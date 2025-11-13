@@ -1,0 +1,161 @@
+/**
+ * Component Library Styles
+ */
+
+.component-library {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--vscode-sideBar-background);
+}
+
+.library-header {
+  height: var(--panel-header-height);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  background-color: var(--vscode-sideBarSectionHeader-background);
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.library-header h3 {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--vscode-sideBarSectionHeader-foreground);
+}
+
+.library-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+/* Component items */
+.component-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  margin-bottom: 4px;
+  border-radius: 4px;
+  cursor: grab;
+  transition: background-color 0.2s ease;
+  user-select: none;
+}
+
+.component-item:hover {
+  background-color: var(--vscode-list-hoverBackground);
+}
+
+.component-item:active {
+  cursor: grabbing;
+}
+
+.component-item.dragging {
+  opacity: 0.5;
+}
+
+.component-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  font-size: 18px;
+}
+
+.component-name {
+  font-size: 13px;
+  color: var(--vscode-foreground);
+  font-weight: 400;
+}
+
+/* Component categories */
+.component-category {
+  margin-bottom: 16px;
+}
+
+.category-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--vscode-descriptionForeground);
+  margin-bottom: 8px;
+  padding: 0 8px;
+}
+
+/* Empty state */
+.library-empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--vscode-descriptionForeground);
+  font-size: 12px;
+}
+
+/* Search */
+.library-search {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.library-search input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--vscode-input-border);
+  border-radius: 2px;
+  background-color: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  font-size: 13px;
+}
+
+.library-search input:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+/* Drag preview */
+.drag-preview {
+  position: fixed;
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 0.8;
+  background-color: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-focusBorder);
+  border-radius: 4px;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.drag-preview .component-icon {
+  margin-right: 8px;
+}
+
+/* Import button */
+.library-import {
+  padding: 12px;
+  border-top: 1px solid var(--vscode-panel-border);
+}
+
+.import-button {
+  width: 100%;
+  padding: 6px 12px;
+  background-color: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border: none;
+  border-radius: 2px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.import-button:hover {
+  background-color: var(--vscode-button-hoverBackground);
+}
+
+.import-button:active {
+  transform: scale(0.98);
+}

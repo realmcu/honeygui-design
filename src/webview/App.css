@@ -1,0 +1,164 @@
+/**
+ * Main App Styles
+ */
+
+.app {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--vscode-editor-background);
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* Canvas container */
+.canvas-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background-color: #f8f9fa;
+}
+
+/* Panels */
+.left-panel {
+  display: flex;
+  flex-direction: column;
+  width: var(--left-panel-width);
+  min-width: 250px;
+  max-width: 400px;
+  background-color: var(--vscode-sideBar-background);
+  border: 1px solid var(--vscode-panel-border);
+  border-top: none;
+  border-bottom: none;
+}
+
+.right-panel {
+  width: var(--right-panel-width);
+  min-width: 280px;
+  max-width: 400px;
+  background-color: var(--vscode-sideBar-background);
+  border: 1px solid var(--vscode-panel-border);
+  border-top: none;
+  border-bottom: none;
+}
+
+/* Panel dividers */
+.panel-divider {
+  height: 1px;
+  background-color: var(--vscode-panel-border);
+  margin: 0;
+}
+
+/* Responsive design */
+@media (max-width: 1280px) {
+  :root {
+    --left-panel-width: 260px;
+    --right-panel-width: 280px;
+  }
+}
+
+@media (max-width: 1024px) {
+  :root {
+    --left-panel-width: 240px;
+    --right-panel-width: 260px;
+  }
+}
+
+@media (max-width: 768px) {
+  .left-panel,
+  .right-panel {
+    display: none;
+  }
+}
+
+/* Print styles */
+@media print {
+  .toolbar,
+  .left-panel,
+  .right-panel {
+    display: none;
+  }
+
+  .canvas-container {
+    background-color: white !important;
+  }
+}
+
+/* Loading state */
+.app-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background-color: var(--vscode-editor-background);
+}
+
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--vscode-progressBar-background);
+  border-top: 2px solid transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-text {
+  margin-left: 12px;
+  font-size: 14px;
+  color: var(--vscode-foreground);
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Error state */
+.app-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  padding: 24px;
+  text-align: center;
+  background-color: var(--vscode-editor-background);
+}
+
+.error-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.error-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--vscode-errorForeground);
+  margin-bottom: 8px;
+}
+
+.error-message {
+  font-size: 13px;
+  color: var(--vscode-foreground);
+  margin-bottom: 16px;
+}
+
+.error-button {
+  padding: 8px 16px;
+  background-color: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border: none;
+  border-radius: 2px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.error-button:hover {
+  background-color: var(--vscode-button-hoverBackground);
+}

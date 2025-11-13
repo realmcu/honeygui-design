@@ -1,0 +1,124 @@
+/**
+ * Toolbar Styles
+ */
+
+.toolbar {
+  height: var(--toolbar-height);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  background-color: var(--vscode-editor-toolbar-background);
+  border-bottom: 1px solid var(--vscode-panel-border);
+  gap: 8px;
+}
+
+.toolbar-section {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 24px;
+  background-color: var(--vscode-panel-border);
+  margin: 0 4px;
+}
+
+/* Toolbar button */
+.toolbar-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background-color: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border: 1px solid var(--vscode-button-border);
+  border-radius: 2px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.toolbar-button:hover {
+  background-color: var(--vscode-button-hoverBackground);
+}
+
+.toolbar-button:active {
+  transform: scale(0.98);
+}
+
+.toolbar-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.toolbar-button.active {
+  background-color: var(--vscode-button-hoverBackground);
+  border-color: var(--vscode-focusBorder);
+}
+
+.toolbar-button.primary {
+  background-color: var(--vscode-button-background);
+  font-weight: 500;
+}
+
+.toolbar-button.primary:hover {
+  background-color: var(--vscode-button-hoverBackground);
+}
+
+/* Zoom controls */
+.zoom-level {
+  min-width: 50px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--vscode-foreground);
+  padding: 4px 8px;
+  background-color: var(--vscode-input-background);
+  border: 1px solid var(--vscode-input-border);
+  border-radius: 2px;
+}
+
+/* Toggle buttons */
+.toolbar-toggle {
+  position: relative;
+  padding: 6px;
+  background-color: var(--vscode-button-background);
+  border: 1px solid var(--vscode-button-border);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.toolbar-toggle:hover {
+  background-color: var(--vscode-button-hoverBackground);
+}
+
+.toolbar-toggle.active {
+  background-color: var(--vscode-button-hoverBackground);
+  border-color: var(--vscode-focusBorder);
+}
+
+.toolbar-toggle input[type="checkbox"] {
+  display: none;
+}
+
+/* Group label */
+.toolbar-group-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--vscode-descriptionForeground);
+  margin-right: 8px;
+}
+
+/* Icon only button */
+.toolbar-icon-button {
+  padding: 6px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

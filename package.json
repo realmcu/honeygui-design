@@ -1,0 +1,197 @@
+{
+  "name": "honeygui-visual-designer",
+  "displayName": "HoneyGUI Visual Designer",
+  "description": "VS Code 插件，提供 HoneyGUI 可视化界面设计、HML 编辑、C/C++ 代码生成与实时预览功能。",
+  "version": "1.1.5",
+  "repository": {
+    "type": "git",
+    "url": "https://gitee.com/example/honey-gui-plugin.git"
+  },
+  "publisher": "honeygui",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Visualization",
+    "Other",
+    "Programming Languages"
+  ],
+  "keywords": [
+    "HoneyGUI",
+    "UI Design",
+    "Visual Designer",
+    "Embedded UI"
+  ],
+  "activationEvents": [
+    "onCommand:honeygui.newProject",
+    "onCommand:honeygui.openDesigner",
+    "onCommand:honeygui.codegen",
+    "onCommand:honeygui.preview",
+    "onCommand:honeygui.openResourceManager",
+    "onCommand:honeygui.openDocs",
+    "onCommand:honeygui.migrateXmlToHml",
+    "onWorkspaceContains:**/*.hml"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "honeygui.newProject",
+        "title": "HoneyGUI: New Project",
+        "category": "HoneyGUI"
+      },
+      {
+        "command": "honeygui.openDesigner",
+        "title": "HoneyGUI: Open Designer",
+        "category": "HoneyGUI"
+      },
+      {
+        "command": "honeygui.codegen",
+        "title": "HoneyGUI: Generate Code",
+        "category": "HoneyGUI"
+      },
+      {
+        "command": "honeygui.preview",
+        "title": "HoneyGUI: Preview",
+        "category": "HoneyGUI"
+      },
+      {
+        "command": "honeygui.openResourceManager",
+        "title": "HoneyGUI: Open Resource Manager",
+        "category": "HoneyGUI"
+      },
+      {
+        "command": "honeygui.openDocs",
+        "title": "HoneyGUI: Open Docs",
+        "category": "HoneyGUI"
+      },
+      {
+        "command": "honeygui.migrateXmlToHml",
+        "title": "HoneyGUI: Migrate XML to HML",
+        "category": "HoneyGUI"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "HoneyGUI",
+      "properties": {
+        "honeygui.codegen.language": {
+          "type": "string",
+          "default": "cpp",
+          "enum": [
+            "cpp",
+            "c"
+          ],
+          "description": "代码生成语言"
+        },
+        "honeygui.codegen.outputDir": {
+          "type": "string",
+          "default": "src/ui",
+          "description": "代码输出目录"
+        },
+        "honeygui.hml.outputDir": {
+          "type": "string",
+          "default": "ui",
+          "description": "HML输出目录"
+        },
+        "honeygui.preview.runnerPath": {
+          "type": "string",
+          "default": "",
+          "description": "预览Runner路径"
+        },
+        "honeygui.preview.autoDownload": {
+          "type": "boolean",
+          "default": true,
+          "description": "自动下载Runner"
+        },
+        "honeygui.preview.timeoutMs": {
+          "type": "number",
+          "default": 10000,
+          "description": "预览超时时间（毫秒）"
+        },
+        "honeygui.ui.gridSize": {
+          "type": "number",
+          "default": 8,
+          "description": "网格大小"
+        },
+        "honeygui.ui.snapToGrid": {
+          "type": "boolean",
+          "default": true,
+          "description": "启用网格吸附"
+        },
+        "honeygui.telemetry.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "启用遥测"
+        },
+        "honeygui.codeGeneration.outputPath": {
+          "type": "string",
+          "default": "src",
+          "description": "代码生成输出路径"
+        },
+        "honeygui.codeGeneration.cppVersion": {
+          "type": "string",
+          "default": "c++17",
+          "description": "C++版本"
+        },
+        "honeygui.codeGeneration.enableDebugInfo": {
+          "type": "boolean",
+          "default": true,
+          "description": "启用调试信息"
+        },
+        "honeygui.preview.autoReload": {
+          "type": "boolean",
+          "default": true,
+          "description": "启用自动重载"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile && npm run build:webview",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint . --ext .ts,.tsx",
+    "test": "npm run compile && node ./out/test/runTest.js",
+    "build:webview": "webpack --mode production",
+    "build:webview:dev": "webpack --mode development",
+    "watch:webview": "webpack --mode development --watch",
+    "serve:webview": "webpack serve --mode development"
+  },
+  "devDependencies": {
+    "@esbuild/linux-x64": "^0.27.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^20.19.25",
+    "@types/react": "^19.2.4",
+    "@types/react-dom": "^19.2.3",
+    "@types/vscode": "^1.80.0",
+    "@types/webpack": "^5.28.5",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "@vitejs/plugin-react": "^5.1.1",
+    "@vscode/test-electron": "^2.5.2",
+    "css-loader": "^7.1.2",
+    "eslint": "^8.56.0",
+    "html-webpack-plugin": "^5.6.4",
+    "jest": "^30.2.0",
+    "mini-css-extract-plugin": "^2.9.4",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "style-loader": "^4.0.0",
+    "ts-jest": "^29.4.5",
+    "ts-loader": "^9.5.4",
+    "typescript": "^5.3.0",
+    "vite": "^7.2.2",
+    "vscode-test": "^1.6.1",
+    "webpack": "^5.102.1",
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.2"
+  },
+  "dependencies": {
+    "chokidar": "^3.6.0",
+    "fast-xml-parser": "^4.3.2",
+    "glob": "^10.3.10",
+    "lucide-react": "^0.553.0",
+    "zustand": "^5.0.8"
+  }
+}

@@ -1,0 +1,1685 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HoneyGUI 设计器</title>
+    <style>
+        :root {
+            --vs-dark-bg: #1e1e1e;
+            --vs-dark-panel-bg: #252526;
+            --vs-dark-border: #3e3e42;
+            --vs-dark-hover: #484848;
+            --vs-dark-active: #575757;
+            --vs-dark-text: #d4d4d4;
+            --vs-dark-text-secondary: #969696;
+            --vs-dark-accent: #007acc;
+            --vs-dark-accent-hover: #0098ff;
+            --canvas-bg: #ffffff;
+            --canvas-grid: #e0e0e0;
+            --selected-border: #007acc;
+            --selected-bg: rgba(0, 122, 204, 0.1);
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--vs-dark-bg);
+            color: var(--vs-dark-text);
+            overflow: hidden;
+        }
+        
+        .header {
+            padding: 10px 20px;
+            background-color: var(--vs-dark-panel-bg);
+            border-bottom: 1px solid var(--vs-dark-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 500;
+        }
+        
+        .toolbar {
+            padding: 5px 10px;
+            background-color: var(--vs-dark-panel-bg);
+            border-bottom: 1px solid var(--vs-dark-border);
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        
+        .toolbar-button {
+            padding: 5px 12px;
+            background-color: var(--vs-dark-panel-bg);
+            border: 1px solid var(--vs-dark-border);
+            border-radius: 3px;
+            color: var(--vs-dark-text);
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .toolbar-button:hover {
+            background-color: var(--vs-dark-hover);
+            border-color: var(--vs-dark-active);
+        }
+        
+        .toolbar-button:active {
+            background-color: var(--vs-dark-active);
+        }
+        
+        .toolbar-button.primary {
+            background-color: var(--vs-dark-accent);
+            border-color: var(--vs-dark-accent);
+        }
+        
+        .toolbar-button.primary:hover {
+            background-color: var(--vs-dark-accent-hover);
+        }
+        
+        .main-container {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+        
+        .sidebar {
+            width: 250px;
+            background-color: var(--vs-dark-panel-bg);
+            border-right: 1px solid var(--vs-dark-border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .sidebar-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--vs-dark-border);
+        }
+        
+        .sidebar-tab {
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+        
+        .sidebar-tab.active {
+            border-bottom-color: var(--vs-dark-accent);
+            color: var(--vs-dark-accent);
+        }
+        
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        
+        .toolbox {
+            margin-bottom: 20px;
+        }
+        
+        .toolbox-title {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 10px;
+            color: var(--vs-dark-text-secondary);
+            padding: 5px 0;
+        }
+        
+        .toolbox-item {
+            padding: 8px 12px;
+            margin-bottom: 5px;
+            background-color: var(--vs-dark-panel-bg);
+            border: 1px solid var(--vs-dark-border);
+            border-radius: 3px;
+            cursor: grab;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .toolbox-item:hover {
+            background-color: var(--vs-dark-hover);
+            border-color: var(--vs-dark-active);
+        }
+        
+        .toolbox-item:active {
+            cursor: grabbing;
+        }
+        
+        .canvas-container {
+            flex: 1;
+            padding: 20px;
+            background-color: var(--vs-dark-bg);
+            overflow: auto;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        
+        .canvas-wrapper {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .canvas {
+            background-color: var(--canvas-bg);
+            background-image: linear-gradient(var(--canvas-grid) 1px, transparent 1px),
+                             linear-gradient(90deg, var(--canvas-grid) 1px, transparent 1px);
+            background-size: 20px 20px;
+            border: 1px solid var(--vs-dark-border);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+        
+        .component {
+            position: absolute;
+            box-sizing: border-box;
+            cursor: move;
+            user-select: none;
+        }
+        
+        .component.selected {
+            border: 2px solid var(--selected-border);
+            background-color: var(--selected-bg);
+        }
+        
+        .component-handle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background-color: var(--selected-border);
+            border: 1px solid white;
+        }
+        
+        .component-handle.nw { top: -4px; left: -4px; cursor: nwse-resize; }
+        .component-handle.ne { top: -4px; right: -4px; cursor: nesw-resize; }
+        .component-handle.sw { bottom: -4px; left: -4px; cursor: nesw-resize; }
+        .component-handle.se { bottom: -4px; right: -4px; cursor: nwse-resize; }
+        .component-handle.n { top: -4px; left: 50%; margin-left: -4px; cursor: ns-resize; }
+        .component-handle.s { bottom: -4px; left: 50%; margin-left: -4px; cursor: ns-resize; }
+        .component-handle.w { left: -4px; top: 50%; margin-top: -4px; cursor: ew-resize; }
+        .component-handle.e { right: -4px; top: 50%; margin-top: -4px; cursor: ew-resize; }
+        
+        .property-panel {
+            width: 300px;
+            background-color: var(--vs-dark-panel-bg);
+            border-left: 1px solid var(--vs-dark-border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .property-panel-header {
+            padding: 10px;
+            border-bottom: 1px solid var(--vs-dark-border);
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .property-panel-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        
+        .property-group {
+            margin-bottom: 20px;
+        }
+        
+        .property-title {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 10px;
+            color: var(--vs-dark-text-secondary);
+        }
+        
+        .property-item {
+            margin-bottom: 10px;
+        }
+        
+        .property-label {
+            font-size: 13px;
+            margin-bottom: 5px;
+            color: var(--vs-dark-text);
+        }
+        
+        input[type="text"], input[type="number"], select, textarea {
+            width: 100%;
+            padding: 6px 8px;
+            background-color: var(--vs-dark-bg);
+            border: 1px solid var(--vs-dark-border);
+            border-radius: 3px;
+            color: var(--vs-dark-text);
+            font-size: 13px;
+            box-sizing: border-box;
+        }
+        
+        input[type="text"]:focus, input[type="number"]:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--vs-dark-accent);
+        }
+        
+        input[type="checkbox"] {
+            margin-right: 5px;
+        }
+        
+        .tree-view {
+            font-size: 13px;
+        }
+        
+        .tree-node {
+            padding: 5px 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+        
+        .tree-node:hover {
+            background-color: var(--vs-dark-hover);
+        }
+        
+        .tree-node.selected {
+            background-color: var(--selected-bg);
+            color: var(--vs-dark-accent);
+        }
+        
+        .tree-icon {
+            width: 16px;
+            height: 16px;
+            margin-right: 5px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .tree-indent {
+            display: inline-block;
+            width: 16px;
+        }
+        
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid transparent;
+            border-top-color: var(--vs-dark-accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        .loading-text {
+            margin-top: 20px;
+            font-size: 14px;
+            color: var(--vs-dark-text-secondary);
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 1200px) {
+            .property-panel {
+                width: 250px;
+            }
+            
+            .sidebar {
+                width: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部标题栏 -->
+    <div class="header">
+        <h1>HoneyGUI 可视化设计器</h1>
+        <div>
+            <span id="project-info">未保存项目</span>
+        </div>
+    </div>
+    
+    <!-- 工具栏 -->
+    <div class="toolbar">
+        <button class="toolbar-button primary" id="saveBtn">保存</button>
+        <button class="toolbar-button" id="previewBtn">预览</button>
+        <button class="toolbar-button primary" id="codegenBtn">生成代码</button>
+        <div style="flex: 1;"></div>
+        <button class="toolbar-button" id="undoBtn" disabled>撤销</button>
+        <button class="toolbar-button" id="redoBtn" disabled>重做</button>
+        <button class="toolbar-button" id="gridToggleBtn">网格</button>
+        <button class="toolbar-button" id="snapToggleBtn">吸附</button>
+    </div>
+    
+    <!-- 主容器 -->
+    <div class="main-container">
+        <!-- 左侧边栏 -->
+        <div class="sidebar">
+            <div class="sidebar-tabs">
+                <div class="sidebar-tab active" data-tab="toolbox">控件</div>
+                <div class="sidebar-tab" data-tab="tree">组件树</div>
+            </div>
+            <div class="sidebar-content">
+                <!-- 工具栏内容 -->
+                <div id="toolbox-tab" class="tab-content">
+                    <div class="toolbox">
+                        <div class="toolbox-title">基础控件</div>
+                        <div class="toolbox-item" draggable="true" data-component-type="label">
+                            <span class="tree-icon">T</span>
+                            标签
+                        </div>
+                        <div class="toolbox-item" draggable="true" data-component-type="button">
+                            <span class="tree-icon">□</span>
+                            按钮
+                        </div>
+                        <div class="toolbox-item" draggable="true" data-component-type="input">
+                            <span class="tree-icon">I</span>
+                            输入框
+                        </div>
+                        <div class="toolbox-item" draggable="true" data-component-type="checkbox">
+                            <span class="tree-icon">☑</span>
+                            复选框
+                        </div>
+                        <div class="toolbox-item" draggable="true" data-component-type="radio">
+                            <span class="tree-icon">○</span>
+                            单选框
+                        </div>
+                        <div class="toolbox-item" draggable="true" data-component-type="select">
+                            <span class="tree-icon">▼</span>
+                            下拉框
+                        </div>
+                        <div class="toolbox-item" draggable="true" data-component-type="image">
+                            <span class="tree-icon">🖼️</span>
+                            图片
+                        </div>
+                        <div class="toolbox-item" draggable="true" data-component-type="progressBar">
+                            <span class="tree-icon">━</span>
+                            进度条
+                        </div>
+                    </div>
+                    <div class="toolbox">
+                        <div class="toolbox-title">容器控件</div>
+                        <div class="toolbox-item" draggable="true" data-component-type="list">
+                            <span class="tree-icon">≡</span>
+                            列表
+                        </div>
+                        <div class="toolbox-item" draggable="true" data-component-type="panel">
+                            <span class="tree-icon">▣</span>
+                            面板
+                        </div>
+                    </div>
+                    <div class="toolbox">
+                        <div class="toolbox-title">布局控件</div>
+                        <div class="toolbox-item" draggable="true" data-component-type="vbox">
+                            <span class="tree-icon">│</span>
+                            垂直布局
+                        </div>
+                        <div class="toolbox-item" draggable="true" data-component-type="hbox">
+                            <span class="tree-icon">─</span>
+                            水平布局
+                        </div>
+                        <div class="toolbox-item" draggable="true" data-component-type="grid">
+                            <span class="tree-icon">╬</span>
+                            网格布局
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 组件树内容 -->
+                <div id="tree-tab" class="tab-content" style="display: none;">
+                    <div class="tree-view" id="component-tree">
+                        <!-- 组件树将通过JS动态生成 -->
+                        <div class="loading">
+                            <div class="loading-spinner"></div>
+                            <div class="loading-text">加载中...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 中间画布 -->
+        <div class="canvas-container">
+            <div class="canvas-wrapper">
+                <div class="canvas" id="designCanvas">
+                    <!-- 画布内容将通过JS动态生成 -->
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                        <div class="loading-text">设计器初始化中...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 右侧属性面板 -->
+        <div class="property-panel">
+            <div class="property-panel-header">属性</div>
+            <div class="property-panel-content" id="property-content">
+                <div class="property-group">
+                    <div class="property-title">基本属性</div>
+                    <div class="property-item">
+                        <div class="property-label">ID</div>
+                        <input type="text" id="property-id" placeholder="组件ID">
+                    </div>
+                    <div class="property-item">
+                        <div class="property-label">名称</div>
+                        <input type="text" id="property-name" placeholder="组件名称">
+                    </div>
+                    <div class="property-item">
+                        <div class="property-label">类型</div>
+                        <input type="text" id="property-type" disabled>
+                    </div>
+                </div>
+                <div class="property-group">
+                    <div class="property-title">位置与大小</div>
+                    <div class="property-item">
+                        <div class="property-label">X坐标</div>
+                        <input type="number" id="property-x" placeholder="X坐标">
+                    </div>
+                    <div class="property-item">
+                        <div class="property-label">Y坐标</div>
+                        <input type="number" id="property-y" placeholder="Y坐标">
+                    </div>
+                    <div class="property-item">
+                        <div class="property-label">宽度</div>
+                        <input type="number" id="property-width" placeholder="宽度">
+                    </div>
+                    <div class="property-item">
+                        <div class="property-label">高度</div>
+                        <input type="number" id="property-height" placeholder="高度">
+                    </div>
+                </div>
+                <div class="property-group">
+                    <div class="property-title">自定义属性</div>
+                    <div id="custom-properties">
+                    <!-- 自定义属性将通过JS动态生成 -->
+                    <div style="padding: 10px; color: var(--vs-dark-text-secondary); text-align: center;">
+                        请选择一个组件以查看其属性
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 代码生成设置 -->
+            <div class="property-group">
+                <div class="property-title">代码生成设置</div>
+                <div class="property-item">
+                    <div class="property-label">目标语言:</div>
+                    <select id="code-gen-language">
+                        <option value="cpp">C++</option>
+                        <option value="c">C</option>
+                    </select>
+                </div>
+                <div class="property-item">
+                    <div style="display: flex; align-items: center;">
+                        <input type="checkbox" id="enable-protected-areas" checked>
+                        <label style="margin-left: 5px; margin-bottom: 0;">启用代码保护区</label>
+                    </div>
+                    <div style="font-size: 11px; color: var(--vs-dark-text-secondary); margin-top: 5px;">
+                        保留特定注释块内的自定义代码
+                    </div>
+                </div>
+                <div class="property-item">
+                    <div style="display: flex; align-items: center;">
+                        <input type="checkbox" id="generate-debug-info" checked>
+                        <label style="margin-left: 5px; margin-bottom: 0;">生成调试信息</label>
+                    </div>
+                    <div style="font-size: 11px; color: var(--vs-dark-text-secondary); margin-top: 5px;">
+                        在生成的代码中包含调试注释
+                    </div>
+                </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 与VSCode扩展通信的API
+        const vscode = acquireVsCodeApi();
+        
+        // 全局状态
+        let appState = {
+            selectedComponent: null,
+            components: [],
+            canvas: null,
+            isDragging: false,
+            isResizing: false,
+            dragOffset: { x: 0, y: 0 },
+            resizeStartPos: { x: 0, y: 0 },
+            resizeHandle: null,
+            showGrid: true,
+            snapToGrid: true,
+            gridSize: 20
+        };
+        
+        // 初始化函数
+        function initDesigner() {
+            console.log('初始化设计器...');
+            
+            // 获取DOM元素
+            appState.canvas = document.getElementById('designCanvas');
+            
+            // 初始化画布
+            initializeCanvas();
+            
+            // 初始化事件监听
+            initializeEventListeners();
+            
+            // 加载默认组件
+            loadDefaultComponents();
+            
+            // 更新界面
+            updateCanvas();
+            updateComponentTree();
+            updatePropertyPanel();
+        }
+        
+        // 初始化画布
+        function initializeCanvas() {
+            appState.canvas.style.width = '800px';
+            appState.canvas.style.height = '600px';
+            
+            // 清空画布
+            appState.canvas.innerHTML = '';
+            
+            // 添加窗口背景组件
+            const windowBackground = document.createElement('div');
+            windowBackground.className = 'component';
+            windowBackground.style.width = '100%';
+            windowBackground.style.height = '100%';
+            windowBackground.style.left = '0px';
+            windowBackground.style.top = '0px';
+            windowBackground.style.backgroundColor = 'transparent';
+            windowBackground.style.border = 'none';
+            windowBackground.dataset.id = 'mainWindow';
+            
+            // 添加点击事件以选择窗口
+            windowBackground.addEventListener('click', (e) => {
+                if (!e.target.closest('.component') || e.target === windowBackground) {
+                    selectComponent('mainWindow');
+                }
+            });
+            
+            appState.canvas.appendChild(windowBackground);
+        }
+        
+        // 加载默认组件
+        function loadDefaultComponents() {
+            appState.components = [
+                {
+                    id: 'mainWindow',
+                    type: 'window',
+                    name: '主窗口',
+                    x: 0,
+                    y: 0,
+                    width: 800,
+                    height: 600,
+                    properties: {
+                        title: 'HoneyGUI 应用',
+                        backgroundColor: '#ffffff'
+                    },
+                    children: []
+                }
+            ];
+        }
+        
+        // 初始化事件监听
+        function initializeEventListeners() {
+            // 工具栏按钮事件
+            document.getElementById('saveBtn').addEventListener('click', saveProject);
+            document.getElementById('previewBtn').addEventListener('click', previewProject);
+            document.getElementById('codegenBtn').addEventListener('click', generateCode);
+            document.getElementById('gridToggleBtn').addEventListener('click', toggleGrid);
+            document.getElementById('snapToggleBtn').addEventListener('click', toggleSnap);
+            
+            // 侧边栏标签切换
+            document.querySelectorAll('.sidebar-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabId = tab.dataset.tab;
+                    
+                    // 更新标签状态
+                    document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    // 更新内容显示
+                    document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
+                    document.getElementById(`${tabId}-tab`).style.display = 'block';
+                    
+                    // 如果切换到组件树，更新组件树
+                    if (tabId === 'tree') {
+                        updateComponentTree();
+                    }
+                });
+            });
+            
+            // 拖拽控件到画布
+            document.querySelectorAll('.toolbox-item').forEach(item => {
+                item.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.setData('component-type', item.dataset.componentType);
+                    item.style.opacity = '0.5';
+                });
+                
+                item.addEventListener('dragend', () => {
+                    item.style.opacity = '1';
+                });
+            });
+            
+            // 画布拖拽接收
+            appState.canvas.addEventListener('dragover', (e) => {
+                e.preventDefault();
+            });
+            
+            appState.canvas.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const componentType = e.dataTransfer.getData('component-type');
+                
+                if (componentType) {
+                    // 计算放置位置
+                    const rect = appState.canvas.getBoundingClientRect();
+                    const x = snapToGrid(e.clientX - rect.left);
+                    const y = snapToGrid(e.clientY - rect.top);
+                    
+                    // 创建新组件
+                    addComponent(componentType, x, y);
+                }
+            });
+            
+            // 属性输入框事件
+            document.getElementById('property-id').addEventListener('input', updateComponentProperties);
+            document.getElementById('property-name').addEventListener('input', updateComponentProperties);
+            document.getElementById('property-x').addEventListener('input', updateComponentPosition);
+            document.getElementById('property-y').addEventListener('input', updateComponentPosition);
+            document.getElementById('property-width').addEventListener('input', updateComponentSize);
+            document.getElementById('property-height').addEventListener('input', updateComponentSize);
+        }
+        
+        // 吸附到网格
+        function snapToGrid(value) {
+            if (!appState.snapToGrid) return value;
+            return Math.round(value / appState.gridSize) * appState.gridSize;
+        }
+        
+        // 添加组件
+        function addComponent(type, x, y) {
+            const newComponent = {
+                id: `${type}_${Date.now()}`,
+                type: type,
+                name: getComponentDisplayName(type),
+                x: x,
+                y: y,
+                width: getDefaultWidth(type),
+                height: getDefaultHeight(type),
+                properties: getDefaultProperties(type),
+                children: []
+            };
+            
+            // 添加到主窗口的子组件
+            const mainWindow = appState.components.find(c => c.id === 'mainWindow');
+            if (mainWindow) {
+                mainWindow.children.push(newComponent);
+                
+                // 选中新添加的组件
+                selectComponent(newComponent.id);
+                
+                // 更新界面
+                updateCanvas();
+                updateComponentTree();
+                updatePropertyPanel();
+                
+                // 通知VSCode扩展
+                notifyVsCode('componentAdded', { component: newComponent });
+            }
+        }
+        
+        // 获取组件显示名称
+        function getComponentDisplayName(type) {
+            const names = {
+                'label': '标签',
+                'button': '按钮',
+                'input': '输入框',
+                'checkbox': '复选框',
+                'radio': '单选框',
+                'select': '下拉框',
+                'image': '图片',
+                'progressBar': '进度条',
+                'list': '列表',
+                'panel': '面板',
+                'vbox': '垂直布局',
+                'hbox': '水平布局',
+                'grid': '网格布局'
+            };
+            return names[type] || type;
+        }
+        
+        // 获取组件默认宽度
+        function getDefaultWidth(type) {
+            const widths = {
+                'label': 100,
+                'button': 80,
+                'input': 200,
+                'checkbox': 20,
+                'radio': 20,
+                'select': 150,
+                'image': 100,
+                'progressBar': 200,
+                'list': 300,
+                'panel': 300,
+                'vbox': 300,
+                'hbox': 400,
+                'grid': 400
+            };
+            return widths[type] || 100;
+        }
+        
+        // 获取组件默认高度
+        function getDefaultHeight(type) {
+            const heights = {
+                'label': 30,
+                'button': 30,
+                'input': 30,
+                'checkbox': 30,
+                'radio': 30,
+                'select': 30,
+                'image': 100,
+                'progressBar': 20,
+                'list': 200,
+                'panel': 200,
+                'vbox': 200,
+                'hbox': 100,
+                'grid': 300
+            };
+            return heights[type] || 30;
+        }
+        
+        // 获取组件默认属性
+        function getDefaultProperties(type) {
+            const properties = {
+                'label': { text: '标签文本' },
+                'button': { text: '按钮', onClick: '' },
+                'input': { text: '', placeholder: '请输入...' },
+                'checkbox': { checked: false, text: '复选框' },
+                'radio': { checked: false, text: '单选框', group: 'group1' },
+                'select': { options: [{ label: '选项1', value: '1' }, { label: '选项2', value: '2' }] },
+                'image': { src: '', alt: '图片' },
+                'progressBar': { value: 50, max: 100 },
+                'list': { items: [] },
+                'panel': { title: '面板' },
+                'vbox': { spacing: 10 },
+                'hbox': { spacing: 10 },
+                'grid': { rows: 3, cols: 3, cellSpacing: 10 }
+            };
+            return properties[type] || {};
+        }
+        
+        // 选择组件
+        function selectComponent(id) {
+            // 找到组件
+            let component = null;
+            
+            // 首先在顶层查找
+            component = appState.components.find(c => c.id === id);
+            
+            // 如果没找到，在窗口的子组件中查找
+            if (!component) {
+                const mainWindow = appState.components.find(c => c.id === 'mainWindow');
+                if (mainWindow) {
+                    component = findComponentInChildren(mainWindow.children, id);
+                }
+            }
+            
+            if (component) {
+                appState.selectedComponent = component;
+                updateCanvasSelection();
+                updatePropertyPanel();
+                updateComponentTreeSelection();
+            }
+        }
+        
+        // 在子组件中查找组件
+        function findComponentInChildren(children, id) {
+            for (const child of children) {
+                if (child.id === id) {
+                    return child;
+                }
+                if (child.children && child.children.length > 0) {
+                    const found = findComponentInChildren(child.children, id);
+                    if (found) return found;
+                }
+            }
+            return null;
+        }
+        
+        // 更新画布
+        function updateCanvas() {
+            // 清除所有非窗口背景的组件
+            const components = appState.canvas.querySelectorAll('.component:not([data-id="mainWindow"])');
+            components.forEach(comp => comp.remove());
+            
+            // 获取主窗口
+            const mainWindow = appState.components.find(c => c.id === 'mainWindow');
+            if (mainWindow && mainWindow.children) {
+                // 创建所有子组件
+                mainWindow.children.forEach(component => {
+                    renderComponent(component);
+                });
+            }
+            
+            // 更新选择状态
+            updateCanvasSelection();
+        }
+        
+        // 渲染组件
+        function renderComponent(component) {
+            const element = document.createElement('div');
+            element.className = 'component';
+            element.dataset.id = component.id;
+            element.style.left = `${component.x}px`;
+            element.style.top = `${component.y}px`;
+            element.style.width = `${component.width}px`;
+            element.style.height = `${component.height}px`;
+            element.style.backgroundColor = component.properties.backgroundColor || 'transparent';
+            element.style.border = component.properties.border || '1px solid #ccc';
+            
+            // 根据组件类型设置内容
+            setComponentContent(element, component);
+            
+            // 添加事件监听
+            addComponentEventListeners(element, component);
+            
+            // 添加到画布
+            appState.canvas.appendChild(element);
+            
+            // 递归渲染子组件
+            if (component.children && component.children.length > 0) {
+                component.children.forEach(child => {
+                    renderComponent(child);
+                });
+            }
+        }
+        
+        // 设置组件内容
+        function setComponentContent(element, component) {
+            switch (component.type) {
+                case 'label':
+                    element.textContent = component.properties.text || '';
+                    element.style.display = 'flex';
+                    element.style.alignItems = 'center';
+                    break;
+                case 'button':
+                    element.textContent = component.properties.text || '按钮';
+                    element.style.display = 'flex';
+                    element.style.alignItems = 'center';
+                    element.style.justifyContent = 'center';
+                    element.style.backgroundColor = '#f0f0f0';
+                    break;
+                case 'input':
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.value = component.properties.text || '';
+                    input.placeholder = component.properties.placeholder || '';
+                    input.style.width = '100%';
+                    input.style.height = '100%';
+                    input.disabled = true;
+                    element.appendChild(input);
+                    break;
+                case 'checkbox':
+                    const checkbox = document.createElement('div');
+                    checkbox.innerHTML = `
+                        <input type="checkbox" ${component.properties.checked ? 'checked' : ''} disabled>
+                        <span>${component.properties.text || ''}</span>
+                    `;
+                    element.appendChild(checkbox);
+                    break;
+                case 'radio':
+                    const radio = document.createElement('div');
+                    radio.innerHTML = `
+                        <input type="radio" name="${component.properties.group || 'radio'}" ${component.properties.checked ? 'checked' : ''} disabled>
+                        <span>${component.properties.text || ''}</span>
+                    `;
+                    element.appendChild(radio);
+                    break;
+                case 'panel':
+                    element.innerHTML = `
+                        <div style="padding: 5px; border-bottom: 1px solid #ccc; font-weight: bold;">
+                            ${component.properties.title || '面板'}
+                        </div>
+                        <div style="padding: 5px;"></div>
+                    `;
+                    break;
+                case 'progressBar':
+                    const progress = document.createElement('div');
+                    const value = component.properties.value || 50;
+                    const max = component.properties.max || 100;
+                    const percent = (value / max) * 100;
+                    progress.innerHTML = `
+                        <div style="width: 100%; height: 100%; background-color: #f0f0f0; border-radius: 3px; overflow: hidden;">
+                            <div style="width: ${percent}%; height: 100%; background-color: #4CAF50;"></div>
+                        </div>
+                    `;
+                    element.appendChild(progress);
+                    break;
+            }
+        }
+        
+        // 添加组件事件监听
+        function addComponentEventListeners(element, component) {
+            // 点击事件 - 选择组件
+            element.addEventListener('click', (e) => {
+                e.stopPropagation();
+                selectComponent(component.id);
+            });
+            
+            // 鼠标按下事件 - 开始拖拽
+            element.addEventListener('mousedown', (e) => {
+                // 如果点击的是调整大小的手柄，不开始拖拽
+                if (e.target.closest('.component-handle')) {
+                    return;
+                }
+                
+                e.stopPropagation();
+                const rect = element.getBoundingClientRect();
+                appState.isDragging = true;
+                appState.dragOffset.x = e.clientX - rect.left;
+                appState.dragOffset.y = e.clientY - rect.top;
+                
+                // 添加移动和释放事件到document
+                document.addEventListener('mousemove', handleDragMove);
+                document.addEventListener('mouseup', handleDragEnd);
+            });
+            
+            // 右键点击事件 - 显示上下文菜单（后续实现）
+            element.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                // TODO: 实现上下文菜单
+            });
+        }
+        
+        // 处理拖拽移动
+        function handleDragMove(e) {
+            if (!appState.isDragging || !appState.selectedComponent) return;
+            
+            const rect = appState.canvas.getBoundingClientRect();
+            let newX = e.clientX - rect.left - appState.dragOffset.x;
+            let newY = e.clientY - rect.top - appState.dragOffset.y;
+            
+            // 吸附到网格
+            if (appState.snapToGrid) {
+                newX = snapToGrid(newX);
+                newY = snapToGrid(newY);
+            }
+            
+            // 更新组件位置
+            updateComponentPositionInternal(appState.selectedComponent.id, newX, newY);
+        }
+        
+        // 处理拖拽结束
+        function handleDragEnd() {
+            appState.isDragging = false;
+            document.removeEventListener('mousemove', handleDragMove);
+            document.removeEventListener('mouseup', handleDragEnd);
+            
+            // 通知VSCode扩展
+            if (appState.selectedComponent) {
+                notifyVsCode('componentMoved', { 
+                    id: appState.selectedComponent.id,
+                    x: appState.selectedComponent.x,
+                    y: appState.selectedComponent.y
+                });
+            }
+        }
+        
+        // 更新组件位置（内部方法）
+        function updateComponentPositionInternal(id, x, y) {
+            // 找到组件并更新位置
+            const component = findComponent(id);
+            if (component) {
+                component.x = x;
+                component.y = y;
+                
+                // 更新DOM元素位置
+                const element = document.querySelector(`.component[data-id="${id}"]`);
+                if (element) {
+                    element.style.left = `${x}px`;
+                    element.style.top = `${y}px`;
+                }
+                
+                // 更新属性面板
+                if (appState.selectedComponent && appState.selectedComponent.id === id) {
+                    document.getElementById('property-x').value = x;
+                    document.getElementById('property-y').value = y;
+                }
+            }
+        }
+        
+        // 查找组件
+        function findComponent(id) {
+            // 首先在顶层查找
+            let component = appState.components.find(c => c.id === id);
+            
+            // 如果没找到，在所有子组件中查找
+            if (!component) {
+                for (const c of appState.components) {
+                    if (c.children) {
+                        component = findComponentInChildren(c.children, id);
+                        if (component) break;
+                    }
+                }
+            }
+            
+            return component;
+        }
+        
+        // 更新画布选择状态
+        function updateCanvasSelection() {
+            // 清除所有选择状态
+            document.querySelectorAll('.component').forEach(comp => {
+                comp.classList.remove('selected');
+                
+                // 移除所有调整大小的手柄
+                const handles = comp.querySelectorAll('.component-handle');
+                handles.forEach(handle => handle.remove());
+            });
+            
+            // 如果有选中的组件，添加选择样式和调整大小的手柄
+            if (appState.selectedComponent && appState.selectedComponent.id !== 'mainWindow') {
+                const element = document.querySelector(`.component[data-id="${appState.selectedComponent.id}"]`);
+                if (element) {
+                    element.classList.add('selected');
+                    
+                    // 添加调整大小的手柄
+                    addResizeHandles(element);
+                }
+            }
+        }
+        
+        // 添加调整大小的手柄
+        function addResizeHandles(element) {
+            const handles = ['nw', 'ne', 'sw', 'se', 'n', 's', 'w', 'e'];
+            
+            handles.forEach(handle => {
+                const div = document.createElement('div');
+                div.className = `component-handle ${handle}`;
+                div.dataset.handle = handle;
+                
+                // 添加鼠标按下事件
+                div.addEventListener('mousedown', (e) => {
+                    e.stopPropagation();
+                    appState.isResizing = true;
+                    appState.resizeHandle = handle;
+                    appState.resizeStartPos.x = e.clientX;
+                    appState.resizeStartPos.y = e.clientY;
+                    
+                    // 添加移动和释放事件到document
+                    document.addEventListener('mousemove', handleResizeMove);
+                    document.addEventListener('mouseup', handleResizeEnd);
+                });
+                
+                element.appendChild(div);
+            });
+        }
+        
+        // 处理调整大小移动
+        function handleResizeMove(e) {
+            if (!appState.isResizing || !appState.selectedComponent || !appState.resizeHandle) return;
+            
+            const deltaX = e.clientX - appState.resizeStartPos.x;
+            const deltaY = e.clientY - appState.resizeStartPos.y;
+            
+            let newWidth = appState.selectedComponent.width;
+            let newHeight = appState.selectedComponent.height;
+            let newX = appState.selectedComponent.x;
+            let newY = appState.selectedComponent.y;
+            
+            // 根据手柄位置调整大小
+            switch (appState.resizeHandle) {
+                case 'nw':
+                    newWidth -= deltaX;
+                    newHeight -= deltaY;
+                    newX += deltaX;
+                    newY += deltaY;
+                    break;
+                case 'ne':
+                    newWidth += deltaX;
+                    newHeight -= deltaY;
+                    newY += deltaY;
+                    break;
+                case 'sw':
+                    newWidth -= deltaX;
+                    newHeight += deltaY;
+                    newX += deltaX;
+                    break;
+                case 'se':
+                    newWidth += deltaX;
+                    newHeight += deltaY;
+                    break;
+                case 'n':
+                    newHeight -= deltaY;
+                    newY += deltaY;
+                    break;
+                case 's':
+                    newHeight += deltaY;
+                    break;
+                case 'w':
+                    newWidth -= deltaX;
+                    newX += deltaX;
+                    break;
+                case 'e':
+                    newWidth += deltaX;
+                    break;
+            }
+            
+            // 限制最小大小
+            newWidth = Math.max(20, newWidth);
+            newHeight = Math.max(20, newHeight);
+            
+            // 更新起始位置
+            appState.resizeStartPos.x = e.clientX;
+            appState.resizeStartPos.y = e.clientY;
+            
+            // 更新组件大小和位置
+            updateComponentSizeInternal(appState.selectedComponent.id, newWidth, newHeight);
+            if (['nw', 'ne', 'sw', 'n', 'w'].includes(appState.resizeHandle)) {
+                updateComponentPositionInternal(appState.selectedComponent.id, newX, newY);
+            }
+        }
+        
+        // 处理调整大小结束
+        function handleResizeEnd() {
+            appState.isResizing = false;
+            appState.resizeHandle = null;
+            document.removeEventListener('mousemove', handleResizeMove);
+            document.removeEventListener('mouseup', handleResizeEnd);
+            
+            // 通知VSCode扩展
+            if (appState.selectedComponent) {
+                notifyVsCode('componentResized', { 
+                    id: appState.selectedComponent.id,
+                    width: appState.selectedComponent.width,
+                    height: appState.selectedComponent.height,
+                    x: appState.selectedComponent.x,
+                    y: appState.selectedComponent.y
+                });
+            }
+        }
+        
+        // 更新组件大小（内部方法）
+        function updateComponentSizeInternal(id, width, height) {
+            // 找到组件并更新大小
+            const component = findComponent(id);
+            if (component) {
+                component.width = width;
+                component.height = height;
+                
+                // 更新DOM元素大小
+                const element = document.querySelector(`.component[data-id="${id}"]`);
+                if (element) {
+                    element.style.width = `${width}px`;
+                    element.style.height = `${height}px`;
+                }
+                
+                // 更新属性面板
+                if (appState.selectedComponent && appState.selectedComponent.id === id) {
+                    document.getElementById('property-width').value = width;
+                    document.getElementById('property-height').value = height;
+                }
+            }
+        }
+        
+        // 更新组件树
+        function updateComponentTree() {
+            const treeContainer = document.getElementById('component-tree');
+            treeContainer.innerHTML = '';
+            
+            // 遍历所有组件
+            appState.components.forEach(component => {
+                const treeItem = createTreeItem(component, 0);
+                treeContainer.appendChild(treeItem);
+            });
+        }
+        
+        // 创建组件树节点
+        function createTreeItem(component, level) {
+            const item = document.createElement('div');
+            item.className = `tree-node ${appState.selectedComponent?.id === component.id ? 'selected' : ''}`;
+            item.dataset.id = component.id;
+            
+            // 添加缩进
+            const indent = document.createElement('span');
+            indent.className = 'tree-indent';
+            indent.style.width = `${level * 16}px`;
+            item.appendChild(indent);
+            
+            // 添加图标
+            const icon = document.createElement('span');
+            icon.className = 'tree-icon';
+            icon.textContent = getComponentIcon(component.type);
+            item.appendChild(icon);
+            
+            // 添加名称
+            const name = document.createElement('span');
+            name.textContent = component.name;
+            item.appendChild(name);
+            
+            // 添加点击事件
+            item.addEventListener('click', () => {
+                selectComponent(component.id);
+            });
+            
+            // 递归添加子组件
+            if (component.children && component.children.length > 0) {
+                const childrenContainer = document.createElement('div');
+                childrenContainer.style.marginLeft = '16px';
+                
+                component.children.forEach(child => {
+                    const childItem = createTreeItem(child, level + 1);
+                    childrenContainer.appendChild(childItem);
+                });
+                
+                item.appendChild(childrenContainer);
+            }
+            
+            return item;
+        }
+        
+        // 获取组件图标
+        function getComponentIcon(type) {
+            const icons = {
+                'window': '🖼️',
+                'label': 'T',
+                'button': '□',
+                'input': 'I',
+                'checkbox': '☑',
+                'radio': '○',
+                'select': '▼',
+                'image': '🖼️',
+                'progressBar': '━',
+                'list': '≡',
+                'panel': '▣',
+                'vbox': '│',
+                'hbox': '─',
+                'grid': '╬'
+            };
+            return icons[type] || '▢';
+        }
+        
+        // 更新组件树选择状态
+        function updateComponentTreeSelection() {
+            document.querySelectorAll('.tree-node').forEach(node => {
+                node.classList.remove('selected');
+                if (node.dataset.id === appState.selectedComponent?.id) {
+                    node.classList.add('selected');
+                }
+            });
+        }
+        
+        // 更新属性面板
+        function updatePropertyPanel() {
+            if (!appState.selectedComponent) {
+                // 清空自定义属性
+                document.getElementById('custom-properties').innerHTML = `
+                    <div style="padding: 10px; color: var(--vs-dark-text-secondary); text-align: center;">
+                        请选择一个组件以查看其属性
+                    </div>
+                `;
+                
+                // 禁用输入框
+                document.getElementById('property-id').value = '';
+                document.getElementById('property-name').value = '';
+                document.getElementById('property-type').value = '';
+                document.getElementById('property-x').value = '';
+                document.getElementById('property-y').value = '';
+                document.getElementById('property-width').value = '';
+                document.getElementById('property-height').value = '';
+                
+                return;
+            }
+            
+            // 填充基本属性
+            document.getElementById('property-id').value = appState.selectedComponent.id;
+            document.getElementById('property-name').value = appState.selectedComponent.name;
+            document.getElementById('property-type').value = getComponentDisplayName(appState.selectedComponent.type);
+            document.getElementById('property-x').value = appState.selectedComponent.x;
+            document.getElementById('property-y').value = appState.selectedComponent.y;
+            document.getElementById('property-width').value = appState.selectedComponent.width;
+            document.getElementById('property-height').value = appState.selectedComponent.height;
+            
+            // 生成自定义属性
+            generateCustomProperties();
+        }
+        
+        // 生成自定义属性
+        function generateCustomProperties() {
+            if (!appState.selectedComponent) return;
+            
+            const container = document.getElementById('custom-properties');
+            container.innerHTML = '';
+            
+            // 根据组件类型生成相应的属性编辑器
+            switch (appState.selectedComponent.type) {
+                case 'label':
+                    addTextProperty('text', '文本内容', container);
+                    break;
+                case 'button':
+                    addTextProperty('text', '按钮文本', container);
+                    addTextProperty('onClick', '点击事件', container);
+                    break;
+                case 'input':
+                    addTextProperty('text', '输入内容', container);
+                    addTextProperty('placeholder', '占位文本', container);
+                    break;
+                case 'checkbox':
+                    addCheckboxProperty('checked', '是否选中', container);
+                    addTextProperty('text', '显示文本', container);
+                    break;
+                case 'radio':
+                    addCheckboxProperty('checked', '是否选中', container);
+                    addTextProperty('text', '显示文本', container);
+                    addTextProperty('group', '分组名称', container);
+                    break;
+                case 'panel':
+                    addTextProperty('title', '面板标题', container);
+                    break;
+                case 'progressBar':
+                    addNumberProperty('value', '当前值', container);
+                    addNumberProperty('max', '最大值', container);
+                    break;
+                case 'vbox':
+                case 'hbox':
+                    addNumberProperty('spacing', '间距', container);
+                    break;
+                case 'grid':
+                    addNumberProperty('rows', '行数', container);
+                    addNumberProperty('cols', '列数', container);
+                    addNumberProperty('cellSpacing', '单元格间距', container);
+                    break;
+            }
+        }
+        
+        // 添加文本属性编辑器
+        function addTextProperty(propertyName, labelText, container) {
+            const item = document.createElement('div');
+            item.className = 'property-item';
+            item.innerHTML = `
+                <div class="property-label">${labelText}</div>
+                <input type="text" id="prop-${propertyName}" value="${appState.selectedComponent?.properties[propertyName] || ''}">
+            `;
+            container.appendChild(item);
+            
+            // 添加事件监听
+            const input = item.querySelector('input');
+            input.addEventListener('input', () => {
+                updateCustomProperty(propertyName, input.value);
+            });
+        }
+        
+        // 添加数字属性编辑器
+        function addNumberProperty(propertyName, labelText, container) {
+            const item = document.createElement('div');
+            item.className = 'property-item';
+            item.innerHTML = `
+                <div class="property-label">${labelText}</div>
+                <input type="number" id="prop-${propertyName}" value="${appState.selectedComponent?.properties[propertyName] || 0}">
+            `;
+            container.appendChild(item);
+            
+            // 添加事件监听
+            const input = item.querySelector('input');
+            input.addEventListener('input', () => {
+                updateCustomProperty(propertyName, parseInt(input.value) || 0);
+            });
+        }
+        
+        // 添加复选框属性编辑器
+        function addCheckboxProperty(propertyName, labelText, container) {
+            const item = document.createElement('div');
+            item.className = 'property-item';
+            item.innerHTML = `
+                <div style="display: flex; align-items: center;">
+                    <input type="checkbox" id="prop-${propertyName}" ${appState.selectedComponent?.properties[propertyName] ? 'checked' : ''}>
+                    <label style="margin-left: 5px;" for="prop-${propertyName}">${labelText}</label>
+                </div>
+            `;
+            container.appendChild(item);
+            
+            // 添加事件监听
+            const checkbox = item.querySelector('input');
+            checkbox.addEventListener('change', () => {
+                updateCustomProperty(propertyName, checkbox.checked);
+            });
+        }
+        
+        // 更新自定义属性
+        function updateCustomProperty(propertyName, value) {
+            if (!appState.selectedComponent) return;
+            
+            // 更新组件属性
+            appState.selectedComponent.properties[propertyName] = value;
+            
+            // 更新画布显示
+            updateCanvas();
+            
+            // 通知VSCode扩展
+            notifyVsCode('propertyChanged', {
+                id: appState.selectedComponent.id,
+                property: propertyName,
+                value: value
+            });
+        }
+        
+        // 更新组件属性
+        function updateComponentProperties(e) {
+            if (!appState.selectedComponent) return;
+            
+            const propertyName = e.target.id.replace('property-', '');
+            
+            if (propertyName === 'id') {
+                appState.selectedComponent.id = e.target.value;
+            } else if (propertyName === 'name') {
+                appState.selectedComponent.name = e.target.value;
+                // 更新组件树
+                updateComponentTree();
+            }
+            
+            // 通知VSCode扩展
+            notifyVsCode('propertyChanged', {
+                id: appState.selectedComponent.id,
+                property: propertyName,
+                value: e.target.value
+            });
+        }
+        
+        // 更新组件位置（从属性面板）
+        function updateComponentPosition(e) {
+            if (!appState.selectedComponent) return;
+            
+            const propertyName = e.target.id.replace('property-', '');
+            const value = parseInt(e.target.value) || 0;
+            
+            if (propertyName === 'x') {
+                updateComponentPositionInternal(appState.selectedComponent.id, value, appState.selectedComponent.y);
+            } else if (propertyName === 'y') {
+                updateComponentPositionInternal(appState.selectedComponent.id, appState.selectedComponent.x, value);
+            }
+        }
+        
+        // 更新组件大小（从属性面板）
+        function updateComponentSize(e) {
+            if (!appState.selectedComponent) return;
+            
+            const propertyName = e.target.id.replace('property-', '');
+            const value = parseInt(e.target.value) || 0;
+            
+            if (propertyName === 'width') {
+                updateComponentSizeInternal(appState.selectedComponent.id, value, appState.selectedComponent.height);
+            } else if (propertyName === 'height') {
+                updateComponentSizeInternal(appState.selectedComponent.id, appState.selectedComponent.width, value);
+            }
+        }
+        
+        // 切换网格显示
+        function toggleGrid() {
+            appState.showGrid = !appState.showGrid;
+            const button = document.getElementById('gridToggleBtn');
+            
+            if (appState.showGrid) {
+                appState.canvas.style.backgroundImage = 'linear-gradient(var(--canvas-grid) 1px, transparent 1px), linear-gradient(90deg, var(--canvas-grid) 1px, transparent 1px)';
+                button.style.backgroundColor = 'var(--vs-dark-accent)';
+            } else {
+                appState.canvas.style.backgroundImage = 'none';
+                button.style.backgroundColor = 'var(--vs-dark-panel-bg)';
+            }
+        }
+        
+        // 切换吸附功能
+        function toggleSnap() {
+            appState.snapToGrid = !appState.snapToGrid;
+            const button = document.getElementById('snapToggleBtn');
+            button.style.backgroundColor = appState.snapToGrid ? 'var(--vs-dark-accent)' : 'var(--vs-dark-panel-bg)';
+        }
+        
+        // 保存项目
+        function saveProject() {
+            // 构建HML内容
+            const hmlContent = buildHmlContent();
+            
+            // 发送到VSCode扩展
+            vscode.postMessage({ command: 'save', content: hmlContent });
+        }
+        
+        // 预览项目
+        function previewProject() {
+            // 构建HML内容
+            const hmlContent = buildHmlContent();
+            
+            // 发送到VSCode扩展
+            vscode.postMessage({ command: 'preview', content: hmlContent });
+        }
+        
+        // 生成代码
+        function generateCode() {
+            // 构建HML内容
+            const hmlContent = buildHmlContent();
+            
+            // 收集代码生成选项
+            const language = document.getElementById('code-gen-language').value;
+            const options = {
+                enableProtectedAreas: document.getElementById('enable-protected-areas').checked,
+                generateDebugInfo: document.getElementById('generate-debug-info').checked
+            };
+            
+            // 发送到VSCode扩展
+            vscode.postMessage({
+                command: 'codegen',
+                content: hmlContent,
+                language: language,
+                options: options
+            });
+        }
+        
+        // 构建HML内容
+        function buildHmlContent() {
+            // TODO: 实现HML构建逻辑
+            return '<?xml version="1.0" encoding="UTF-8"?><hml><window id="mainWindow" width="800" height="600"></window></hml>';
+        }
+        
+        // 通知VSCode扩展
+        function notifyVsCode(type, data) {
+            vscode.postMessage({ command: 'notify', type: type, data: data });
+        }
+        
+        // 显示通知
+        function showNotification(message, type = 'info') {
+            // 创建通知元素
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = message;
+            
+            // 添加样式
+            notification.style.position = 'fixed';
+            notification.style.bottom = '20px';
+            notification.style.right = '20px';
+            notification.style.padding = '12px 20px';
+            notification.style.borderRadius = '4px';
+            notification.style.fontSize = '14px';
+            notification.style.zIndex = '10000';
+            notification.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+            notification.style.backgroundColor = type === 'error' ? '#f44336' : 
+                                              type === 'warning' ? '#ff9800' : '#4caf50';
+            notification.style.color = 'white';
+            notification.style.opacity = '0';
+            notification.style.transition = 'opacity 0.3s ease';
+            
+            // 添加到页面
+            document.body.appendChild(notification);
+            
+            // 显示动画
+            setTimeout(() => {
+                notification.style.opacity = '1';
+            }, 10);
+            
+            // 自动关闭
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => {
+                    notification.remove();
+                }, 300);
+            }, 3000);
+        }
+        
+        // 监听来自VSCode扩展的消息
+        window.addEventListener('message', event => {
+            const message = event.data;
+            
+            switch (message.command) {
+                case 'loadHml':
+                    // 加载HML内容
+                    loadHmlContent(message.content);
+                    break;
+                case 'showMessage':
+                    // 显示消息
+                    showNotification(message.text, message.type || 'info');
+                    break;
+                case 'error':
+                    // 显示错误
+                    showNotification('错误: ' + message.text, 'error');
+                    break;
+                case 'codegenProgress':
+                    // 显示代码生成进度
+                    showNotification('代码生成中: ' + message.text, 'info');
+                    break;
+                case 'codegenComplete':
+                    // 显示代码生成完成
+                    showNotification('代码生成完成: ' + message.outputPath, 'success');
+                    break;
+            }
+        });
+        
+        // 加载HML内容
+        function loadHmlContent(hmlContent) {
+            // TODO: 解析HML内容并更新模型
+            console.log('加载HML内容:', hmlContent);
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', initDesigner);
+    </script>
+</body>
+</html>

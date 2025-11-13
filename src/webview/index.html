@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HoneyGUI Designer</title>
+    <link href="styles.css" rel="stylesheet">
+</head>
+<body>
+    <div id="root"></div>
+    <script src="webview.js"></script>
+
+    <script>
+        // 添加错误处理
+        window.addEventListener('error', function(e) {
+            console.error('[HoneyGUI Designer] Global error:', e.error);
+            var errorDiv = document.createElement('div');
+            errorDiv.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#c62828;color:white;padding:10px;z-index:9999;font-family:monospace;font-size:12px;white-space:pre-wrap;';
+            errorDiv.textContent = '错误: ' + e.error.message + '\n' + e.error.stack;
+            document.body.appendChild(errorDiv);
+        });
+
+        window.addEventListener('unhandledrejection', function(e) {
+            console.error('[HoneyGUI Designer] Unhandled promise rejection:', e.reason);
+        });
+
+        // 检查是否加载了 React
+        window.addEventListener('load', function() {
+            console.log('[HoneyGUI Designer] Page loaded');
+            setTimeout(function() {
+                if (!document.getElementById('root').hasChildNodes()) {
+                    console.error('[HoneyGUI Designer] React app did not render!');
+                    var errorDiv = document.createElement('div');
+                    errorDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#c62828;color:white;padding:20px;border-radius:4px;font-family:monospace;';
+                    errorDiv.innerHTML = '<h3>React App 未渲染</h3><p>请检查控制台查看错误详情</p>';
+                    document.body.appendChild(errorDiv);
+                }
+            }, 2000);
+        });
+    </script>
+</body>
+</html>

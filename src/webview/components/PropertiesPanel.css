@@ -1,0 +1,249 @@
+/**
+ * Properties Panel Styles
+ */
+
+.properties-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--vscode-sideBar-background);
+}
+
+.properties-header {
+  height: var(--panel-header-height);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  background-color: var(--vscode-sideBarSectionHeader-background);
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.properties-header h3 {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--vscode-sideBarSectionHeader-foreground);
+}
+
+.properties-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.properties-tabs button {
+  flex: 1;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--vscode-foreground);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.properties-tabs button:hover {
+  background-color: var(--vscode-list-hoverBackground);
+}
+
+.properties-tabs button.active {
+  color: var(--vscode-sideBarTitle-foreground);
+  border-bottom-color: var(--vscode-focusBorder);
+  background-color: var(--vscode-sideBarSectionHeader-background);
+}
+
+.properties-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.no-selection {
+  padding: 16px;
+  text-align: center;
+  color: var(--vscode-descriptionForeground);
+  font-size: 12px;
+}
+
+/* Property groups */
+.property-group {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.property-group:last-child {
+  border-bottom: none;
+}
+
+.property-group-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--vscode-descriptionForeground);
+  margin-bottom: 12px;
+  padding-left: 4px;
+}
+
+/* Property items */
+.property-item {
+  margin-bottom: 12px;
+}
+
+.property-item label {
+  display: block;
+  font-size: 12px;
+  color: var(--vscode-foreground);
+  margin-bottom: 4px;
+  font-weight: 400;
+}
+
+/* Position grid */
+.position-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.position-input {
+  display: flex;
+  flex-direction: column;
+}
+
+.position-input label {
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+
+/* Color picker */
+.color-picker-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.color-input {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.color-text {
+  flex: 1;
+}
+
+/* Checkbox */
+.checkbox-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.checkbox-wrapper input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}
+
+/* Select */
+.select-wrapper {
+  position: relative;
+}
+
+.select-wrapper select {
+  width: 100%;
+  appearance: none;
+  padding: 6px 8px;
+  padding-right: 24px;
+}
+
+.select-arrow {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--vscode-foreground);
+}
+
+/* Textarea */
+.property-textarea {
+  width: 100%;
+  min-height: 60px;
+  padding: 6px 8px;
+  border: 1px solid var(--vscode-input-border);
+  border-radius: 2px;
+  background-color: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  font-family: var(--vscode-font-family);
+  font-size: 13px;
+  resize: vertical;
+}
+
+.property-textarea:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+/* Events panel */
+.events-panel {
+  padding: 16px 0;
+}
+
+.event-item {
+  margin-bottom: 12px;
+}
+
+.event-item label {
+  display: block;
+  font-size: 12px;
+  color: var(--vscode-foreground);
+  margin-bottom: 4px;
+}
+
+.event-handler {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.event-handler input {
+  flex: 1;
+}
+
+.event-handler button {
+  padding: 4px 8px;
+  background-color: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border: none;
+  border-radius: 2px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.event-handler button:hover {
+  background-color: var(--vscode-button-hoverBackground);
+}
+
+/* Disabled */
+input:disabled,
+select:disabled,
+textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Error state */
+.error-input {
+  border-color: var(--vscode-inputValidation-errorBorder) !important;
+  background-color: var(--vscode-inputValidation-errorBackground) !important;
+}
+
+.error-message {
+  color: var(--vscode-errorForeground);
+  font-size: 11px;
+  margin-top: 4px;
+}
