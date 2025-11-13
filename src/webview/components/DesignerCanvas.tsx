@@ -26,6 +26,8 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     setCanvasOffset,
     updateComponent,
     editingMode,
+    canvasSize,
+    canvasBackgroundColor,
   } = useDesignerStore();
 
   const handleCanvasMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -252,44 +254,66 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     }
   };
 
-  // Render grid
+  // Render grid - Optimized professional style with primary/secondary grid lines
   const renderGrid = () => {
     if (!snapToGrid || gridSize <= 0) return null;
 
     const gridElements = [];
     const gridSizePx = gridSize * zoom;
-    const width = 2000;
-    const height = 2000;
+    // 主网格线间隔（通常是次网格线的倍数）
+    const primaryGridInterval = 5; // 增加间隔使网格更清晰
+    const width = canvasSize.width * zoom;
+    const height = canvasSize.height * zoom;
+    
+    // 次网格线样式（更细、更柔和）
+    const secondaryGridStyle = {
+      position: 'absolute' as const,
+      background: 'var(--vscode-editor-background)',
+      opacity: 0.3,
+      pointerEvents: 'none' as const,
+    };
+    
+    // 主网格线样式（稍粗、更明显但不突兀）
+    const primaryGridStyle = {
+      position: 'absolute' as const,
+      background: 'var(--vscode-editor-inactiveSelectionBackground)',
+      opacity: 0.6,
+      pointerEvents: 'none' as const,
+    };
 
+    // 垂直线
     for (let x = 0; x < width; x += gridSizePx) {
+      const isPrimaryLine = x % (gridSizePx * primaryGridInterval) === 0;
+      const lineStyle = isPrimaryLine ? primaryGridStyle : secondaryGridStyle;
+      
       gridElements.push(
         <div
           key={`v-${x}`}
           style={{
-            position: 'absolute',
+            ...lineStyle,
             left: x,
             top: 0,
-            width: 1,
+            width: isPrimaryLine ? 1.2 : 0.8, // 优化线宽，使主网格更明显但不过粗
             height: '100%',
-            background: '#f0f0f0',
-            pointerEvents: 'none',
           }}
         />
       );
     }
 
+    // 水平线
     for (let y = 0; y < height; y += gridSizePx) {
+      const isPrimaryLine = y % (gridSizePx * primaryGridInterval) === 0;
+      const lineStyle = isPrimaryLine ? primaryGridStyle : secondaryGridStyle;
+      
       gridElements.push(
         <div
           key={`h-${y}`}
           style={{
-            position: 'absolute',
+            ...lineStyle,
             left: 0,
             top: y,
             width: '100%',
-            height: 1,
-            background: '#f0f0f0',
-            pointerEvents: 'none',
+            height: isPrimaryLine ? 1.2 : 0.8, // 优化线宽，使主网格更明显但不过粗
           }}
         />
       );
@@ -299,40 +323,48 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
   };
 
   return (
-    <div
-      ref={canvasRef}
-      className="designer-canvas"
-      onMouseDown={handleCanvasMouseDown}
-      onMouseMove={handleComponentMouseMove}
-      onMouseUp={handleComponentMouseUp}
-      onMouseLeave={handleCanvasMouseUp}
-      style={{
-        cursor: isDragging && editingMode === 'select' ? 'grabbing' : editingMode === 'move' ? 'grab' : 'default',
-      }}
-    >
-      {/* Grid */}
-      {renderGrid()}
-
-      {/* Components */}
+    <div className="designer-canvas-container">
       <div
+        ref={canvasRef}
+        className="designer-canvas"
         style={{
-          position: 'absolute',
-          left: canvasOffset.x,
-          top: canvasOffset.y,
-          transform: `scale(${zoom})`,
-          transformOrigin: '0 0',
-          width: '100%',
-          height: '100%',
+          backgroundColor: canvasBackgroundColor,
+          width: `${canvasSize.width}px`,
+          height: `${canvasSize.height}px`,
+          position: 'relative',
+          border: '1px solid var(--vscode-activityBar-border)',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+          cursor: isDragging && editingMode === 'select' ? 'grabbing' : editingMode === 'move' ? 'grab' : 'default',
         }}
+        onMouseDown={handleCanvasMouseDown}
+        onMouseMove={handleComponentMouseMove}
+        onMouseUp={handleComponentMouseUp}
+        onMouseLeave={handleCanvasMouseUp}
       >
-        {components
-          .filter((c) => c.parent === null)
-          .map((component) => renderComponent(component))}
-      </div>
+        {/* Grid */}
+        {renderGrid()}
 
-      {/* Zoom indicator */}
-      <div className="zoom-indicator">
-        {Math.round(zoom * 100)}%
+        {/* Components */}
+        <div
+          style={{
+            position: 'absolute',
+            left: canvasOffset.x,
+            top: canvasOffset.y,
+            transform: `scale(${zoom})`,
+            transformOrigin: '0 0',
+            width: '100%',
+            height: '100%',
+          }}
+        >
+          {components
+            .filter((c) => c.parent === null)
+            .map((component) => renderComponent(component))}
+        </div>
+
+        {/* Zoom indicator */}
+        <div className="zoom-indicator">
+          {Math.round(zoom * 100)}%
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useDesignerStore } from '../store';
 import { Save, Code, Play, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, Grid3x3, MousePointer, Move } from 'lucide-react';
+import CanvasSettings from './CanvasSettings';
 import './Toolbar.css';
 
 const Toolbar: React.FC = () => {
@@ -132,6 +133,7 @@ const Toolbar: React.FC = () => {
           <Grid3x3 size={16} />
           <span>网格</span>
         </button>
+        <CanvasSettings />
       </div>
 
       <div className="toolbar-divider" />

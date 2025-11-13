@@ -23,6 +23,8 @@ export interface DesignerStore extends DesignerState {
   setGridSize: (size: number) => void;
   setSnapToGrid: (snap: boolean) => void;
   setEditingMode: (mode: 'select' | 'move' | 'resize') => void;
+  setCanvasSize: (size: { width: number; height: number }) => void;
+  setCanvasBackgroundColor: (color: string) => void;
 
   // Drag and drop
   startDrag: (componentId: string, mousePos: { x: number; y: number }) => void;
@@ -65,6 +67,8 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   gridSize: 8,
   snapToGrid: true,
   canvasOffset: { x: 0, y: 0 },
+  canvasSize: { width: 1024, height: 768 }, // 默认画布尺寸
+  canvasBackgroundColor: '#ffffff', // 默认画布背景色
   editingMode: 'select',
   undoStack: [],
   redoStack: [],
@@ -109,6 +113,8 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   setGridSize: (size) => set({ gridSize: size }),
   setSnapToGrid: (snap) => set({ snapToGrid: snap }),
   setEditingMode: (mode) => set({ editingMode: mode }),
+  setCanvasSize: (size) => set({ canvasSize: size }),
+  setCanvasBackgroundColor: (color) => set({ canvasBackgroundColor: color }),
 
   // Drag and drop
   startDrag: (componentId, mousePos) => {

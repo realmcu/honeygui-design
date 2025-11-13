@@ -84,6 +84,8 @@ export interface DesignerState {
   gridSize: number;
   snapToGrid: boolean;
   canvasOffset: { x: number; y: number };
+  canvasSize: { width: number; height: number };
+  canvasBackgroundColor: string;
   editingMode: 'select' | 'move' | 'resize';
   undoStack: any[];
   redoStack: any[];
