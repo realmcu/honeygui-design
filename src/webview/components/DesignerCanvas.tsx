@@ -25,6 +25,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     canvasOffset,
     setCanvasOffset,
     updateComponent,
+    removeComponent,
     editingMode,
     canvasSize,
     canvasBackgroundColor,
@@ -94,6 +95,29 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
   const handleComponentMouseUp = () => {
     setDraggedComponent(null);
   };
+
+  // 处理键盘事件，特别是delete键删除选中组件
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 当按下delete或backspace键，并且有选中的组件时，删除该组件
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedComponent) {
+        // 阻止默认行为，避免在某些浏览器中可能的页面后退或其他默认操作
+        e.preventDefault();
+        // 调用store中的removeComponent函数删除选中的组件
+        removeComponent(selectedComponent);
+        // 清除选中状态
+        onComponentSelect(null);
+      }
+    };
+
+    // 添加键盘事件监听器
+    window.addEventListener('keydown', handleKeyDown);
+    
+    // 清理函数，移除事件监听器
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [selectedComponent, removeComponent, onComponentSelect]);
 
   const renderComponent = (component: Component) => {
     const isSelected = selectedComponent === component.id;

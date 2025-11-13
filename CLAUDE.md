@@ -1,86 +1,86 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+本文件为 Claude Code (claude.ai/code) 提供使用该仓库代码时的指导。
 
-## Project Overview
+## 项目概述
 
-HoneyGUI Visual Designer is a VS Code extension that provides a visual drag-and-drop interface for creating HoneyGUI (HoneyGUI Markup Language) UI interfaces. It generates C++/C code for embedded applications with support for protected code regions.
+HoneyGUI Visual Designer 是一个 VS Code 扩展，提供可视化拖放界面来创建 HoneyGUI（HoneyGUI 标记语言）UI 界面。它能生成适用于嵌入式应用的 C++/C 代码，并支持代码保护区功能。
 
-**Key Technologies:**
+**关键技术：**
 - TypeScript 5.3
-- React 18 + ReactDOM + Zustand (for webview UI)
-- VS Code Extension API
-- Webpack 5 (webview build)
-- HML (HoneyGUI Markup Language - custom XML-like format)
+- React 18 + ReactDOM + Zustand（用于 webview UI）
+- VS Code 扩展 API
+- Webpack 5（webview 构建）
+- HML（HoneyGUI 标记语言 - 自定义类 XML 格式）
 
-## Development Commands
+## 开发命令
 
-### Build Commands
+### 构建命令
 ```bash
-# Install dependencies
+# 安装依赖
 npm install
 
-# Compile extension TypeScript (main process)
+# 编译扩展 TypeScript（主进程）
 npm run compile
 
-# Watch extension TypeScript for changes
+# 监听扩展 TypeScript 变化
 npm run watch
 
-# Build webview React app (production)
+# 构建 webview React 应用（生产环境）
 npm run build:webview
 
-# Build webview React app (development)
+# 构建 webview React 应用（开发环境）
 npm run build:webview:dev
 
-# Watch webview for changes
+# 监听 webview 变化
 npm run watch:webview
 
-# Serve webview with dev server (port 3000)
+# 使用开发服务器运行 webview（端口 3000）
 npm run serve:webview
 
-# Lint code
+# 代码检查
 npm run lint
 
-# Run tests
+# 运行测试
 npm test
 
-# Full build before publishing
+# 发布前完整构建
 npm run vscode:prepublish
 ```
 
-### Testing/Running
+### 测试/运行
 ```bash
-# Press F5 in VS Code to launch extension in debug mode
-# OR use watch mode during development:
+# 在 VS Code 中按 F5 启动调试模式的扩展
+# 或在开发期间使用监听模式：
 npm run watch
 
-# Run tests
+# 运行测试
 npm test
 ```
 
-### Packaging
+### 打包
 ```bash
-# Generate VSIX file (requires vsce installed)
+# 生成 VSIX 文件（需要先安装 vsce）
 vsce package
 
-# Output will be: honeygui-visual-designer-{version}.vsix
+# 输出文件为: honeygui-visual-designer-{version}.vsix
 ```
 
-## Architecture Overview
+## 架构概述
 
-### Module Structure
+### 模块结构
 
-The project follows a modular architecture with clear separation between extension logic and webview UI:
+项目采用模块化架构，扩展逻辑与 webview UI 清晰分离：
 
 ```
 src/
-├── extension.ts                    # Extension entry point
+├── extension.ts                    # 扩展入口点
 ├── webview/                        # React webview UI
-│   ├── index.tsx                   # React app entry
-│   ├── App.tsx                     # Main app component
-│   ├── store.ts                    # Zustand state management
-│   ├── types.ts                    # TypeScript types
-│   ├── components/                 # UI components
+│   ├── index.tsx                   # React 应用入口
+│   ├── App.tsx                     # 主应用组件
+│   ├── store.ts                    # Zustand 状态管理
+│   ├── types.ts                    # TypeScript 类型
+│   ├── components/                 # UI 组件
 │   │   ├── Toolbar.tsx
 │   │   ├── ComponentLibrary.tsx
 │   │   ├── DesignerCanvas.tsx
@@ -88,21 +88,21 @@ src/
 │   │   ├── ComponentTree.tsx
 │   │   └── ResourceManager.tsx
 │   └── utils/
-│       └── undoRedo.ts             # Command pattern undo/redo
+│       └── undoRedo.ts             # 命令模式撤销/重做
 ├── designer/
-│   ├── DesignerPanel.ts            # Webview panel management
-│   └── DesignerModel.ts            # Designer data model
+│   ├── DesignerPanel.ts            # Webview 面板管理
+│   └── DesignerModel.ts            # 设计器数据模型
 ├── hml/
-│   ├── HmlController.ts            # HML file operations
-│   ├── HmlParser.ts                # Parse HML to components
-│   └── HmlSerializer.ts            # Serialize components to HML
+│   ├── HmlController.ts            # HML 文件操作
+│   ├── HmlParser.ts                # 解析 HML 到组件
+│   └── HmlSerializer.ts            # 序列化组件到 HML
 ├── codegen/
-│   ├── CodeGenerator.ts            # Abstract generator base
+│   ├── CodeGenerator.ts            # 抽象生成器基类
 │   └── cpp/
-│       └── CppCodeGenerator.ts     # C++ code generation
+│       └── CppCodeGenerator.ts     # C++ 代码生成
 ├── preview/
-│   ├── PreviewService.ts           # Preview management
-│   └── PreviewRunner.ts            # HoneyGUI Runner integration
+│   ├── PreviewService.ts           # 预览管理
+│   └── PreviewRunner.ts            # HoneyGUI Runner 集成
 ├── template/
 │   ├── TemplateManager.ts
 │   ├── ProjectWizard.ts
@@ -111,35 +111,35 @@ src/
     └── ConfigManager.ts
 ```
 
-### State Management
+### 状态管理
 
-**Extension-side**: State managed directly through HmlController and config managers
-**Webview-side**: React + Zustand for UI state management
+**扩展端**：通过 HmlController 和配置管理器直接管理状态
+**Webview 端**：React + Zustand 用于 UI 状态管理
 
-**Key Zustand store features:**
-- Component CRUD operations
-- Selection state
-- Undo/redo (Command pattern with 50-step history)
-- Canvas state (zoom, pan, grid settings)
+**Zustand store 主要功能：**
+- 组件增删改查操作
+- 选择状态
+- 撤销/重做（命令模式，50 步历史）
+- 画布状态（缩放、平移、网格设置）
 
-### Communication Flow
+### 通信流程
 
-1. **Extension → Webview**: Via `postMessage()` with typed messages
-   - `loadHml`: Load designer with HML content
-   - `showMessage`: Display notifications
-   - `error`: Display error messages
+1. **扩展 → Webview**：通过 `postMessage()` 发送带类型的消息
+   - `loadHml`：将 HML 内容加载到设计器
+   - `showMessage`：显示通知
+   - `error`：显示错误消息
 
-2. **Webview → Extension**: Via `vscode.postMessage()`
-   - `save`: Request save operation
-   - `codegen`: Request code generation
-   - `addComponent`/`removeComponent`/`updateComponent`: Component changes
-   - `notify`: User notifications
+2. **Webview → 扩展**：通过 `vscode.postMessage()`
+   - `save`：请求保存操作
+   - `codegen`：请求代码生成
+   - `addComponent`/`removeComponent`/`updateComponent`：组件变更
+   - `notify`：用户通知
 
-### Build Output
+### 构建输出
 
 ```
 out/
-├── extension.js                    # Compiled extension
+├── extension.js                    # 编译后的扩展
 ├── extension.js.map
 ├── hml/
 ├── designer/
@@ -148,35 +148,35 @@ out/
 │   └── cpp/
 │       └── CppCodeGenerator.js
 └── designer/
-    └── webview/                    # React build output
+    └── webview/                    # React 构建输出
         ├── index.html
         ├── styles.css
-        └── webview.js              # 791 KiB React bundle
+        └── webview.js              # 791 KiB React 包
 ```
 
-## Development Guidelines
+## 开发指南
 
-### Adding New UI Components
+### 添加新 UI 组件
 
-1. **Component Definition** (`src/webview/types.ts`):
-   - Add component type to `ComponentDefinition`
-   - Define property schema
+1. **组件定义** (`src/webview/types.ts`)：
+   - 添加组件类型到 `ComponentDefinition`
+   - 定义属性模式
 
-2. **Component Library** (`ComponentLibrary.tsx`):
-   - Add entry to `COMPONENT_LIBRARY`
-   - Provide icon, name, description
+2. **组件库** (`ComponentLibrary.tsx`)：
+   - 添加条目到 `COMPONENT_LIBRARY`
+   - 提供图标、名称、描述
 
-3. **Component Rendering** (`DesignerCanvas.tsx`):
-   - Add rendering case in `renderComponent`
-   - Implement component-specific rendering
+3. **组件渲染** (`DesignerCanvas.tsx`)：
+   - 在 `renderComponent` 中添加渲染分支
+   - 实现组件特定渲染
 
-4. **Code Generation** (`src/codegen/cpp/CppCodeGenerator.ts`):
-   - Add generate method for new component type
-   - Register in main generate loop
+4. **代码生成** (`src/codegen/cpp/CppCodeGenerator.ts`)：
+   - 为新组件类型添加生成方法
+   - 在主生成循环中注册
 
-### HML File Format
+### HML 文件格式
 
-HML is a custom XML-like format:
+HML 是自定义类 XML 格式：
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -193,112 +193,112 @@ HML is a custom XML-like format:
 </hone:HoneyGUI>
 ```
 
-### Protected Code Regions
+### 代码保护区
 
-When generating C++/C code, users can add protected regions using special comments:
+生成 C++/C 代码时，用户可以使用特殊注释添加保护区：
 
 ```cpp
 // HONEYGUI PROTECTED START [unique-id]
-// Your custom code here - preserved during regeneration
+// 您的自定义代码在这里 - 重新生成时保留
 int customVariable = 42;
 // HONEYGUI PROTECTED END [unique-id]
 ```
 
-The code generator (`CppCodeGenerator`) parses existing files and merges protected regions into new generated code.
+代码生成器 (`CppCodeGenerator`) 会解析现有文件，并在生成新代码时合并保护区。
 
-## Key Implementation Details
+## 关键实现细节
 
-### Undo/Redo System
+### 撤销/重做系统
 
-Implements Command Pattern:
+实现命令模式：
 - `AddComponentCommand`
 - `DeleteComponentCommand`
 - `MoveComponentCommand`
 - `UpdatePropertyCommand`
 
-Managed by `CommandManager` with 50-step history. Integrated into Zustand store.
+由 `CommandManager` 管理，50 步历史记录。集成到 Zustand store。
 
-### Designer Canvas
+### 设计器画布
 
-Supports:
-- Drag-and-drop from component library
-- Component selection with visual feedback
-- Position snapping to grid (8px default)
-- Zoom (25% - 800%)
-- Multi-level component nesting
+支持：
+- 从组件库拖放
+- 带视觉反馈的组件选择
+- 位置吸附到网格（默认 8px）
+- 缩放（25% - 800%）
+- 多级组件嵌套
 
-### Keyboard Shortcuts
+### 键盘快捷键
 
-Implemented via React hook (`useKeyboardShortcuts`):
-- Ctrl+S: Save
-- Ctrl+Z: Undo
-- Ctrl+Shift+Z/Ctrl+Y: Redo
-- Delete: Delete selected
-- Ctrl+D: Duplicate
-- Arrow keys: Nudge (1px)
-- Shift+Arrow: Nudge (10px)
+通过 React hook (`useKeyboardShortcuts`) 实现：
+- Ctrl+S：保存
+- Ctrl+Z：撤销
+- Ctrl+Shift+Z/Ctrl+Y：重做
+- Delete：删除选中
+- Ctrl+D：复制
+- 方向键：微调（1px）
+- Shift+方向键：快速移动（10px）
 
-### Extension Commands
+### 扩展命令
 
-- `honeygui.newProject`: Create new project with wizard
-- `honeygui.openDesigner`: Open visual designer
-- `honeygui.codegen`: Generate C++/C code
-- `honeygui.preview`: Launch preview with HoneyGUI Runner
-- `honeygui.openResourceManager`: Open resource browser
-- `honeygui.openDocs`: Open documentation
-- `honeygui.migrateXmlToHml`: Migrate XML files to HML
+- `honeygui.newProject`：使用向导创建新项目
+- `honeygui.openDesigner`：打开可视化设计器
+- `honeygui.codegen`：生成 C++/C 代码
+- `honeygui.preview`：使用 HoneyGUI Runner 启动预览
+- `honeygui.openResourceManager`：打开资源浏览器
+- `honeygui.openDocs`：打开文档
+- `honeygui.migrateXmlToHml`：将 XML 文件迁移到 HML
 
-## VS Code Configuration Settings
+## VS Code 配置设置
 
-The extension contributes these settings (prefix: `honeygui.`):
+扩展提供以下设置（前缀：`honeygui.`）：
 
-- `codegen.language`: Target language (cpp/c)
-- `codegen.outputDir`: Code generation output directory
-- `codegen.outputPath`: Code output path (default: "src")
-- `codegen.cppVersion`: C++ version (default: "c++17")
-- `codegen.enableDebugInfo`: Include debug info in generated code
-- `hml.outputDir`: HML file output directory
-- `preview.runnerPath`: Path to HoneyGUI Runner executable
-- `preview.autoDownload`: Auto-download runner if missing
-- `preview.timeoutMs`: Preview timeout in milliseconds
-- `ui.gridSize`: Grid size for snapping (default: 8)
-- `ui.snapToGrid`: Enable grid snapping
-- `telemetry.enabled`: Enable telemetry collection
-- `preview.autoReload`: Auto-reload preview on changes
+- `codegen.language`：目标语言（cpp/c）
+- `codegen.outputDir`：代码生成输出目录
+- `codegen.outputPath`：代码输出路径（默认："src"）
+- `codegen.cppVersion`：C++ 版本（默认："c++17"）
+- `codegen.enableDebugInfo`：在生成代码中包含调试信息
+- `hml.outputDir`：HML 文件输出目录
+- `preview.runnerPath`：HoneyGUI Runner 可执行文件路径
+- `preview.autoDownload`：缺失时自动下载 runner
+- `preview.timeoutMs`：预览超时（毫秒）
+- `ui.gridSize`：吸附网格大小（默认：8）
+- `ui.snapToGrid`：启用网格吸附
+- `telemetry.enabled`：启用遥测收集
+- `preview.autoReload`：变更时自动重载预览
 
-## Testing
+## 测试
 
-Tests are located in `test/` directory:
-- Unit tests: `test/unit/`
-- Integration tests: `test/integration/`
+测试位于 `test/` 目录：
+- 单元测试：`test/unit/`
+- 集成测试：`test/integration/`
 
-Run tests:
+运行测试：
 ```bash
 npm test
 ```
 
-This compiles TypeScript then runs the test suite.
+这会编译 TypeScript 然后运行测试套件。
 
-## Known Limitations
+## 已知限制
 
-1. **Bundle Size**: React bundle is 791 KiB (larger than recommended 244 KiB). Consider code splitting for production.
+1. **包大小**：React 包为 791 KiB（超过推荐的 244 KiB）。生产环境建议使用代码分割。
 
-2. **Communication**: Webview <-> extension communication needs completion for certain features.
+2. **通信**：Webview <-> 扩展之间的通信需要完善某些功能。
 
-3. **Performance**: React.memo not widely used; consider optimizations for large component trees.
+3. **性能**：未广泛使用 React.memo；大型组件树需考虑优化。
 
-4. **File System**: Resource manager uses mock data; needs real file system integration.
+4. **文件系统**：资源管理器使用模拟数据；需要真实文件系统集成。
 
-## Build System
+## 构建系统
 
-Uses dual build system:
-- **Extension**: TypeScript compiler (tsc) to `out/`
-- **Webview**: Webpack 5 to `out/designer/webview/`
+使用双构建系统：
+- **扩展**：TypeScript 编译器 (tsc) 输出到 `out/`
+- **Webview**：Webpack 5 输出到 `out/designer/webview/`
 
-**Webpack features:**
-- ts-loader for TypeScript compilation
-- css-loader + style-loader (dev) / MiniCssExtractPlugin (prod)
-- HtmlWebpackPlugin for HTML generation
-- Source maps for debugging
+**Webpack 特性：**
+- ts-loader 编译 TypeScript
+- css-loader + style-loader（开发）/ MiniCssExtractPlugin（生产）
+- HtmlWebpackPlugin 生成 HTML
+- Source map 调试
 
-Dev server available on port 3000 for webview development.
+提供端口 3000 的 dev server 用于 webview 开发。
