@@ -323,19 +323,32 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
   };
 
   return (
-    <div className="designer-canvas-container">
+    <div className="designer-canvas-container" style={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      width: '100%',
+      height: '100%'
+    }}>
       <div
         ref={canvasRef}
         className="designer-canvas"
         style={{
-          backgroundColor: canvasBackgroundColor,
-          width: `${canvasSize.width}px`,
-          height: `${canvasSize.height}px`,
-          position: 'relative',
-          border: '1px solid var(--vscode-activityBar-border)',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-          cursor: isDragging && editingMode === 'select' ? 'grabbing' : editingMode === 'move' ? 'grab' : 'default',
-        }}
+            backgroundColor: canvasBackgroundColor || 'var(--vscode-editor-background)', // 使用主题变量作为默认背景
+            width: `${canvasSize.width}px`,
+            height: `${canvasSize.height}px`,
+            position: 'relative',
+            border: '1px solid var(--vscode-panel-border)', // 使用主题变量定义边框
+            borderRadius: '2px', // 轻微的圆角
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2)', // 在深色主题下更强的阴影
+            cursor: isDragging && editingMode === 'select' ? 'grabbing' : editingMode === 'move' ? 'grab' : 'default',
+            backgroundImage: 'linear-gradient(45deg, var(--vscode-editor-inactiveSelectionBackground) 25%, transparent 25%, transparent 75%, var(--vscode-editor-inactiveSelectionBackground) 75%, var(--vscode-editor-inactiveSelectionBackground)), linear-gradient(45deg, var(--vscode-editor-inactiveSelectionBackground) 25%, transparent 25%, transparent 75%, var(--vscode-editor-inactiveSelectionBackground) 75%, var(--vscode-editor-inactiveSelectionBackground))',
+            backgroundSize: '10px 10px',
+            backgroundPosition: '0 0, 5px 5px',
+            backgroundBlendMode: 'overlay',
+            opacity: 1, // 确保画布整体不透明
+            zIndex: 1, // 确保画布在正确的层级
+          }}
         onMouseDown={handleCanvasMouseDown}
         onMouseMove={handleComponentMouseMove}
         onMouseUp={handleComponentMouseUp}
