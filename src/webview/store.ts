@@ -80,8 +80,9 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   },
 
   addComponent: (component) => {
-    const command = new AddComponentCommand(component, get());
-    commandManager.execute(command);
+    const state = get();
+    set({ components: [...state.components, component] });
+    get().saveToFile();
   },
 
   updateComponent: (id, updates) => {
@@ -98,9 +99,11 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     const component = state.components.find((c) => c.id === id);
     if (!component) return;
 
-    const children = state.components.filter((c) => c.parent === id);
-    const command = new DeleteComponentCommand(component, children, state);
-    commandManager.execute(command);
+    // 直接修改状态，不通过命令模式，避免无限递归
+    set((state) => ({
+      components: state.components.filter((c) => c.id !== id && c.parent !== id)
+    }));
+    get().saveToFile();
   },
 
   selectComponent: (id) => set({ selectedComponent: id }),

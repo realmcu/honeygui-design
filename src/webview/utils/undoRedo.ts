@@ -52,7 +52,11 @@ export class DeleteComponentCommand implements Command {
   }
 
   execute(): void {
-    this.store.removeComponent(this.component.id);
+    // 直接修改状态，不通过store的removeComponent方法，避免无限递归
+    this.store.setComponents(
+      this.store.components.filter((c: Component) => c.id !== this.component.id && c.parent !== this.component.id)
+    );
+    this.store.saveToFile();
   }
 
   undo(): void {
@@ -61,7 +65,11 @@ export class DeleteComponentCommand implements Command {
   }
 
   redo(): void {
-    this.store.removeComponent(this.component.id);
+    // 直接修改状态，不通过store的removeComponent方法，避免无限递归
+    this.store.setComponents(
+      this.store.components.filter((c: Component) => c.id !== this.component.id && c.parent !== this.component.id)
+    );
+    this.store.saveToFile();
   }
 
   getName(): string {
