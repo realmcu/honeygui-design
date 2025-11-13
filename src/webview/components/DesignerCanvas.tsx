@@ -20,6 +20,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     draggedComponent,
     setDraggedComponent,
     zoom,
+    setZoom,
     gridSize,
     snapToGrid,
     canvasOffset,
@@ -30,6 +31,50 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     canvasSize,
     canvasBackgroundColor,
   } = useDesignerStore();
+
+  // 处理鼠标滚轮事件，实现Ctrl+鼠标滚轮缩放画布
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    // 检查是否按住了Ctrl键（在Mac上也支持Cmd键）
+    if (e.ctrlKey || e.metaKey) {
+      // 确保阻止默认行为
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // 计算缩放增量
+      const scaleAmount = e.deltaY > 0 ? -0.1 : 0.1;
+      const newZoom = zoom + scaleAmount;
+      
+      // 限制缩放范围
+      const clampedZoom = Math.max(0.1, Math.min(5, newZoom));
+      
+      // 更新缩放值
+      setZoom(clampedZoom);
+      
+      // 调试日志（开发环境下可以取消注释）
+      // console.log(`Zoom changed: ${zoom.toFixed(2)} -> ${clampedZoom.toFixed(2)}`);
+    }
+  };
+  
+  // 添加全局鼠标事件监听，确保Ctrl键状态正确检测
+  useEffect(() => {
+    const handleGlobalWheel = (e: WheelEvent) => {
+      // 当鼠标在画布上且按住Ctrl键时，确保事件被正确处理
+      if ((e.ctrlKey || e.metaKey) && canvasRef.current?.contains(e.target as Node)) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+    
+    // 添加全局监听作为备用机制
+    window.addEventListener('wheel', handleGlobalWheel, { passive: false });
+    
+    return () => {
+      window.removeEventListener('wheel', handleGlobalWheel);
+    };
+  }, []);
+
+  // 在画布上显示缩放提示（当鼠标悬停时）
+  const [showZoomHint, setShowZoomHint] = useState(false);
 
   const handleCanvasMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === canvasRef.current) {
@@ -358,27 +403,59 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
         ref={canvasRef}
         className="designer-canvas"
         style={{
-            backgroundColor: canvasBackgroundColor || 'var(--vscode-editor-background)', // 使用主题变量作为默认背景
+            backgroundColor: canvasBackgroundColor || 'var(--vscode-editor-background)',
             width: `${canvasSize.width}px`,
             height: `${canvasSize.height}px`,
             position: 'relative',
-            border: '1px solid var(--vscode-panel-border)', // 使用主题变量定义边框
-            borderRadius: '2px', // 轻微的圆角
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2)', // 在深色主题下更强的阴影
+            border: '1px solid var(--vscode-panel-border)',
+            borderRadius: '2px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2)',
             cursor: isDragging && editingMode === 'select' ? 'grabbing' : editingMode === 'move' ? 'grab' : 'default',
             backgroundImage: 'linear-gradient(45deg, var(--vscode-editor-inactiveSelectionBackground) 25%, transparent 25%, transparent 75%, var(--vscode-editor-inactiveSelectionBackground) 75%, var(--vscode-editor-inactiveSelectionBackground)), linear-gradient(45deg, var(--vscode-editor-inactiveSelectionBackground) 25%, transparent 25%, transparent 75%, var(--vscode-editor-inactiveSelectionBackground) 75%, var(--vscode-editor-inactiveSelectionBackground))',
             backgroundSize: '10px 10px',
             backgroundPosition: '0 0, 5px 5px',
             backgroundBlendMode: 'overlay',
-            opacity: 1, // 确保画布整体不透明
-            zIndex: 1, // 确保画布在正确的层级
+            opacity: 1,
+            zIndex: 1,
+            // 确保滚轮事件能够正确触发
+            touchAction: 'none',
+            WebkitUserSelect: 'none',
+            msUserSelect: 'none',
+            userSelect: 'none',
           }}
         onMouseDown={handleCanvasMouseDown}
         onMouseMove={handleComponentMouseMove}
         onMouseUp={handleComponentMouseUp}
-        onMouseLeave={handleCanvasMouseUp}
+        // 使用捕获模式绑定滚轮事件，确保优先处理
+        onWheel={(e) => {
+          e.stopPropagation();
+          handleWheel(e);
+        }}
+        onMouseEnter={() => setShowZoomHint(true)}
+        onMouseLeave={(e) => {
+          setShowZoomHint(false);
+          handleCanvasMouseUp();
+        }}
       >
-        {/* Grid */}
+          {/* 缩放提示 */}
+          {showZoomHint && (
+            <div className="zoom-hint" style={{
+              position: 'absolute',
+              top: '10px',
+              right: '10px',
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              color: 'white',
+              padding: '5px 10px',
+              borderRadius: '4px',
+              fontSize: '12px',
+              pointerEvents: 'none',
+              zIndex: 1000
+            }}>
+              Ctrl+滚轮缩放 ({Math.round(zoom * 100)}%)
+            </div>
+          )}
+          
+          {/* Grid */}
         {renderGrid()}
 
         {/* Components */}
