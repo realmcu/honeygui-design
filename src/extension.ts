@@ -4,7 +4,7 @@ import { PreviewService } from './preview/PreviewService';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
-import { CreateProjectPanel } from './project/CreateProjectPanel';
+import { CreateProjectPanel } from './designer/CreateProjectPanel';
 
 // 全局状态变量
 let isLoading = false;
@@ -437,7 +437,7 @@ export function activate(context: vscode.ExtensionContext) {
             const welcomeItems: vscode.TreeItem[] = [];
             
             const newProjectItem = new vscode.TreeItem('新建项目', vscode.TreeItemCollapsibleState.None);
-            newProjectItem.command = { command: 'honeygui.newProject', title: '新建项目' };
+            newProjectItem.command = { command: 'honeygui.createProject', title: '新建项目' };
             welcomeItems.push(newProjectItem);
             
             const openProjectItem = new vscode.TreeItem('打开项目', vscode.TreeItemCollapsibleState.None);
@@ -779,80 +779,9 @@ export function activate(context: vscode.ExtensionContext) {
             }
         }),
         
-        // 创建项目命令
-        vscode.commands.registerCommand('honeygui.createProject', async () => {
-            try {
-                const projectName = await vscode.window.showInputBox({
-                    prompt: '输入项目名称',
-                    placeHolder: 'honeygui-app'
-                });
-                
-                if (projectName) {
-                    const options: vscode.OpenDialogOptions = {
-                        canSelectFolders: true,
-                        canSelectFiles: false,
-                        openLabel: '选择项目存放位置'
-                    };
-                    
-                    const result = await vscode.window.showOpenDialog(options);
-                    if (result && result.length > 0) {
-                        const folderPath = result[0].fsPath;
-                        const projectPath = path.join(folderPath, projectName);
-                        
-                        // 简单的项目创建逻辑
-                        try {
-                            fs.mkdirSync(projectPath, { recursive: true });
-                            fs.mkdirSync(path.join(projectPath, 'ui'), { recursive: true });
-                            fs.mkdirSync(path.join(projectPath, 'src'), { recursive: true });
-                            fs.mkdirSync(path.join(projectPath, 'assets'), { recursive: true });
-                            
-                            // 创建基本文件
-                            const hmlContent = `<!-- ${projectName} UI定义 -->
-<hml page id="${projectName}" width="360" height="640">
-  <container id="root" layout="column" padding="16">
-    <text id="title" value="${projectName}" fontSize="24" marginTop="16" align="center"/>
-    <button id="helloButton" text="点击我" marginTop="32" align="center" onClick="OnHelloButtonClick"/>
-  </container>
-</hml>`;
-                            fs.writeFileSync(path.join(projectPath, 'ui', `${projectName}.hml`), hmlContent, 'utf8');
-                            
-                            const cppContent = `// ${projectName} 主程序
-
-#include <iostream>
-
-// <honeygui-protect-begin:handler>
-void OnHelloButtonClick() {
-    std::cout << "Hello, HoneyGUI!" << std::endl;
-}
-// <honeygui-protect-end:handler>
-
-int main() {
-    std::cout << "${projectName} 启动中..." << std::endl;
-    return 0;
-}`;
-                            fs.writeFileSync(path.join(projectPath, 'src', 'main.cpp'), cppContent, 'utf8');
-                            
-                            vscode.window.showInformationMessage(`项目创建成功: ${projectPath}`);
-                            
-                            // 询问是否打开项目
-                            const action = await vscode.window.showInformationMessage(
-                              '项目创建成功!',
-                              '打开项目',
-                              '稍后打开'
-                            );
-                            
-                            if (action === '打开项目') {
-                              await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(projectPath), false);
-                            }
-                        } catch (error) {
-                            vscode.window.showErrorMessage(`创建项目失败: ${error instanceof Error ? error.message : String(error)}`);
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error('创建项目失败:', error);
-                vscode.window.showErrorMessage(`创建项目失败: ${error instanceof Error ? error.message : '未知错误'}`);
-            }
+        // 创建项目命令 - 调用CreateProjectPanel显示项目创建配置界面
+        vscode.commands.registerCommand('honeygui.createProject', () => {
+            CreateProjectPanel.createOrShow(context);
         }),
 
         // 生成代码命令
