@@ -30,11 +30,56 @@
     "onCommand:honeygui.openResourceManager",
     "onCommand:honeygui.openDocs",
     "onCommand:honeygui.migrateXmlToHml",
+    "onView:honeygui.welcome",
+    "onView:honeygui.quick",
     "onWorkspaceContains:**/*.hml"
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "honeygui-explorer",
+          "title": "HoneyGUI Visual Designer",
+          "icon": "resources/honeygui-icon.svg",
+          "priority": 100
+        }
+      ]
+    },
+    "views": {
+      "honeygui-explorer": [
+        {
+          "id": "honeygui.welcome",
+          "name": "WELCOME",
+          "icon": "$(home)"
+        },
+        {
+          "id": "honeygui.quick",
+          "name": "QUICK",
+          "icon": "$(play)"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "honeygui.switchView",
+          "when": "view == honeygui.welcome",
+          "group": "navigation@1"
+        },
+        {
+          "command": "honeygui.switchView",
+          "when": "view == honeygui.quick",
+          "group": "navigation@1"
+        }
+      ]
+    },
     "commands": [
+      {
+        "command": "honeygui.switchView",
+        "title": "Switch View",
+        "icon": "$(swap-horizontal)"
+      },
       {
         "command": "honeygui.newProject",
         "title": "HoneyGUI: New Project",
@@ -69,6 +114,45 @@
         "command": "honeygui.migrateXmlToHml",
         "title": "HoneyGUI: Migrate XML to HML",
         "category": "HoneyGUI"
+      },
+      {
+        "command": "honeygui.openProject",
+        "title": "Open Project",
+        "category": "HoneyGUI"
+      },
+      {
+        "command": "honeygui.openRecent",
+        "title": "Open Recent",
+        "category": "HoneyGUI"
+      },
+      {
+        "command": "honeygui.showCreateProjectForm",
+        "title": "Create Project",
+        "category": "HoneyGUI"
+      },
+      {
+        "command": "honeygui.openSettings",
+        "title": "Settings",
+        "category": "HoneyGUI",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "honeygui.startProject",
+        "title": "Start",
+        "category": "HoneyGUI",
+        "icon": "$(play)"
+      },
+      {
+        "command": "honeygui.stopProject",
+        "title": "Stop",
+        "category": "HoneyGUI",
+        "icon": "$(stop)"
+      },
+      {
+        "command": "honeygui.restartProject",
+        "title": "Restart",
+        "category": "HoneyGUI",
+        "icon": "$(refresh)"
       }
     ],
     "configuration": {
