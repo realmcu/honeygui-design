@@ -146,13 +146,16 @@ export class CreateProjectPanel {
                 isLoading: true
             });
 
-            // 模拟项目创建过程（实际实现中应该调用项目脚手架逻辑）
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            // 显示状态通知
+            vscode.window.showInformationMessage('Creating project...');
 
             const projectPath = path.join(formData.saveLocation, formData.projectName);
 
             // 创建项目目录结构
             fs.mkdirSync(projectPath, { recursive: true });
+            fs.mkdirSync(path.join(projectPath, 'ui'), { recursive: true });
+            fs.mkdirSync(path.join(projectPath, 'src'), { recursive: true });
+            fs.mkdirSync(path.join(projectPath, 'assets'), { recursive: true });
 
             // 创建基本项目配置文件
             const projectConfig = {
@@ -170,19 +173,32 @@ export class CreateProjectPanel {
                 JSON.stringify(projectConfig, null, 2)
             );
 
-            // 创建基本的项目结构
-            fs.mkdirSync(path.join(projectPath, 'src'), { recursive: true });
-            fs.mkdirSync(path.join(projectPath, 'assets'), { recursive: true });
-            fs.mkdirSync(path.join(projectPath, 'styles'), { recursive: true });
+            // 创建HML页面文件
+            const hmlContent = `<!-- ${formData.projectName} UI定义 -->
+<hml page id="${formData.projectName}" width="${formData.resolution.split('X')[0]}" height="${formData.resolution.split('X')[1]}">
+  <container id="root" layout="column" padding="16">
+    <text id="title" value="${formData.projectName}" fontSize="24" marginTop="16" align="center"/>
+    <button id="helloButton" text="点击我" marginTop="32" align="center" onClick="OnHelloButtonClick"/>
+  </container>
+</hml>`;
+            fs.writeFileSync(path.join(projectPath, 'ui', `${formData.projectName}.hml`), hmlContent, 'utf8');
+            
+            // 创建C++源文件
+            const cppContent = `// ${formData.projectName} 主程序
 
-            // 创建示例主页面
-            fs.writeFileSync(
-                path.join(projectPath, 'src', 'main.hml'),
-                `<div class="container">
-    <text class="title">Welcome to ${formData.projectName}</text>
-    <button class="btn">Click Me</button>
-</div>`
-            );
+#include <iostream>
+
+// <honeygui-protect-begin:handler>
+void OnHelloButtonClick() {
+    std::cout << "Hello, ${formData.projectName}!" << std::endl;
+}
+// <honeygui-protect-end:handler>
+
+int main() {
+    std::cout << "${formData.projectName} 启动中..." << std::endl;
+    return 0;
+}`;
+            fs.writeFileSync(path.join(projectPath, 'src', 'main.cpp'), cppContent, 'utf8');
 
             // 通知webview项目创建成功
             this.panel.webview.postMessage({
@@ -488,10 +504,10 @@ export class CreateProjectPanel {
             <div class="form-group">
                 <label for="resolution">Resolution</label>
                 <select id="resolution" class="form-control">
-                    <option value="480x272">480x272</option>
-                    <option value="800x480">800x480</option>
-                    <option value="1280x720">1280x720</option>
-                    <option value="1920x1080">1920x1080</option>
+                    <option value="480X272" selected>480X272</option>
+                    <option value="800X480">800X480</option>
+                    <option value="1280X720">1280X720</option>
+                    <option value="1920X1080">1920X1080</option>
                 </select>
             </div>
 
@@ -513,9 +529,8 @@ export class CreateProjectPanel {
                 </select>
             </div>
 
-            <div class="form-actions">
-                <button type="button" class="btn" id="cancelButton">Cancel</button>
-                <button type="button" class="btn btn-success" id="createButton" disabled>Create</button>
+            <div class="form-actions" style="display: flex; justify-content: center; margin-top: 24px;">
+                <button type="button" class="btn btn-success" id="createButton" disabled style="padding: 10px 24px; font-size: 16px; min-width: 150px;">Create</button>
             </div>
         </form>
     </div>
@@ -536,12 +551,17 @@ export class CreateProjectPanel {
         
         // 监听项目名称变化，自动更新APP ID
         projectNameInput.addEventListener('input', () => {
-            if (appIdInput.value.startsWith('com.example.')) {
-                const projectName = projectNameInput.value.trim();
-                if (projectName) {
-                    // 将项目名称转换为驼峰命名
-                    const formattedName = projectName.replace(/[-_\s]+(.)?/g, (_, c) => c ? c.toUpperCase() : '');
-                    appIdInput.value = "com.example." + formattedName;
+            const projectName = projectNameInput.value.trim();
+            if (projectName) {
+                // 检查是否应该自动更新APP ID（只有当用户未手动修改过默认格式时）
+                const defaultPrefix = "com.example.";
+                const originalDefault = defaultPrefix + "NewProject";
+                
+                if (appIdInput.value === originalDefault || 
+                    (appIdInput.value.startsWith(defaultPrefix) && appIdInput.value !== defaultPrefix + projectName)) {
+                    // 将项目名称转换为适合APP ID的格式
+                    const formattedName = projectName.replace(/[^a-zA-Z0-9]+(.)?/g, (_, c) => c ? c.toUpperCase() : '');
+                    appIdInput.value = defaultPrefix + formattedName;
                 }
             }
             validateForm();
