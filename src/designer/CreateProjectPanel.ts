@@ -145,6 +145,10 @@ export class CreateProjectPanel {
                     color: #969696;
                     font-size: 14px;
                     transition: all 0.2s;
+                    user-select: none;
+                    outline: none;
+                    position: relative;
+                    z-index: 10;
                 }
                 
                 .tab.active {
@@ -256,8 +260,8 @@ export class CreateProjectPanel {
             <h1>Create project</h1>
             
             <div class="tabs">
-                <button class="tab active" onclick="switchTab('empty')">Create empty project</button>
-                <button class="tab" onclick="switchTab('template')">Create template project</button>
+                <button id="tab-empty" class="tab active">Create empty project</button>
+                <button id="tab-template" class="tab">Create template project</button>
             </div>
             
             <div id="empty-tab" class="tab-content" style="display: block;">
@@ -329,27 +333,65 @@ export class CreateProjectPanel {
                 
                 // 切换选项卡
                 function switchTab(tabId) {
+                    console.log('Switching to tab:', tabId);
+                    
                     // 隐藏所有内容
-                    document.querySelectorAll('.tab-content').forEach(content => {
+                    const contents = document.querySelectorAll('.tab-content');
+                    console.log('Found content elements:', contents.length);
+                    contents.forEach(content => {
                         content.style.display = 'none';
                     });
                     
                     // 移除所有选项卡的激活状态
-                    document.querySelectorAll('.tab').forEach(tab => {
+                    const tabs = document.querySelectorAll('.tab');
+                    console.log('Found tab elements:', tabs.length);
+                    tabs.forEach(tab => {
                         tab.classList.remove('active');
                     });
                     
                     // 显示选中的内容
-                    document.getElementById(tabId + '-tab').style.display = 'block';
+                    const contentElement = document.getElementById(tabId + '-tab');
+                    console.log('Content element found:', contentElement !== null);
+                    if (contentElement) {
+                        contentElement.style.display = 'block';
+                    }
                     
                     // 激活选中的选项卡
-                    const activeTab = Array.from(document.querySelectorAll('.tab')).find(tab => tab.onclick.toString().includes(tabId));
+                    const activeTab = document.getElementById('tab-' + tabId);
+                    console.log('Tab element found:', activeTab !== null);
                     if (activeTab) {
                         activeTab.classList.add('active');
                     }
                     
                     validateForm();
                 }
+                
+                // 动态绑定事件监听器，避免内联事件处理程序违反CSP
+                document.addEventListener('DOMContentLoaded', function() {
+                    console.log('DOM content loaded, binding event listeners...');
+                    
+                    // 获取标签按钮并绑定点击事件
+                    const tabEmpty = document.getElementById('tab-empty');
+                    const tabTemplate = document.getElementById('tab-template');
+                    
+                    console.log('Tab buttons found - empty:', tabEmpty !== null, 'template:', tabTemplate !== null);
+                    
+                    if (tabEmpty) {
+                        tabEmpty.addEventListener('click', function() {
+                            console.log('Empty tab clicked');
+                            switchTab('empty');
+                        });
+                    }
+                    
+                    if (tabTemplate) {
+                        tabTemplate.addEventListener('click', function() {
+                            console.log('Template tab clicked');
+                            switchTab('template');
+                        });
+                    }
+                    
+                    console.log('Event listeners bound successfully');
+                });
                 
                 // 选择文件夹
                 function selectFolder() {
