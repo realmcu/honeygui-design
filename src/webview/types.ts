@@ -19,6 +19,14 @@ export interface ComponentStyle {
   borderRadius?: number;
   padding?: number;
   margin?: number;
+  
+  // 视图组件属性
+  overflow?: 'auto' | 'hidden' | 'scroll' | 'visible';
+  
+  // 窗口组件属性
+  title?: string;
+  titleBarHeight?: number;
+  titleBarColor?: string;
 }
 
 export interface ComponentData {
@@ -55,8 +63,9 @@ export type ComponentType =
   | 'switch'
   | 'slider'
   | 'image'
-  | 'container'
-  | 'panel';
+  | 'panel'
+  | 'view'
+  | 'window';
 
 export interface ComponentDefinition {
   type: ComponentType;

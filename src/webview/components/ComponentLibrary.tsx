@@ -78,17 +78,7 @@ const componentDefinitions: ComponentDefinition[] = [
       { name: 'enabled', label: '启用', type: 'boolean', defaultValue: true, group: 'general' },
     ],
   },
-  {
-    type: 'container',
-    name: '容器',
-    icon: '📦',
-    defaultSize: { width: 300, height: 200 },
-    properties: [
-      { name: 'backgroundColor', label: '背景色', type: 'color', defaultValue: '#f5f5f5', group: 'style' },
-      { name: 'padding', label: '内边距', type: 'number', defaultValue: 8, group: 'style' },
-      { name: 'border', label: '边框', type: 'string', group: 'style' },
-    ],
-  },
+
   {
     type: 'panel',
     name: '面板',
@@ -98,6 +88,31 @@ const componentDefinitions: ComponentDefinition[] = [
       { name: 'backgroundColor', label: '背景色', type: 'color', defaultValue: '#ffffff', group: 'style' },
       { name: 'border', label: '边框', type: 'string', defaultValue: '1px solid #ccc', group: 'style' },
       { name: 'borderRadius', label: '圆角', type: 'number', defaultValue: 4, group: 'style' },
+    ],
+  },
+  {
+    type: 'view',
+    name: '视图',
+    icon: '👁️',
+    defaultSize: { width: 350, height: 250 },
+    properties: [
+      { name: 'backgroundColor', label: '背景色', type: 'color', defaultValue: '#ffffff', group: 'style' },
+      { name: 'padding', label: '内边距', type: 'number', defaultValue: 12, group: 'style' },
+      { name: 'overflow', label: '溢出处理', type: 'select', defaultValue: 'auto', options: ['auto', 'hidden', 'scroll'], group: 'style' },
+    ],
+  },
+  {
+    type: 'window',
+    name: '窗口',
+    icon: '🪟',
+    defaultSize: { width: 450, height: 350 },
+    properties: [
+      { name: 'title', label: '窗口标题', type: 'string', defaultValue: '窗口', group: 'general' },
+      { name: 'backgroundColor', label: '背景色', type: 'color', defaultValue: '#ffffff', group: 'style' },
+      { name: 'border', label: '边框', type: 'string', defaultValue: '1px solid #ccc', group: 'style' },
+      { name: 'borderRadius', label: '圆角', type: 'number', defaultValue: 6, group: 'style' },
+      { name: 'titleBarHeight', label: '标题栏高度', type: 'number', defaultValue: 36, group: 'style' },
+      { name: 'titleBarColor', label: '标题栏颜色', type: 'color', defaultValue: '#f0f0f0', group: 'style' },
     ],
   },
 ];

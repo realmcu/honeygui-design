@@ -279,8 +279,9 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
           </div>
         );
 
-      case 'container':
       case 'panel':
+      case 'view':
+      case 'window':
         return (
           <div
             key={component.id}
@@ -288,22 +289,54 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
               ...style,
               border: isSelected
                 ? '2px solid #007ACC'
-                : '1px solid #ccc',
-              background: component.style?.backgroundColor || '#f5f5f5',
-              padding: component.style?.padding || 8,
+                : component.type === 'window' ? (component.style?.border || '1px solid #ccc') : '1px solid #ccc',
+              borderRadius: component.type === 'window' ? (component.style?.borderRadius || 6) : 0,
+              background: component.type === 'window' ? (component.style?.backgroundColor || '#ffffff') : (component.style?.backgroundColor || '#f5f5f5'),
+              padding: component.type === 'window' ? 0 : (component.style?.padding || 8),
+              overflow: component.type === 'view' ? (component.style?.overflow || 'auto') : 'visible',
             }}
             onMouseDown={(e) => handleComponentMouseDown(e, component.id)}
             onClick={handleClick}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
           >
-            <div style={{ fontSize: '12px', opacity: 0.6, marginBottom: '4px' }}>
-              {component.name}
+            {component.type === 'window' && (
+              <div 
+                style={{
+                  height: component.style?.titleBarHeight || 36,
+                  backgroundColor: component.style?.titleBarColor || '#f0f0f0',
+                  borderTopLeftRadius: component.style?.borderRadius || 6,
+                  borderTopRightRadius: component.style?.borderRadius || 6,
+                  padding: '0 12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  borderBottom: '1px solid #e0e0e0',
+                }}
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  handleComponentMouseDown(e, component.id);
+                }}
+              >
+                <span style={{ fontWeight: 'bold', fontSize: '14px' }}>
+                  {component.style?.title || component.name}
+                </span>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#ff6b6b' }}></div>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#ffd93d' }}></div>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#6bcb77' }}></div>
+                </div>
+              </div>
+            )}
+            <div style={{ padding: component.type === 'window' ? '12px' : 0 }}>
+              <div style={{ fontSize: '12px', opacity: 0.6, marginBottom: '4px' }}>
+                {component.name}
+              </div>
+              {component.children?.map((childId) => {
+                const child = components.find((c) => c.id === childId);
+                return child ? renderComponent(child) : null;
+              })}
             </div>
-            {component.children?.map((childId) => {
-              const child = components.find((c) => c.id === childId);
-              return child ? renderComponent(child) : null;
-            })}
           </div>
         );
 
