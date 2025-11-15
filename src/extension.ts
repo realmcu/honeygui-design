@@ -852,9 +852,17 @@ export function activate(context: vscode.ExtensionContext) {
         // 检查当前活动的编辑器是否打开了.hml文件
         const activeEditor = vscode.window.activeTextEditor;
         if (activeEditor && activeEditor.document.uri.fsPath.endsWith('.hml')) {
-            // 可以在这里执行一些针对.hml文件的特殊处理
+            // 自动在设计器中打开HML文件，而不是以文本方式显示
+            DesignerPanel.createOrShow(context, activeEditor.document.uri.fsPath);
         }
     });
+    
+    // 在扩展激活时立即检查活动编辑器中的.hml文件
+    const currentActiveEditor = vscode.window.activeTextEditor;
+    if (currentActiveEditor && currentActiveEditor.document.uri.fsPath.endsWith('.hml')) {
+        // 自动在设计器中打开HML文件
+        DesignerPanel.createOrShow(context, currentActiveEditor.document.uri.fsPath);
+    }
     
     // 当扩展被激活时的通知
     vscode.window.showInformationMessage('HoneyGUI扩展已激活');

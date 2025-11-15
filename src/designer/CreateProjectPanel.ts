@@ -586,10 +586,18 @@ export class CreateProjectPanel {
             // 延迟执行，确保VSCode有足够时间处理文件夹打开操作
             setTimeout(async () => {
                 try {
-                    // 尝试打开主HML文件（假设在项目根目录下有.hml文件）
+                    // 尝试打开主HML文件
                     const hmlFiles = await vscode.workspace.findFiles('**/*.hml', '**/node_modules/**', 1);
                     if (hmlFiles.length > 0) {
+                        const hmlFilePath = hmlFiles[0].fsPath;
+                        
+                        // 首先打开HML文件
                         await vscode.commands.executeCommand('vscode.open', hmlFiles[0]);
+                        
+                        // 然后在设计器中打开HML文件，确保正确激活HML功能
+                        // 导入DesignerPanel并使用它来打开文件
+                        const { DesignerPanel } = await import('../designer/DesignerPanel');
+                        DesignerPanel.createOrShow(this._context, hmlFilePath);
                     }
                     
                     // 启动预览服务
