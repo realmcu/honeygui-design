@@ -580,38 +580,21 @@ export class CreateProjectPanel {
                 text: `Project created successfully: ${projectPath}`
             });
             
-            // 自动打开并激活项目
+            // 在打开文件夹前，将项目信息保存到全局存储
+            // 这样即使在扩展重新加载后，我们也能知道需要激活哪个项目
+            await this._context.globalState.update('pendingProjectActivation', {
+                projectPath: projectPath,
+                projectName: projectName,
+                timestamp: Date.now()
+            });
+
+            // 自动打开项目文件夹
+            // 注意：这会导致VSCode重新加载扩展，当前上下文将失效
             await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(projectPath), false);
-            
-            // 延迟执行，确保VSCode有足够时间处理文件夹打开操作
-            setTimeout(async () => {
-                try {
-                    // 尝试打开主HML文件
-                    const hmlFiles = await vscode.workspace.findFiles('**/*.hml', '**/node_modules/**', 1);
-                    if (hmlFiles.length > 0) {
-                        const hmlFilePath = hmlFiles[0].fsPath;
-                        
-                        // 首先打开HML文件
-                        await vscode.commands.executeCommand('vscode.open', hmlFiles[0]);
-                        
-                        // 然后在设计器中打开HML文件，确保正确激活HML功能
-                        // 导入DesignerPanel并使用它来打开文件
-                        const { DesignerPanel } = await import('../designer/DesignerPanel');
-                        DesignerPanel.createOrShow(this._context, hmlFilePath);
-                    }
-                    
-                    // 启动预览服务
-                    // 注意：这里不直接创建PreviewService实例，而是通过执行命令来启动项目
-                    // 这样可以确保使用的是全局的previewService实例
-                    await vscode.commands.executeCommand('honeygui.startProject');
-                    
-                    // 显示项目已完全激活的消息
-                    vscode.window.showInformationMessage('项目已成功激活！');
-                } catch (error) {
-                    console.error('自动激活项目失败:', error);
-                    vscode.window.showErrorMessage(`自动激活项目失败: ${error instanceof Error ? error.message : '未知错误'}`);
-                }
-            }, 2000); // 2秒延迟
+
+            // 注意：代码执行到这里，扩展会被重新加载
+            // 实际的激活逻辑将在 extension.ts 的 activate 函数中处理
+            // 通过检查 globalState 中的 pendingProjectActivation
             
             // 关闭Webview
             this.dispose();
@@ -702,8 +685,26 @@ A HoneyGUI project created with the following configuration:
 3. Run the preview to see your changes in real-time
 4. Generate code to update the C/C++ implementation
 `;
-        
+
         fs.writeFileSync(path.join(projectPath, 'README.md'), readmeContent, 'utf8');
+
+        // 创建 project.json 项目配置文件
+        const projectConfig = {
+            name: projectName,
+            appId: appId,
+            version: '1.0.0',
+            resolution: resolution,
+            minSdk: minSdk,
+            pixelMode: pixelMode,
+            mainHmlFile: `ui/${projectName}.hml`,
+            created: new Date().toISOString()
+        };
+
+        fs.writeFileSync(
+            path.join(projectPath, 'project.json'),
+            JSON.stringify(projectConfig, null, 2),
+            'utf8'
+        );
     }
 
     /**

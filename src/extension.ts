@@ -543,21 +543,38 @@ export function activate(context: vscode.ExtensionContext) {
                     openLabel: 'Open Project',
                     title: 'Select HoneyGUI Project Folder'
                 };
-                
+
                 const result = await vscode.window.showOpenDialog(options);
                 if (result && result.length > 0) {
                     const projectPath = result[0].fsPath;
-                    
-                    // 验证是否为有效的HoneyGUI项目（检查必要的配置文件）
-                    if (fs.existsSync(path.join(projectPath, 'project.json'))) {
+
+                    // 验证是否为有效的HoneyGUI项目
+                    // 检查标准1：是否存在 project.json（推荐的标准项目结构）
+                    const hasProjectJson = fs.existsSync(path.join(projectPath, 'project.json'));
+
+                    // 检查标准2：是否存在 ui/ 目录，且目录中有 .hml 文件（兼容性支持）
+                    const uiPath = path.join(projectPath, 'ui');
+                    let hasHmlFiles = false;
+                    if (fs.existsSync(uiPath) && fs.statSync(uiPath).isDirectory()) {
+                        const files = fs.readdirSync(uiPath);
+                        hasHmlFiles = files.some(file => file.endsWith('.hml'));
+                    }
+
+                    // 如果满足任一条件，则认为是有效的HoneyGUI项目
+                    if (hasProjectJson || hasHmlFiles) {
                         // 打开文件夹
                         await vscode.commands.executeCommand('vscode.openFolder', result[0], false);
                         vscode.window.showInformationMessage(`Project opened successfully: ${path.basename(projectPath)}`);
-                        
+
                         // 保存到最近项目列表
                         saveRecentProject(projectPath, context);
                     } else {
-                        vscode.window.showErrorMessage('Selected folder is not a valid HoneyGUI project');
+                        // 不满足任一条件，显示错误信息，说明两种验证方式
+                        if (!fs.existsSync(uiPath)) {
+                            vscode.window.showErrorMessage('Selected folder is not a valid HoneyGUI project: missing ui/ directory');
+                        } else {
+                            vscode.window.showErrorMessage('Selected folder is not a valid HoneyGUI project: missing .hml files in ui/ directory');
+                        }
                     }
                 }
             } catch (error) {
@@ -707,46 +724,10 @@ export function activate(context: vscode.ExtensionContext) {
             }
         }),
 
-        // 新建项目命令
-        vscode.commands.registerCommand('honeygui.newProject', async () => {
-            try {
-                // 显示保存对话框，让用户选择项目保存位置
-                const uri = await vscode.window.showSaveDialog({
-                    defaultUri: vscode.Uri.file('untitled.hml'),
-                    filters: {
-                        'HML 文件': ['hml'],
-                        '所有文件': ['*']
-                    }
-                });
-                
-                if (uri) {
-                    // 创建默认的HML内容
-                    const defaultHmlContent = `<?xml version="1.0" encoding="UTF-8"?>
-<hml>
-  <metadata>
-    <title>新HoneyGUI项目</title>
-    <description>使用HoneyGUI设计器创建的新项目</description>
-    <version>1.0.0</version>
-    <author>HoneyGUI用户</author>
-  </metadata>
-  <window id="mainWindow" width="800" height="600" title="HoneyGUI应用">
-    <label id="welcomeLabel" text="欢迎使用HoneyGUI!" x="350" y="280" width="200" height="40" />
-    <button id="okButton" text="确定" x="375" y="350" width="100" height="30" />
-  </window>
-</hml>`;
-                    
-                    // 保存文件
-                    await vscode.workspace.fs.writeFile(uri, Buffer.from(defaultHmlContent, 'utf8'));
-                    
-                    // 打开设计器并加载新建的文件
-                    DesignerPanel.createOrShow(context, uri.fsPath);
-                    
-                    vscode.window.showInformationMessage(`项目已创建: ${path.basename(uri.fsPath)}`);
-                }
-            } catch (error) {
-                console.error('创建新项目失败:', error);
-                vscode.window.showErrorMessage(`创建新项目失败: ${error instanceof Error ? error.message : '未知错误'}`);
-            }
+        // 新建项目命令 - 使用 CreateProjectPanel 提供完整的项目创建向导
+        // 与侧边栏的创建项目功能保持一致
+        vscode.commands.registerCommand('honeygui.newProject', () => {
+            CreateProjectPanel.createOrShow(context);
         }),
 
         // 导入现有项目命令
@@ -873,6 +854,117 @@ export function activate(context: vscode.ExtensionContext) {
             previewService.dispose();
         }
     });
+
+    /**
+     * 检查并处理待激活的项目
+     * 当通过 CreateProjectPanel 创建项目后，项目信息会被保存到 globalState
+     * 扩展重新加载后，需要自动激活该项目
+     */
+    async function checkAndActivatePendingProject() {
+        try {
+            // 从全局存储获取待激活的项目信息
+            const pendingActivation = context.globalState.get<any>('pendingProjectActivation');
+
+            if (pendingActivation && pendingActivation.projectPath) {
+                console.log('检测到待激活项目:', pendingActivation.projectName);
+
+                // 检查是否超时（5分钟内）
+                const now = Date.now();
+                const timestamp = pendingActivation.timestamp || 0;
+                const timeElapsed = now - timestamp;
+                const MAX_ELAPSED_TIME = 5 * 60 * 1000; // 5分钟
+
+                if (timeElapsed > MAX_ELAPSED_TIME) {
+                    console.log('待激活项目已超时，清除记录');
+                    await context.globalState.update('pendingProjectActivation', undefined);
+                    return;
+                }
+
+                // 检查当前工作区是否是待激活的项目
+                const workspaceFolders = vscode.workspace.workspaceFolders;
+                if (workspaceFolders && workspaceFolders.length > 0) {
+                    const currentWorkspace = workspaceFolders[0].uri.fsPath;
+                    const pendingProjectPath = pendingActivation.projectPath;
+
+                    // 检查是否是同一个项目
+                    if (currentWorkspace === pendingProjectPath) {
+                        console.log('工作区匹配，开始自动激活项目');
+
+                        // 显示激活进度
+                        vscode.window.withProgress({
+                            location: vscode.ProgressLocation.Notification,
+                            title: `正在激活项目: ${pendingActivation.projectName}`,
+                            cancellable: false
+                        }, async (progress) => {
+                            try {
+                                progress.report({ increment: 0, message: '查找HML文件...' });
+
+                                // 尝试查找HML文件
+                                const hmlFiles = await vscode.workspace.findFiles('**/*.hml', '**/node_modules/**', 1);
+
+                                if (hmlFiles.length > 0) {
+                                    const hmlFile = hmlFiles[0];
+                                    const hmlFilePath = hmlFile.fsPath;
+
+                                    progress.report({ increment: 30, message: '加载HML文件...' });
+
+                                    // 先打开文件
+                                    await vscode.commands.executeCommand('vscode.open', hmlFile);
+
+                                    progress.report({ increment: 60, message: '打开设计器...' });
+
+                                    // 在设计器中打开
+                                    DesignerPanel.createOrShow(context, hmlFilePath);
+
+                                    progress.report({ increment: 90, message: '启动预览服务...' });
+
+                                    // 启动预览服务
+                                    await vscode.commands.executeCommand('honeygui.startProject');
+
+                                    progress.report({ increment: 100, message: '项目激活完成！' });
+
+                                    // 显示成功消息
+                                    vscode.window.showInformationMessage(`项目 '${pendingActivation.projectName}' 已成功激活！`);
+
+                                    console.log('项目激活完成:', pendingActivation.projectName);
+                                } else {
+                                    console.warn('未找到HML文件，无法激活项目');
+                                    vscode.window.showWarningMessage('未找到HML文件，项目激活不完整');
+                                }
+
+                                // 激活完成后清除待激活标记
+                                await context.globalState.update('pendingProjectActivation', undefined);
+
+                            } catch (error) {
+                                console.error('项目激活失败:', error);
+                                const errorMessage = error instanceof Error ? error.message : '未知错误';
+                                vscode.window.showErrorMessage(`项目激活失败: ${errorMessage}`);
+
+                                // 即使失败也清除标记，避免重复尝试
+                                await context.globalState.update('pendingProjectActivation', undefined);
+                            }
+                        });
+                    } else {
+                        console.log('工作区不匹配，当前:', currentWorkspace, '待激活:', pendingProjectPath);
+                    }
+                } else {
+                    console.log('没有工作区文件夹');
+                }
+            } else {
+                console.log('没有待激活的项目');
+            }
+        } catch (error) {
+            console.error('检查待激活项目时出错:', error);
+            // 出错时清除标记，避免阻塞
+            await context.globalState.update('pendingProjectActivation', undefined);
+        }
+    }
+
+    // 延迟一小段时间后检查待激活项目
+    // 给VSCode一些时间来完成工作区初始化
+    setTimeout(() => {
+        checkAndActivatePendingProject();
+    }, 1000);
 }
 
 // 导出停用函数
