@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import { PreviewService } from '../preview/PreviewService';
 import { TemplateManager } from '../template/TemplateManager';
 
 /**
@@ -579,16 +580,30 @@ export class CreateProjectPanel {
                 text: `Project created successfully: ${projectPath}`
             });
             
-            // 询问是否打开项目
-            const action = await vscode.window.showInformationMessage(
-                'Project created successfully!',
-                'Open Project',
-                'Later'
-            );
+            // 自动打开并激活项目
+            await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(projectPath), false);
             
-            if (action === 'Open Project') {
-                await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(projectPath), false);
-            }
+            // 延迟执行，确保VSCode有足够时间处理文件夹打开操作
+            setTimeout(async () => {
+                try {
+                    // 尝试打开主HML文件（假设在项目根目录下有.hml文件）
+                    const hmlFiles = await vscode.workspace.findFiles('**/*.hml', '**/node_modules/**', 1);
+                    if (hmlFiles.length > 0) {
+                        await vscode.commands.executeCommand('vscode.open', hmlFiles[0]);
+                    }
+                    
+                    // 启动预览服务
+                    // 注意：这里不直接创建PreviewService实例，而是通过执行命令来启动项目
+                    // 这样可以确保使用的是全局的previewService实例
+                    await vscode.commands.executeCommand('honeygui.startProject');
+                    
+                    // 显示项目已完全激活的消息
+                    vscode.window.showInformationMessage('项目已成功激活！');
+                } catch (error) {
+                    console.error('自动激活项目失败:', error);
+                    vscode.window.showErrorMessage(`自动激活项目失败: ${error instanceof Error ? error.message : '未知错误'}`);
+                }
+            }, 2000); // 2秒延迟
             
             // 关闭Webview
             this.dispose();
