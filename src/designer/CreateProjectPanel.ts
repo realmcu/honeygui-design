@@ -272,12 +272,12 @@ export class CreateProjectPanel {
                     </div>
                     
                     <div class="form-group">
-                        <label for="saveLocation">Save location</label>
-                        <div class="input-group">
-                            <input type="text" id="saveLocation" class="form-control" placeholder="Please select a project save path" readonly />
-                            <button class="btn-icon" onclick="selectFolder()">📁</button>
+                            <label for="saveLocation">Save location</label>
+                            <div class="input-group">
+                                <input type="text" id="saveLocation" class="form-control" placeholder="Please select a project save path" />
+                                <button class="btn-icon" id="selectFolderButton">📁</button>
+                            </div>
                         </div>
-                    </div>
                     
                     <div class="form-row">
                         <div class="form-group">
@@ -373,8 +373,12 @@ export class CreateProjectPanel {
                     // 获取标签按钮并绑定点击事件
                     const tabEmpty = document.getElementById('tab-empty');
                     const tabTemplate = document.getElementById('tab-template');
+                    const selectFolderButton = document.getElementById('selectFolderButton');
+                    const saveLocationInput = document.getElementById('saveLocation');
+                    const createButton = document.getElementById('createButton');
                     
                     console.log('Tab buttons found - empty:', tabEmpty !== null, 'template:', tabTemplate !== null);
+                    console.log('Folder button found:', selectFolderButton !== null);
                     
                     if (tabEmpty) {
                         tabEmpty.addEventListener('click', function() {
@@ -390,6 +394,27 @@ export class CreateProjectPanel {
                         });
                     }
                     
+                    if (selectFolderButton) {
+                        selectFolderButton.addEventListener('click', function() {
+                            console.log('Select folder button clicked');
+                            selectFolder();
+                        });
+                    }
+                    
+                    if (saveLocationInput) {
+                        saveLocationInput.addEventListener('input', function() {
+                            console.log('Save location input changed');
+                            validateForm();
+                        });
+                    }
+                    
+                    if (createButton) {
+                        createButton.addEventListener('click', function() {
+                            console.log('Create button clicked');
+                            createProject();
+                        });
+                    }
+                    
                     console.log('Event listeners bound successfully');
                 });
                 
@@ -400,22 +425,31 @@ export class CreateProjectPanel {
                 
                 // 验证表单
                 function validateForm() {
+                    console.log('Validating form...');
                     const projectName = document.getElementById('projectName').value.trim();
                     const saveLocation = document.getElementById('saveLocation').value.trim();
                     const createButton = document.getElementById('createButton');
                     
+                    console.log('Project name:', projectName, 'Save location:', saveLocation);
+                    
                     // 启用或禁用创建按钮
-                    createButton.disabled = !projectName || !saveLocation;
+                    if (createButton) {
+                        createButton.disabled = !projectName || !saveLocation;
+                        console.log('Create button disabled state:', createButton.disabled);
+                    }
                 }
                 
                 // 创建项目
                 function createProject() {
+                    console.log('Creating project...');
                     const projectName = document.getElementById('projectName').value.trim();
                     const saveLocation = document.getElementById('saveLocation').value.trim();
                     const appId = document.getElementById('appId').value.trim();
                     const resolution = document.getElementById('resolution').value;
                     const minSdk = document.getElementById('minSdk').value;
                     const pixelMode = document.getElementById('pixelMode').value;
+                    
+                    console.log('Project config:', { projectName, saveLocation, appId, resolution, minSdk, pixelMode });
                     
                     vscode.postMessage({
                         command: 'createProject',

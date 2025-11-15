@@ -25,6 +25,19 @@ const App: React.FC = () => {
 
   // 安全初始化VSCode API（确保只使用已有的实例）
   useEffect(() => {
+    // 添加错误处理
+    const handleGlobalError = (e: ErrorEvent) => {
+      console.error('[HoneyGUI Designer] Global error:', e.error);
+      const errorDiv = document.createElement('div');
+      errorDiv.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#c62828;color:white;padding:10px;z-index:9999;font-family:monospace;font-size:12px;white-space:pre-wrap;';
+      errorDiv.textContent = '错误: ' + (e.error?.message || 'Unknown error') + '\n' + (e.error?.stack || 'No stack trace');
+      document.body.appendChild(errorDiv);
+    };
+
+    const handleUnhandledRejection = (e: PromiseRejectionEvent) => {
+      console.error('[HoneyGUI Designer] Unhandled promise rejection:', e.reason);
+    };
+
     // 检查是否已经有VSCode API实例
     if (!window.vscodeAPI) {
       console.warn('[HoneyGUI App] VSCode API not initialized yet, will retry...');
@@ -58,10 +71,31 @@ const App: React.FC = () => {
       }
     });
 
+    // 添加错误监听器
+    window.addEventListener('error', handleGlobalError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+    // 检查React是否渲染成功
+    setTimeout(() => {
+      if (!document.getElementById('root')?.hasChildNodes()) {
+        console.error('[HoneyGUI Designer] React app did not render!');
+        const errorDiv = document.createElement('div');
+        errorDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#c62828;color:white;padding:20px;border-radius:4px;font-family:monospace;';
+        errorDiv.innerHTML = '<h3>React App 未渲染</h3><p>请检查控制台查看错误详情</p>';
+        document.body.appendChild(errorDiv);
+      }
+    }, 2000);
+
     // Load existing design if any
     window.vscodeAPI?.postMessage({
       command: 'loadFile',
     });
+
+    // 清理函数
+    return () => {
+      window.removeEventListener('error', handleGlobalError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
   }, [setVSCodeAPI, setComponents]);
 
   const handleCanvasDrop = (e: React.DragEvent) => {

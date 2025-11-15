@@ -76,6 +76,7 @@ export class CreateProjectPanel {
     }
 
     private async selectSaveLocation() {
+        console.log('selectSaveLocation method called');
         const options: vscode.OpenDialogOptions = {
             canSelectFiles: false,
             canSelectFolders: true,
@@ -84,12 +85,23 @@ export class CreateProjectPanel {
             title: 'Select Project Save Location'
         };
 
-        const result = await vscode.window.showOpenDialog(options);
-        if (result && result.length > 0) {
-            this.panel.webview.postMessage({
-                command: 'saveLocationSelected',
-                path: result[0].fsPath
-            });
+        try {
+            console.log('Showing open dialog for folder selection');
+            const result = await vscode.window.showOpenDialog(options);
+            console.log('Dialog closed, result:', result);
+            
+            if (result && result.length > 0) {
+                console.log('Path selected:', result[0].fsPath);
+                this.panel.webview.postMessage({
+                    command: 'saveLocationSelected',
+                    path: result[0].fsPath
+                });
+            } else {
+                console.log('No folder selected');
+            }
+        } catch (error) {
+            console.error('Error in selectSaveLocation:', error);
+            vscode.window.showErrorMessage(`Error selecting folder: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
 
@@ -567,10 +579,18 @@ int main() {
             validateForm();
         });
         
-        // 浏览按钮点击事件
-        document.getElementById('browseButton').addEventListener('click', () => {
-            vscode.postMessage({ command: 'selectSaveLocation' });
-        });
+        // 浏览按钮点击事件 - 修复版本
+        const browseButton = document.getElementById('browseButton');
+        if (browseButton) {
+            browseButton.addEventListener('click', () => {
+                console.log('Browse button clicked, sending selectSaveLocation command');
+                vscode.postMessage({ command: 'selectSaveLocation' });
+            });
+            // 确保按钮可点击
+            browseButton.style.pointerEvents = 'auto';
+        } else {
+            console.error('Browse button element not found');
+        }
         
         // 接收保存位置选择结果
         window.addEventListener('message', event => {
