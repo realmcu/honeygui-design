@@ -125,19 +125,19 @@ export class CreateProjectPanel {
                     color: #d4d4d4;
                     min-height: 100vh;
                 }
-                
+
                 h1 {
                     font-size: 24px;
                     margin-bottom: 20px;
                     color: #ffffff;
                 }
-                
+
                 .tabs {
                     display: flex;
                     border-bottom: 1px solid #3e3e42;
                     margin-bottom: 20px;
                 }
-                
+
                 .tab {
                     padding: 10px 20px;
                     cursor: pointer;
@@ -151,30 +151,30 @@ export class CreateProjectPanel {
                     position: relative;
                     z-index: 10;
                 }
-                
+
                 .tab.active {
                     color: #007acc;
                     border-bottom: 2px solid #007acc;
                 }
-                
+
                 .form-container {
                     background-color: #252526;
                     border: 1px solid #3e3e42;
                     border-radius: 4px;
                     padding: 20px;
                 }
-                
+
                 .form-group {
                     margin-bottom: 20px;
                 }
-                
+
                 label {
                     display: block;
                     margin-bottom: 8px;
                     font-size: 14px;
                     color: #d4d4d4;
                 }
-                
+
                 .form-control {
                     width: 100%;
                     padding: 8px 12px;
@@ -184,22 +184,22 @@ export class CreateProjectPanel {
                     color: #d4d4d4;
                     font-size: 14px;
                 }
-                
+
                 .form-control:focus {
                     outline: none;
                     border-color: #007acc;
                 }
-                
+
                 .input-group {
                     display: flex;
                 }
-                
+
                 .input-group .form-control {
                     flex: 1;
                     border-top-right-radius: 0;
                     border-bottom-right-radius: 0;
                 }
-                
+
                 .btn-icon {
                     padding: 8px 12px;
                     background-color: #0e639c;
@@ -211,15 +211,15 @@ export class CreateProjectPanel {
                     cursor: pointer;
                     font-size: 14px;
                 }
-                
+
                 .btn-icon:hover {
                     background-color: #1177bb;
                 }
-                
+
                 select.form-control {
                     cursor: pointer;
                 }
-                
+
                 .btn-create {
                     width: 100%;
                     padding: 12px;
@@ -233,32 +233,53 @@ export class CreateProjectPanel {
                     transition: background-color 0.2s;
                     margin-top: 10px;
                 }
-                
+
                 .btn-create:hover:not(:disabled) {
                     background-color: #148514;
                 }
-                
+
                 .btn-create:disabled {
                     background-color: #3c3c3c;
                     border-color: #3e3e42;
                     cursor: not-allowed;
                 }
-                
+
                 .form-row {
                     display: grid;
                     grid-template-columns: 1fr 1fr;
                     gap: 20px;
                 }
-                
+
                 @media (max-width: 768px) {
                     .form-row {
                         grid-template-columns: 1fr;
                     }
                 }
+
+                /* 错误消息样式 */
+                .error-message {
+                    background-color: rgba(231, 76, 60, 0.15);
+                    border: 1px solid #e74c3c;
+                    border-radius: 4px;
+                    color: #e74c3c;
+                    padding: 12px;
+                    margin-bottom: 20px;
+                    white-space: pre-line;
+                    font-size: 14px;
+                    line-height: 1.4;
+                }
+
+                .error-message.hidden {
+                    display: none;
+                }
             </style>
         </head>
         <body>
             <h1>Create project</h1>
+
+            <!-- 错误消息显示区域 -->
+            <div id="errorMessage" class="error-message hidden"></div>
+
             
             <div class="tabs">
                 <button id="tab-empty" class="tab active">Create empty project</button>
@@ -430,9 +451,14 @@ export class CreateProjectPanel {
                     const projectName = document.getElementById('projectName').value.trim();
                     const saveLocation = document.getElementById('saveLocation').value.trim();
                     const createButton = document.getElementById('createButton');
-                    
+
                     console.log('Project name:', projectName, 'Save location:', saveLocation);
-                    
+
+                    // 清除之前的错误消息
+                    if (projectName || saveLocation) {
+                        hideError();
+                    }
+
                     // 启用或禁用创建按钮
                     if (createButton) {
                         createButton.disabled = !projectName || !saveLocation;
@@ -479,14 +505,38 @@ export class CreateProjectPanel {
                     validateForm();
                 });
                 
+                // 显示错误消息
+                function showError(message) {
+                    const errorElement = document.getElementById('errorMessage');
+                    errorElement.textContent = message;
+                    errorElement.classList.remove('hidden');
+
+                    // 3秒后自动隐藏
+                    setTimeout(() => {
+                        hideError();
+                    }, 5000);
+                }
+
+                // 隐藏错误消息
+                function hideError() {
+                    const errorElement = document.getElementById('errorMessage');
+                    errorElement.classList.add('hidden');
+                }
+
                 // 监听来自扩展的消息
                 window.addEventListener('message', event => {
                     const message = event.data;
-                    
+
                     switch (message.command) {
                         case 'folderSelected':
                             document.getElementById('saveLocation').value = message.folderPath;
+                            hideError(); // 清除错误消息
                             validateForm();
+                            break;
+                        case 'error':
+                            // 显示错误消息给用户（不使用alert，改用页面内显示）
+                            console.error('Error from extension:', message.text);
+                            showError(message.text);
                             break;
                     }
                 });
@@ -547,23 +597,59 @@ export class CreateProjectPanel {
     private async _createProject(config: any): Promise<void> {
         try {
             const { projectName, saveLocation, appId, resolution, minSdk, pixelMode } = config;
-            
+
+            // 记录日志用于调试
+            console.log(`[CreateProjectPanel] Creating project: projectName=${projectName}, saveLocation=${saveLocation}, appId=${appId}`);
+
             // 验证必填字段
             if (!projectName || !saveLocation || !appId) {
+                console.error('[CreateProjectPanel] Validation failed: Missing required fields');
                 this._panel.webview.postMessage({
                     command: 'error',
-                    text: 'All required fields must be filled'
+                    text: '请填写所有必填字段 (项目名称、保存位置、APP ID)'
                 });
                 return;
             }
-            
-            const projectPath = path.join(saveLocation, projectName);
-            
-            // 检查项目路径是否已存在
-            if (fs.existsSync(projectPath)) {
+
+            // 验证项目名称格式
+            const invalidChars = /[<>:*"?|\\/]/;
+            if (invalidChars.test(projectName)) {
+                console.error(`[CreateProjectPanel] Invalid project name: ${projectName}`);
                 this._panel.webview.postMessage({
                     command: 'error',
-                    text: `Project directory already exists: ${projectPath}`
+                    text: '项目名称包含非法字符，不能包含: < > : * " ? | \\ /'
+                });
+                return;
+            }
+
+            const projectPath = path.join(saveLocation, projectName);
+            console.log(`[CreateProjectPanel] Full project path: ${projectPath}`);
+
+            // 检查项目路径是否已存在（增强检测）
+            try {
+                if (fs.existsSync(projectPath)) {
+                    const stats = fs.statSync(projectPath);
+                    if (stats.isDirectory()) {
+                        console.error(`[CreateProjectPanel] Project directory already exists: ${projectPath}`);
+                        this._panel.webview.postMessage({
+                            command: 'error',
+                            text: `项目已存在: "${projectName}"\n\n目录 "${projectPath}" 已存在。\n\n请选择其他名称或删除现有项目。`
+                        });
+                        return;
+                    } else {
+                        console.error(`[CreateProjectPanel] Path exists but is not a directory: ${projectPath}`);
+                        this._panel.webview.postMessage({
+                            command: 'error',
+                            text: `无法创建项目: "${projectPath}" 已存在且不是一个目录`
+                        });
+                        return;
+                    }
+                }
+            } catch (error) {
+                console.error(`[CreateProjectPanel] Error checking path existence: ${error}`);
+                this._panel.webview.postMessage({
+                    command: 'error',
+                    text: `检查项目路径时出错: ${error instanceof Error ? error.message : '未知错误'}`
                 });
                 return;
             }
