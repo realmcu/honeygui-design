@@ -1,4 +1,5 @@
-import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
 import { CodeGenerator, CodeGeneratorOptions, CodeGenerationResult } from '../CodeGenerator';
 
 // 简化的Component类型定义，用于通过编译
@@ -358,7 +359,12 @@ END
    */
   private async writeFile(fileName: string, content: string): Promise<boolean> {
     try {
-      await vscode.workspace.fs.writeFile(vscode.Uri.file(fileName), Buffer.from(content, 'utf8'));
+      // 使用Node.js的fs模块替代vscode的文件操作API
+      const dirPath = path.dirname(fileName);
+      if (!fs.existsSync(dirPath)) {
+        fs.mkdirSync(dirPath, { recursive: true });
+      }
+      fs.writeFileSync(fileName, content, 'utf8');
       return true;
     } catch (error) {
       console.error(`写入文件失败: ${fileName}`, error);

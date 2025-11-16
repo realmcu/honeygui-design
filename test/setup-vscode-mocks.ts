@@ -1,6 +1,16 @@
 // VSCode API模拟设置文件
 // 用于在测试环境中模拟VSCode扩展API
 
+// 扩展NodeJS.Global接口以支持testHelpers属性
+declare global {
+  namespace NodeJS {
+    interface Global {
+      testHelpers: any;
+      vscode: any;
+    }
+  }
+}
+
 // 创建模拟的VSCode对象
 const vscodeMock = {
   window: {
@@ -111,20 +121,23 @@ beforeEach(() => {
 });
 
 // 添加常用的测试辅助函数
-global.testHelpers = {
-  mockVsCodeCommand: (commandId: string, mockImplementation: any) => {
-    const mockCommand = jest.fn().mockImplementation(mockImplementation);
-    vscodeMock.commands.registerCommand.mockImplementation((id, callback) => {
-      if (id === commandId) {
+Object.defineProperty(global, 'testHelpers', {
+  value: {
+    mockVsCodeCommand: (commandId: string, mockImplementation: any) => {
+      const mockCommand = jest.fn().mockImplementation(mockImplementation);
+      vscodeMock.commands.registerCommand.mockImplementation((id, callback) => {
+        if (id === commandId) {
+          return {
+            callback: mockImplementation,
+            dispose: jest.fn()
+          };
+        }
         return {
-          callback: mockImplementation,
           dispose: jest.fn()
         };
-      }
-      return {
-        dispose: jest.fn()
-      };
-    });
-    return mockCommand;
-  }
-};
+      });
+      return mockCommand;
+    }
+  },
+  writable: true
+});

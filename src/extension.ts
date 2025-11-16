@@ -6,6 +6,94 @@ import * as path from 'path';
 import * as crypto from 'crypto';
 import { CreateProjectPanel } from './designer/CreateProjectPanel';
 
+// 日志记录器
+class Logger {
+    private outputChannel: vscode.OutputChannel;
+    private logLevel: 'debug' | 'info' | 'warn' | 'error' = 'info';
+
+    constructor() {
+        this.outputChannel = vscode.window.createOutputChannel('HoneyGUI Design');
+    }
+
+    private formatMessage(level: string, message: string): string {
+        const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
+        return `[${timestamp}] [${level.toUpperCase()}] ${message}`;
+    }
+
+    private shouldLog(level: string): boolean {
+        const levels = ['debug', 'info', 'warn', 'error'];
+        const currentLevelIndex = levels.indexOf(this.logLevel);
+        const messageLevelIndex = levels.indexOf(level);
+        return messageLevelIndex >= currentLevelIndex;
+    }
+
+    debug(message: string): void {
+        if (this.shouldLog('debug')) {
+            const formatted = this.formatMessage('DEBUG', message);
+            this.outputChannel.appendLine(formatted);
+            console.log(formatted);
+        }
+    }
+
+    info(message: string): void {
+        if (this.shouldLog('info')) {
+            const formatted = this.formatMessage('INFO', message);
+            this.outputChannel.appendLine(formatted);
+            console.log(formatted);
+        }
+    }
+
+    warn(message: string): void {
+        if (this.shouldLog('warn')) {
+            const formatted = this.formatMessage('WARN', message);
+            this.outputChannel.appendLine(formatted);
+            console.warn(formatted);
+        }
+    }
+
+    error(message: string, error?: unknown): void {
+        if (this.shouldLog('error')) {
+            let errorMessage = message;
+            if (error instanceof Error) {
+                errorMessage += `: ${error.message}`;
+                if (error.stack) {
+                    errorMessage += `\n${error.stack}`;
+                }
+            } else if (error) {
+                errorMessage += `: ${String(error)}`;
+            }
+
+            const formatted = this.formatMessage('ERROR', errorMessage);
+            this.outputChannel.appendLine(formatted);
+            console.error(formatted);
+        }
+    }
+
+    setLogLevel(level: 'debug' | 'info' | 'warn' | 'error'): void {
+        this.logLevel = level;
+        this.info(`日志级别已设置为: ${level}`);
+    }
+
+    show(): void {
+        this.outputChannel.show();
+    }
+
+    clear(): void {
+        this.outputChannel.clear();
+    }
+
+    append(message: string): void {
+        this.outputChannel.append(message);
+    }
+
+    appendLine(message: string): void {
+        this.outputChannel.appendLine(message);
+    }
+}
+
+// 全局日志实例
+export const logger = new Logger();
+
 // 全局状态变量
 let isLoading = false;
 let statusBarItem: vscode.StatusBarItem;
@@ -16,16 +104,18 @@ function updateStatus(message: string, isBusy: boolean = false): void {
         statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
         statusBarItem.show();
     }
-    
+
     statusBarItem.text = `$(honeygui-icon) ${message}`;
     statusBarItem.tooltip = `HoneyGUI: ${message}`;
-    
+
     if (isBusy) {
         statusBarItem.text = `$(sync~spin) ${statusBarItem.text}`;
     }
-    
+
     statusBarItem.show();
-    
+
+    logger.debug(`状态更新: ${message} (isBusy: ${isBusy})`);
+
     // 5秒后自动清除非忙碌状态的消息
     if (!isBusy) {
         setTimeout(() => {
@@ -39,12 +129,12 @@ function updateStatus(message: string, isBusy: boolean = false): void {
 // 统一错误处理函数
 function handleError(error: unknown, operation: string): void {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error(`HoneyGUI ${operation} failed:`, error);
-    
+    logger.error(`HoneyGUI ${operation} failed`, error);
+
     // 更新状态
     isLoading = false;
     updateStatus(`Error: ${operation}`, false);
-    
+
     // 显示错误消息
     vscode.window.showErrorMessage(`HoneyGUI: Failed to ${operation.toLowerCase()}. ${errorMessage}`);
 }
@@ -403,7 +493,7 @@ class HoneyguiQuickViewProvider implements vscode.WebviewViewProvider {
  */
 // Honeygui设计器扩展激活函数
 export function activate(context: vscode.ExtensionContext) {
-    console.log('HoneyGUI Visual Designer 扩展已激活');
+    logger.info('HoneyGUI Visual Designer 扩展已激活');
 
     // 立即注册视图提供者 - 放在所有其他逻辑之前
     const welcomeProvider = new HoneyguiWelcomeViewProvider(context);
@@ -483,7 +573,7 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.window.registerTreeDataProvider('honeygui.quick', new QuickViewDataProvider())
     );
 
-    console.log('HoneyGUI: 视图提供者已注册');
+    logger.info('HoneyGUI: 视图提供者已注册');
 
     // 创建预览服务实例
     const previewService = new PreviewService(context);
@@ -492,13 +582,13 @@ export function activate(context: vscode.ExtensionContext) {
 
     // 初始化模板管理器
     const templateManager = new TemplateManager(context);
-    templateManager.loadTemplates().catch(err => console.error('模板加载失败:', err));
+    templateManager.loadTemplates().catch(err => logger.error('模板加载失败', err));
 
     // 尝试激活视图容器以确保视图可见
     setTimeout(() => {
         vscode.commands.executeCommand('workbench.view.extension.honeygui-explorer').then(
-            () => console.log('HoneyGUI: 视图容器激活成功'),
-            (err) => console.log('HoneyGUI: 视图容器可能尚未准备好:', err)
+            () => logger.info('HoneyGUI: 视图容器激活成功'),
+            (err) => logger.warn('HoneyGUI: 视图容器可能尚未准备好', err)
         );
     }, 100);
 
@@ -799,6 +889,84 @@ export function activate(context: vscode.ExtensionContext) {
         // XML转HML迁移命令
         vscode.commands.registerCommand('honeygui.migrateXmlToHml', () => {
             vscode.window.showInformationMessage('HoneyGUI: XML转HML迁移功能即将实现');
+        }),
+
+        // 日志相关命令
+        // 显示日志输出通道
+        vscode.commands.registerCommand('honeygui.showLogs', () => {
+            logger.show();
+            vscode.window.showInformationMessage('HoneyGUI 日志已显示');
+        }),
+
+        // 清空日志
+        vscode.commands.registerCommand('honeygui.clearLogs', () => {
+            logger.clear();
+            vscode.window.showInformationMessage('HoneyGUI 日志已清空');
+        }),
+
+        // 复制日志到剪贴板
+        vscode.commands.registerCommand('honeygui.copyLogs', async () => {
+            try {
+                await logger.copyToClipboard();
+            } catch (error) {
+                vscode.window.showErrorMessage('复制日志失败');
+            }
+        }),
+
+        // 导出日志到文件
+        vscode.commands.registerCommand('honeygui.exportLogs', async () => {
+            try {
+                await logger.exportToFile();
+            } catch (error) {
+                vscode.window.showErrorMessage('导出日志失败');
+            }
+        }),
+
+        // 设置日志级别
+        vscode.commands.registerCommand('honeygui.setLogLevel', async () => {
+            const levels = [
+                { label: 'Debug (最详细)', value: 'debug' as const },
+                { label: 'Info (推荐)', value: 'info' as const },
+                { label: 'Warning', value: 'warn' as const },
+                { label: 'Error (仅错误)', value: 'error' as const }
+            ];
+
+            const selected = await vscode.window.showQuickPick(
+                levels.map(l => l.label),
+                { placeHolder: '选择日志级别' }
+            );
+
+            if (selected) {
+                const level = levels.find(l => l.label === selected)?.value || 'info';
+                logger.setLogLevel(level);
+                vscode.window.showInformationMessage(`日志级别已设置为: ${selected}`);
+            }
+        }),
+
+        // 扩展信息
+        vscode.commands.registerCommand('honeygui.showExtensionInfo', () => {
+            const info = {
+                'Extension': 'HoneyGUI Visual Designer',
+                'Version': context.extension.packageJSON.version || '未知',
+                'Path': context.extensionPath,
+                'Runtime': process.version,
+                'Platform': process.platform
+            };
+
+            const infoText = Object.entries(info)
+                .map(([key, value]) => `${key}: ${value}`)
+                .join('\n');
+
+            logger.info('扩展信息:\n' + infoText);
+            vscode.window.showInformationMessage(
+                `HoneyGUI v${info.Version}`,
+                '查看日志',
+                '确定'
+            ).then(selection => {
+                if (selection === '查看日志') {
+                    logger.show();
+                }
+            });
         })
     );
     

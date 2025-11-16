@@ -1,4 +1,5 @@
-import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
 import { Component } from '../hml/HmlParser';
 import { DesignerModel } from '../designer/DesignerModel';
 
@@ -62,10 +63,10 @@ export abstract class CodeGenerator {
    */
   protected async ensureOutputDirExists(): Promise<boolean> {
     try {
-      const outputDirUri = vscode.Uri.file(this.options.outputDir);
-      const exists = await this.existsAsync(outputDirUri);
-      if (!exists) {
-        await vscode.workspace.fs.createDirectory(outputDirUri);
+      // 检查目录是否存在
+      if (!fs.existsSync(this.options.outputDir)) {
+        // 如果不存在，创建目录
+        fs.mkdirSync(this.options.outputDir, { recursive: true });
       }
       return true;
     } catch (error) {
@@ -74,34 +75,29 @@ export abstract class CodeGenerator {
     }
   }
 
-  /**
-   * 检查文件/目录是否存在
-   */
-  private async existsAsync(uri: vscode.Uri): Promise<boolean> {
-    try {
-      await vscode.workspace.fs.stat(uri);
-      return true;
-    } catch (error) {
-      return false;
-    }
-  }
+  // 移除vscode相关的existsAsync方法，直接使用fs.existsSync
 
   /**
    * 写入文件，支持代码保护区合并
    */
   protected async writeFileWithMerge(filePath: string, content: string): Promise<boolean> {
     try {
-      const fileUri = vscode.Uri.file(filePath);
-      const exists = await this.existsAsync(fileUri);
+      // 确保目录存在
+      const dir = path.dirname(filePath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      
+      const exists = fs.existsSync(filePath);
       
       if (exists && this.options.enableProtectedAreas) {
         // 如果文件存在且启用了保护区，尝试合并
-        const existingContent = Buffer.from(await vscode.workspace.fs.readFile(fileUri)).toString('utf8');
+        const existingContent = fs.readFileSync(filePath, 'utf8');
         const mergedContent = this.mergeWithProtectedAreas(existingContent, content);
-        await vscode.workspace.fs.writeFile(fileUri, Buffer.from(mergedContent, 'utf8'));
+        fs.writeFileSync(filePath, mergedContent, 'utf8');
       } else {
         // 直接写入新文件
-        await vscode.workspace.fs.writeFile(fileUri, Buffer.from(content, 'utf8'));
+        fs.writeFileSync(filePath, content, 'utf8');
       }
       return true;
     } catch (error) {

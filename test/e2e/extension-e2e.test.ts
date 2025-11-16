@@ -1,14 +1,22 @@
 import * as assert from 'assert';
 import * as path from 'path';
 import { runTests } from '@vscode/test-electron';
-import { describe, it, before, after } from '@jest/globals';
+import { describe, it, beforeAll, afterAll } from '@jest/globals';
 
 describe('HoneyGUI Extension E2E Tests', () => {
   // 注意：这些测试需要使用VSCode的测试API运行
   // 这里我们主要定义测试函数，实际运行将通过专门的测试脚本
   
-  it('should run VSCode extension tests', async function() {
-    this.timeout(30000); // 给予足够的超时时间
+  beforeAll(() => {
+    // 测试前的设置
+  });
+
+  afterAll(() => {
+    // 测试后的清理
+  });
+  
+  it('should run VSCode extension tests', async () => {
+    // Jest中的超时设置可以在配置中完成，这里使用默认超时
     
     try {
       // 扩展根目录路径

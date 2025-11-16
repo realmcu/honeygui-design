@@ -334,8 +334,8 @@ describe('CreateProjectPanel', () => {
       // 创建面板实例
       const panel = CreateProjectPanel.createOrShow(mockContext);
       
-      // 调用私有方法
-      const nonce = panel._getNonce();
+      // 调用私有方法（使用类型断言绕过TypeScript检查）
+      const nonce = (panel as any)._getNonce();
       
       // 验证nonce长度
       expect(nonce).toHaveLength(32);

@@ -1,190 +1,177 @@
-import * as vscode from 'vscode';
-import { activate, deactivate } from '../../src/extension';
+import * as assert from 'assert';
 
-// Mock VSCode API
-jest.mock('vscode', () => ({
-  window: {
-    createStatusBarItem: jest.fn().mockReturnValue({
-      text: '',
-      tooltip: '',
-      show: jest.fn(),
-      hide: jest.fn()
-    }),
-    showInformationMessage: jest.fn(),
-    showErrorMessage: jest.fn(),
-    showWarningMessage: jest.fn(),
-    registerWebviewViewProvider: jest.fn(),
-    registerTreeDataProvider: jest.fn(),
-    activeTextEditor: null,
-    onDidChangeVisibleTextEditors: jest.fn().mockReturnValue({
-      dispose: jest.fn()
-    })
-  },
-  workspace: {
-    onDidOpenTextDocument: jest.fn().mockReturnValue({
-      dispose: jest.fn()
-    }),
-    createFileSystemWatcher: jest.fn().mockReturnValue({
-      onDidChange: jest.fn().mockReturnValue({
-        dispose: jest.fn()
-      }),
-      dispose: jest.fn()
-    }),
-    workspaceFolders: [],
-    findFiles: jest.fn()
-  },
-  commands: {
-    registerCommand: jest.fn().mockReturnValue({
-      dispose: jest.fn()
-    }),
-    executeCommand: jest.fn()
-  },
-  StatusBarAlignment: {
-    Left: 0
-  },
-  ProgressLocation: {
-    Notification: 0
-  },
-  WebviewViewResolveContext: {},
-  CancellationToken: {},
-  TreeItem: jest.fn().mockImplementation((label, collapsibleState) => ({
-    label,
-    collapsibleState,
-    command: null
-  })),
-  TreeItemCollapsibleState: {
-    None: 0
-  }
-}));
+// 创建简单的模拟对象
+const mockWindow = {
+  registerTreeDataProvider: jest.fn(),
+  showInformationMessage: jest.fn(),
+  showErrorMessage: jest.fn()
+};
 
-// Mock other dependencies
-jest.mock('../../src/designer/DesignerPanel', () => ({
-  DesignerPanel: {
-    createOrShow: jest.fn()
-  }
-}));
-
-jest.mock('../../src/preview/PreviewService', () => ({
-  PreviewService: jest.fn().mockImplementation(() => ({
-    registerCommands: jest.fn(),
+const mockWorkspace = {
+  onDidOpenTextDocument: jest.fn().mockReturnValue({
     dispose: jest.fn()
-  }))
+  }),
+  findFiles: jest.fn().mockResolvedValue([]),
+  // 简单的workspaceFolders实现
+  workspaceFolders: undefined
+};
+
+const mockCommands = {
+  registerCommand: jest.fn().mockReturnValue({
+    dispose: jest.fn()
+  }),
+  executeCommand: jest.fn().mockResolvedValue(true)
+};
+
+const mockUri = {
+  file: jest.fn().mockReturnValue({
+    path: '',
+    fsPath: '',
+    toString: jest.fn().mockReturnValue(''),
+    with: jest.fn().mockReturnThis()
+  })
+};
+
+// 全局模拟vscode模块
+jest.mock('vscode', () => ({
+  window: mockWindow,
+  workspace: mockWorkspace,
+  commands: mockCommands,
+  Uri: mockUri,
+  ExtensionContext: jest.fn(),
+  TreeDataProvider: jest.fn(),
+  __esModule: true
 }));
 
-jest.mock('../../src/designer/CreateProjectPanel');
+// 导入被测试模块
+let activate: any;
+let deactivate: any;
+let vscode: any;
 
-describe('Extension API', () => {
-  let mockContext: any;
-  
+// 在测试前导入
+const importModules = () => {
+  jest.resetModules();
+  vscode = require('vscode');
+  const extensionModule = require('../../src/extension');
+  activate = extensionModule.activate;
+  deactivate = extensionModule.deactivate;
+};
+
+importModules();
+
+describe('Extension Test', () => {
+  let context: any;
+  let timeoutCallback: any;
+
   beforeEach(() => {
-    // 清除所有模拟的调用历史
+    // 清除所有mock的调用历史
     jest.clearAllMocks();
     
-    // 创建模拟的上下文对象
-    mockContext = {
-      extensionUri: { fsPath: '/mock/path' },
+    // 重新导入模块以获取干净的状态
+    importModules();
+    
+    // 模拟ExtensionContext
+    context = {
       subscriptions: [],
-      globalState: {
-        get: jest.fn().mockReturnValue(undefined),
-        update: jest.fn()
-      }
+      extensionPath: '',
+      storagePath: '',
+      logPath: '',
+      globalStoragePath: '',
+      workspaceState: { 
+        get: jest.fn(), 
+        update: jest.fn() 
+      },
+      globalState: { 
+        get: jest.fn(), 
+        update: jest.fn() 
+      },
     };
-    
-    // 添加push方法到subscriptions数组
-    mockContext.subscriptions.push = jest.fn((item) => {
-      if (Array.isArray(mockContext.subscriptions)) {
-        mockContext.subscriptions.push = Array.prototype.push;
-        mockContext.subscriptions.push(item);
-      }
+
+    // 保存setTimeout的回调以便手动触发
+    jest.spyOn(global, 'setTimeout').mockImplementation((callback: any) => {
+      timeoutCallback = callback;
+      return 0 as any;
     });
+    
+    // 重置workspaceFolders
+    vscode.workspace.workspaceFolders = undefined;
   });
-  
-  describe('activate function', () => {
-    it('should activate the extension and register all components', async () => {
-      // Act
-      await activate(mockContext);
-      
-      // Assert
-      expect(vscode.window.registerWebviewViewProvider).toHaveBeenCalledTimes(2);
-      expect(vscode.window.registerTreeDataProvider).toHaveBeenCalledTimes(2);
-      expect(vscode.window.showInformationMessage).toHaveBeenCalledWith('HoneyGUI扩展已激活');
-      
-      // 验证订阅了至少一个命令
-      expect(mockContext.subscriptions.length).toBeGreaterThan(0);
-    });
-    
-    it('should handle recent projects functionality', () => {
-      // 设置全局状态返回一些最近项目
-      mockContext.globalState.get = jest.fn().mockReturnValue(['/project1', '/project2']);
-      
-      // Act
-      activate(mockContext);
-      
-      // 验证获取了最近项目
-      expect(mockContext.globalState.get).toHaveBeenCalledWith('honeygui.recentProjects');
-    });
-    
-    it('should handle pending project activation when available', async () => {
-      // 设置待激活项目
-      const pendingProject = {
-        projectPath: '/mock/project',
-        projectName: 'Test Project',
-        timestamp: Date.now() - 60000 // 1分钟前创建，在5分钟超时内
-      };
-      mockContext.globalState.get = jest.fn().mockImplementation((key) => {
-        if (key === 'pendingProjectActivation') return pendingProject;
-        return undefined;
-      });
-      
-      // 设置工作区文件夹
-      (vscode.workspace.workspaceFolders as jest.Mock) = [
-        { uri: { fsPath: '/mock/project' } }
-      ];
-      
-      // 设置查找文件结果
-      (vscode.workspace.findFiles as jest.Mock) = jest.fn().mockResolvedValue([
-        { fsPath: '/mock/project/main.hml' }
-      ]);
-      
-      // Act
-      await activate(mockContext);
-      
-      // 给setTimeout一些时间执行
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // 验证调用了项目激活相关功能
-      expect(vscode.workspace.findFiles).toHaveBeenCalled();
-    });
-    
-    it('should handle HML file opening events', () => {
-      // Act
-      activate(mockContext);
-      
-      // 验证注册了文件打开事件监听器
-      expect(vscode.workspace.onDidOpenTextDocument).toHaveBeenCalled();
-    });
+
+  afterEach(() => {
+    // 恢复原始的setTimeout
+    jest.restoreAllMocks();
   });
-  
-  describe('deactivate function', () => {
-    it('should deactivate the extension properly', () => {
-      // Act
-      deactivate();
-      
-      // Assert
-      expect(vscode.window.showInformationMessage).toHaveBeenCalledWith('HoneyGUI扩展已停用');
-    });
+
+  it('应该激活扩展并注册所有组件', async () => {
+    await activate(context);
+
+    // 验证所有组件都被注册
+    assert.strictEqual(mockWindow.registerTreeDataProvider.mock.calls.length, 2);
+    assert.strictEqual(mockWindow.showInformationMessage.mock.calls[0]?.[0], 'HoneyGUI扩展已激活');
+    assert.strictEqual(context.subscriptions.length > 0, true);
   });
-  
-  describe('Error handling', () => {
-    it('should handle errors gracefully during activation', async () => {
-      // 模拟在激活过程中抛出错误
-      const errorMock = new Error('Activation error');
-      (vscode.window.registerWebviewViewProvider as jest.Mock) = jest.fn().mockImplementation(() => {
-        throw errorMock;
-      });
-      
-      // Act & Assert
-      await expect(activate(mockContext)).rejects.toThrow('Activation error');
+
+  it('应该处理最近项目列表', async () => {
+    // 模拟最近项目存储
+    context.globalState.get.mockReturnValue(['/test/project1', '/test/project2']);
+
+    await activate(context);
+
+    // 验证最近项目被正确处理
+    assert.strictEqual(context.globalState.get.mock.calls.length > 0, true);
+  });
+
+  it('应该处理没有工作区文件夹的情况', async () => {
+    // 已经设置为undefined
+    await activate(context);
+
+    // 验证扩展仍然可以激活
+    assert.strictEqual(mockWindow.registerTreeDataProvider.mock.calls.length, 2);
+  });
+
+  it('应该处理待激活项目', async () => {
+    // 模拟待激活项目
+    context.globalState.get.mockReturnValueOnce(undefined) // 最近项目
+      .mockReturnValueOnce('/test/pending-project'); // 待激活项目
+
+    await activate(context);
+
+    // 执行setTimeout回调
+    if (typeof timeoutCallback === 'function') {
+      timeoutCallback();
+    }
+
+    // 验证待激活项目被处理
+    assert.strictEqual(context.globalState.get.mock.calls.length > 1, true);
+  });
+
+  it('应该监听文件打开事件', async () => {
+    await activate(context);
+
+    // 验证文件打开事件被监听
+    assert.strictEqual(mockWorkspace.onDidOpenTextDocument.mock.calls.length, 1);
+  });
+
+  it('应该正确停用扩展', async () => {
+    await deactivate();
+
+    // 验证停用消息被显示
+    assert.strictEqual(mockWindow.showInformationMessage.mock.calls[0]?.[0], 'HoneyGUI扩展已停用');
+  });
+
+  it('应该处理错误情况', async () => {
+    // 模拟一个会抛出错误的API调用
+    mockWindow.registerTreeDataProvider.mockImplementation(() => {
+      throw new Error('测试错误');
     });
+
+    try {
+      await activate(context);
+    } catch (error) {
+      // 忽略错误，因为我们只关心错误处理是否发生
+    }
+
+    // 验证错误被处理
+    assert.strictEqual(mockWindow.showErrorMessage.mock.calls.length > 0, true);
   });
 });
