@@ -1,0 +1,49 @@
+module.exports = {
+  preset: 'ts-jest',
+  testEnvironment: 'node',
+  roots: ['<rootDir>/test', '<rootDir>/src'],
+  transform: {
+    '^.+\\.tsx?$': 'ts-jest'
+  },
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
+  testPathIgnorePatterns: ['/node_modules/', '/out/'],
+  verbose: true,
+  testMatch: ['**/test/**/*.test.ts'],
+  moduleNameMapping: {
+    '^@/(.*)$': '<rootDir>/src/$1'
+  },
+  // 配置覆盖率收集
+  collectCoverage: true,
+  collectCoverageFrom: [
+    'src/**/*.{ts,tsx}',
+    '!src/**/*.d.ts',
+    '!src/test/**/*',
+    '!**/node_modules/**'
+  ],
+  coverageDirectory: 'coverage',
+  coverageReporters: [
+    'json',
+    'lcov',
+    'text',
+    'clover',
+    'html'
+  ],
+  coverageThreshold: {
+    global: {
+      branches: 50,
+      functions: 50,
+      lines: 50,
+      statements: 50
+    }
+  },
+  reporters: [
+    'default',
+    ['jest-junit', {
+      outputDirectory: './coverage',
+      outputName: 'junit.xml'
+    }]
+  ],
+  moduleDirectories: ['node_modules', 'src'],
+  // 模拟VSCode API
+  setupFilesAfterEnv: ['<rootDir>/test/setup-vscode-mocks.ts']
+};
