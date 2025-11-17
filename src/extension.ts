@@ -8,16 +8,36 @@ import { CreateProjectPanel } from './designer/CreateProjectPanel';
 
 // 日志记录器
 class Logger {
-    private outputChannel: vscode.OutputChannel;
+    private outputChannel: vscode.LogOutputChannel;
     private logLevel: 'debug' | 'info' | 'warn' | 'error' = 'info';
+    private cachedLogs: string[] = [];
 
     constructor() {
-        this.outputChannel = vscode.window.createOutputChannel('HoneyGUI Design');
+        this.outputChannel = vscode.window.createOutputChannel('HoneyGUI Design', { log: true });
     }
 
     private formatMessage(level: string, message: string): string {
         const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
         return `[${timestamp}] [${level.toUpperCase()}] ${message}`;
+    }
+
+    private cacheAndLog(level: string, formatted: string): void {
+        this.cachedLogs.push(formatted);
+        // LogOutputChannel有专用的日志方法
+        switch (level) {
+            case 'debug':
+                this.outputChannel.debug(formatted);
+                break;
+            case 'info':
+                this.outputChannel.info(formatted);
+                break;
+            case 'warn':
+                this.outputChannel.warn(formatted);
+                break;
+            case 'error':
+                this.outputChannel.error(formatted);
+                break;
+        }
     }
 
     private shouldLog(level: string): boolean {
@@ -30,7 +50,7 @@ class Logger {
     debug(message: string): void {
         if (this.shouldLog('debug')) {
             const formatted = this.formatMessage('DEBUG', message);
-            this.outputChannel.appendLine(formatted);
+            this.cacheAndLog('debug', formatted);
             console.log(formatted);
         }
     }
@@ -38,7 +58,7 @@ class Logger {
     info(message: string): void {
         if (this.shouldLog('info')) {
             const formatted = this.formatMessage('INFO', message);
-            this.outputChannel.appendLine(formatted);
+            this.cacheAndLog('info', formatted);
             console.log(formatted);
         }
     }
@@ -46,7 +66,7 @@ class Logger {
     warn(message: string): void {
         if (this.shouldLog('warn')) {
             const formatted = this.formatMessage('WARN', message);
-            this.outputChannel.appendLine(formatted);
+            this.cacheAndLog('warn', formatted);
             console.warn(formatted);
         }
     }
@@ -64,7 +84,7 @@ class Logger {
             }
 
             const formatted = this.formatMessage('ERROR', errorMessage);
-            this.outputChannel.appendLine(formatted);
+            this.cacheAndLog('error', formatted);
             console.error(formatted);
         }
     }
@@ -88,6 +108,7 @@ class Logger {
 
     appendLine(message: string): void {
         this.outputChannel.appendLine(message);
+        this.cachedLogs.push(message);
     }
 
     /**
@@ -95,7 +116,7 @@ class Logger {
      */
     public async copyToClipboard(): Promise<void> {
         try {
-            const content = this['outputChannel'] ? this['outputChannel']['value'] || '' : '';
+            const content = this.cachedLogs.join('\n');
             await vscode.env.clipboard.writeText(content);
             vscode.window.showInformationMessage('HoneyGUI 日志已复制到剪贴板');
         } catch (error) {
@@ -108,7 +129,7 @@ class Logger {
      * 导出日志到文件
      */
     public async exportToFile(filePath?: string): Promise<void> {
-        const content = this['outputChannel'] ? this['outputChannel']['value'] || '' : '';
+        const content = this.cachedLogs.join('\n');
 
         if (!filePath) {
             const defaultPath = `honeygui-log-${new Date().toISOString().replace(/[:.]/g, '-')}.txt`;
@@ -141,6 +162,8 @@ class Logger {
 
 // 全局日志实例
 export const logger = new Logger();
+
+export { Logger };
 
 // 全局状态变量
 let isLoading = false;

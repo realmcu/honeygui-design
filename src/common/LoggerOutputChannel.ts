@@ -6,9 +6,10 @@ import * as vscode from 'vscode';
  */
 export class LoggerOutputChannel {
     private static instance: LoggerOutputChannel;
-    private outputChannel: vscode.OutputChannel;
+    private outputChannel: vscode.LogOutputChannel;
     private logLevel: 'debug' | 'info' | 'warn' | 'error' = 'debug';
     private isDebugMode: boolean;
+    private cachedLogs: string[] = [];
 
     private constructor() {
         this.outputChannel = vscode.window.createOutputChannel('HoneyGUI Design', { log: true });
@@ -87,6 +88,9 @@ export class LoggerOutputChannel {
 
         const formattedMessage = this.formatMessage(level, message, data);
 
+        // 缓存日志内容
+        this.cachedLogs.push(formattedMessage);
+
         // 输出到输出通道
         switch (level) {
             case 'debug':
@@ -155,8 +159,9 @@ export class LoggerOutputChannel {
      * 清空日志
      */
     public clear(): void {
-        this.outputChannel.clear();
-        this.info('日志已清空');
+        this.cachedLogs = [];
+        // Note: LogOutputChannel没有clear方法
+        this.outputChannel.info('日志已清空（缓存已清除）');
     }
 
     /**
@@ -177,7 +182,7 @@ export class LoggerOutputChannel {
      * 获取所有日志内容（用于复制或导出）
      */
     private getAllContent(): string {
-        return this.outputChannel['value'] || '';
+        return this.cachedLogs.join('\n');
     }
 
     /**
