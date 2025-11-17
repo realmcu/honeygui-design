@@ -60,8 +60,8 @@ let vscodeAPI: VSCodeAPI | null = null;
 const createDefaultScreen = (): Component => {
   const id = generateId();
   return {
-    id,
-    type: 'screen' as ComponentType,
+    id: 'screen_0',
+    type: 'screen',
     name: 'Default Screen',
     position: {
       x: 50,
@@ -69,14 +69,12 @@ const createDefaultScreen = (): Component => {
       width: 1024,
       height: 768
     },
-    properties: {
-      backgroundColor: '#ffffff', // 默认白色背景
-      border: '1px solid #dddddd',
-      borderRadius: '8px'
-    },
+    visible: true,
+    enabled: true,
+    locked: false,
+    zIndex: 0,
     children: [], // 子组件数组
-    parent: null, // 顶级容器
-    isContainer: true // 标识为容器组件
+    parent: null // 顶级容器
   };
 };
 
@@ -117,7 +115,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
           }
           
           // 将当前组件的ID添加到父组件的children数组中
-          if (!newComponents[parentIndex].children.includes(component.id)) {
+          if (newComponents[parentIndex]?.children && !newComponents[parentIndex].children.includes(component.id)) {
             newComponents[parentIndex].children.push(component.id);
           }
         }

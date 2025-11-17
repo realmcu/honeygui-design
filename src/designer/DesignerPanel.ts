@@ -154,9 +154,19 @@ export class DesignerPanel {
             const htmlPath = vscode.Uri.joinPath(onDiskPath, 'index.html');
             let htmlContent = fs.readFileSync(htmlPath.fsPath, 'utf8');
 
+            // 查找带哈希的JS和CSS文件
+            // Webpack生成格式: main.{hash}.js 和 main.{hash}.css
+            const files = fs.readdirSync(onDiskPath.fsPath);
+            const jsFile = files.find(f => /^main\..+\.js$/.test(f));
+            const cssFile = files.find(f => /^main\..+\.css$/.test(f));
+
+            if (!jsFile || !cssFile) {
+                throw new Error('未找到构建后的JS或CSS文件');
+            }
+
             // 生成资源URL (正确方式)
-            const stylesUri = webview.asWebviewUri(vscode.Uri.joinPath(onDiskPath, 'styles.css'));
-            const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(onDiskPath, 'webview.js'));
+            const stylesUri = webview.asWebviewUri(vscode.Uri.joinPath(onDiskPath, cssFile));
+            const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(onDiskPath, jsFile));
 
             // 替换资源URL (使用正确的Webview URI)
             // 注意: index.html 内容很简单:
@@ -410,15 +420,26 @@ export class DesignerPanel {
             // 尝试加载项目配置文件
             let projectConfig = null;
             try {
-                const projectDir = path.dirname(filePath);
-                const projectConfigPath = path.join(projectDir, 'project.json');
+                // 首先尝试从HML文件所在目录查找
+                const hmlDir = path.dirname(filePath);
+                const configPathInHmlDir = path.join(hmlDir, 'project.json');
                 
-                if (fs.existsSync(projectConfigPath)) {
-                    const configContent = fs.readFileSync(projectConfigPath, 'utf8');
+                if (fs.existsSync(configPathInHmlDir)) {
+                    const configContent = fs.readFileSync(configPathInHmlDir, 'utf8');
                     projectConfig = JSON.parse(configContent);
-                    console.log('[HoneyGUI Designer] 成功加载项目配置文件:', projectConfig);
+                    console.log('[HoneyGUI Designer] 成功从HML目录加载项目配置文件:', projectConfig);
                 } else {
-                    console.log('[HoneyGUI Designer] 未找到项目配置文件:', projectConfigPath);
+                    // 如果HML目录中找不到，尝试从项目根目录查找（上级目录）
+                    const projectRootDir = path.dirname(hmlDir);
+                    const configPathInRootDir = path.join(projectRootDir, 'project.json');
+                    
+                    if (fs.existsSync(configPathInRootDir)) {
+                        const configContent = fs.readFileSync(configPathInRootDir, 'utf8');
+                        projectConfig = JSON.parse(configContent);
+                        console.log('[HoneyGUI Designer] 成功从项目根目录加载项目配置文件:', projectConfig);
+                    } else {
+                        console.log('[HoneyGUI Designer] 未找到项目配置文件:', configPathInHmlDir, '和', configPathInRootDir);
+                    }
                 }
             } catch (configError) {
                 console.error('[HoneyGUI Designer] 加载项目配置文件失败:', configError);

@@ -65,7 +65,8 @@ export type ComponentType =
   | 'image'
   | 'panel'
   | 'view'
-  | 'window';
+  | 'window'
+  | 'screen';
 
 export interface ComponentDefinition {
   type: ComponentType;

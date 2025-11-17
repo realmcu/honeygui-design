@@ -173,7 +173,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     };
   }, [selectedComponent, removeComponent, onComponentSelect]);
 
-  const renderComponent = (component: Component, components: Component[] = components) => {
+  const renderComponent = (component: Component, componentList: Component[] = components) => {
     const isSelected = selectedComponent === component.id;
     const isHovered = !draggedComponent && useDesignerStore.getState().hoveredComponent === component.id;
 
@@ -213,18 +213,42 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
 
     switch (component.type) {
       case 'screen':
-        // screen容器特殊处理，确保背景颜色正确显示
+        /**
+         * Screen容器实现 - 画布层级结构中的根容器
+         *
+         * 功能特性：
+         * 1. **层级管理**: 作为所有UI组件的顶级容器，所有非容器组件必须作为其子对象存在
+         * 2. **视觉区分**: 提供清晰的视觉边界和标识，便于识别和管理
+         * 3. **背景自定义**: 支持自定义背景色、边框、圆角等样式属性
+         * 4. **自动创建**: 项目创建时自动生成，确保始终存在根容器
+         *
+         * 样式规范：
+         * - 默认背景色: #ffffff (纯白色)，提供干净的画布基础
+         * - 默认边框: 1px solid #dddddd (浅灰色)，提供清晰的容器边界
+         * - 默认圆角: 8px，现代UI的圆润视觉效果
+         * - 阴影效果: 0 4px 12px rgba(0, 0, 0, 0.15)，增强层次感和立体感
+         * - 溢出处理: overflow: 'visible'，允许子组件超出边界(便于拖放操作)
+         *
+         * 组件关系：
+         * - parent: null (顶级容器，没有父组件)
+         * - children: [componentId1, componentId2, ...] (包含所有子组件ID)
+         * - zIndex: 0 (基础层级，其他组件在其之上)
+         *
+         * @see ComponentLibrary.tsx - 组件库中的screen定义包含完整的属性配置
+         * @see store.ts - createDefaultScreen() 函数负责创建默认screen实例
+         */
         return (
           <div
             key={component.id}
             style={{
               ...style,
+              // Screen容器样式 - 提供清晰的视觉层次和边界
               backgroundColor: component.style?.backgroundColor || '#ffffff',
               border: component.style?.border || '1px solid #dddddd',
               borderRadius: component.style?.borderRadius || '8px',
-              // 为screen容器添加阴影效果
+              // 添加阴影效果增强层次感
               boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-              // 确保容器可以容纳子组件
+              // 允许子组件溢出边界(拖放时临时超出)
               overflow: 'visible',
             }}
             onMouseDown={(e) => handleComponentMouseDown(e, component.id)}
@@ -232,7 +256,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
           >
-            {/* 渲染screen容器的标题 */}
+            {/* Screen容器标题 - 提供明确的视觉标识 */}
             <div style={{
               position: 'absolute',
               top: '-22px',
@@ -243,17 +267,18 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
               borderRadius: '4px 4px 0 0',
               border: '1px solid #dddddd',
               borderBottom: 'none',
+              // 禁止鼠标事件穿透，确保标题区域可交互
+              pointerEvents: 'auto',
             }}>
               {component.name || 'Screen'}
             </div>
-            {/* 渲染子组件 */}
+            {/* 递归渲染所有子组件 - 确保正确的层级嵌套 */}
             {component.children?.map((childId) => {
-              const child = components.find((c) => c.id === childId);
-              return child ? renderComponent(child) : null;
+              const child = componentList.find((c) => c.id === childId);
+              return child ? renderComponent(child, componentList) : null;
             })}
           </div>
         );
-      case
       case 'button':
         return (
           <button
@@ -333,35 +358,95 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
       case 'panel':
       case 'view':
       case 'window':
-        // View组件作为容器处理，支持多容器布局
-        // - 可以作为顶级组件放置在画布上
-        // - 可以包含其他子组件
-        // - 拥有独立的样式和布局特性
+        /**
+         * View/Panel/Window 容器组件实现 - 支持嵌套布局和多容器并行
+         *
+         * 功能特性：
+         * 1. **多容器支持**: View组件可作为独立顶级容器，实现多容器并行布局
+         * 2. **嵌套能力**: 所有容器组件都支持包含子组件，形成层级结构
+         * 3. **视觉区分**: 不同类型容器有不同的默认样式和视觉特征
+         * 4. **灵活布局**: 支持在screen内部或外部放置，满足不同场景需求
+         *
+         * 组件类型特性：
+         * - View (👁️): 通用视图容器，默认浅灰背景，支持自动滚动
+         *   * 用途: 分组组件、创建独立区域、实现复杂布局
+         *   * 样式: background: '#f5f5f5', overflow: 'auto'
+         *   * 层级: 可以作为screen的子组件，也可以作为顶级组件
+         *
+         * - Panel (🪟): 面板容器，默认白色背景
+         *   * 用途: 内容分组、卡片式布局
+         *   * 样式: background: '#ffffff'
+         *   * 层级: 通常作为screen的子组件
+         *
+         * - Window (🪟): 窗口容器，模拟操作系统窗口外观
+         *   * 用途: 对话框、独立功能模块
+         *   * 样式: 包含标题栏、窗口控制按钮(关闭、最小化、最大化)
+         *   * 层级: 可以作为顶级组件
+         *
+         * 布局策略：
+         * - View组件拖放到画布: 可以作为顶级组件放置（多容器并行）
+         * - View组件拖放到screen内部: 作为screen的子组件（嵌套布局）
+         * - View组件拖放到其他View内部: 支持多级嵌套
+         *
+         * 组件关系：
+         * - parent: string | null (父组件ID，顶级组件为null)
+         * - children: string[] (子组件ID数组)
+         * - zIndex: number (层级顺序，可控制显示层级)
+         *
+         * 尺寸控制：
+         * - View/Panel/Window都遵循组件库中定义的defaultSize
+         * - 可在属性面板中手动调整尺寸
+         *
+         * @see ComponentLibrary.tsx - componentDefinitions包含各容器类型的默认尺寸
+         * @see App.tsx handleCanvasDrop() - 拖放逻辑决定组件的parent和层级关系
+         * @see PropertiesPanel.tsx - 属性面板支持调整容器样式和尺寸
+         */
         return (
           <div
             key={component.id}
             style={{
               ...style,
-              // 选中状态和容器类型特定的边框样式
+              // 根据容器类型设置边框样式 - 选中状态高亮显示，非选中状态显示默认边框
               border: isSelected
-                ? '2px solid #007ACC' // 选中时高亮边框
-                : component.type === 'window' ? (component.style?.border || '1px solid #ccc') : '1px solid #ccc',
-              // 窗口组件的圆角特性
-              borderRadius: component.type === 'window' ? (component.style?.borderRadius || 6) : 0,
-              // 容器背景色，View组件默认使用浅灰色以区分内容区域
-              background: component.type === 'window' ? (component.style?.backgroundColor || '#ffffff') : (component.style?.backgroundColor || '#f5f5f5'),
-              // 内边距设置，为子组件提供空间
-              padding: component.type === 'window' ? 0 : (component.style?.padding || 8),
-              // View组件默认启用自动滚动，以支持超出边界的子组件
-              overflow: component.type === 'view' ? (component.style?.overflow || 'auto') : 'visible',
+                ? '2px solid #007ACC' // 选中时高亮边框（蓝色）
+                : component.type === 'window'
+                ? (component.style?.border || '1px solid #ccc') // Window组件使用自定义边框或默认
+                : component.type === 'view'
+                ? (component.style?.border || '1px dashed #bbb') // View组件使用虚线边框，表示可嵌套
+                : (component.style?.border || '1px solid #ccc'), // Panel组件使用实线边框
+              // 根据容器类型设置圆角
+              borderRadius: component.type === 'window'
+                ? (component.style?.borderRadius || 6) // Window组件圆角
+                : component.type === 'view'
+                ? (component.style?.borderRadius || 4) // View组件圆角
+                : (component.style?.borderRadius || 0), // Panel组件默认无圆角
+              // 根据容器类型设置背景色
+              background: component.type === 'window'
+                ? (component.style?.backgroundColor || '#ffffff') // Window默认白色背景
+                : component.type === 'view'
+                ? (component.style?.backgroundColor || '#f5f5f5') // View默认浅灰色，区分内容区域
+                : (component.style?.backgroundColor || '#ffffff'), // Panel默认白色背景
+              // 根据容器类型设置内边距
+              padding: component.type === 'window'
+                ? 0 // Window内边距由内容区域控制
+                : component.type === 'view'
+                ? (component.style?.padding || 12) // View默认内边距12px
+                : (component.style?.padding || 8), // Panel默认内边距8px
+              // 根据容器类型设置溢出处理
+              overflow: component.type === 'view'
+                ? (component.style?.overflow || 'auto') // View组件默认自动滚动，支持内容超出
+                : component.type === 'panel'
+                ? (component.style?.overflow || 'hidden') // Panel组件默认隐藏溢出
+                : 'visible', // Window组件默认可见，不处理溢出
             }}
             onMouseDown={(e) => handleComponentMouseDown(e, component.id)}
             onClick={handleClick}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
           >
+            {/* Window组件渲染标题栏 - 模拟操作系统窗口外观 */}
             {component.type === 'window' && (
-              <div 
+              <div
                 style={{
                   height: component.style?.titleBarHeight || 36,
                   backgroundColor: component.style?.titleBarColor || '#f0f0f0',
@@ -372,15 +457,18 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   borderBottom: '1px solid #e0e0e0',
+                  cursor: 'move', // 标题栏显示移动光标，提示可拖动
                 }}
                 onMouseDown={(e) => {
                   e.stopPropagation();
                   handleComponentMouseDown(e, component.id);
                 }}
               >
+                {/* 窗口标题 */}
                 <span style={{ fontWeight: 'bold', fontSize: '14px' }}>
                   {component.style?.title || component.name}
                 </span>
+                {/* 窗口控制按钮 (关闭、最小化、最大化) */}
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#ff6b6b' }}></div>
                   <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#ffd93d' }}></div>
@@ -388,10 +476,15 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
                 </div>
               </div>
             )}
+            {/* 容器内容区域 - 根据类型设置不同内边距 */}
             <div style={{ padding: component.type === 'window' ? '12px' : 0 }}>
-              <div style={{ fontSize: '12px', opacity: 0.6, marginBottom: '4px' }}>
-                {component.name}
-              </div>
+              {/* 仅View组件显示名称标签(便于识别) */}
+              {component.type === 'view' && (
+                <div style={{ fontSize: '12px', opacity: 0.6, marginBottom: '4px', fontWeight: 500 }}>
+                  {component.name}
+                </div>
+              )}
+              {/* 递归渲染子组件 - 支持嵌套结构 */}
               {component.children?.map((childId) => {
                 const child = components.find((c) => c.id === childId);
                 return child ? renderComponent(child) : null;
