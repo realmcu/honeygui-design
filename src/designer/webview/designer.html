@@ -15,8 +15,8 @@
             --vs-dark-text-secondary: #969696;
             --vs-dark-accent: #007acc;
             --vs-dark-accent-hover: #0098ff;
-            --canvas-bg: #ffffff;
-            --canvas-grid: #e0e0e0;
+            --canvas-bg: #e0e0e0; /* 默认灰色背景 */
+            --canvas-grid: #bdbdbd;
             --selected-border: #007acc;
             --selected-bg: rgba(0, 122, 204, 0.1);
         }
@@ -181,6 +181,31 @@
             border: 1px solid var(--vs-dark-border);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
             position: relative;
+            min-width: 1000px;
+            min-height: 800px;
+            /* 支持扩展的画布区域 */
+        }
+        
+        /* 背景色选择器样式 */
+        .bg-color-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0 10px;
+        }
+        
+        .bg-color-selector label {
+            color: var(--vs-dark-text);
+            font-size: 14px;
+        }
+        
+        .bg-color-selector input[type="color"] {
+            width: 32px;
+            height: 28px;
+            border: 1px solid var(--vs-dark-border);
+            border-radius: 4px;
+            background: none;
+            cursor: pointer;
         }
         
         .component {
@@ -193,6 +218,11 @@
         .component.selected {
             border: 2px solid var(--selected-border);
             background-color: var(--selected-bg);
+        }
+        
+        .component.drag-over {
+            border: 2px dashed var(--vs-dark-accent);
+            background-color: rgba(0, 122, 204, 0.1);
         }
         
         .component-handle {
@@ -364,6 +394,11 @@
         <button class="toolbar-button" id="previewBtn">预览</button>
         <button class="toolbar-button primary" id="codegenBtn">生成代码</button>
         <div style="flex: 1;"></div>
+        <!-- 背景颜色选择器 -->
+        <div class="bg-color-selector">
+            <label for="canvas-bg-color">画布背景:</label>
+            <input type="color" id="canvas-bg-color" value="#e0e0e0">
+        </div>
         <button class="toolbar-button" id="undoBtn" disabled>撤销</button>
         <button class="toolbar-button" id="redoBtn" disabled>重做</button>
         <button class="toolbar-button" id="gridToggleBtn">网格</button>
@@ -560,6 +595,7 @@
             selectedComponent: null,
             components: [],
             canvas: null,
+            canvasBackground: '#e0e0e0', // 默认画布背景色
             isDragging: false,
             isResizing: false,
             dragOffset: { x: 0, y: 0 },
@@ -594,47 +630,54 @@
         
         // 初始化画布
         function initializeCanvas() {
-            appState.canvas.style.width = '800px';
-            appState.canvas.style.height = '600px';
+            // 设置画布为可扩展大小
+            appState.canvas.style.minWidth = '1000px';
+            appState.canvas.style.minHeight = '800px';
+            appState.canvas.style.width = '1000px';
+            appState.canvas.style.height = '800px';
             
             // 清空画布
             appState.canvas.innerHTML = '';
             
-            // 添加窗口背景组件
-            const windowBackground = document.createElement('div');
-            windowBackground.className = 'component';
-            windowBackground.style.width = '100%';
-            windowBackground.style.height = '100%';
-            windowBackground.style.left = '0px';
-            windowBackground.style.top = '0px';
-            windowBackground.style.backgroundColor = 'transparent';
-            windowBackground.style.border = 'none';
-            windowBackground.dataset.id = 'mainWindow';
-            
-            // 添加点击事件以选择窗口
-            windowBackground.addEventListener('click', (e) => {
-                if (!e.target.closest('.component') || e.target === windowBackground) {
-                    selectComponent('mainWindow');
-                }
+            // 初始化背景颜色选择器
+            const bgColorPicker = document.getElementById('canvas-bg-color');
+            bgColorPicker.addEventListener('input', function(e) {
+                // 更新CSS变量
+                document.documentElement.style.setProperty('--canvas-bg', e.target.value);
+                // 更新状态
+                appState.canvasBackground = e.target.value;
             });
             
-            appState.canvas.appendChild(windowBackground);
+            // 添加画布点击事件，用于选择/取消选择组件
+            appState.canvas.addEventListener('click', (e) => {
+                // 如果点击的是画布空白区域，则取消选择
+                if (!e.target.closest('.component')) {
+                    // 取消所有组件的选中状态
+                    document.querySelectorAll('.component.selected').forEach(el => {
+                        el.classList.remove('selected');
+                    });
+                    appState.selectedComponent = null;
+                    updatePropertyPanel();
+                }
+            });
         }
         
         // 加载默认组件
         function loadDefaultComponents() {
             appState.components = [
                 {
-                    id: 'mainWindow',
-                    type: 'window',
-                    name: '主窗口',
-                    x: 0,
-                    y: 0,
+                    id: 'mainScreen',
+                    type: 'screen',
+                    name: '主屏幕',
+                    x: 50,
+                    y: 50,
                     width: 800,
                     height: 600,
                     properties: {
-                        title: 'HoneyGUI 应用',
-                        backgroundColor: '#ffffff'
+                        backgroundColor: '#ffffff',
+                        borderWidth: '1px',
+                        borderStyle: 'solid',
+                        borderColor: '#cccccc'
                     },
                     children: []
                 }
@@ -685,10 +728,32 @@
             // 画布拖拽接收
             appState.canvas.addEventListener('dragover', (e) => {
                 e.preventDefault();
+                // 高亮显示可能的目标容器
+                const target = findContainerAtPosition(e.clientX, e.clientY);
+                document.querySelectorAll('.component').forEach(comp => {
+                    if (comp === target && ['screen', 'view', 'panel', 'vbox', 'hbox', 'grid'].includes(
+                        appState.components.find(c => c.id === comp.dataset.id)?.type)) {
+                        comp.classList.add('drag-over');
+                    } else {
+                        comp.classList.remove('drag-over');
+                    }
+                });
+            });
+            
+            appState.canvas.addEventListener('dragleave', () => {
+                // 移除所有高亮
+                document.querySelectorAll('.component').forEach(comp => {
+                    comp.classList.remove('drag-over');
+                });
             });
             
             appState.canvas.addEventListener('drop', (e) => {
                 e.preventDefault();
+                // 移除所有高亮
+                document.querySelectorAll('.component').forEach(comp => {
+                    comp.classList.remove('drag-over');
+                });
+                
                 const componentType = e.dataTransfer.getData('component-type');
                 
                 if (componentType) {
@@ -697,8 +762,24 @@
                     const x = snapToGrid(e.clientX - rect.left);
                     const y = snapToGrid(e.clientY - rect.top);
                     
+                    // 查找拖放位置的容器
+                    const targetContainer = findContainerAtPosition(e.clientX, e.clientY);
+                    let parentId = null;
+                    
+                    if (targetContainer && targetContainer.dataset.id) {
+                        const containerComponent = appState.components.find(c => c.id === targetContainer.dataset.id);
+                        // 检查是否是有效的容器类型
+                        if (containerComponent && ['screen', 'view', 'panel', 'vbox', 'hbox', 'grid'].includes(containerComponent.type)) {
+                            parentId = containerComponent.id;
+                            // 相对于容器的位置
+                            const containerRect = targetContainer.getBoundingClientRect();
+                            x = snapToGrid(e.clientX - containerRect.left);
+                            y = snapToGrid(e.clientY - containerRect.top);
+                        }
+                    }
+                    
                     // 创建新组件
-                    addComponent(componentType, x, y);
+                    addComponent(componentType, x, y, parentId);
                 }
             });
             
@@ -717,24 +798,121 @@
             return Math.round(value / appState.gridSize) * appState.gridSize;
         }
         
+        // 查找指定位置的容器组件
+        function findContainerAtPosition(clientX, clientY) {
+            // 获取所有组件元素
+            const components = Array.from(document.querySelectorAll('.component'));
+            // 从后往前检查，优先选择顶层组件
+            for (let i = components.length - 1; i >= 0; i--) {
+                const comp = components[i];
+                const rect = comp.getBoundingClientRect();
+                // 检查点击是否在组件内部
+                if (clientX >= rect.left && clientX <= rect.right && 
+                    clientY >= rect.top && clientY <= rect.bottom) {
+                    return comp;
+                }
+            }
+            return null;
+        }
+        
         // 添加组件
-        function addComponent(type, x, y) {
+        function addComponent(type, x, y, parentId = null) {
             const newComponent = {
                 id: `${type}_${Date.now()}`,
                 type: type,
                 name: getComponentDisplayName(type),
                 x: x,
                 y: y,
-                width: getDefaultWidth(type),
-                height: getDefaultHeight(type),
+                width: getDefaultWidth(type, appResolution),
+                height: getDefaultHeight(type, appResolution),
                 properties: getDefaultProperties(type),
                 children: []
             };
             
-            // 添加到主窗口的子组件
-            const mainWindow = appState.components.find(c => c.id === 'mainWindow');
-            if (mainWindow) {
-                mainWindow.children.push(newComponent);
+            // 对于View组件，确保它能正确承载子组件
+            if (type === 'view') {
+                newComponent.properties.isContainer = true;
+            }
+            
+            let parentComponent = null;
+            
+            // 如果指定了父容器ID
+            if (parentId) {
+                // 查找所有组件（包括嵌套的）
+                function findComponentById(id, components) {
+                    for (const component of components) {
+                        if (component.id === id) return component;
+                        if (component.children && component.children.length > 0) {
+                            const found = findComponentById(id, component.children);
+                            if (found) return found;
+                        }
+                    }
+                    return null;
+                }
+                
+                parentComponent = findComponentById(parentId, appState.components);
+            }
+            
+            // 如果没有找到有效的父容器，或者拖放的是容器组件（screen, view），则直接添加到顶层
+            if (!parentComponent || ['screen', 'view'].includes(type)) {
+                // 确保非容器组件总是放在mainScreen内
+                if (!['screen', 'view'].includes(type)) {
+                    const mainScreen = appState.components.find(c => c.id === 'mainScreen');
+                    if (mainScreen) {
+                        mainScreen.children.push(newComponent);
+                        
+                        // 选中新添加的组件
+                        selectComponent(newComponent.id);
+                        
+                        // 更新界面
+                        updateCanvas();
+                        updateComponentTree();
+                        updatePropertyPanel();
+                        
+                        // 通知VSCode扩展
+                        notifyVsCode('componentAdded', { component: newComponent });
+                        
+                        return;
+                    }
+                } else {
+                    // 容器组件直接添加到顶层
+                    appState.components.push(newComponent);
+                    
+                    // 选中新添加的组件
+                    selectComponent(newComponent.id);
+                    
+                    // 更新界面
+                    updateCanvas();
+                    updateComponentTree();
+                    updatePropertyPanel();
+                    
+                    // 通知VSCode扩展
+                    notifyVsCode('componentAdded', { component: newComponent });
+                    
+                    return;
+                }
+            } else {
+                // 添加到指定的父容器
+                parentComponent.children.push(newComponent);
+                
+                // 选中新添加的组件
+                selectComponent(newComponent.id);
+                
+                // 更新界面
+                updateCanvas();
+                updateComponentTree();
+                updatePropertyPanel();
+                
+                // 通知VSCode扩展
+                notifyVsCode('componentAdded', { component: newComponent });
+                
+                return;
+            }
+            
+            // 默认情况：添加到mainScreen
+            const mainScreen = appState.components.find(c => c.id === 'mainScreen');
+            if (mainScreen) {
+                mainScreen.children.push(newComponent);
                 
                 // 选中新添加的组件
                 selectComponent(newComponent.id);
@@ -769,9 +947,46 @@
             return names[type] || type;
         }
         
+        // 分辨率设置相关
+        let appResolution = '720p'; // 默认分辨率
+        
+        // 设置应用分辨率
+        function setResolution(resolution) {
+            appResolution = resolution;
+            // 可以在这里添加重新计算组件尺寸的逻辑
+        }
+        
+        // 根据分辨率获取缩放因子
+        function getScaleFactorByResolution(resolution) {
+            const scaleFactors = {
+                '360p': 0.5,
+                '480p': 0.67,
+                '720p': 1.0,
+                '1080p': 1.5,
+                '2k': 2.0,
+                '4k': 3.0
+            };
+            return scaleFactors[resolution] || 1.0;
+        }
+        
+        // 根据分辨率获取窗口默认大小
+        function getWindowSizeByResolution(resolution) {
+            const windowSizes = {
+                '360p': { width: 480, height: 360 },
+                '480p': { width: 640, height: 480 },
+                '720p': { width: 1280, height: 720 },
+                '1080p': { width: 1920, height: 1080 },
+                '2k': { width: 2560, height: 1440 },
+                '4k': { width: 3840, height: 2160 }
+            };
+            return windowSizes[resolution] || { width: 1280, height: 720 };
+        }
+        
         // 获取组件默认宽度
-        function getDefaultWidth(type) {
+        function getDefaultWidth(type, resolution = appResolution) {
             const widths = {
+                'screen': getWindowSizeByResolution(resolution).width,
+                'view': 600,
                 'label': 100,
                 'button': 80,
                 'input': 200,
@@ -786,12 +1001,24 @@
                 'hbox': 400,
                 'grid': 400
             };
-            return widths[type] || 100;
+            
+            // 获取基础宽度
+            let baseWidth = widths[type] || 100;
+            
+            // 除了screen和view组件外，其他组件应用分辨率缩放因子
+            if (type !== 'screen' && type !== 'view') {
+                const scaleFactor = getScaleFactorByResolution(resolution);
+                return Math.round(baseWidth * scaleFactor);
+            }
+            
+            return baseWidth;
         }
         
         // 获取组件默认高度
-        function getDefaultHeight(type) {
+        function getDefaultHeight(type, resolution = appResolution) {
             const heights = {
+                'screen': getWindowSizeByResolution(resolution).height,
+                'view': 400,
                 'label': 30,
                 'button': 30,
                 'input': 30,
@@ -806,12 +1033,24 @@
                 'hbox': 100,
                 'grid': 300
             };
-            return heights[type] || 30;
+            
+            // 获取基础高度
+            let baseHeight = heights[type] || 30;
+            
+            // 除了screen和view组件外，其他组件应用分辨率缩放因子
+            if (type !== 'screen' && type !== 'view') {
+                const scaleFactor = getScaleFactorByResolution(resolution);
+                return Math.round(baseHeight * scaleFactor);
+            }
+            
+            return baseHeight;
         }
         
         // 获取组件默认属性
         function getDefaultProperties(type) {
             const properties = {
+                'screen': { backgroundColor: '#ffffff', borderWidth: '1px', borderStyle: 'solid', borderColor: '#cccccc' },
+                'view': { backgroundColor: 'transparent', borderWidth: '1px', borderStyle: 'solid', borderColor: '#cccccc' },
                 'label': { text: '标签文本' },
                 'button': { text: '按钮', onClick: '' },
                 'input': { text: '', placeholder: '请输入...' },
@@ -837,11 +1076,13 @@
             // 首先在顶层查找
             component = appState.components.find(c => c.id === id);
             
-            // 如果没找到，在窗口的子组件中查找
+            // 如果没找到，在所有顶层组件的子组件中查找
             if (!component) {
-                const mainWindow = appState.components.find(c => c.id === 'mainWindow');
-                if (mainWindow) {
-                    component = findComponentInChildren(mainWindow.children, id);
+                for (const topComponent of appState.components) {
+                    if (topComponent.children && topComponent.children.length > 0) {
+                        component = findComponentInChildren(topComponent.children, id);
+                        if (component) break;
+                    }
                 }
             }
             
@@ -869,34 +1110,43 @@
         
         // 更新画布
         function updateCanvas() {
-            // 清除所有非窗口背景的组件
-            const components = appState.canvas.querySelectorAll('.component:not([data-id="mainWindow"])');
+            // 清除所有组件
+            const components = appState.canvas.querySelectorAll('.component');
             components.forEach(comp => comp.remove());
             
-            // 获取主窗口
-            const mainWindow = appState.components.find(c => c.id === 'mainWindow');
-            if (mainWindow && mainWindow.children) {
-                // 创建所有子组件
-                mainWindow.children.forEach(component => {
-                    renderComponent(component);
-                });
-            }
+            // 渲染所有顶层组件（screen和view组件）
+            appState.components.forEach(component => {
+                renderComponent(component);
+            });
             
             // 更新选择状态
             updateCanvasSelection();
         }
         
         // 渲染组件
-        function renderComponent(component) {
+        function renderComponent(component, parentElement = null) {
             const element = document.createElement('div');
             element.className = 'component';
             element.dataset.id = component.id;
+            element.style.position = 'absolute';
             element.style.left = `${component.x}px`;
             element.style.top = `${component.y}px`;
             element.style.width = `${component.width}px`;
             element.style.height = `${component.height}px`;
-            element.style.backgroundColor = component.properties.backgroundColor || 'transparent';
-            element.style.border = component.properties.border || '1px solid #ccc';
+            
+            // 设置背景色
+            if (component.properties.backgroundColor) {
+                element.style.backgroundColor = component.properties.backgroundColor;
+            } else {
+                element.style.backgroundColor = 'transparent';
+            }
+            
+            // 设置边框
+            if (component.properties.borderWidth || component.properties.borderStyle || component.properties.borderColor) {
+                element.style.border = `${component.properties.borderWidth || '1px'} ${component.properties.borderStyle || 'solid'} ${component.properties.borderColor || '#ccc'}`;
+            } else {
+                element.style.border = 'none';
+            }
             
             // 根据组件类型设置内容
             setComponentContent(element, component);
@@ -904,13 +1154,20 @@
             // 添加事件监听
             addComponentEventListeners(element, component);
             
-            // 添加到画布
-            appState.canvas.appendChild(element);
+            // 确定父容器：如果有父元素则添加到父元素，否则添加到画布
+            const container = parentElement || appState.canvas;
+            container.appendChild(element);
+            
+            // 对于容器类型的组件（screen, view, panel等），设置为相对定位以正确包含子组件
+            if (['screen', 'view', 'panel', 'vbox', 'hbox', 'grid'].includes(component.type)) {
+                element.style.position = 'absolute';
+                element.style.overflow = 'hidden'; // 防止子组件溢出
+            }
             
             // 递归渲染子组件
             if (component.children && component.children.length > 0) {
                 component.children.forEach(child => {
-                    renderComponent(child);
+                    renderComponent(child, element);
                 });
             }
         }

@@ -8,10 +8,12 @@ interface DesignerCanvasProps {
 }
 
 const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) => {
+  // 设置画布默认背景色为灰色，作为任务1的一部分
   const canvasRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [canvasOffsetStart, setCanvasOffsetStart] = useState({ x: 0, y: 0 });
+  const [canvasBackground, setCanvasBackground] = useState<string>('#f0f0f0'); // 默认灰色背景
 
   const {
     components,
@@ -31,6 +33,13 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     canvasSize,
     canvasBackgroundColor,
   } = useDesignerStore();
+  
+  // 当store中的画布背景色变化时更新本地状态
+  useEffect(() => {
+    if (canvasBackgroundColor && canvasBackgroundColor !== canvasBackground) {
+      setCanvasBackground(canvasBackgroundColor);
+    }
+  }, [canvasBackgroundColor, canvasBackground]);
 
   // 处理鼠标滚轮事件，实现Ctrl+鼠标滚轮缩放画布
   const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
@@ -164,7 +173,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     };
   }, [selectedComponent, removeComponent, onComponentSelect]);
 
-  const renderComponent = (component: Component) => {
+  const renderComponent = (component: Component, components: Component[] = components) => {
     const isSelected = selectedComponent === component.id;
     const isHovered = !draggedComponent && useDesignerStore.getState().hoveredComponent === component.id;
 
@@ -203,6 +212,48 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     };
 
     switch (component.type) {
+      case 'screen':
+        // screen容器特殊处理，确保背景颜色正确显示
+        return (
+          <div
+            key={component.id}
+            style={{
+              ...style,
+              backgroundColor: component.style?.backgroundColor || '#ffffff',
+              border: component.style?.border || '1px solid #dddddd',
+              borderRadius: component.style?.borderRadius || '8px',
+              // 为screen容器添加阴影效果
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+              // 确保容器可以容纳子组件
+              overflow: 'visible',
+            }}
+            onMouseDown={(e) => handleComponentMouseDown(e, component.id)}
+            onClick={handleClick}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+          >
+            {/* 渲染screen容器的标题 */}
+            <div style={{
+              position: 'absolute',
+              top: '-22px',
+              left: '0',
+              backgroundColor: '#f0f0f0',
+              padding: '2px 8px',
+              fontSize: '12px',
+              borderRadius: '4px 4px 0 0',
+              border: '1px solid #dddddd',
+              borderBottom: 'none',
+            }}>
+              {component.name || 'Screen'}
+            </div>
+            {/* 渲染子组件 */}
+            {component.children?.map((childId) => {
+              const child = components.find((c) => c.id === childId);
+              return child ? renderComponent(child) : null;
+            })}
+          </div>
+        );
+      case
       case 'button':
         return (
           <button
@@ -282,17 +333,26 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
       case 'panel':
       case 'view':
       case 'window':
+        // View组件作为容器处理，支持多容器布局
+        // - 可以作为顶级组件放置在画布上
+        // - 可以包含其他子组件
+        // - 拥有独立的样式和布局特性
         return (
           <div
             key={component.id}
             style={{
               ...style,
+              // 选中状态和容器类型特定的边框样式
               border: isSelected
-                ? '2px solid #007ACC'
+                ? '2px solid #007ACC' // 选中时高亮边框
                 : component.type === 'window' ? (component.style?.border || '1px solid #ccc') : '1px solid #ccc',
+              // 窗口组件的圆角特性
               borderRadius: component.type === 'window' ? (component.style?.borderRadius || 6) : 0,
+              // 容器背景色，View组件默认使用浅灰色以区分内容区域
               background: component.type === 'window' ? (component.style?.backgroundColor || '#ffffff') : (component.style?.backgroundColor || '#f5f5f5'),
+              // 内边距设置，为子组件提供空间
               padding: component.type === 'window' ? 0 : (component.style?.padding || 8),
+              // View组件默认启用自动滚动，以支持超出边界的子组件
               overflow: component.type === 'view' ? (component.style?.overflow || 'auto') : 'visible',
             }}
             onMouseDown={(e) => handleComponentMouseDown(e, component.id)}
@@ -424,27 +484,26 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     return gridElements;
   };
 
+  // 扩展画布区域，使其成为可滚动的大型画布
   return (
     <div className="designer-canvas-container" style={{
       display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
+      overflow: 'auto', // 允许容器滚动
       width: '100%',
       height: '100%'
     }}>
+      {/* 可扩展的画布区域，移除固定宽度和高度限制 */}
       <div
         ref={canvasRef}
         className="designer-canvas"
         style={{
-            backgroundColor: canvasBackgroundColor || 'var(--vscode-editor-background)',
-            width: `${canvasSize.width}px`,
-            height: `${canvasSize.height}px`,
+            backgroundColor: canvasBackground, // 使用本地状态的背景色
             position: 'relative',
+            minWidth: '1200px', // 最小宽度
+            minHeight: '800px', // 最小高度
             border: '1px solid var(--vscode-panel-border)',
-            borderRadius: '2px',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2)',
             cursor: isDragging && editingMode === 'select' ? 'grabbing' : editingMode === 'move' ? 'grab' : 'default',
-            backgroundImage: 'linear-gradient(45deg, var(--vscode-editor-inactiveSelectionBackground) 25%, transparent 25%, transparent 75%, var(--vscode-editor-inactiveSelectionBackground) 75%, var(--vscode-editor-inactiveSelectionBackground)), linear-gradient(45deg, var(--vscode-editor-inactiveSelectionBackground) 25%, transparent 25%, transparent 75%, var(--vscode-editor-inactiveSelectionBackground) 75%, var(--vscode-editor-inactiveSelectionBackground))',
+            backgroundImage: 'linear-gradient(45deg, rgba(0, 0, 0, 0.05) 25%, transparent 25%, transparent 75%, rgba(0, 0, 0, 0.05) 75%, rgba(0, 0, 0, 0.05)), linear-gradient(45deg, rgba(0, 0, 0, 0.05) 25%, transparent 25%, transparent 75%, rgba(0, 0, 0, 0.05) 75%, rgba(0, 0, 0, 0.05))',
             backgroundSize: '10px 10px',
             backgroundPosition: '0 0, 5px 5px',
             backgroundBlendMode: 'overlay',
@@ -461,8 +520,12 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
         onMouseUp={handleComponentMouseUp}
         // 使用捕获模式绑定滚轮事件，确保优先处理
         onWheel={(e) => {
-          e.stopPropagation();
-          handleWheel(e);
+          // 判断是否按下Ctrl键，是则缩放，否则滚动
+          if (e.ctrlKey) {
+            e.preventDefault();
+            handleWheel(e);
+          }
+          // 否则允许默认滚动行为
         }}
         onMouseEnter={() => setShowZoomHint(true)}
         onMouseLeave={(e) => {
@@ -503,6 +566,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
             height: '100%',
           }}
         >
+          {/* 渲染所有顶级组件，并递归渲染其子组件 */}
           {components
             .filter((c) => c.parent === null)
             .map((component) => renderComponent(component))}

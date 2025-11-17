@@ -407,11 +407,29 @@ export class DesignerPanel {
             // 序列化文档为字符串
             const hmlContent = this._hmlController.serializeDocument();
             
-            // 发送HML内容到Webview
+            // 尝试加载项目配置文件
+            let projectConfig = null;
+            try {
+                const projectDir = path.dirname(filePath);
+                const projectConfigPath = path.join(projectDir, 'project.json');
+                
+                if (fs.existsSync(projectConfigPath)) {
+                    const configContent = fs.readFileSync(projectConfigPath, 'utf8');
+                    projectConfig = JSON.parse(configContent);
+                    console.log('[HoneyGUI Designer] 成功加载项目配置文件:', projectConfig);
+                } else {
+                    console.log('[HoneyGUI Designer] 未找到项目配置文件:', projectConfigPath);
+                }
+            } catch (configError) {
+                console.error('[HoneyGUI Designer] 加载项目配置文件失败:', configError);
+            }
+            
+            // 发送HML内容和配置信息到Webview
             this._panel.webview.postMessage({
                 command: 'loadHml',
                 content: hmlContent,
-                document: document
+                document: document,
+                projectConfig: projectConfig
             });
             
             // 更新面板标题

@@ -1,6 +1,6 @@
 # HoneyGUI Design 文档中心
 
-欢迎使用 HoneyGUI Visual Designer 文档中心。这里包含了所有开发、调试、测试相关的文档。
+欢迎使用 HoneyGUI Visual Designer 文档中心。这里包含了所有开发、调试相关的文档。
 
 ## 📂 文档导航
 
@@ -10,9 +10,6 @@
 ### 调试指南
 - [完整调试指南](./debugging/DEBUG_GUIDE.md) - 详细的调试和问题排查指南
 - [调试速查表](./debugging/DEBUG_QUICK_REF.md) - 快速查找常见问题的解决方案
-
-### 测试文档
-- [测试指南](./testing/TESTING_GUIDE.md) - 测试框架和测试方法
 
 ### 技术文档
 - [React UI 实现](./technical/REACT_UI_IMPLEMENTATION.md) - React 前端实现细节
@@ -40,8 +37,6 @@ docs/
 ├── debugging/          # 调试和问题排查
 │   ├── DEBUG_GUIDE.md         # 完整调试指南
 │   └── DEBUG_QUICK_REF.md     # 快速参考手册
-├── testing/            # 测试相关
-│   └── TESTING_GUIDE.md       # 测试指南
 └── technical/          # 技术实现细节
     └── REACT_UI_IMPLEMENTATION.md  # React UI 实现
 ```

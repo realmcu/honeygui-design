@@ -23,7 +23,6 @@ export interface DesignerStore extends DesignerState {
   setGridSize: (size: number) => void;
   setSnapToGrid: (snap: boolean) => void;
   setEditingMode: (mode: 'select' | 'move' | 'resize') => void;
-  setCanvasSize: (size: { width: number; height: number }) => void;
   setCanvasBackgroundColor: (color: string) => void;
 
   // Drag and drop
@@ -57,9 +56,33 @@ export interface DesignerStore extends DesignerState {
 
 let vscodeAPI: VSCodeAPI | null = null;
 
+// 创建默认screen容器
+const createDefaultScreen = (): Component => {
+  const id = generateId();
+  return {
+    id,
+    type: 'screen' as ComponentType,
+    name: 'Default Screen',
+    position: {
+      x: 50,
+      y: 50,
+      width: 1024,
+      height: 768
+    },
+    properties: {
+      backgroundColor: '#ffffff', // 默认白色背景
+      border: '1px solid #dddddd',
+      borderRadius: '8px'
+    },
+    children: [], // 子组件数组
+    parent: null, // 顶级容器
+    isContainer: true // 标识为容器组件
+  };
+};
+
 export const useDesignerStore = create<DesignerStore>((set, get) => ({
   // State
-  components: [],
+  components: [createDefaultScreen()], // 初始化时创建默认screen容器
   selectedComponent: null,
   hoveredComponent: null,
   draggedComponent: null,
@@ -68,7 +91,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   snapToGrid: true,
   canvasOffset: { x: 0, y: 0 },
   canvasSize: { width: 1024, height: 768 }, // 默认画布尺寸
-  canvasBackgroundColor: '#ffffff', // 默认画布背景色
+  canvasBackgroundColor: '#f0f0f0', // 默认画布背景色为灰色
   editingMode: 'select',
   undoStack: [],
   redoStack: [],
@@ -80,8 +103,31 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   },
 
   addComponent: (component) => {
-    const state = get();
-    set({ components: [...state.components, component] });
+    set((state) => {
+      const newComponents = [...state.components];
+      
+      // 如果组件有父组件引用，需要将其添加到父组件的children数组中
+      if (component.parent && typeof component.parent === 'string') {
+        const parentIndex = newComponents.findIndex(comp => comp.id === component.parent);
+        
+        if (parentIndex !== -1) {
+          // 确保父组件有children数组
+          if (!newComponents[parentIndex].children) {
+            newComponents[parentIndex] = { ...newComponents[parentIndex], children: [] };
+          }
+          
+          // 将当前组件的ID添加到父组件的children数组中
+          if (!newComponents[parentIndex].children.includes(component.id)) {
+            newComponents[parentIndex].children.push(component.id);
+          }
+        }
+      }
+      
+      // 添加新组件到components数组
+      newComponents.push(component);
+      
+      return { components: newComponents };
+    });
     get().saveToFile();
   },
 
@@ -116,7 +162,6 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   setGridSize: (size) => set({ gridSize: size }),
   setSnapToGrid: (snap) => set({ snapToGrid: snap }),
   setEditingMode: (mode) => set({ editingMode: mode }),
-  setCanvasSize: (size) => set({ canvasSize: size }),
   setCanvasBackgroundColor: (color) => set({ canvasBackgroundColor: color }),
 
   // Drag and drop

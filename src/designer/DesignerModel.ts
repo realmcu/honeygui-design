@@ -39,8 +39,20 @@ export class DesignerModel {
     
     /**
      * 添加组件
+     * @param component 要添加的组件
+     * @param parentId 父组件ID（可选，不提供则添加到根级别）
      */
-    addComponent(component: Component): void {
+    addComponent(component: Component, parentId?: string): void {
+        if (parentId) {
+            // 添加到指定父组件
+            const parent = this._findComponentRecursive(parentId, this._components);
+            if (parent) {
+                parent.children.push(component);
+                this._notifyChange();
+                return;
+            }
+        }
+        // 添加到根级别
         this._components.push(component);
         this._notifyChange();
     }
@@ -49,9 +61,19 @@ export class DesignerModel {
      * 删除组件
      */
     removeComponent(componentId: string): void {
-        const index = this._components.findIndex(c => c.id === componentId);
-        if (index !== -1) {
-            this._components.splice(index, 1);
+        // 尝试在根级别删除
+        const rootIndex = this._components.findIndex(c => c.id === componentId);
+        if (rootIndex !== -1) {
+            this._components.splice(rootIndex, 1);
+            if (this._selectedComponent?.id === componentId) {
+                this._selectedComponent = null;
+            }
+            this._notifyChange();
+            return;
+        }
+        
+        // 在所有组件的子组件中递归查找并删除
+        if (this._removeComponentRecursive(componentId, this._components)) {
             if (this._selectedComponent?.id === componentId) {
                 this._selectedComponent = null;
             }
@@ -63,9 +85,19 @@ export class DesignerModel {
      * 更新组件
      */
     updateComponent(updatedComponent: Component): void {
-        const index = this._components.findIndex(c => c.id === updatedComponent.id);
-        if (index !== -1) {
-            this._components[index] = updatedComponent;
+        // 尝试在根级别更新
+        const rootIndex = this._components.findIndex(c => c.id === updatedComponent.id);
+        if (rootIndex !== -1) {
+            this._components[rootIndex] = updatedComponent;
+            if (this._selectedComponent?.id === updatedComponent.id) {
+                this._selectedComponent = updatedComponent;
+            }
+            this._notifyChange();
+            return;
+        }
+        
+        // 在所有组件的子组件中递归查找并更新
+        if (this._updateComponentRecursive(updatedComponent, this._components)) {
             if (this._selectedComponent?.id === updatedComponent.id) {
                 this._selectedComponent = updatedComponent;
             }
@@ -74,10 +106,91 @@ export class DesignerModel {
     }
     
     /**
-     * 获取组件
+     * 递归查找组件
+     */
+    private _findComponentRecursive(componentId: string, components: Component[]): Component | null {
+        for (const component of components) {
+            if (component.id === componentId) {
+                return component;
+            }
+            
+            if (component.children && component.children.length > 0) {
+                const found = this._findComponentRecursive(componentId, component.children);
+                if (found) {
+                    return found;
+                }
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * 递归删除组件
+     */
+    private _removeComponentRecursive(componentId: string, components: Component[]): boolean {
+        for (let i = 0; i < components.length; i++) {
+            if (components[i].children && components[i].children.length > 0) {
+                const childIndex = components[i].children.findIndex(c => c.id === componentId);
+                if (childIndex !== -1) {
+                    components[i].children.splice(childIndex, 1);
+                    return true;
+                }
+                
+                // 继续在孙组件中查找
+                if (this._removeComponentRecursive(componentId, components[i].children)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * 递归更新组件
+     */
+    private _updateComponentRecursive(updatedComponent: Component, components: Component[]): boolean {
+        for (const component of components) {
+            if (component.children && component.children.length > 0) {
+                const childIndex = component.children.findIndex(c => c.id === updatedComponent.id);
+                if (childIndex !== -1) {
+                    component.children[childIndex] = updatedComponent;
+                    return true;
+                }
+                
+                // 继续在孙组件中查找
+                if (this._updateComponentRecursive(updatedComponent, component.children)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * 获取组件（支持递归查找）
      */
     getComponent(id: string): Component | undefined {
-        return this._components.find(c => c.id === id);
+        // 先在根级别查找
+        const rootComponent = this._components.find(c => c.id === id);
+        if (rootComponent) {
+            return rootComponent;
+        }
+        
+        // 在所有组件的子组件中递归查找
+        const found = this._findComponentRecursive(id, this._components);
+        return found || undefined;
+    }
+    
+    /**
+     * 获取指定父组件下的所有子组件
+     */
+    getChildComponents(parentId?: string): Component[] {
+        if (!parentId) {
+            return this._components;
+        }
+        
+        const parent = this.getComponent(parentId);
+        return parent ? parent.children : [];
     }
     
     /**
@@ -108,6 +221,39 @@ export class DesignerModel {
             children: []
         };
         this.addComponent(windowComponent);
+    }
+    
+    /**
+     * 获取组件的完整路径（包含所有父组件ID）
+     */
+    getComponentPath(componentId: string): string[] {
+        const path: string[] = [];
+        this._findComponentPath(componentId, this._components, path);
+        return path;
+    }
+    
+    /**
+     * 递归查找组件路径
+     */
+    private _findComponentPath(componentId: string, components: Component[], path: string[]): boolean {
+        for (const component of components) {
+            // 检查当前组件是否是目标组件
+            if (component.id === componentId) {
+                path.push(component.id);
+                return true;
+            }
+            
+            // 检查子组件
+            if (component.children && component.children.length > 0) {
+                path.push(component.id);
+                const found = this._findComponentPath(componentId, component.children, path);
+                if (found) {
+                    return true;
+                }
+                path.pop(); // 回溯
+            }
+        }
+        return false;
     }
     
     /**
@@ -170,7 +316,7 @@ export class ComponentFactory {
     /**
      * 创建组件
      */
-    static createComponent(type: ComponentType, idPrefix?: string): Component {
+    static createComponent(type: ComponentType, idPrefix?: string, resolution?: string): Component {
         const id = idPrefix ? `${idPrefix}_${Date.now()}` : `${type}_${Date.now()}`;
         
         const baseComponent: Component = {
@@ -179,8 +325,8 @@ export class ComponentFactory {
             name: this.getComponentDisplayName(type),
             x: 100,
             y: 100,
-            width: this.getDefaultWidth(type),
-            height: this.getDefaultHeight(type),
+            width: this.getDefaultWidth(type, resolution),
+            height: this.getDefaultHeight(type, resolution),
             properties: {},
             children: []
         };
@@ -199,8 +345,10 @@ export class ComponentFactory {
             case ComponentType.Window:
                 baseComponent.x = 0;
                 baseComponent.y = 0;
-                baseComponent.width = 800;
-                baseComponent.height = 600;
+                // 根据分辨率设置窗口默认大小
+                const windowSize = this.getWindowSizeByResolution(resolution);
+                baseComponent.width = windowSize.width;
+                baseComponent.height = windowSize.height;
                 break;
         }
         
@@ -234,8 +382,8 @@ export class ComponentFactory {
     /**
      * 获取组件默认宽度
      */
-    private static getDefaultWidth(type: ComponentType): number {
-        const widths: Record<ComponentType, number> = {
+    private static getDefaultWidth(type: ComponentType, resolution?: string): number {
+        const baseWidths: Record<ComponentType, number> = {
             [ComponentType.Window]: 800,
             [ComponentType.Label]: 100,
             [ComponentType.Button]: 80,
@@ -252,14 +400,22 @@ export class ComponentFactory {
             [ComponentType.Grid]: 400
         };
         
-        return widths[type] || 100;
+        const scaleFactor = this.getScaleFactorByResolution(resolution);
+        
+        // 窗口组件的宽度由getWindowSizeByResolution专门处理
+        if (type === ComponentType.Window) {
+            return baseWidths[type];
+        }
+        
+        // 对其他组件应用缩放因子
+        return Math.round(baseWidths[type] * scaleFactor);
     }
     
     /**
      * 获取组件默认高度
      */
-    private static getDefaultHeight(type: ComponentType): number {
-        const heights: Record<ComponentType, number> = {
+    private static getDefaultHeight(type: ComponentType, resolution?: string): number {
+        const baseHeights: Record<ComponentType, number> = {
             [ComponentType.Window]: 600,
             [ComponentType.Label]: 30,
             [ComponentType.Button]: 30,
@@ -276,6 +432,61 @@ export class ComponentFactory {
             [ComponentType.Grid]: 300
         };
         
-        return heights[type] || 30;
+        const scaleFactor = this.getScaleFactorByResolution(resolution);
+        
+        // 窗口组件的高度由getWindowSizeByResolution专门处理
+        if (type === ComponentType.Window) {
+            return baseHeights[type];
+        }
+        
+        // 对其他组件应用缩放因子
+        return Math.round(baseHeights[type] * scaleFactor);
+    }
+    
+    /**
+     * 根据分辨率获取缩放因子
+     */
+    private static getScaleFactorByResolution(resolution?: string): number {
+        // 默认分辨率为800x480，缩放因子为1.0
+        if (!resolution) {
+            return 1.0;
+        }
+        
+        // 根据不同分辨率设置不同的缩放因子
+        switch (resolution) {
+            case '480X272':
+                return 0.6; // 较小的分辨率，组件尺寸缩小
+            case '800X480':
+                return 1.0; // 基准分辨率
+            case '1024X600':
+                return 1.2; // 较大的分辨率，组件尺寸适当放大
+            case '1280X720':
+                return 1.5; // 高分辨率，组件尺寸放大更多
+            default:
+                return 1.0;
+        }
+    }
+    
+    /**
+     * 根据分辨率获取窗口默认大小
+     */
+    private static getWindowSizeByResolution(resolution?: string): { width: number; height: number } {
+        if (!resolution) {
+            return { width: 800, height: 480 }; // 默认分辨率
+        }
+        
+        // 根据分辨率字符串解析宽高
+        const parts = resolution.split('X');
+        if (parts.length === 2) {
+            const width = parseInt(parts[0], 10);
+            const height = parseInt(parts[1], 10);
+            
+            if (!isNaN(width) && !isNaN(height)) {
+                return { width, height };
+            }
+        }
+        
+        // 如果解析失败，返回默认值
+        return { width: 800, height: 480 };
     }
 }

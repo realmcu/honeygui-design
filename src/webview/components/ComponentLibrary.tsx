@@ -115,6 +115,17 @@ const componentDefinitions: ComponentDefinition[] = [
       { name: 'titleBarColor', label: '标题栏颜色', type: 'color', defaultValue: '#f0f0f0', group: 'style' },
     ],
   },
+  {
+    type: 'screen',
+    name: '屏幕',
+    icon: '📱',
+    defaultSize: { width: 1024, height: 768 },
+    properties: [
+      { name: 'title', label: '屏幕标题', type: 'string', defaultValue: '主屏幕', group: 'general' },
+      { name: 'backgroundColor', label: '背景色', type: 'color', defaultValue: '#ffffff', group: 'style' },
+      { name: 'border', label: '边框', type: 'string', defaultValue: '1px solid #e0e0e0', group: 'style' },
+    ],
+  },
 ];
 
 const ComponentLibrary: React.FC<ComponentLibraryProps> = ({ onComponentDragStart }) => {

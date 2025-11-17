@@ -281,6 +281,9 @@ class HoneyguiWelcomeViewProvider implements vscode.WebviewViewProvider {
                 case 'createProject':
                     vscode.commands.executeCommand('honeygui.showCreateProjectForm');
                     break;
+                case 'projectSettings':
+                    vscode.commands.executeCommand('honeygui.openSettings');
+                    break;
                 case 'openSettings':
                     vscode.commands.executeCommand('honeygui.openSettings');
                     break;
@@ -337,11 +340,19 @@ class HoneyguiWelcomeViewProvider implements vscode.WebviewViewProvider {
             border-radius: 4px;
             color: var(--vscode-foreground);
             cursor: pointer;
-            transition: background-color 0.2s;
+            transition: all 0.2s;
             font-size: 14px;
+            outline: none;
         }
         .action-button:hover {
             background-color: var(--vscode-list-hoverBackground);
+        }
+        .action-button:active {
+            transform: scale(0.98);
+        }
+        .action-button:focus {
+            border-color: var(--vscode-focusBorder);
+            box-shadow: 0 0 0 1px var(--vscode-focusBorder);
         }
         .button-icon {
             width: 20px;
@@ -354,6 +365,15 @@ class HoneyguiWelcomeViewProvider implements vscode.WebviewViewProvider {
         .button-text {
             flex: 1;
             text-align: left;
+        }
+        .project-settings-button {
+            border-color: var(--vscode-button-background);
+            background-color: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+            font-weight: 500;
+        }
+        .project-settings-button:hover {
+            background-color: var(--vscode-button-hoverBackground);
         }
     </style>
 </head>
@@ -376,6 +396,10 @@ class HoneyguiWelcomeViewProvider implements vscode.WebviewViewProvider {
                 <div class="button-icon">➕</div>
                 <div class="button-text">Create Project</div>
             </button>
+            <button class="action-button project-settings-button" id="projectSettings">
+                <div class="button-icon">⚙️</div>
+                <div class="button-text">设置项目</div>
+            </button>
             <button class="action-button" id="openSettings">
                 <div class="button-icon">⚙️</div>
                 <div class="button-text">Settings</div>
@@ -396,6 +420,10 @@ class HoneyguiWelcomeViewProvider implements vscode.WebviewViewProvider {
         
         document.getElementById('createProject').addEventListener('click', () => {
             vscode.postMessage({ command: 'createProject' });
+        });
+        
+        document.getElementById('projectSettings').addEventListener('click', () => {
+            vscode.postMessage({ command: 'projectSettings' });
         });
         
         document.getElementById('openSettings').addEventListener('click', () => {

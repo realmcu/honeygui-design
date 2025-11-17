@@ -98,35 +98,76 @@ const App: React.FC = () => {
     };
   }, [setVSCodeAPI, setComponents]);
 
+  /**
+   * 处理画布上的拖放事件，添加新组件到设计器
+   * 支持组件拖放逻辑：
+   * 1. View组件可以作为顶级容器放置，实现多容器并行布局
+   * 2. 普通组件（按钮、标签等）默认放置在screen容器内
+   * 3. 根据组件类型设置合适的默认尺寸
+   * 
+   * @param e 拖放事件对象，包含拖拽源信息和放置位置
+   */
   const handleCanvasDrop = (e: React.DragEvent) => {
+    // 阻止默认拖放行为，确保自定义逻辑正常工作
     e.preventDefault();
+    
+    // 从拖拽数据中获取组件类型
     const componentType = e.dataTransfer.getData('component-type') as any;
 
     if (componentType) {
+      // 获取画布元素的边界矩形，用于计算相对位置
       const rect = (e.target as HTMLElement).getBoundingClientRect();
-      const x = Math.round((e.clientX - rect.left) / 1); // Adjust for zoom if needed
+      
+      // 计算鼠标在画布中的相对位置
+      const x = Math.round((e.clientX - rect.left) / 1); // 后续可根据需要添加缩放调整
       const y = Math.round((e.clientY - rect.top) / 1);
 
+      // 获取当前所有组件，查找顶级screen容器
+      const components = useDesignerStore.getState().components;
+      const screenContainer = components.find(comp => comp.type === 'screen' && comp.parent === null);
+      
+      // 创建新组件配置对象
       const newComponent: Component = {
-        id: `${componentType}_${Date.now()}`,
+        id: `${componentType}_${Date.now()}`, // 生成唯一ID
         type: componentType,
-        name: `${componentType}_${Date.now().toString().slice(-4)}`,
+        name: `${componentType}_${Date.now().toString().slice(-4)}`, // 生成可读名称
         position: {
-          x: Math.max(0, x),
+          x: Math.max(0, x), // 确保不出现负数坐标
           y: Math.max(0, y),
-          width: 100,
-          height: 32,
+          // View组件设置更大的默认尺寸，作为容器使用
+          width: componentType === 'view' ? 200 : 100,
+          height: componentType === 'view' ? 150 : 32,
         },
         visible: true,
         enabled: true,
         locked: false,
         zIndex: 1,
-        children: [],
-        parent: null,
+        children: [], // 初始化空的子组件列表
+        parent: null, // 默认没有父组件
         data: {
+          // 根据组件类型设置默认文本内容
           text: componentType === 'button' ? 'Button' : componentType === 'label' ? 'Label' : '',
         },
       };
+
+      // 布局策略：
+      // - View组件和Screen组件：可以作为顶级组件直接放在画布上
+      // - 其他组件（按钮、标签等）：默认放在screen容器内作为子组件
+      if (componentType !== 'view' && componentType !== 'screen' && screenContainer) {
+        // 设置父组件为screen容器
+        newComponent.parent = screenContainer.id;
+        
+        // 调整位置，使其相对于screen容器内部坐标系统
+        const screenX = screenContainer.position.x || 0;
+        const screenY = screenContainer.position.y || 0;
+        // 计算相对于容器内部的坐标，并确保至少有10px的边距
+        newComponent.position.x = Math.max(10, x - screenX);
+        newComponent.position.y = Math.max(10, y - screenY);
+        
+        console.debug(`添加组件${newComponent.type}到screen容器，内部坐标: (${newComponent.position.x}, ${newComponent.position.y})`);
+      } else if (componentType === 'view') {
+        console.debug(`添加独立View容器，坐标: (${newComponent.position.x}, ${newComponent.position.y})`);
+      }
 
       addComponent(newComponent);
     }
