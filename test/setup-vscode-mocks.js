@@ -68,6 +68,11 @@ Object.defineProperty(global, 'vscode', {
 });
 // 导出模拟对象以供测试中使用
 exports.mockVSCode = vscodeMock;
+// 将vscode模拟对象导出为模块，让Jest能够正确解析'vscode'
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports.vscode = vscodeMock;
+    module.exports.mockVSCode = vscodeMock;
+}
 // 模拟Node.js的fs/path等模块
 jest.mock('fs', () => ({
     promises: {

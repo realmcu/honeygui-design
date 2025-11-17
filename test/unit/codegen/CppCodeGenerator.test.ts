@@ -204,11 +204,13 @@ describe('CppCodeGenerator测试', () => {
             // 创建无效的模型
             const invalidModel = new MockDesignerModel();
             invalidModel.components = {}; // 清空所有组件
-            
+
             // 创建选项
             const options: CodeGeneratorOptions = {
                 outputDir: testOutputDir,
-                projectName: 'test-project'
+                projectName: 'test-project',
+                enableProtectedAreas: true,
+                generateDebugInfo: true
             };
 
             // 生成代码并验证异常被抛出
@@ -235,8 +237,9 @@ describe('CppCodeGenerator测试', () => {
                     cppGenerator.generate();
                     assert.fail('应该抛出异常但没有抛出');
                 } catch (error) {
-                    assert.strictEqual(error instanceof Error, true);
-                    assert.strictEqual(error.message, 'File write failed');
+                    const err = error as Error;
+                    assert.strictEqual(err instanceof Error, true);
+                    assert.strictEqual(err.message, 'File write failed');
                 }
             } finally {
                 // 恢复原始方法

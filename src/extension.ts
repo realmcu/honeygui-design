@@ -89,6 +89,54 @@ class Logger {
     appendLine(message: string): void {
         this.outputChannel.appendLine(message);
     }
+
+    /**
+     * 将当前日志内容复制到剪贴板
+     */
+    public async copyToClipboard(): Promise<void> {
+        try {
+            const content = this['outputChannel'] ? this['outputChannel']['value'] || '' : '';
+            await vscode.env.clipboard.writeText(content);
+            vscode.window.showInformationMessage('HoneyGUI 日志已复制到剪贴板');
+        } catch (error) {
+            this.error('复制日志到剪贴板失败', error);
+            vscode.window.showErrorMessage('复制日志失败: ' + (error as Error).message);
+        }
+    }
+
+    /**
+     * 导出日志到文件
+     */
+    public async exportToFile(filePath?: string): Promise<void> {
+        const content = this['outputChannel'] ? this['outputChannel']['value'] || '' : '';
+
+        if (!filePath) {
+            const defaultPath = `honeygui-log-${new Date().toISOString().replace(/[:.]/g, '-')}.txt`;
+            const uri = await vscode.window.showSaveDialog({
+                defaultUri: vscode.Uri.file(defaultPath),
+                filters: {
+                    'Text Files': ['txt'],
+                    'Log Files': ['log'],
+                    'All Files': ['*']
+                },
+                title: '导出 HoneyGUI 日志'
+            });
+
+            if (!uri) {
+                return;
+            }
+
+            filePath = uri.fsPath;
+        }
+
+        try {
+            fs.writeFileSync(filePath, content, 'utf8');
+            vscode.window.showInformationMessage(`日志已导出到: ${filePath}`);
+        } catch (error) {
+            this.error('导出日志失败', error);
+            vscode.window.showErrorMessage('导出日志失败: ' + (error as Error).message);
+        }
+    }
 }
 
 // 全局日志实例
@@ -588,7 +636,7 @@ export function activate(context: vscode.ExtensionContext) {
     setTimeout(() => {
         vscode.commands.executeCommand('workbench.view.extension.honeygui-explorer').then(
             () => logger.info('HoneyGUI: 视图容器激活成功'),
-            (err) => logger.warn('HoneyGUI: 视图容器可能尚未准备好', err)
+            (err) => logger.warn(`HoneyGUI: 视图容器可能尚未准备好 ${err}`)
         );
     }, 100);
 

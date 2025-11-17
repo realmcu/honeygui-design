@@ -11,7 +11,7 @@ declare global {
   }
 }
 
-// 创建模拟的VSCode对象
+// 创建模拟的VSCode对象 - 使用Object.assign确保所有导出可用
 const vscodeMock = {
   window: {
     showInformationMessage: jest.fn().mockResolvedValue('OK'),
@@ -20,10 +20,9 @@ const vscodeMock = {
       reveal: jest.fn(),
       webview: {
         html: '',
-        onDidReceiveMessage: jest.fn().mockReturnValue({
-          dispose: jest.fn()
-        }),
-        postMessage: jest.fn().mockResolvedValue(true)
+        onDidReceiveMessage: jest.fn(),
+        postMessage: jest.fn().mockResolvedValue(true),
+        asWebviewUri: jest.fn(uri => uri)
       },
       dispose: jest.fn()
     })
@@ -48,7 +47,16 @@ const vscodeMock = {
   },
   Uri: {
     file: jest.fn((path: string) => ({ path, fsPath: path, scheme: 'file' })),
-    parse: jest.fn()
+    parse: jest.fn(),
+    // 添加缺失的joinPath方法
+    joinPath: jest.fn((uri, ...pathSegments) => {
+      const joinedPath = pathSegments.join('/');
+      return {
+        path: `${uri.path}/${joinedPath}`,
+        fsPath: `${uri.fsPath}/${joinedPath}`,
+        scheme: 'file'
+      };
+    })
   },
   ViewColumn: { One: 1, Two: 2, Three: 3, Active: -1 },
   ExtensionContext: {
@@ -79,20 +87,51 @@ Object.defineProperty(global, 'vscode', {
 // 导出模拟对象以供测试中使用
 export const mockVSCode = vscodeMock;
 
+// 重要：导出整个模拟对象作为模块的默认导出和属性，
+// 这样import * as vscode from 'vscode'才能正常工作
+// 同时也让Jest能够正确解析'vscode'模块
+if (typeof module !== 'undefined' && module.exports) {
+  // 模拟CommonJS导出，支持 import * as 语法
+  module.exports = vscodeMock;
+  module.exports.vscode = vscodeMock;
+  module.exports.mockVSCode = vscodeMock;
+  module.exports.default = vscodeMock;
+
+  // 确保所有属性都被正确暴露
+  Object.assign(module.exports, vscodeMock);
+}
+
 // 模拟Node.js的fs/path等模块
-jest.mock('fs', () => ({
-  promises: {
-    readFile: jest.fn().mockResolvedValue(''),
-    writeFile: jest.fn().mockResolvedValue(undefined),
-    mkdir: jest.fn().mockResolvedValue(undefined),
-    exists: jest.fn().mockResolvedValue(true),
-    readdir: jest.fn().mockResolvedValue([])
-  },
-  existsSync: jest.fn().mockReturnValue(true),
-  mkdirSync: jest.fn(),
-  writeFileSync: jest.fn(),
-  readFileSync: jest.fn().mockReturnValue('')
-}));
+jest.mock('fs', () => {
+  const mockFs: any = {
+    promises: {
+      readFile: jest.fn().mockResolvedValue(''),
+      writeFile: jest.fn().mockResolvedValue(undefined),
+      mkdir: jest.fn().mockResolvedValue(undefined),
+      exists: jest.fn().mockResolvedValue(true),
+      readdir: jest.fn().mockResolvedValue([])
+    },
+    existsSync: jest.fn().mockReturnValue(true),
+    mkdirSync: jest.fn(),
+    writeFileSync: jest.fn(),
+    readFileSync: jest.fn().mockReturnValue('')
+  };
+
+  // 添加回调风格的writeFile和其他方法
+  mockFs.writeFile = jest.fn((path, data, callback) => {
+    if (callback) {
+      callback(null);
+    }
+  });
+
+  mockFs.mkdir = jest.fn((path, options, callback) => {
+    if (callback) {
+      callback(null);
+    }
+  });
+
+  return mockFs;
+});
 
 jest.mock('path', () => ({
   join: jest.fn((...args) => args.join('/')),
