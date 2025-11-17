@@ -169,9 +169,12 @@ export class DesignerPanel {
             const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(onDiskPath, jsFile));
 
             // 替换资源URL (使用正确的Webview URI)
-            // 注意: index.html 内容很简单:
-            // <link rel="stylesheet" href="styles.css">
-            // <script src="webview.js"></script>
+            // 删除 Webpack 自动插入的带哈希的引用（它们未经 webview.asWebviewUri 转换）
+            // 替换旧的 styles.css 和 webview.js 引用
+            htmlContent = htmlContent.replace(/<link href="main\..+\.css"[^>]*>/g, ''); // 删除 Webpack 插入的 CSS
+            htmlContent = htmlContent.replace(/<script defer="defer" src="main\..+\.js"><\/script>/g, ''); // 删除 Webpack 插入的 JS
+
+            // 替换模板中的占位符
             htmlContent = htmlContent.replace(/href="styles.css"/g, `href="${stylesUri}"`);
             htmlContent = htmlContent.replace(/src="webview.js"/g, `src="${scriptUri}"`);
 

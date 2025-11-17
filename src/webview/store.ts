@@ -58,9 +58,11 @@ let vscodeAPI: VSCodeAPI | null = null;
 
 // 创建默认screen容器
 const createDefaultScreen = (): Component => {
-  const id = generateId();
+  // 内联简化版ID生成器，避免store初始化时的模块依赖问题
+  const generateSimpleId = (): string => `screen_0`;
+
   return {
-    id: 'screen_0',
+    id: generateSimpleId(),
     type: 'screen',
     name: 'Default Screen',
     position: {
