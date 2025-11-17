@@ -59,10 +59,8 @@ const App: React.FC = () => {
           if (message.components) {
             setComponents(message.components);
           }
-          if (message.projectConfig) {
-            // 初始化项目配置（包括分辨率）
-            initializeWithProjectConfig(message.projectConfig);
-          }
+          // 总是初始化项目配置，即使没有 projectConfig（会使用默认值）
+          initializeWithProjectConfig(message.projectConfig || null);
           if (message.designerConfig?.canvasBackgroundColor) {
             // 设置设计器画布背景色
             setCanvasBackgroundColor(message.designerConfig.canvasBackgroundColor);
@@ -202,10 +200,11 @@ const App: React.FC = () => {
     // === 组件层级策略决策 ===
     // 根据组件类型决定parent关系，确保正确的层级结构
 
-    // 规则1: 容器类组件（View/Panel/Window/Screen）作为顶级组件
+    // 规则1: 容器类组件（View/Panel/Window）作为顶级组件
     // - 位置使用绝对坐标，相对于画布原点
     // - 支持多容器并行布局，各自独立
-    const isContainerComponent = ['view', 'panel', 'window', 'screen'].includes(componentType);
+    // - 注意: Screen 已从组件库中移除，只能通过 project.json 自动创建
+    const isContainerComponent = ['view', 'panel', 'window'].includes(componentType);
 
     // 规则2: UI类组件（Button/Label/Input等）添加到screen容器内
     // - 需要存在screen容器

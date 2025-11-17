@@ -79,7 +79,7 @@ const createDefaultScreen = (resolution?: string): Component => {
 
   return {
     id: generateSimpleId(),
-    type: 'screen',
+    type: 'screen' as ComponentType,
     name: 'Default Screen',
     position: {
       x: 50,
@@ -98,7 +98,7 @@ const createDefaultScreen = (resolution?: string): Component => {
 
 export const useDesignerStore = create<DesignerStore>((set, get) => ({
   // State
-  components: [createDefaultScreen()], // 初始化时创建默认screen容器
+  components: [], // 初始化时不创建screen，等待projectConfig加载
   projectConfig: null as any, // 项目配置（分辨率等）
   selectedComponent: null,
   hoveredComponent: null,
@@ -333,7 +333,8 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   // Initialize with project config
   initializeWithProjectConfig: (config) => {
     const resolution = config?.resolution;
-    const components = [createDefaultScreen(resolution)];
+    // 确保至少有一个screen容器，如果config为空则使用默认分辨率
+    const components = resolution ? [createDefaultScreen(resolution)] : [createDefaultScreen()];
     set({
       components,
       projectConfig: config,

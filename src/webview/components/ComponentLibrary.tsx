@@ -127,17 +127,6 @@ const componentDefinitions: ComponentDefinition[] = [
       { name: 'overflow', label: '溢出处理', type: 'select', defaultValue: 'hidden', options: ['hidden', 'auto', 'scroll', 'visible'], group: 'style' },
     ],
   },
-  {
-    type: 'screen',
-    name: '屏幕',
-    icon: '📱',
-    defaultSize: { width: 1024, height: 768 },
-    properties: [
-      { name: 'title', label: '屏幕标题', type: 'string', defaultValue: '主屏幕', group: 'general' },
-      { name: 'backgroundColor', label: '背景色', type: 'color', defaultValue: '#ffffff', group: 'style' },
-      { name: 'border', label: '边框', type: 'string', defaultValue: '1px solid #e0e0e0', group: 'style' },
-    ],
-  },
 ];
 
 const ComponentLibrary: React.FC<ComponentLibraryProps> = ({ onComponentDragStart }) => {
