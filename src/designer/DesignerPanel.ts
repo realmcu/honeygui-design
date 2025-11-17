@@ -447,13 +447,19 @@ export class DesignerPanel {
             } catch (configError) {
                 console.error('[HoneyGUI Designer] 加载项目配置文件失败:', configError);
             }
-            
+
+            // 从 project.json 获取设计器配置（画布背景色等）
+            const canvasBackgroundColor = projectConfig?.designer?.canvasBackgroundColor || '#f0f0f0';
+
             // 发送HML内容和配置信息到Webview
             this._panel.webview.postMessage({
                 command: 'loadHml',
                 content: hmlContent,
                 document: document,
-                projectConfig: projectConfig
+                projectConfig: projectConfig,
+                designerConfig: {
+                    canvasBackgroundColor
+                }
             });
             
             // 更新面板标题
@@ -476,21 +482,46 @@ export class DesignerPanel {
         try {
             // 创建新的HML文档
             const document = this._hmlController.createNewDocument();
-            
+
             // 序列化文档为字符串
             const hmlContent = this._hmlController.serializeDocument();
-            
-            // 发送HML内容到Webview
+
+            // 尝试从工作区读取项目配置（包含画布背景色）
+            let projectConfig: any = null;
+            try {
+                const workspaceFolders = vscode.workspace.workspaceFolders;
+                if (workspaceFolders && workspaceFolders.length > 0) {
+                    const workspaceRoot = workspaceFolders[0].uri.fsPath;
+                    const projectJsonPath = path.join(workspaceRoot, 'project.json');
+
+                    if (fs.existsSync(projectJsonPath)) {
+                        const configContent = fs.readFileSync(projectJsonPath, 'utf8');
+                        projectConfig = JSON.parse(configContent);
+                        console.log('[HoneyGUI Designer] 从工作区加载 project.json:', projectConfig);
+                    }
+                }
+            } catch (configError) {
+                console.log('[HoneyGUI Designer] 无法加载 project.json，使用默认配置');
+            }
+
+            // 从 project.json 获取画布背景色，默认灰色
+            const canvasBackgroundColor = projectConfig?.designer?.canvasBackgroundColor || '#f0f0f0';
+
+            // 发送HML内容和配置到Webview
             this._panel.webview.postMessage({
                 command: 'loadHml',
                 content: hmlContent,
-                document: document
+                document: document,
+                projectConfig: projectConfig,
+                designerConfig: {
+                    canvasBackgroundColor
+                }
             });
-            
+
             // 更新面板标题
             this._panel.title = 'HoneyGUI 设计器 - 未命名';
             this._filePath = undefined;
-            
+
         } catch (error) {
             console.error('创建新文档失败:', error);
             vscode.window.showErrorMessage(`创建新文档失败: ${error instanceof Error ? error.message : '未知错误'}`);

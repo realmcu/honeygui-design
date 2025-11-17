@@ -66,7 +66,8 @@ export type ComponentType =
   | 'panel'
   | 'view'
   | 'window'
-  | 'screen';
+  | 'screen'
+  | 'canvas';
 
 export interface ComponentDefinition {
   type: ComponentType;
@@ -99,6 +100,7 @@ export interface DesignerState {
   editingMode: 'select' | 'move' | 'resize';
   undoStack: any[];
   redoStack: any[];
+  projectConfig?: any; // Project configuration (resolution, etc.)
 }
 
 export interface VSCodeAPI {

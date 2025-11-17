@@ -18,6 +18,8 @@ const App: React.FC = () => {
     setComponents,
     selectComponent,
     addComponent,
+    initializeWithProjectConfig,
+    setCanvasBackgroundColor,
   } = useDesignerStore();
 
   // Initialize keyboard shortcuts
@@ -56,6 +58,14 @@ const App: React.FC = () => {
         case 'loadHml':
           if (message.components) {
             setComponents(message.components);
+          }
+          if (message.projectConfig) {
+            // 初始化项目配置（包括分辨率）
+            initializeWithProjectConfig(message.projectConfig);
+          }
+          if (message.designerConfig?.canvasBackgroundColor) {
+            // 设置设计器画布背景色
+            setCanvasBackgroundColor(message.designerConfig.canvasBackgroundColor);
           }
           break;
 

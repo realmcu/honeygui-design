@@ -358,11 +358,12 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
       case 'panel':
       case 'view':
       case 'window':
+      case 'canvas':
         /**
-         * View/Panel/Window 容器组件实现 - 支持嵌套布局和多容器并行
+         * View/Panel/Window/Canvas 容器组件实现 - 支持嵌套布局和多容器并行
          *
          * 功能特性：
-         * 1. **多容器支持**: View组件可作为独立顶级容器，实现多容器并行布局
+         * 1. **多容器支持**: 容器组件可作为独立顶级容器，实现多容器并行布局
          * 2. **嵌套能力**: 所有容器组件都支持包含子组件，形成层级结构
          * 3. **视觉区分**: 不同类型容器有不同的默认样式和视觉特征
          * 4. **灵活布局**: 支持在screen内部或外部放置，满足不同场景需求
@@ -383,10 +384,16 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
          *   * 样式: 包含标题栏、窗口控制按钮(关闭、最小化、最大化)
          *   * 层级: 可以作为顶级组件
          *
+         * - Canvas (🎨): 画布组件，用于绘图或自定义渲染
+         *   * 用途: 绘图区域、游戏画布、自定义UI
+         *   * 样式: background: '#ffffff', border, overflow控制
+         *   * 层级: 通常作为screen的子组件
+         *   * 注意: 这是UI组件，不是设计器画布
+         *
          * 布局策略：
-         * - View组件拖放到画布: 可以作为顶级组件放置（多容器并行）
-         * - View组件拖放到screen内部: 作为screen的子组件（嵌套布局）
-         * - View组件拖放到其他View内部: 支持多级嵌套
+         * - 容器组件拖放到画布: 可以作为顶级组件放置（多容器并行）
+         * - 容器组件拖放到screen内部: 作为screen的子组件（嵌套布局）
+         * - 容器组件拖放到其他View内部: 支持多级嵌套
          *
          * 组件关系：
          * - parent: string | null (父组件ID，顶级组件为null)
@@ -394,7 +401,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
          * - zIndex: number (层级顺序，可控制显示层级)
          *
          * 尺寸控制：
-         * - View/Panel/Window都遵循组件库中定义的defaultSize
+         * - 所有容器组件都遵循组件库中定义的defaultSize
          * - 可在属性面板中手动调整尺寸
          *
          * @see ComponentLibrary.tsx - componentDefinitions包含各容器类型的默认尺寸

@@ -52,14 +52,30 @@ export interface DesignerStore extends DesignerState {
   // Selection
   getSelectedComponent: () => Component | undefined;
   getComponentById: (id: string) => Component | undefined;
+
+  // Project configuration
+  setProjectConfig: (config: any) => void;
+  initializeWithProjectConfig: (config: any) => void;
 }
 
 let vscodeAPI: VSCodeAPI | null = null;
 
 // 创建默认screen容器
-const createDefaultScreen = (): Component => {
+const createDefaultScreen = (resolution?: string): Component => {
   // 内联简化版ID生成器，避免store初始化时的模块依赖问题
-  const generateSimpleId = (): string => `screen_0`;
+  const generateSimpleId = (): string => `screen_${Date.now()}`;
+
+  // 解析分辨率，默认 1024x768
+  const parseResolution = (res?: string) => {
+    if (!res) return { width: 1024, height: 768 };
+    const parts = res.split('X');
+    return {
+      width: parseInt(parts[0]) || 1024,
+      height: parseInt(parts[1]) || 768
+    };
+  };
+
+  const size = parseResolution(resolution);
 
   return {
     id: generateSimpleId(),
@@ -68,8 +84,8 @@ const createDefaultScreen = (): Component => {
     position: {
       x: 50,
       y: 50,
-      width: 1024,
-      height: 768
+      width: size.width,    // 根据项目配置设置宽度
+      height: size.height   // 根据项目配置设置高度
     },
     visible: true,
     enabled: true,
@@ -83,6 +99,7 @@ const createDefaultScreen = (): Component => {
 export const useDesignerStore = create<DesignerStore>((set, get) => ({
   // State
   components: [createDefaultScreen()], // 初始化时创建默认screen容器
+  projectConfig: null as any, // 项目配置（分辨率等）
   selectedComponent: null,
   hoveredComponent: null,
   draggedComponent: null,
@@ -301,6 +318,36 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
 
   getComponentById: (id) => {
     return get().components.find((c) => c.id === id);
+  },
+
+  // Project configuration
+  setProjectConfig: (config) => {
+    set({ projectConfig: config });
+    // 根据项目分辨率重新创建 screen
+    if (config?.resolution) {
+      const components = [createDefaultScreen(config.resolution)];
+      set({ components });
+    }
+  },
+
+  // Initialize with project config
+  initializeWithProjectConfig: (config) => {
+    const resolution = config?.resolution;
+    const components = [createDefaultScreen(resolution)];
+    set({
+      components,
+      projectConfig: config,
+      selectedComponent: null,
+      hoveredComponent: null,
+      draggedComponent: null,
+      zoom: 1,
+      gridSize: 8,
+      snapToGrid: true,
+      canvasOffset: { x: 0, y: 0 },
+      canvasSize: { width: 1024, height: 768 },
+      canvasBackgroundColor: '#f0f0f0',
+      editingMode: 'select',
+    });
   },
 }));
 

@@ -116,6 +116,18 @@ const componentDefinitions: ComponentDefinition[] = [
     ],
   },
   {
+    type: 'canvas',
+    name: '画布组件',
+    icon: '🎨',
+    defaultSize: { width: 300, height: 200 },
+    properties: [
+      { name: 'backgroundColor', label: '背景色', type: 'color', defaultValue: '#ffffff', group: 'style' },
+      { name: 'border', label: '边框', type: 'string', defaultValue: '1px solid #cccccc', group: 'style' },
+      { name: 'borderRadius', label: '圆角', type: 'number', defaultValue: 4, group: 'style' },
+      { name: 'overflow', label: '溢出处理', type: 'select', defaultValue: 'hidden', options: ['hidden', 'auto', 'scroll', 'visible'], group: 'style' },
+    ],
+  },
+  {
     type: 'screen',
     name: '屏幕',
     icon: '📱',
