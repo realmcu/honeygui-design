@@ -199,6 +199,14 @@ out/
    - 为新组件类型添加生成方法
    - 在主生成循环中注册
 
+### 键盘快捷键实现
+
+键盘快捷键通过 React hook (`useKeyboardShortcuts`) 实现，位于 `src/webview/utils/`。修改或添加快捷键需要：
+
+1. 在 `useKeyboardShortcuts.ts` 中更新快捷键映射
+2. 确保快捷键不与 VS Code 或浏览器默认行为冲突
+3. 在 `App.tsx` 中调用 hook 并传入 store actions
+
 ### HML 文件格式
 
 HML 是自定义类 XML 格式：
@@ -262,6 +270,15 @@ int customVariable = 42;
 - Ctrl+D：复制
 - 方向键：微调（1px）
 - Shift+方向键：快速移动（10px）
+
+**实现位置**：`src/webview/utils/useKeyboardShortcuts.ts`
+
+**关键实现细节**：
+- Hook 接收 `store` 参数以访问所有状态管理方法
+- 使用 `useCallback` 避免不必要的重新渲染
+- 事件监听器在 `useEffect` 中注册和清理
+- 支持多选组件的移动操作
+- 拦截浏览器默认行为（如 Ctrl+S 不打开保存对话框）
 
 ### 扩展命令
 
@@ -336,6 +353,24 @@ npm run compile
 2. 在开发宿主中手动执行功能测试
 3. 查看输出窗口（Output > HoneyGUI Design）检查日志
 4. 使用浏览器的开发者工具检查 webview 控制台
+
+### 调试技巧
+
+**扩展端调试**：
+- 在 VS Code 中设置断点（extension.ts, designer/, hml/, codegen/）
+- 按 F5 启动调试，断点会在扩展代码中生效
+- 查看 Output 面板中的 "HoneyGUI Design" 通道
+
+**Webview 端调试**：
+- 在开发模式下访问 http://localhost:3000
+- 使用浏览器开发者工具调试 React 组件
+- 查看 Console 中的日志和错误
+- 使用 React DevTools 检查组件树和状态
+
+**常见问题排查**：
+- **通信问题**：检查 postMessage 和 vscode.postMessage 的日志
+- **状态不一致**：对比扩展端和 webview 端的状态
+- **构建问题**：删除 out/ 目录后重新构建
 
 ## 已知限制
 

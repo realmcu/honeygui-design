@@ -31,6 +31,9 @@ export class HmlController {
             // 解析文件内容
             const document = await this.parser.parseFromFile(filePath);
             
+            // 检查并确保文档包含screen组件
+            this._ensureScreenComponent(document);
+            
             // 更新当前文档状态
             this._currentDocument = document;
             this._currentFilePath = filePath;
@@ -334,26 +337,40 @@ export class HmlController {
             },
             children: [
                 {
-                    id: 'welcome',
-                    type: 'text',
+                    id: 'main_screen',
+                    type: 'screen',
                     properties: {
-                        text: '欢迎使用 HoneyGUI',
-                        fontSize: 18,
-                        color: '#333333',
-                        marginTop: 20,
-                        marginLeft: 20
-                    }
-                },
-                {
-                    id: 'subtitle',
-                    type: 'text',
-                    properties: {
-                        text: '请开始设计您的界面',
-                        fontSize: 14,
-                        color: '#666666',
-                        marginTop: 8,
-                        marginLeft: 20
-                    }
+                        id: 'main',
+                        width: '100%',
+                        height: '100%',
+                        backgroundColor: '#f5f5f5',
+                        flexDirection: 'column',
+                        padding: 16
+                    },
+                    children: [
+                        {
+                            id: 'welcome',
+                            type: 'text',
+                            properties: {
+                                text: '欢迎使用 HoneyGUI',
+                                fontSize: 18,
+                                color: '#333333',
+                                marginTop: 20,
+                                marginLeft: 20
+                            }
+                        },
+                        {
+                            id: 'subtitle',
+                            type: 'text',
+                            properties: {
+                                text: '请开始设计您的界面',
+                                fontSize: 14,
+                                color: '#666666',
+                                marginTop: 8,
+                                marginLeft: 20
+                            }
+                        }
+                    ]
                 }
             ]
         };
@@ -440,5 +457,57 @@ export class HmlController {
         }
         
         return id;
+    }
+    
+    /**
+     * 检查并确保文档包含screen组件
+     * 如果没有screen组件，则将现有内容包装到screen组件中
+     */
+    private _ensureScreenComponent(document: HmlDocument): void {
+        // 检查根组件的子组件中是否已经包含screen组件
+        const root = document.view.root;
+        let hasScreenComponent = false;
+        
+        if (root.children) {
+            // 检查是否已经有screen类型的组件
+            for (const child of root.children) {
+                if (child.type === 'screen') {
+                    hasScreenComponent = true;
+                    break;
+                }
+            }
+        }
+        
+        // 如果没有screen组件，则创建一个screen组件并将现有内容移到其中
+        if (!hasScreenComponent) {
+            // 保存现有的子组件
+            const existingChildren = root.children || [];
+            
+            // 创建screen组件
+            const screenComponent: Component = {
+                id: 'main_screen',
+                type: 'screen',
+                properties: {
+                    id: 'main',
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: '#f5f5f5',
+                    flexDirection: 'column',
+                    padding: 16
+                },
+                children: existingChildren
+            };
+            
+            // 更新所有子组件的parentId为screen组件的ID
+            for (const child of existingChildren) {
+                child.parentId = screenComponent.id;
+            }
+            
+            // 将screen组件设置为根组件的唯一子组件
+            root.children = [screenComponent];
+            
+            // 重新生成组件列表
+            document.view.components = this._flattenComponentTree(document.view.root);
+        }
     }
 }
