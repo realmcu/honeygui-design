@@ -3,6 +3,8 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { PreviewService } from '../preview/PreviewService';
 import { TemplateManager } from '../template/TemplateManager';
+import { HmlTemplateManager } from '../hml/HmlTemplateManager';
+import { WebviewUtils } from '../common/WebviewUtils';
 
 /**
  * 项目创建面板管理类
@@ -596,15 +598,9 @@ export class CreateProjectPanel {
     /**
      * 生成随机nonce值
      */
+    // 使用WebviewUtils中的方法替代原有的_getNonce
     private _getNonce(): string {
-        let text = '';
-        const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-        
-        for (let i = 0; i < 32; i++) {
-            text += possible.charAt(Math.floor(Math.random() * possible.length));
-        }
-        
-        return text;
+        return WebviewUtils.generateNonce();
     }
 
     /**
@@ -628,10 +624,7 @@ export class CreateProjectPanel {
             }
         } catch (error) {
             console.error('选择文件夹失败:', error);
-            this._panel.webview.postMessage({
-                command: 'error',
-                text: 'Failed to select folder'
-            });
+            WebviewUtils.handleWebviewError(this._panel.webview, 'Failed to select folder');
         }
     }
 
@@ -755,67 +748,27 @@ export class CreateProjectPanel {
         fs.mkdirSync(path.join(projectPath, 'src'), { recursive: true });
         fs.mkdirSync(path.join(projectPath, 'assets'), { recursive: true });
         
-        // 解析分辨率
-        const [width, height] = resolution.split('X').map(Number);
-        
+        // 使用HmlTemplateManager生成文件内容
         // 创建HML文件
-        const hmlContent = `<!-- ${projectName} UI definition -->
-<!-- APP ID: ${appId} -->
-<!-- Resolution: ${resolution} -->
-<!-- Min SDK: ${minSdk} -->
-<!-- Pixel Mode: ${pixelMode} -->
-<hml id="${projectName}" width="${width}" height="${height}">
-  <container id="root" layout="column" padding="16">
-    <text id="title" value="${projectName}" fontSize="24" marginTop="16" align="center"></text>
-    <button id="welcomeButton" text="Click Me" marginTop="32" align="center" onclickhandler="OnWelcomeButtonClick"></button>
-  </container>
-</hml>`;
-        
+        const hmlContent = HmlTemplateManager.generateProjectHml(
+            projectName,
+            resolution,
+            appId,
+            minSdk,
+            pixelMode
+        );
         fs.writeFileSync(path.join(projectPath, 'ui', `${projectName}.hml`), hmlContent, 'utf8');
         
         // 创建C++文件
-        const cppContent = `// ${projectName} Main Program
-// APP ID: ${appId}
-
-#include <iostream>
-
-// <honeygui-protect-begin:handler>
-void OnWelcomeButtonClick() {
-    std::cout << "Welcome to ${projectName}!" << std::endl;
-}
-// <honeygui-protect-end:handler>
-
-int main() {
-    std::cout << "${projectName} starting..." << std::endl;
-    return 0;
-}`;
-        
+        const cppContent = HmlTemplateManager.generateMainCpp(projectName, appId);
         fs.writeFileSync(path.join(projectPath, 'src', 'main.cpp'), cppContent, 'utf8');
         
         // 创建README文件
-        const readmeContent = `# ${projectName}
-
-A HoneyGUI project created with the following configuration:
-
-- **APP ID**: ${appId}
-- **Resolution**: ${resolution}
-- **Minimum SDK**: ${minSdk}
-- **Pixel Mode**: ${pixelMode}
-
-## Project Structure
-
-- **ui/**: Contains HML UI definition files
-- **src/**: Contains C/C++ source code
-- **assets/**: Contains image and other resource files
-
-## Getting Started
-
-1. Open this project in VS Code
-2. Use the HoneyGUI Designer to modify the UI
-3. Run the preview to see your changes in real-time
-4. Generate code to update the C/C++ implementation
-`;
-
+        const readmeContent = HmlTemplateManager.generateReadme(
+            projectName,
+            appId,
+            resolution
+        );
         fs.writeFileSync(path.join(projectPath, 'README.md'), readmeContent, 'utf8');
 
         // 创建 project.json 项目配置文件

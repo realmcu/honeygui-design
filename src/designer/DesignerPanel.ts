@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import { HmlController } from '../hml/HmlController';
 import { Component } from '../hml/types';
 import { CodeGeneratorFactory, CodeGeneratorOptions } from '../codegen/CodeGenerator';
+import { WebviewUtils } from '../common/WebviewUtils';
 
 /**
  * 设计器Webview面板管理类
@@ -492,14 +493,7 @@ export class DesignerPanel {
      * 生成随机nonce值
      */
     private _getNonce(): string {
-        let text = '';
-        const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-        
-        for (let i = 0; i < 32; i++) {
-            text += possible.charAt(Math.floor(Math.random() * possible.length));
-        }
-        
-        return text;
+        return WebviewUtils.generateNonce();
     }
 
     /**
