@@ -764,10 +764,10 @@ export class CreateProjectPanel {
 <!-- Resolution: ${resolution} -->
 <!-- Min SDK: ${minSdk} -->
 <!-- Pixel Mode: ${pixelMode} -->
-<hml page id="${projectName}" width="${width}" height="${height}">
+<hml id="${projectName}" width="${width}" height="${height}">
   <container id="root" layout="column" padding="16">
-    <text id="title" value="${projectName}" fontSize="24" marginTop="16" align="center"/>
-    <button id="welcomeButton" text="Click Me" marginTop="32" align="center" onClick="OnWelcomeButtonClick"/>
+    <text id="title" value="${projectName}" fontSize="24" marginTop="16" align="center"></text>
+    <button id="welcomeButton" text="Click Me" marginTop="32" align="center" onclickhandler="OnWelcomeButtonClick"></button>
   </container>
 </hml>`;
         

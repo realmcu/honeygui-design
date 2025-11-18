@@ -215,9 +215,17 @@ export class PreviewRunner {
       // 检查Runner是否存在
       if (!this.isRunnerInstalled()) {
         if (this.autoDownload) {
+          // 注意：开发阶段默认禁用自动下载，避免网络访问失败
           await this.downloadRunner();
         } else {
-          throw new Error('Runner未安装，请先下载或设置Runner路径');
+          throw new Error(
+            `HoneyGUI Runner未找到: ${this.runnerPath}\n\n` +
+            '请确保Runner已手动安装到以下位置之一:\n' +
+            '1. 在VS Code设置中配置 honeygui.preview.runnerPath\n' +
+            '2. 将Runner安装到: ~/.honeygui/runner/\n\n' +
+            '当前为离线模式（预览自动下载已禁用）。\n' +
+            '如需启用自动下载，请在设置中将 "honeygui.preview.autoDownload" 设为 true。'
+          );
         }
       }
 

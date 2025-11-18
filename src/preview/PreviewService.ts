@@ -151,10 +151,27 @@ export class PreviewService {
       }
 
       const status = this.runner.getStatus();
-      
-      // 检查Runner是否已安装
-      if (!status.isInstalled && status.isRunning) {
-        vscode.window.showErrorMessage('HoneyGUI Runner未安装，请检查配置');
+
+      // 检查Runner是否已安装（增强错误提示）
+      if (!status.isInstalled) {
+        const config = vscode.workspace.getConfiguration('honeygui.preview');
+        const autoDownload = config.get<boolean>('autoDownload', false);
+
+        if (autoDownload) {
+          vscode.window.showErrorMessage(
+            'HoneyGUI Runner未安装',
+            '尝试自动下载Runner...（开发阶段默认禁用自动下载）'
+          );
+        } else {
+          vscode.window.showErrorMessage(
+            'HoneyGUI Runner未找到',
+            `Runner未在以下位置找到:\n${status.runnerPath}\n\n` +
+            '解决方案:\n' +
+            '1. 在VS Code设置中配置 honeygui.preview.runnerPath\n' +
+            '2. 将Runner安装到: ~/.honeygui/runner/\n\n' +
+            '当前为离线开发模式（自动下载已禁用）。'
+          );
+        }
         return;
       }
 

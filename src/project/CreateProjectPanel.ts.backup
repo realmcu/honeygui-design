@@ -189,8 +189,8 @@ export class CreateProjectPanel {
             const hmlContent = `<!-- ${formData.projectName} UI定义 -->
 <hml page id="${formData.projectName}" width="${formData.resolution.split('X')[0]}" height="${formData.resolution.split('X')[1]}">
   <container id="root" layout="column" padding="16">
-    <text id="title" value="${formData.projectName}" fontSize="24" marginTop="16" align="center"/>
-    <button id="helloButton" text="点击我" marginTop="32" align="center" onClick="OnHelloButtonClick"/>
+    <text id="title" value="${formData.projectName}" fontSize="24" marginTop="16" align="center"></text>
+    <button id="helloButton" text="点击我" marginTop="32" align="center" onclickhandler="OnHelloButtonClick"></button>
   </container>
 </hml>`;
             fs.writeFileSync(path.join(projectPath, 'ui', `${formData.projectName}.hml`), hmlContent, 'utf8');

@@ -185,8 +185,8 @@
         },
         "honeygui.preview.autoDownload": {
           "type": "boolean",
-          "default": true,
-          "description": "自动下载Runner"
+          "default": false,
+          "description": "自动下载Runner（开发阶段：默认禁用，避免网络访问失败）"
         },
         "honeygui.preview.timeoutMs": {
           "type": "number",

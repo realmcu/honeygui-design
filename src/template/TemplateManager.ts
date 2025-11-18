@@ -155,11 +155,11 @@ export class TemplateManager {
     const uiDir = path.join(templateDir, 'ui');
     fs.mkdirSync(uiDir, { recursive: true });
     const uiContent = `<!-- {{projectName}} UI定义 -->
-<hml page id="{{projectName}}" width="{{width}}" height="{{height}}">
+<hml id="{{projectName}}" width="{{width}}" height="{{height}}">
   <container id="root" layout="column" padding="16">
-    <text id="title" value="{{appTitle}}" fontSize="24" marginTop="16" align="center"/>
-    <text id="subtitle" value="{{description}}" fontSize="14" marginTop="8" align="center"/>
-    <button id="helloButton" text="点击我" marginTop="32" align="center" onClick="OnHelloButtonClick"/>
+    <text id="title" value="{{appTitle}}" fontSize="24" marginTop="16" align="center"></text>
+    <text id="subtitle" value="{{description}}" fontSize="14" marginTop="8" align="center"></text>
+    <button id="helloButton" text="点击我" marginTop="32" align="center" onclickhandler="OnHelloButtonClick"></button>
   </container>
 </hml>`;
     await promisify(fs.writeFile)(path.join(uiDir, 'main.hml'), uiContent, 'utf8');
