@@ -290,7 +290,7 @@ export class CreateProjectPanel {
                 <div class="form-container">
                     <div class="form-group">
                         <label for="projectName">Project name</label>
-                        <input type="text" id="projectName" class="form-control" value="NewProject" oninput="validateForm()" />
+                        <input type="text" id="projectName" class="form-control" value="NewProject" />
                     </div>
                     
                     <div class="form-group">
@@ -304,12 +304,12 @@ export class CreateProjectPanel {
                     <div class="form-row">
                         <div class="form-group">
                             <label for="appId">APP ID</label>
-                            <input type="text" id="appId" class="form-control" value="com.example.NewProject" oninput="validateForm()" />
+                            <input type="text" id="appId" class="form-control" value="com.example.NewProject" />
                         </div>
-                        
+
                         <div class="form-group">
                             <label for="resolution">Resolution</label>
-                            <select id="resolution" class="form-control" onchange="validateForm()">
+                            <select id="resolution" class="form-control">
                                 <option value="480X272">480X272</option>
                                 <option value="800X480">800X480</option>
                                 <option value="1024X600">1024X600</option>
@@ -317,20 +317,20 @@ export class CreateProjectPanel {
                             </select>
                         </div>
                     </div>
-                    
+
                     <div class="form-row">
                         <div class="form-group">
                             <label for="minSdk">Minimum SDK</label>
-                            <select id="minSdk" class="form-control" onchange="validateForm()">
+                            <select id="minSdk" class="form-control">
                                 <option value="API 2: Persim Wear V1.1.0">API 2: Persim Wear V1.1.0</option>
                                 <option value="API 3: Persim Wear V1.2.0">API 3: Persim Wear V1.2.0</option>
                                 <option value="API 4: Persim Wear V2.0.0">API 4: Persim Wear V2.0.0</option>
                             </select>
                         </div>
-                        
+
                         <div class="form-group">
                             <label for="pixelMode">Pixel Mode</label>
-                            <select id="pixelMode" class="form-control" onchange="validateForm()">
+                            <select id="pixelMode" class="form-control">
                                 <option value="ARGB8888">ARGB8888</option>
                                 <option value="RGB565">RGB565</option>
                                 <option value="ARGB4444">ARGB4444</option>
@@ -339,7 +339,7 @@ export class CreateProjectPanel {
                         </div>
                     </div>
                     
-                    <button id="createButton" class="btn-create" disabled onclick="createProject()">Create</button>
+                    <button id="createButton" class="btn-create" disabled>Create</button>
                 </div>
             </div>
             
@@ -391,52 +391,96 @@ export class CreateProjectPanel {
                 // 动态绑定事件监听器，避免内联事件处理程序违反CSP
                 document.addEventListener('DOMContentLoaded', function() {
                     console.log('DOM content loaded, binding event listeners...');
-                    
-                    // 获取标签按钮并绑定点击事件
+
+                    // 获取表单元素
                     const tabEmpty = document.getElementById('tab-empty');
                     const tabTemplate = document.getElementById('tab-template');
                     const selectFolderButton = document.getElementById('selectFolderButton');
                     const saveLocationInput = document.getElementById('saveLocation');
                     const createButton = document.getElementById('createButton');
-                    
-                    console.log('Tab buttons found - empty:', tabEmpty !== null, 'template:', tabTemplate !== null);
-                    console.log('Folder button found:', selectFolderButton !== null);
-                    
+                    const appIdInput = document.getElementById('appId');
+                    const resolutionSelect = document.getElementById('resolution');
+                    const minSdkSelect = document.getElementById('minSdk');
+                    const pixelModeSelect = document.getElementById('pixelMode');
+
+                    console.log('Tab buttons found - empty:', !!tabEmpty, 'template:', !!tabTemplate);
+                    console.log('Form elements found:', {
+                        folderBtn: !!selectFolderButton,
+                        saveLocation: !!saveLocationInput,
+                        createBtn: !!createButton,
+                        appId: !!appIdInput,
+                        resolution: !!resolutionSelect,
+                        minSdk: !!minSdkSelect,
+                        pixelMode: !!pixelModeSelect
+                    });
+
+                    // 绑定标签切换事件
                     if (tabEmpty) {
                         tabEmpty.addEventListener('click', function() {
                             console.log('Empty tab clicked');
                             switchTab('empty');
                         });
                     }
-                    
+
                     if (tabTemplate) {
                         tabTemplate.addEventListener('click', function() {
                             console.log('Template tab clicked');
                             switchTab('template');
                         });
                     }
-                    
+
+                    // 绑定文件夹选择事件
                     if (selectFolderButton) {
                         selectFolderButton.addEventListener('click', function() {
                             console.log('Select folder button clicked');
                             selectFolder();
                         });
                     }
-                    
+
+                    // 绑定表单验证事件
                     if (saveLocationInput) {
                         saveLocationInput.addEventListener('input', function() {
                             console.log('Save location input changed');
                             validateForm();
                         });
                     }
-                    
+
+                    if (appIdInput) {
+                        appIdInput.addEventListener('input', function() {
+                            console.log('APP ID input changed');
+                            validateForm();
+                        });
+                    }
+
+                    if (resolutionSelect) {
+                        resolutionSelect.addEventListener('change', function() {
+                            console.log('Resolution changed');
+                            validateForm();
+                        });
+                    }
+
+                    if (minSdkSelect) {
+                        minSdkSelect.addEventListener('change', function() {
+                            console.log('Min SDK changed');
+                            validateForm();
+                        });
+                    }
+
+                    if (pixelModeSelect) {
+                        pixelModeSelect.addEventListener('change', function() {
+                            console.log('Pixel mode changed');
+                            validateForm();
+                        });
+                    }
+
+                    // 绑定创建按钮事件
                     if (createButton) {
                         createButton.addEventListener('click', function() {
                             console.log('Create button clicked');
                             createProject();
                         });
                     }
-                    
+
                     console.log('Event listeners bound successfully');
                 });
                 
