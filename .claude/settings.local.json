@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "HoneyGUI vscode plugin"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
