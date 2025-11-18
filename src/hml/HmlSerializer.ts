@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { HmlDocument, Component, ComponentProperties } from './HmlParser';
+import { Document as HmlDocument, Component, ComponentProperties } from './types';
 
 /**
  * HML序列化器类
@@ -88,12 +88,16 @@ export class HmlSerializer {
      * @param view view对象，包含root组件和components数组
      * @returns 序列化后的view XML字符串
      */
-    private _serializeView(view: { root: Component; components: Component[] }): string {
+    private _serializeView(view: { components?: Component[] }): string {
         let viewContent = '    <view>' + '\n';
         
-        // 序列化组件树（从根组件开始）
-        if (view && view.root) {
-            viewContent += this._serializeComponent(view.root, 2);
+        // 序列化组件树（从顶层组件开始）
+        if (view && view.components && view.components.length > 0) {
+            // 找到顶层组件（没有parentId的组件）
+            const topLevelComponents = view.components.filter(comp => !comp.parentId);
+            topLevelComponents.forEach(component => {
+                viewContent += this._serializeComponent(component, 2);
+            });
         }
         
         viewContent += '    </view>' + '\n';
@@ -135,7 +139,7 @@ export class HmlSerializer {
             componentContent += indent + '<' + component.type + attributesStr + '>' + '\n';
             
             // 递归序列化子组件
-            component.children.forEach(child => {
+            component.children.forEach((child: Component) => {
                 componentContent += this._serializeComponent(child, indentLevel + 1);
             });
             

@@ -272,6 +272,7 @@
     "chokidar": "^3.6.0",
     "fast-xml-parser": "^4.3.2",
     "lucide-react": "^0.553.0",
+    "xml-js": "^1.6.11",
     "zustand": "^5.0.8"
   }
 }

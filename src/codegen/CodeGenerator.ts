@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { Component } from '../hml/HmlParser';
+import { Component } from '../hml/types';
 import { DesignerModel } from '../designer/DesignerModel';
 
 /**

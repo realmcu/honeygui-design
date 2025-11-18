@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { HmlController } from '../hml/HmlController';
-import { Component } from '../hml/HmlParser';
+import { Component } from '../hml/types';
 import { CodeGeneratorFactory, CodeGeneratorOptions } from '../codegen/CodeGenerator';
 
 /**
@@ -141,61 +141,229 @@ export class DesignerPanel {
      */
     private _getHtmlForWebview(webview: vscode.Webview): string {
         try {
-            // 获取构建后的资源路径
-            const onDiskPath = vscode.Uri.joinPath(
+            // 1. 首先尝试从构建目录加载
+            const buildPath = vscode.Uri.joinPath(
                 this._extensionUri,
                 'out',
                 'designer',
                 'webview'
             );
+            
+            // 2. 同时准备源码目录作为备选
+            const sourcePath = vscode.Uri.joinPath(
+                this._extensionUri,
+                'src',
+                'designer',
+                'webview'
+            );
+            
+            // 3. 确定使用哪个路径
+            let htmlPath: vscode.Uri;
+            let onDiskPath: vscode.Uri;
+            
+            // 检查构建目录是否存在index.html
+            if (fs.existsSync(vscode.Uri.joinPath(buildPath, 'index.html').fsPath)) {
+                onDiskPath = buildPath;
+                htmlPath = vscode.Uri.joinPath(buildPath, 'index.html');
+            } else if (fs.existsSync(vscode.Uri.joinPath(sourcePath, 'index.html').fsPath)) {
+                // 如果构建目录不存在，则使用源码目录
+                onDiskPath = sourcePath;
+                htmlPath = vscode.Uri.joinPath(sourcePath, 'index.html');
+            } else if (fs.existsSync(vscode.Uri.joinPath(sourcePath, 'designer.html').fsPath)) {
+                // 可能使用了不同的文件名
+                onDiskPath = sourcePath;
+                htmlPath = vscode.Uri.joinPath(sourcePath, 'designer.html');
+            } else {
+                // 如果都不存在，使用内置的最小HTML模板
+                console.warn('[HoneyGUI Designer] 未找到HTML文件，使用内置最小模板');
+                return this._getMinimalHtmlTemplate(webview);
+            }
+            
             const webviewUri = webview.asWebviewUri(onDiskPath);
 
             // 读取HTML文件内容
-            const htmlPath = vscode.Uri.joinPath(onDiskPath, 'index.html');
             let htmlContent = fs.readFileSync(htmlPath.fsPath, 'utf8');
 
-            // 查找带哈希的JS和CSS文件
-            // Webpack生成格式: main.{hash}.js 和 main.{hash}.css
-            const files = fs.readdirSync(onDiskPath.fsPath);
-            const jsFile = files.find(f => /^main\..+\.js$/.test(f));
-            const cssFile = files.find(f => /^main\..+\.css$/.test(f));
+            // 4. 查找并处理资源文件（JS和CSS）
+            let stylesUri: vscode.Uri | undefined;
+            let scriptUri: vscode.Uri | undefined;
+            
+            try {
+                if (fs.existsSync(onDiskPath.fsPath)) {
+                    const files = fs.readdirSync(onDiskPath.fsPath);
+                    
+                    // 尝试查找带哈希的文件或普通文件名
+                    const jsFile = files.find(f => /^main\..+\.js$/.test(f)) || 
+                                  files.find(f => f === 'webview.js') || 
+                                  files.find(f => f === 'designer.js') ||
+                                  files.find(f => f.endsWith('.js'));
+                    
+                    const cssFile = files.find(f => /^main\..+\.css$/.test(f)) || 
+                                   files.find(f => f === 'styles.css') || 
+                                   files.find(f => f === 'designer.css') ||
+                                   files.find(f => f.endsWith('.css'));
 
-            if (!jsFile || !cssFile) {
-                throw new Error('未找到构建后的JS或CSS文件');
+                    if (jsFile) {
+                        scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(onDiskPath, jsFile));
+                    }
+                    
+                    if (cssFile) {
+                        stylesUri = webview.asWebviewUri(vscode.Uri.joinPath(onDiskPath, cssFile));
+                    }
+                }
+            } catch (e) {
+                console.warn('[HoneyGUI Designer] 无法读取资源文件列表:', e);
             }
 
-            // 生成资源URL (正确方式)
-            const stylesUri = webview.asWebviewUri(vscode.Uri.joinPath(onDiskPath, cssFile));
-            const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(onDiskPath, jsFile));
+            // 5. 替换资源URL
+            if (stylesUri) {
+                // 删除所有CSS引用并添加正确的Webview URI
+                htmlContent = htmlContent.replace(/<link href=".+\.css"[^>]*>/g, '');
+                htmlContent = htmlContent.replace('</head>', `<link href="${stylesUri}" rel="stylesheet"></head>`);
+            }
+            
+            if (scriptUri) {
+                // 删除所有JS引用并添加正确的Webview URI
+                htmlContent = htmlContent.replace(/<script src=".+\.js".*><\/script>/g, '');
+                htmlContent = htmlContent.replace('</body>', `<script src="${scriptUri}"></script></body>`);
+            }
 
-            // 替换资源URL (使用正确的Webview URI)
-            // 删除 Webpack 自动插入的带哈希的引用（它们未经 webview.asWebviewUri 转换）
-            // 替换旧的 styles.css 和 webview.js 引用
-            htmlContent = htmlContent.replace(/<link href="main\..+\.css"[^>]*>/g, ''); // 删除 Webpack 插入的 CSS
-            htmlContent = htmlContent.replace(/<script defer="defer" src="main\..+\.js"><\/script>/g, ''); // 删除 Webpack 插入的 JS
+            console.log('[HoneyGUI Designer] Webview 初始化:');
+            console.log('  使用路径:', onDiskPath.toString());
+            if (stylesUri) console.log('  Styles:', stylesUri.toString());
+            if (scriptUri) console.log('  Script:', scriptUri.toString());
 
-            // 替换模板中的占位符
-            htmlContent = htmlContent.replace(/href="styles.css"/g, `href="${stylesUri}"`);
-            htmlContent = htmlContent.replace(/src="webview.js"/g, `src="${scriptUri}"`);
-
-            console.log('[HoneyGUI Designer] Webview URIs:');
-            console.log('  Styles:', stylesUri.toString());
-            console.log('  Script:', scriptUri.toString());
-            console.log('  Webview Base:', webviewUri.toString());
-
-            // 添加CSP meta标签 (放宽 CSP 以允许 React 运行)
+            // 6. 添加CSP meta标签 (放宽 CSP 以允许 React 运行)
             const nonce = this._getNonce();
             const cspMetaTag = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} https: data:; script-src ${webview.cspSource} 'unsafe-eval' 'unsafe-inline'; style-src ${webview.cspSource} 'unsafe-inline'; font-src ${webview.cspSource}; connect-src ${webview.cspSource};">`;
-            htmlContent = htmlContent.replace('</head>', `${cspMetaTag}</head>`);
+            
+            // 确保CSP标签被添加，如果已经有则替换
+            if (htmlContent.includes('<meta http-equiv="Content-Security-Policy"')) {
+                htmlContent = htmlContent.replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/, cspMetaTag);
+            } else {
+                htmlContent = htmlContent.replace('</head>', `${cspMetaTag}</head>`);
+            }
 
             return htmlContent;
         } catch (error) {
-            console.error('[HoneyGUI Designer] 无法加载HTML文件:', error);
-
-            // 如果文件不存在，返回默认HTML内容
-            const errorMessage = error instanceof Error ? error.message : '未知错误';
-            return this._getDefaultHtmlContent(webview, errorMessage);
+            console.error('[HoneyGUI Designer] 加载HTML内容时出错:', error);
+            
+            // 无论发生什么错误，都返回最小可用的HTML模板
+            return this._getMinimalHtmlTemplate(webview, error instanceof Error ? error.message : '未知错误');
         }
+    }
+    
+    /**
+     * 获取最小化的HTML模板，作为最后的回退方案
+     */
+    private _getMinimalHtmlTemplate(webview: vscode.Webview, errorMessage?: string): string {
+        const nonce = this._getNonce();
+        const cspMetaTag = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${nonce}'; style-src 'unsafe-inline';">`;
+        
+        return `
+        <!DOCTYPE html>
+        <html lang="zh-CN">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>HoneyGUI 设计器</title>
+            ${cspMetaTag}
+            <style>
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    margin: 0;
+                    padding: 20px;
+                    background-color: #1e1e1e;
+                    color: #d4d4d4;
+                    min-height: 100vh;
+                }
+                .container {
+                    max-width: 800px;
+                    margin: 0 auto;
+                    padding: 20px;
+                    background-color: #252526;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                }
+                h1 {
+                    color: #007acc;
+                    margin-top: 0;
+                }
+                .message {
+                    margin: 20px 0;
+                    padding: 15px;
+                    border-radius: 4px;
+                    background-color: #1e1e1e;
+                }
+                .error {
+                    border-left: 4px solid #f44336;
+                    color: #f87474;
+                }
+                .info {
+                    border-left: 4px solid #007acc;
+                }
+                button {
+                    background-color: #007acc;
+                    color: white;
+                    border: none;
+                    padding: 8px 16px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 14px;
+                }
+                button:hover {
+                    background-color: #005a9e;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>HoneyGUI 设计器</h1>
+                ${errorMessage ? 
+                    `<div class="message error">
+                        <strong>加载警告:</strong> ${errorMessage}<br>
+                        <strong>解决方案:</strong> 请确保已正确构建项目。尝试运行: <code>npm run build</code>
+                    </div>` : 
+                    '<div class="message info">设计器基础界面已加载。部分高级功能可能不可用。</div>'
+                }
+                <div class="message">
+                    <p>基础功能可用。您可以尝试:</p>
+                    <ul>
+                        <li>创建新的HML文档</li>
+                        <li>保存设计内容</li>
+                        <li>与VSCode扩展通信</li>
+                    </ul>
+                </div>
+                <button onclick="sendMessage('save', {content: '<?xml version=\"1.0\" encoding=\"UTF-8\"?><hml><screen id=\"mainScreen\"></screen></hml>'});">测试保存</button>
+            </div>
+            
+            <script nonce="${nonce}">
+                // 基础的VSCode消息通信功能
+                const vscode = acquireVsCodeApi();
+                
+                function sendMessage(command, data) {
+                    vscode.postMessage({
+                        command: command,
+                        ...data
+                    });
+                }
+                
+                // 监听VSCode消息
+                window.addEventListener('message', event => {
+                    const message = event.data;
+                    console.log('收到VSCode消息:', message);
+                    
+                    // 可以根据需要扩展消息处理
+                    switch (message.command) {
+                        case 'updateContent':
+                            console.log('更新内容:', message.content);
+                            break;
+                    }
+                });
+            </script>
+        </body>
+        </html>
+        `;
     }
 
     /**
@@ -408,59 +576,68 @@ export class DesignerPanel {
     }
     
     /**
-     * 加载文件
-     */
-    private async _loadFile(filePath: string): Promise<void> {
-        this._filePath = filePath;
+ * 加载文件
+ */
+private async _loadFile(filePath: string): Promise<void> {
+    this._filePath = filePath;
+    
+    try {
+        // 使用HML控制器加载文件
+        const document = await this._hmlController.loadFile(filePath);
         
+        // 序列化文档为字符串
+        const hmlContent = this._hmlController.serializeDocument();
+        
+        // 为前端准备组件数据（转换为前端需要的格式）
+        const frontendComponents = this._hmlController.prepareComponentsForFrontend(document);
+        
+        // 尝试加载项目配置文件
+        let projectConfig = null;
         try {
-            // 使用HML控制器加载文件
-            const document = await this._hmlController.loadFile(filePath);
+            // 首先尝试从HML文件所在目录查找
+            const hmlDir = path.dirname(filePath);
+            const configPathInHmlDir = path.join(hmlDir, 'project.json');
             
-            // 序列化文档为字符串
-            const hmlContent = this._hmlController.serializeDocument();
-            
-            // 尝试加载项目配置文件
-            let projectConfig = null;
-            try {
-                // 首先尝试从HML文件所在目录查找
-                const hmlDir = path.dirname(filePath);
-                const configPathInHmlDir = path.join(hmlDir, 'project.json');
+            if (fs.existsSync(configPathInHmlDir)) {
+                const configContent = fs.readFileSync(configPathInHmlDir, 'utf8');
+                projectConfig = JSON.parse(configContent);
+                console.log('[HoneyGUI Designer] 成功从HML目录加载项目配置文件:', projectConfig);
+            } else {
+                // 如果HML目录中找不到，尝试从项目根目录查找（上级目录）
+                const projectRootDir = path.dirname(hmlDir);
+                const configPathInRootDir = path.join(projectRootDir, 'project.json');
                 
-                if (fs.existsSync(configPathInHmlDir)) {
-                    const configContent = fs.readFileSync(configPathInHmlDir, 'utf8');
+                if (fs.existsSync(configPathInRootDir)) {
+                    const configContent = fs.readFileSync(configPathInRootDir, 'utf8');
                     projectConfig = JSON.parse(configContent);
-                    console.log('[HoneyGUI Designer] 成功从HML目录加载项目配置文件:', projectConfig);
+                    console.log('[HoneyGUI Designer] 成功从项目根目录加载项目配置文件:', projectConfig);
                 } else {
-                    // 如果HML目录中找不到，尝试从项目根目录查找（上级目录）
-                    const projectRootDir = path.dirname(hmlDir);
-                    const configPathInRootDir = path.join(projectRootDir, 'project.json');
-                    
-                    if (fs.existsSync(configPathInRootDir)) {
-                        const configContent = fs.readFileSync(configPathInRootDir, 'utf8');
-                        projectConfig = JSON.parse(configContent);
-                        console.log('[HoneyGUI Designer] 成功从项目根目录加载项目配置文件:', projectConfig);
-                    } else {
-                        console.log('[HoneyGUI Designer] 未找到项目配置文件:', configPathInHmlDir, '和', configPathInRootDir);
-                    }
+                    console.log('[HoneyGUI Designer] 未找到项目配置文件:', configPathInHmlDir, '和', configPathInRootDir);
                 }
-            } catch (configError) {
-                console.error('[HoneyGUI Designer] 加载项目配置文件失败:', configError);
             }
+        } catch (configError) {
+            console.error('[HoneyGUI Designer] 加载项目配置文件失败:', configError);
+        }
 
-            // 从 project.json 获取设计器配置（画布背景色等）
-            const canvasBackgroundColor = projectConfig?.designer?.canvasBackgroundColor || '#f0f0f0';
+        // 从 project.json 获取设计器配置（画布背景色等）
+        const canvasBackgroundColor = projectConfig?.designer?.canvasBackgroundColor || '#f0f0f0';
 
-            // 发送HML内容和配置信息到Webview
-            this._panel.webview.postMessage({
-                command: 'loadHml',
-                content: hmlContent,
-                document: document,
-                projectConfig: projectConfig,
-                designerConfig: {
-                    canvasBackgroundColor
+        // 发送HML内容和配置信息到Webview，传递转换后的组件数据
+        this._panel.webview.postMessage({
+            command: 'loadHml',
+            content: hmlContent,
+            document: {
+                ...document,
+                view: {
+                    ...document.view,
+                    components: frontendComponents
                 }
-            });
+            },
+            projectConfig: projectConfig,
+            designerConfig: {
+                canvasBackgroundColor
+            }
+        });
             
             // 更新面板标题
             const fileName = path.basename(filePath);
@@ -476,47 +653,56 @@ export class DesignerPanel {
     }
     
     /**
-     * 创建新的空白文档
-     */
-    private _createNewDocument(): void {
+ * 创建新的空白文档
+ */
+private _createNewDocument(): void {
+    try {
+        // 创建新的HML文档
+        const document = this._hmlController.createNewDocument();
+
+        // 序列化文档为字符串
+        const hmlContent = this._hmlController.serializeDocument();
+        
+        // 为前端准备组件数据
+        const frontendComponents = this._hmlController.prepareComponentsForFrontend(document);
+
+        // 尝试从工作区读取项目配置（包含画布背景色）
+        let projectConfig: any = null;
         try {
-            // 创建新的HML文档
-            const document = this._hmlController.createNewDocument();
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            if (workspaceFolders && workspaceFolders.length > 0) {
+                const workspaceRoot = workspaceFolders[0].uri.fsPath;
+                const projectJsonPath = path.join(workspaceRoot, 'project.json');
 
-            // 序列化文档为字符串
-            const hmlContent = this._hmlController.serializeDocument();
-
-            // 尝试从工作区读取项目配置（包含画布背景色）
-            let projectConfig: any = null;
-            try {
-                const workspaceFolders = vscode.workspace.workspaceFolders;
-                if (workspaceFolders && workspaceFolders.length > 0) {
-                    const workspaceRoot = workspaceFolders[0].uri.fsPath;
-                    const projectJsonPath = path.join(workspaceRoot, 'project.json');
-
-                    if (fs.existsSync(projectJsonPath)) {
-                        const configContent = fs.readFileSync(projectJsonPath, 'utf8');
-                        projectConfig = JSON.parse(configContent);
-                        console.log('[HoneyGUI Designer] 从工作区加载 project.json:', projectConfig);
-                    }
+                if (fs.existsSync(projectJsonPath)) {
+                    const configContent = fs.readFileSync(projectJsonPath, 'utf8');
+                    projectConfig = JSON.parse(configContent);
+                    console.log('[HoneyGUI Designer] 从工作区加载 project.json:', projectConfig);
                 }
-            } catch (configError) {
-                console.log('[HoneyGUI Designer] 无法加载 project.json，使用默认配置');
             }
+        } catch (configError) {
+            console.log('[HoneyGUI Designer] 无法加载 project.json，使用默认配置');
+        }
 
-            // 从 project.json 获取画布背景色，默认灰色
-            const canvasBackgroundColor = projectConfig?.designer?.canvasBackgroundColor || '#f0f0f0';
+        // 从 project.json 获取画布背景色，默认灰色
+        const canvasBackgroundColor = projectConfig?.designer?.canvasBackgroundColor || '#f0f0f0';
 
-            // 发送HML内容和配置到Webview
-            this._panel.webview.postMessage({
-                command: 'loadHml',
-                content: hmlContent,
-                document: document,
-                projectConfig: projectConfig,
-                designerConfig: {
-                    canvasBackgroundColor
+        // 发送HML内容和配置到Webview
+        this._panel.webview.postMessage({
+            command: 'loadHml',
+            content: hmlContent,
+            document: {
+                ...document,
+                view: {
+                    ...document.view,
+                    components: frontendComponents
                 }
-            });
+            },
+            projectConfig: projectConfig,
+            designerConfig: {
+                canvasBackgroundColor
+            }
+        });
 
             // 更新面板标题
             this._panel.title = 'HoneyGUI 设计器 - 未命名';

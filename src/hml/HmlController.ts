@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { HmlParser, HmlDocument, Component } from './HmlParser';
+import * as fs from 'fs';
+import { HmlParser } from './HmlParser';
+import { Document as HmlDocument, Component } from './types';
 import { HmlSerializer } from './HmlSerializer';
 
 /**
@@ -29,7 +31,9 @@ export class HmlController {
     public async loadFile(filePath: string): Promise<HmlDocument> {
         try {
             // 解析文件内容
-            const document = await this.parser.parseFromFile(filePath);
+            // 同步读取文件内容，避免 Promise 相关问题
+            const fileContent = fs.readFileSync(filePath, 'utf-8');
+            const document = this.parser.parse(fileContent);
             
             // 检查并确保文档包含screen组件
             this._ensureScreenComponent(document);
@@ -38,6 +42,9 @@ export class HmlController {
             this._currentDocument = document;
             this._currentFilePath = filePath;
             this._documentVersion++;
+            
+            console.log(`Successfully loaded HML file: ${filePath}`);
+            console.log(`Parsed ${document.view.components?.length || 0} components`);
             
             return document;
         } catch (error) {
@@ -84,11 +91,16 @@ export class HmlController {
                 throw new Error('未指定保存路径');
             }
             
+            // 在保存前转换组件数据结构
+            const documentForSerialization = this._convertForSerialization(this._currentDocument);
+            
             // 保存文档
-            await this.serializer.serializeToFile(this._currentDocument, targetPath);
+            await this.serializer.serializeToFile(documentForSerialization, targetPath);
             
             // 更新当前文件路径
             this._currentFilePath = targetPath;
+            
+            console.log(`Successfully saved HML file: ${targetPath}`);
             
             return targetPath;
         } catch (error) {
@@ -122,6 +134,7 @@ export class HmlController {
         authorEmail?: string;
     } = {}): HmlDocument {
         // 创建默认的HML文档结构
+        const root = this._createDefaultRootComponent();
         const document: HmlDocument = {
             meta: {
                 project: {
@@ -135,8 +148,8 @@ export class HmlController {
                 }
             },
             view: {
-                root: this._createDefaultRootComponent(),
-                components: []
+                root,
+                components: [root] // 确保根组件也包含在components数组中
             }
         };
         
@@ -145,8 +158,10 @@ export class HmlController {
         this._currentFilePath = null; // 新建文档尚未保存，所以没有文件路径
         this._documentVersion++;
         
-        // 生成组件列表
-        document.view.components = this._flattenComponentTree(document.view.root);
+        // 生成完整组件列表
+        if (document.view.root) {
+            document.view.components = this._flattenComponentTree(document.view.root);
+        }
         
         return document;
     }
@@ -210,7 +225,10 @@ export class HmlController {
         }
         
         // 在组件树中查找组件
-        const component = this._findComponentById(this._currentDocument.view.root, componentId);
+        let component: Component | null = null;
+        if (this._currentDocument.view.root) {
+            component = this._findComponentById(this._currentDocument.view.root, componentId);
+        }
         
         if (!component) {
             return null;
@@ -233,7 +251,9 @@ export class HmlController {
         this._documentVersion++;
         
         // 重新生成组件列表
-        this._currentDocument.view.components = this._flattenComponentTree(this._currentDocument.view.root);
+          if (this._currentDocument.view.root) {
+              this._currentDocument.view.components = this._flattenComponentTree(this._currentDocument.view.root);
+          }
         
         return component;
     }
@@ -249,7 +269,10 @@ export class HmlController {
         }
         
         // 在组件树中查找父组件
-        const parent = this._findComponentById(this._currentDocument.view.root, parentId);
+        let parent: Component | null = null;
+        if (this._currentDocument.view.root) {
+            parent = this._findComponentById(this._currentDocument.view.root, parentId);
+        }
         
         if (!parent) {
             return null;
@@ -277,7 +300,9 @@ export class HmlController {
         this._documentVersion++;
         
         // 重新生成组件列表
-        this._currentDocument.view.components = this._flattenComponentTree(this._currentDocument.view.root);
+        if (this._currentDocument.view.root) {
+            this._currentDocument.view.components = this._flattenComponentTree(this._currentDocument.view.root);
+        }
         
         return newComponent;
     }
@@ -292,19 +317,24 @@ export class HmlController {
         }
         
         // 如果要删除根组件，不允许操作
-        if (componentId === this._currentDocument.view.root.id) {
+        if (this._currentDocument.view.root && componentId === this._currentDocument.view.root.id) {
             throw new Error('不能删除根组件');
         }
         
         // 查找并删除组件
-        const success = this._deleteComponentFromTree(this._currentDocument.view.root, componentId);
+        let success = false;
+        if (this._currentDocument.view.root) {
+            success = this._deleteComponentFromTree(this._currentDocument.view.root, componentId);
+        }
         
         if (success) {
             // 更新文档版本
             this._documentVersion++;
             
             // 重新生成组件列表
-            this._currentDocument.view.components = this._flattenComponentTree(this._currentDocument.view.root);
+            if (this._currentDocument.view.root) {
+                this._currentDocument.view.components = this._flattenComponentTree(this._currentDocument.view.root);
+            }
         }
         
         return success;
@@ -319,7 +349,10 @@ export class HmlController {
             return null;
         }
         
-        return this._findComponentById(this._currentDocument.view.root, componentId);
+        if (this._currentDocument.view.root) {
+            return this._findComponentById(this._currentDocument.view.root, componentId);
+        }
+        return null;
     }
 
     /**
@@ -451,12 +484,115 @@ export class HmlController {
         // 如果有当前文档，检查ID是否已存在
         if (this._currentDocument) {
             let counter = 1;
-            while (this._findComponentById(this._currentDocument.view.root, id)) {
+            while (this._currentDocument.view.root && this._findComponentById(this._currentDocument.view.root, id)) {
                 id = `${componentType.toLowerCase()}_${Date.now()}_${counter++}`;
             }
         }
         
         return id;
+    }
+    
+    /**
+     * 为前端准备组件数据
+     * @param document HML文档对象
+     */
+    public prepareComponentsForFrontend(document: HmlDocument): Component[] {
+        // 转换组件数据结构，确保前端需要的position对象格式
+        const components: Component[] = document.view.components || [];
+        return components.map(component => this._convertComponentForFrontend(component));
+    }
+    
+    /**
+     * 为前端转换单个组件数据结构
+     * @private
+     */
+    private _convertComponentForFrontend(component: Component): Component {
+        // 创建一个新对象而不是使用JSON.parse(JSON.stringify())
+        // 这样可以避免循环引用问题并更好地处理类型
+        const converted: Component = {
+            id: component.id,
+            type: component.type,
+            properties: { ...component.properties },
+            events: component.events ? { ...component.events } : undefined,
+            children: component.children ? [...component.children] : undefined,
+            parentId: component.parentId
+        };
+        
+        // 检查并转换位置属性
+        if (converted.properties) {
+            const left = converted.properties.left;
+            const top = converted.properties.top;
+            const width = converted.properties.width;
+            const height = converted.properties.height;
+            
+            // 如果有left和top属性，将它们转换为position对象
+            if (left !== undefined || top !== undefined) {
+                (converted as any).position = {
+                    left: left || 0,
+                    top: top || 0,
+                    width: width || 'auto',
+                    height: height || 'auto'
+                };
+            }
+        }
+        
+        return converted;
+    }
+    
+    /**
+     * 转换文档以便序列化
+     * @private
+     */
+    private _convertForSerialization(document: HmlDocument): HmlDocument {
+        // 创建一个新对象而不是使用JSON.parse(JSON.stringify())
+        const converted: HmlDocument = {
+            meta: { ...document.meta },
+            view: {
+                root: document.view.root ? { ...document.view.root } : undefined,
+                components: document.view.components ? [...document.view.components] : undefined
+            }
+        };
+        
+        // 转换组件数据结构
+        if (converted.view.components) {
+            converted.view.components = converted.view.components.map(component => {
+                const result: Component = { ...component };
+                // 如果有position对象，将其属性合并到properties中
+                if ((component as any).position && component.properties) {
+                    const position = (component as any).position;
+                    if (!result.properties) {
+                        result.properties = {};
+                    }
+                    result.properties.left = position.left;
+                    result.properties.top = position.top;
+                    if (position.width && position.width !== 'auto') {
+                        result.properties.width = position.width;
+                    }
+                    if (position.height && position.height !== 'auto') {
+                        result.properties.height = position.height;
+                    }
+                }
+                return result;
+            });
+        }
+        
+        // 同样处理root组件
+        if (converted.view.root && (converted.view.root as any).position) {
+            const position = (converted.view.root as any).position;
+            if (!converted.view.root.properties) {
+                converted.view.root.properties = {};
+            }
+            converted.view.root.properties.left = position.left;
+            converted.view.root.properties.top = position.top;
+            if (position.width && position.width !== 'auto') {
+                converted.view.root.properties.width = position.width;
+            }
+            if (position.height && position.height !== 'auto') {
+                converted.view.root.properties.height = position.height;
+            }
+        }
+        
+        return converted;
     }
     
     /**
@@ -468,7 +604,7 @@ export class HmlController {
         const root = document.view.root;
         let hasScreenComponent = false;
         
-        if (root.children) {
+        if (root && root.children) {
             // 检查是否已经有screen类型的组件
             for (const child of root.children) {
                 if (child.type === 'screen') {
@@ -479,7 +615,7 @@ export class HmlController {
         }
         
         // 如果没有screen组件，则创建一个screen组件并将现有内容移到其中
-        if (!hasScreenComponent) {
+        if (!hasScreenComponent && root) {
             // 保存现有的子组件
             const existingChildren = root.children || [];
             
@@ -487,6 +623,10 @@ export class HmlController {
             const screenComponent: Component = {
                 id: 'main_screen',
                 type: 'screen',
+                x: 0,
+                y: 0,
+                width: 100,
+                height: 100,
                 properties: {
                     id: 'main',
                     width: '100%',
@@ -507,7 +647,9 @@ export class HmlController {
             root.children = [screenComponent];
             
             // 重新生成组件列表
-            document.view.components = this._flattenComponentTree(document.view.root);
+            if (document.view.root) {
+                document.view.components = this._flattenComponentTree(document.view.root);
+            }
         }
     }
 }
