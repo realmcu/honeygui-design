@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "HoneyGUI vscode plugin"
+      "HoneyGUI vscode plugin",
+      "Bash(npm run compile:*)"
     ],
     "deny": [],
     "ask": []

@@ -745,24 +745,25 @@ export class CreateProjectPanel {
         // 创建目录结构
         fs.mkdirSync(projectPath, { recursive: true });
         fs.mkdirSync(path.join(projectPath, 'ui'), { recursive: true });
+        fs.mkdirSync(path.join(projectPath, 'ui', 'main'), { recursive: true }); // 创建 ui/main 目录
         fs.mkdirSync(path.join(projectPath, 'src'), { recursive: true });
         fs.mkdirSync(path.join(projectPath, 'assets'), { recursive: true });
-        
+
         // 使用HmlTemplateManager生成文件内容
-        // 创建HML文件
-        const hmlContent = HmlTemplateManager.generateProjectHml(
+        // 创建 main.hml 文件（包含 screen 容器）
+        const mainHmlContent = HmlTemplateManager.generateMainHml(
             projectName,
             resolution,
             appId,
             minSdk,
             pixelMode
         );
-        fs.writeFileSync(path.join(projectPath, 'ui', `${projectName}.hml`), hmlContent, 'utf8');
-        
+        fs.writeFileSync(path.join(projectPath, 'ui', 'main', 'main.hml'), mainHmlContent, 'utf8');
+
         // 创建C++文件
         const cppContent = HmlTemplateManager.generateMainCpp(projectName, appId);
         fs.writeFileSync(path.join(projectPath, 'src', 'main.cpp'), cppContent, 'utf8');
-        
+
         // 创建README文件
         const readmeContent = HmlTemplateManager.generateReadme(
             projectName,
@@ -779,7 +780,7 @@ export class CreateProjectPanel {
             resolution: resolution,
             minSdk: minSdk,
             pixelMode: pixelMode,
-            mainHmlFile: `ui/${projectName}.hml`,
+            mainHmlFile: 'ui/main/main.hml', // 固定指向 main.hml
             created: new Date().toISOString()
         };
 

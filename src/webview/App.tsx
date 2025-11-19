@@ -149,16 +149,45 @@ const App: React.FC = () => {
     }
 
     // 获取当前画布中所有已存在的组件列表
-    const components = useDesignerStore.getState().components;
+    let components = useDesignerStore.getState().components;
 
     // 查找画布中的根screen容器(顶级screen组件)
-    const screenContainer = components.find(comp =>
+    let screenContainer = components.find(comp =>
       comp.type === 'screen' && comp.parent === null
     );
 
+    // 如果没有找到screen容器，自动创建一个
     if (!screenContainer) {
-      console.error('未找到screen容器，无法添加组件');
-      return;
+      console.warn('未找到screen容器，自动创建默认screen容器');
+
+      // 从项目配置或默认配置获取分辨率
+      const projectConfig = useDesignerStore.getState().projectConfig;
+      const { width = 800, height = 480 } = useDesignerStore.getState().canvasSize;
+
+      // 创建screen组件
+      const screenId = `screen_${Date.now()}`;
+      screenContainer = {
+        id: screenId,
+        type: 'screen' as ComponentType,
+        name: 'Screen',
+        position: {
+          x: 50,
+          y: 50,
+          width: width,
+          height: height
+        },
+        visible: true,
+        enabled: true,
+        locked: false,
+        zIndex: 0,
+        children: [],
+        parent: null
+      };
+
+      // 使用store的addComponent方法将screen添加到组件列表
+      useDesignerStore.getState().addComponent(screenContainer);
+
+      console.info(`[拖放] 自动创建screen容器: ${screenId} (${width}x${height})`);
     }
 
     // 计算鼠标释放时的画布坐标位置
@@ -170,7 +199,9 @@ const App: React.FC = () => {
     const componentId = `${componentType}_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
 
     // === View组件特殊处理：判断是否为第一个View ===
-    const existingViews = components.filter(comp => comp.type === 'view');
+    // 重新获取最新的组件列表（包含可能刚刚创建的screen）
+    const updatedComponents = useDesignerStore.getState().components;
+    const existingViews = updatedComponents.filter(comp => comp.type === 'view');
     const isFirstView = componentType === 'view' && existingViews.length === 0;
 
     // 计算组件位置和尺寸

@@ -27,22 +27,23 @@ export class HmlParser {
         textKey: '_text',
         attributesKey: '_attributes'
       });
-      
+
       // 检查解析结果
       if (!result || typeof result !== 'object') {
         console.error('HML解析错误: 无效的XML格式');
         return this._getDefaultDocument();
       }
 
-      // 解析元数据
-      const meta = this._parseMetaXmlJs((result as any).meta);
+      // 解析元数据（带有 hml 标签的属性）
+      const hmlAttributes = (result as any)._attributes || {};
+      const meta = this._parseMetaXmlJs((result as any).meta, hmlAttributes);
       // 解析视图
       const view = this._parseViewXmlJs((result as any).view);
-      
+
       // 构建组件树
       const components: Component[] = [];
       const componentMap = new Map<string, Component>();
-      
+
       // 解析所有组件（排除meta和view）
       Object.entries(result as any).forEach(([key, value]) => {
         if (key !== 'meta' && key !== 'view' && typeof value === 'object') {
@@ -52,10 +53,10 @@ export class HmlParser {
           }
         }
       });
-      
+
       // 确保组件树是扁平化的
       const flattenedComponents = this._flattenComponents(components);
-      
+
       return {
         meta,
         view,
@@ -124,23 +125,25 @@ export class HmlParser {
   
   /**
    * 解析元数据 (使用xml-js)
+   * @param metaElement meta元素
+   * @param hmlAttributes hml标签的属性（id, width, height等）
    */
-  private _parseMetaXmlJs(metaElement: any): Meta {
-    if (!metaElement || typeof metaElement !== 'object') {
-      return {
-        title: '未命名页面',
-        description: '',
-        width: 480,
-        height: 800
-      };
-    }
-    
-    const attributes = metaElement._attributes || {};
+  private _parseMetaXmlJs(metaElement: any, hmlAttributes: any = {}): Meta {
+    const metaAttributes = metaElement?._attributes || {};
+
+    // 合并hml标签的属性和meta标签的属性
+    // hml标签的属性（id, width, height）优先级更高
     return {
-      title: attributes.title || '未命名页面',
-      description: attributes.description || '',
-      width: parseInt(attributes.width || '480'),
-      height: parseInt(attributes.height || '800')
+      title: hmlAttributes.id || metaAttributes.title || '未命名页面',
+      description: metaAttributes.description || '',
+      width: parseInt(hmlAttributes.width || metaAttributes.width || '480'),
+      height: parseInt(hmlAttributes.height || metaAttributes.height || '800'),
+      // 保留原始属性以便序列化
+      id: hmlAttributes.id,
+      appId: metaAttributes.appId,
+      resolution: metaAttributes.resolution,
+      minSdk: metaAttributes.minSdk,
+      pixelMode: metaAttributes.pixelMode
     };
   }
   

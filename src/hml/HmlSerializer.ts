@@ -27,29 +27,177 @@ export class HmlSerializer {
 
     /**
      * 将HML文档对象序列化为字符串
+     * 支持两种格式：
+     * 1. 原始格式（带有screen容器）：<hml id="..." width="..." height="..."><screen>...</screen></hml>
+     * 2. 标准格式：<hml><meta>...</meta><view>...</view></hml>
+     *
      * @param document HML文档对象
      * @returns 序列化后的HML字符串
      */
     public serialize(document: HmlDocument): string {
         try {
-            let hmlContent = '<?xml version="1.0" encoding="UTF-8"?>' + '\n';
-            hmlContent += '<hml>' + '\n';
-            
-            // 序列化meta部分
-            hmlContent += this._serializeMeta(document.meta);
-            
-            // 序列化view部分
-            hmlContent += this._serializeView(document.view);
-            
-            hmlContent += '</hml>';
-            
-            return hmlContent;
+            // 检查是否包含screen格式的组件（原始格式）
+            const hasScreenFormat = this._hasScreenFormat(document);
+
+            if (hasScreenFormat) {
+                // 使用原始screen格式序列化
+                return this._serializeScreenFormat(document);
+            } else {
+                // 使用标准格式序列化
+                return this._serializeStandardFormat(document);
+            }
         } catch (error) {
             if (error instanceof Error) {
                 throw error;
             }
             throw new Error(`序列化HML内容失败: ${String(error)}`);
         }
+    }
+
+    /**
+     * 检查文档是否使用screen格式（原始格式）
+     */
+    private _hasScreenFormat(document: HmlDocument): boolean {
+        if (!document.view?.components) {
+            return false;
+        }
+
+        // 检查是否有screen类型的组件
+        const hasScreenComponent = document.view.components.some(comp => comp.type === 'screen');
+
+        // 检查meta中是否有id、width、height属性（原始格式的特征）
+        const hasMetaAttributes = !!(document.meta?.title || document.meta?.width || document.meta?.height);
+
+        return hasScreenComponent || hasMetaAttributes;
+    }
+
+    /**
+     * 使用标准格式序列化（meta + view结构）
+     */
+    private _serializeStandardFormat(document: HmlDocument): string {
+        let hmlContent = '<?xml version="1.0" encoding="UTF-8"?>' + '\n';
+        hmlContent += '<hml>' + '\n';
+
+        // 序列化meta部分
+        hmlContent += this._serializeMeta(document.meta);
+
+        // 序列化view部分
+        hmlContent += this._serializeView(document.view);
+
+        hmlContent += '</hml>';
+
+        return hmlContent;
+    }
+
+    /**
+     * 使用screen格式序列化（原始格式）
+     */
+    private _serializeScreenFormat(document: HmlDocument): string {
+        let hmlContent = '';
+
+        // 获取注释信息（项目配置信息）
+        const comments = this._extractComments(document.meta);
+        if (comments) {
+            hmlContent += comments + '\n';
+        }
+
+        // 序列化<hml>根标签及其属性
+        const hmlAttributes = this._serializeHmlAttributes(document.meta);
+        hmlContent += `<hml${hmlAttributes}>` + '\n';
+
+        // 查找并序列化screen组件及其子组件
+        const screenComponent = this._findScreenComponent(document);
+        if (screenComponent) {
+            hmlContent += this._serializeComponent(screenComponent, 1);
+        } else {
+            // 如果没有screen组件，序列化所有顶层组件
+            const topLevelComponents = document.view.components?.filter(comp => !comp.parentId) || [];
+            topLevelComponents.forEach(component => {
+                hmlContent += this._serializeComponent(component, 1);
+            });
+        }
+
+        hmlContent += '</hml>';
+
+        return hmlContent;
+    }
+
+    /**
+     * 提取注释信息（项目配置信息）
+     */
+    private _extractComments(meta: any): string {
+        if (!meta) return '';
+
+        const lines: string[] = [];
+
+        // 项目名称
+        if (meta.title) {
+            lines.push(`${meta.title} UI definition`);
+        }
+
+        // APP ID
+        if (meta.appId) {
+            lines.push(`APP ID: ${meta.appId}`);
+        }
+
+        // 分辨率
+        if (meta.width && meta.height) {
+            lines.push(`Resolution: ${meta.width}X${meta.height}`);
+        } else if (meta.resolution) {
+            lines.push(`Resolution: ${meta.resolution}`);
+        }
+
+        // 最小SDK
+        if (meta.minSdk) {
+            lines.push(`Min SDK: ${meta.minSdk}`);
+        }
+
+        // 像素模式
+        if (meta.pixelMode) {
+            lines.push(`Pixel Mode: ${meta.pixelMode}`);
+        }
+
+        if (lines.length === 0) return '';
+
+        return lines.map(line => `<!-- ${line} -->`).join('\n');
+    }
+
+    /**
+     * 序列化<hml>标签的属性
+     */
+    private _serializeHmlAttributes(meta: any): string {
+        const attrs: string[] = [];
+
+        if (!meta) return '';
+
+        // id 属性
+        if (meta.id || meta.title) {
+            attrs.push(`id="${meta.id || meta.title}"`);
+        }
+
+        // width 属性
+        if (meta.width) {
+            attrs.push(`width="${meta.width}"`);
+        }
+
+        // height 属性
+        if (meta.height) {
+            attrs.push(`height="${meta.height}"`);
+        }
+
+        return attrs.length > 0 ? ' ' + attrs.join(' ') : '';
+    }
+
+    /**
+     * 查找screen组件
+     */
+    private _findScreenComponent(document: HmlDocument): any {
+        if (!document.view?.components) {
+            return null;
+        }
+
+        // 查找screen类型的组件
+        return document.view.components.find(comp => comp.type === 'screen');
     }
 
     /**
@@ -113,18 +261,35 @@ export class HmlSerializer {
     private _serializeComponent(component: Component, indentLevel: number): string {
         const indent = ' '.repeat(indentLevel * 4);
         let componentContent = '';
-        
+
         // 构建组件的属性字符串
         let attributesStr = ' id="' + component.id + '"';
-        
-        // 序列化常规属性
+
+        // 序列化位置属性（x, y, width, height）
+        if (component.x !== undefined && component.x !== null) {
+            attributesStr += ' x="' + component.x + '"';
+        }
+        if (component.y !== undefined && component.y !== null) {
+            attributesStr += ' y="' + component.y + '"';
+        }
+        if (component.width !== undefined && component.width !== null) {
+            attributesStr += ' width="' + component.width + '"';
+        }
+        if (component.height !== undefined && component.height !== null) {
+            attributesStr += ' height="' + component.height + '"';
+        }
+
+        // 序列化其他属性
         if (component.properties) {
             Object.keys(component.properties).forEach(propName => {
                 const value = component.properties![propName];
-                attributesStr += ' ' + propName + '="' + this._escapeXmlValue(this._convertToString(value)) + '"';
+                // 跳过已经序列化的属性
+                if (!['x', 'y', 'width', 'height', 'id'].includes(propName)) {
+                    attributesStr += ' ' + propName + '="' + this._escapeXmlValue(this._convertToString(value)) + '"';
+                }
             });
         }
-        
+
         // 序列化事件处理
         if (component.events) {
             Object.keys(component.events).forEach(eventName => {
@@ -132,23 +297,23 @@ export class HmlSerializer {
                 attributesStr += ' on:' + eventName + '="' + this._escapeXmlValue(handler) + '"';
             });
         }
-        
+
         // 检查是否有子组件
         if (component.children && component.children.length > 0) {
             // 有子组件，使用开始和结束标签
             componentContent += indent + '<' + component.type + attributesStr + '>' + '\n';
-            
+
             // 递归序列化子组件
             component.children.forEach((child: Component) => {
                 componentContent += this._serializeComponent(child, indentLevel + 1);
             });
-            
+
             componentContent += indent + '</' + component.type + '>' + '\n';
         } else {
             // 没有子组件，使用自闭合标签
             componentContent += indent + '<' + component.type + attributesStr + ' />' + '\n';
         }
-        
+
         return componentContent;
     }
 

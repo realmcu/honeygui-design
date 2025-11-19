@@ -6,7 +6,7 @@ import * as path from 'path';
  */
 export class HmlTemplateManager {
     /**
-     * 生成标准项目HML文件内容
+     * 生成标准项目HML文件内容（用于普通HML文件，不包含screen容器）
      * @param projectName 项目名称
      * @param resolution 分辨率 (格式: "WIDTHXHEIGHT")
      * @param appId 应用ID
@@ -23,21 +23,59 @@ export class HmlTemplateManager {
     ): string {
         // 解析分辨率
         const [width, height] = resolution.split('X').map(Number);
-        
+
         // 生成注释头
         let headerComments = `<!-- ${projectName} UI definition -->`;
         if (appId) headerComments += `\n<!-- APP ID: ${appId} -->`;
         headerComments += `\n<!-- Resolution: ${resolution} -->`;
         if (minSdk) headerComments += `\n<!-- Min SDK: ${minSdk} -->`;
         if (pixelMode) headerComments += `\n<!-- Pixel Mode: ${pixelMode} -->`;
-        
-        // 生成HML内容
+
+        // 生成HML内容（不包含screen容器）
         return `${headerComments}
 <hml id="${projectName}" width="${width}" height="${height}">
   <container id="root" layout="column" padding="16">
     <text id="title" value="${projectName}" fontSize="24" marginTop="16" align="center"></text>
     <button id="welcomeButton" text="Click Me" marginTop="32" align="center" onclickhandler="OnWelcomeButtonClick"></button>
   </container>
+</hml>`;
+    }
+
+    /**
+     * 生成主HML文件内容（main.hml，包含screen容器）
+     * @param projectName 项目名称
+     * @param resolution 分辨率 (格式: "WIDTHXHEIGHT")
+     * @param appId 应用ID
+     * @param minSdk 最小SDK版本
+     * @param pixelMode 像素模式
+     * @returns 格式化的HML文件内容
+     */
+    static generateMainHml(
+        projectName: string,
+        resolution: string,
+        appId?: string,
+        minSdk?: string,
+        pixelMode?: string
+    ): string {
+        // 解析分辨率
+        const [width, height] = resolution.split('X').map(Number);
+
+        // 生成注释头
+        let headerComments = `<!-- ${projectName} Main UI - main.hml -->`;
+        if (appId) headerComments += `\n<!-- APP ID: ${appId} -->`;
+        headerComments += `\n<!-- Resolution: ${resolution} -->`;
+        if (minSdk) headerComments += `\n<!-- Min SDK: ${minSdk} -->`;
+        if (pixelMode) headerComments += `\n<!-- Pixel Mode: ${pixelMode} -->`;
+
+        // 生成包含screen容器的HML内容
+        return `${headerComments}
+<hml id="${projectName}" width="${width}" height="${height}">
+  <screen id="mainScreen" width="${width}" height="${height}">
+    <container id="root" layout="column" padding="16">
+      <text id="title" value="${projectName}" fontSize="24" marginTop="16" align="center"></text>
+      <button id="welcomeButton" text="Click Me" marginTop="32" align="center" onclickhandler="OnWelcomeButtonClick"></button>
+    </container>
+  </screen>
 </hml>`;
     }
     
@@ -142,5 +180,43 @@ int main() {
             config: path.join(projectRootPath, 'project.json'),
             readme: path.join(projectRootPath, 'README.md')
         };
+    }
+
+    /**
+     * 生成空白的HML文件内容（用于右键菜单新建文件，不包含任何组件）
+     * @param fileName 文件名（不包含扩展名）
+     * @param resolution 分辨率 (格式: "WIDTHXHEIGHT")
+     * @returns 格式化的HML文件内容
+     */
+    static generateEmptyHml(fileName: string, resolution: string): string {
+        // 解析分辨率
+        const [width, height] = resolution.split('X').map(Number);
+
+        // 生成HML内容（不包含任何组件）
+        return `<!-- Empty HML file: ${fileName}.hml -->
+<!-- Created: ${new Date().toISOString()} -->
+<hml id="${fileName}" width="${width}" height="${height}">
+  <!-- Add your components here -->
+</hml>`;
+    }
+
+    /**
+     * 生成简单的HML文件内容（用于右键菜单新建文件，不包含screen容器）
+     * @param fileName 文件名（不包含扩展名）
+     * @param resolution 分辨率 (格式: "WIDTHXHEIGHT")
+     * @returns 格式化的HML文件内容
+     */
+    static generateSimpleHml(fileName: string, resolution: string): string {
+        // 解析分辨率
+        const [width, height] = resolution.split('X').map(Number);
+
+        // 生成包含基本容器但不包含screen的HML内容
+        return `<!-- Simple HML file: ${fileName}.hml -->
+<!-- Created: ${new Date().toISOString()} -->
+<hml id="${fileName}" width="${width}" height="${height}">
+  <container id="root" layout="column">
+    <!-- Add your components here -->
+  </container>
+</hml>`;
     }
 }

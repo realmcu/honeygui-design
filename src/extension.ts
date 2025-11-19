@@ -1028,6 +1028,88 @@ export function activate(context: vscode.ExtensionContext) {
             HmlEditorProvider.openInDesigner(context, uri);
         }),
 
+        // 右键菜单：创建新HML文件
+        vscode.commands.registerCommand('honeygui.createNewHmlFile', async (uri: vscode.Uri) => {
+            try {
+                // 验证是否在 ui 目录下
+                const uiPath = uri.fsPath;
+                const path = require('path');
+                const fs = require('fs');
+
+                if (!fs.existsSync(uiPath) || !fs.statSync(uiPath).isDirectory()) {
+                    vscode.window.showErrorMessage('请选择 ui 目录创建新文件');
+                    return;
+                }
+
+                // 读取项目配置以获取分辨率
+                let resolution = '800X480'; // 默认分辨率
+                try {
+                    const projectJsonPath = path.join(path.dirname(uiPath), 'project.json');
+                    if (fs.existsSync(projectJsonPath)) {
+                        const projectConfig = JSON.parse(fs.readFileSync(projectJsonPath, 'utf8'));
+                        resolution = projectConfig.resolution || resolution;
+                    }
+                } catch (error) {
+                    console.warn('无法读取项目配置，使用默认分辨率:', error);
+                }
+
+                // 提示用户输入文件名
+                const fileName = await vscode.window.showInputBox({
+                    prompt: '请输入新HML文件的名称（不包含扩展名）',
+                    placeHolder: '例如：settings, dialog, widget等',
+                    validateInput: (value) => {
+                        if (!value || value.trim().length === 0) {
+                            return '文件名不能为空';
+                        }
+                        // 检查非法字符
+                        const invalidChars = /[<>:*"?|\\/]/;
+                        if (invalidChars.test(value)) {
+                            return '文件名不能包含非法字符: < > : * " ? | \\ /';
+                        }
+                        return null;
+                    }
+                });
+
+                if (!fileName) {
+                    return; // 用户取消
+                }
+
+                // 创建 ui/[文件名] 目录
+                const newDirPath = path.join(uiPath, fileName);
+                if (!fs.existsSync(newDirPath)) {
+                    fs.mkdirSync(newDirPath, { recursive: true });
+                }
+
+                // 生成HML文件（不包含screen容器）
+                const { HmlTemplateManager } = require('./hml/HmlTemplateManager');
+                const hmlContent = HmlTemplateManager.generateSimpleHml(fileName, resolution);
+
+                // 保存文件到 ui/[文件名]/[文件名].hml
+                const hmlFilePath = path.join(newDirPath, `${fileName}.hml`);
+                fs.writeFileSync(hmlFilePath, hmlContent, 'utf8');
+
+                // 显示成功消息
+                vscode.window.showInformationMessage(`HML文件创建成功: ui/${fileName}/${fileName}.hml`);
+
+                // 询问用户是否立即打开文件
+                const openFile = await vscode.window.showInformationMessage(
+                    '是否立即打开新创建的HML文件？',
+                    '是',
+                    '否'
+                );
+
+                if (openFile === '是') {
+                    // 使用默认方式打开（会使用CustomTextEditorProvider）
+                    const document = await vscode.workspace.openTextDocument(hmlFilePath);
+                    await vscode.window.showTextDocument(document);
+                }
+
+            } catch (error) {
+                console.error('创建HML文件失败:', error);
+                vscode.window.showErrorMessage(`创建HML文件失败: ${error instanceof Error ? error.message : '未知错误'}`);
+            }
+        }),
+
         // 复制日志到剪贴板
         vscode.commands.registerCommand('honeygui.copyLogs', async () => {
             try {
@@ -1201,35 +1283,24 @@ export function activate(context: vscode.ExtensionContext) {
 
                                 if (hmlFiles.length > 0) {
                                     const hmlFile = hmlFiles[0];
-                                    const hmlFilePath = hmlFile.fsPath;
 
                                     progress.report({ increment: 30, message: '加载HML文件...' });
 
-                                    // 先打开文件
-                                    await vscode.commands.executeCommand('vscode.open', hmlFile);
+                                    // 禁用自动打开设计器功能
+                                    // 现在项目创建后，设计器保持初始状态，不自动打开任何文件
 
-                                    progress.report({ increment: 60, message: '打开设计器...' });
+                                    progress.report({ increment: 100, message: '项目加载完成！' });
 
-                                    // 在设计器中打开
-                                    DesignerPanel.createOrShow(context, hmlFilePath);
+                                    // 显示成功消息（不提及设计器）
+                                    vscode.window.showInformationMessage(`项目 '${pendingActivation.projectName}' 已成功加载！`);
 
-                                    progress.report({ increment: 90, message: '启动预览服务...' });
-
-                                    // 启动预览服务
-                                    await vscode.commands.executeCommand('honeygui.startProject');
-
-                                    progress.report({ increment: 100, message: '项目激活完成！' });
-
-                                    // 显示成功消息
-                                    vscode.window.showInformationMessage(`项目 '${pendingActivation.projectName}' 已成功激活！`);
-
-                                    console.log('项目激活完成:', pendingActivation.projectName);
+                                    console.log('项目加载完成:', pendingActivation.projectName);
                                 } else {
-                                    console.warn('未找到HML文件，无法激活项目');
-                                    vscode.window.showWarningMessage('未找到HML文件，项目激活不完整');
+                                    console.warn('未找到HML文件');
+                                    vscode.window.showWarningMessage('未找到HML文件');
                                 }
 
-                                // 激活完成后清除待激活标记
+                                // 清除待激活标记
                                 await context.globalState.update('pendingProjectActivation', undefined);
 
                             } catch (error) {

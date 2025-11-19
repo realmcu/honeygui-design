@@ -42,6 +42,12 @@ export interface Meta {
   height?: number;
   project?: any;
   author?: any;
+  // 原始HML格式的属性
+  id?: string;              // hml标签的id属性
+  appId?: string;           // APP ID
+  resolution?: string;      // 分辨率
+  minSdk?: string;          // 最小SDK版本
+  pixelMode?: string;       // 像素模式
 }
 
 /**
