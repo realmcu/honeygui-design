@@ -31,12 +31,12 @@ export class DesignerPanel {
         // 如果已有面板，则显示并返回
         if (DesignerPanel.currentPanel) {
             DesignerPanel.currentPanel._panel.reveal(column);
-            
+
             // 如果提供了文件路径，加载该文件
             if (filePath) {
                 DesignerPanel.currentPanel._loadFile(filePath);
             }
-            
+
             return DesignerPanel.currentPanel;
         }
 
@@ -55,22 +55,30 @@ export class DesignerPanel {
         );
 
         DesignerPanel.currentPanel = new DesignerPanel(panel, context);
-        
+
         // 如果提供了文件路径，加载该文件，否则创建新文档
         if (filePath) {
             DesignerPanel.currentPanel._loadFile(filePath);
         } else {
             DesignerPanel.currentPanel._createNewDocument();
         }
-        
+
         return DesignerPanel.currentPanel;
     }
 
-    private constructor(panel: vscode.WebviewPanel, context: vscode.ExtensionContext) {
+    /**
+     * 从 TextDocument 构造（用于 CustomTextEditorProvider）
+     */
+    public constructor(panel: vscode.WebviewPanel, context: vscode.ExtensionContext, document?: vscode.TextDocument) {
         this._panel = panel;
         this._extensionUri = context.extensionUri;
         this._context = context;
         this._hmlController = new HmlController();
+
+        // 如果有文档，设置文件路径
+        if (document) {
+            this._filePath = document.uri.fsPath;
+        }
 
         // 设置Webview内容
         this._update();
@@ -705,6 +713,93 @@ private _createNewDocument(): void {
         } catch (error) {
             console.error('创建新文档失败:', error);
             vscode.window.showErrorMessage(`创建新文档失败: ${error instanceof Error ? error.message : '未知错误'}`);
+        }
+    }
+
+    /**
+     * 从 TextDocument 加载内容（用于 CustomTextEditorProvider）
+     */
+    public async loadFromDocument(document: vscode.TextDocument): Promise<void> {
+        this._filePath = document.uri.fsPath;
+
+        try {
+            const content = document.getText();
+
+            // 解析文档内容
+            const hmlDocument = this._hmlController.parseContent(content);
+
+            // 序列化文档为字符串
+            const hmlContent = this._hmlController.serializeDocument();
+
+            // 为前端准备组件数据
+            const frontendComponents = this._hmlController.prepareComponentsForFrontend(hmlDocument);
+
+            // 尝试加载项目配置文件
+            let projectConfig = null;
+            try {
+                const hmlDir = path.dirname(document.uri.fsPath);
+                const configPathInHmlDir = path.join(hmlDir, 'project.json');
+
+                if (fs.existsSync(configPathInHmlDir)) {
+                    const configContent = fs.readFileSync(configPathInHmlDir, 'utf8');
+                    projectConfig = JSON.parse(configContent);
+                } else {
+                    const projectRootDir = path.dirname(hmlDir);
+                    const configPathInRootDir = path.join(projectRootDir, 'project.json');
+
+                    if (fs.existsSync(configPathInRootDir)) {
+                        const configContent = fs.readFileSync(configPathInRootDir, 'utf8');
+                        projectConfig = JSON.parse(configContent);
+                    }
+                }
+            } catch (configError) {
+                console.error('[HoneyGUI Designer] 加载项目配置文件失败:', configError);
+            }
+
+            // 从 project.json 获取设计器配置
+            const canvasBackgroundColor = projectConfig?.designer?.canvasBackgroundColor || '#f0f0f0';
+
+            // 发送内容到 Webview
+            this._panel.webview.postMessage({
+                command: 'loadHml',
+                content: hmlContent,
+                document: {
+                    ...hmlDocument,
+                    view: {
+                        ...hmlDocument.view,
+                        components: frontendComponents
+                    }
+                },
+                projectConfig: projectConfig,
+                designerConfig: {
+                    canvasBackgroundColor
+                }
+            });
+
+            // 更新面板标题
+            const fileName = path.basename(document.fileName);
+            this._panel.title = `HoneyGUI Designer: ${fileName}`;
+
+        } catch (error) {
+            console.error('从文档加载HML失败:', error);
+            vscode.window.showErrorMessage(`加载HML文件失败: ${error instanceof Error ? error.message : '未知错误'}`);
+
+            // 如果加载失败，创建一个新的空白文档
+            this._createNewDocument();
+        }
+    }
+
+    /**
+     * 从文档更新内容（当文档在外部被修改时）
+     */
+    public async updateFromDocument(): Promise<void> {
+        if (this._filePath) {
+            try {
+                const document = await vscode.workspace.openTextDocument(this._filePath);
+                await this.loadFromDocument(document);
+            } catch (error) {
+                console.error('更新文档失败:', error);
+            }
         }
     }
 

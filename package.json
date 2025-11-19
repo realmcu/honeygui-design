@@ -36,6 +36,26 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "languages": [
+      {
+        "id": "hml",
+        "aliases": ["HML", "hml"],
+        "extensions": [".hml"],
+        "configuration": "./hml.language-configuration.json"
+      }
+    ],
+    "customEditors": [
+      {
+        "viewType": "honeygui.hmlEditor",
+        "displayName": "HoneyGUI Design View",
+        "selector": [
+          {
+            "filenamePattern": "*.hml"
+          }
+        ],
+        "priority": "default"
+      }
+    ],
     "viewsContainers": {
       "activitybar": [
         {
@@ -61,6 +81,18 @@
       ]
     },
     "menus": {
+      "explorer/context": [
+        {
+          "command": "honeygui.openInTextEditor",
+          "when": "resourceExtname == .hml",
+          "group": "1_open@1"
+        },
+        {
+          "command": "honeygui.openInDesigner",
+          "when": "resourceExtname == .hml",
+          "group": "1_open@2"
+        }
+      ],
       "view/title": [
         {
           "command": "honeygui.switchView",
@@ -79,6 +111,16 @@
         "command": "honeygui.switchView",
         "title": "Switch View",
         "icon": "$(swap-horizontal)"
+      },
+      {
+        "command": "honeygui.openInTextEditor",
+        "title": "Open with Text Editor",
+        "category": "HoneyGUI"
+      },
+      {
+        "command": "honeygui.openInDesigner",
+        "title": "Open with HoneyGUI Designer",
+        "category": "HoneyGUI"
       },
       {
         "command": "honeygui.newProject",

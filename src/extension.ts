@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { DesignerPanel } from './designer/DesignerPanel';
 import { PreviewService } from './preview/PreviewService';
+import { HmlEditorProvider } from './hml/HmlEditorProvider';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
@@ -594,6 +595,20 @@ class HoneyguiQuickViewProvider implements vscode.WebviewViewProvider {
 export function activate(context: vscode.ExtensionContext) {
     logger.info('HoneyGUI Visual Designer 扩展已激活');
 
+    // 注册 HML 自定义编辑器提供器
+    context.subscriptions.push(
+        vscode.window.registerCustomEditorProvider(
+            HmlEditorProvider.viewType,
+            new HmlEditorProvider(context),
+            {
+                webviewOptions: {
+                    retainContextWhenHidden: true
+                },
+                supportsMultipleEditorsPerDocument: false
+            }
+        )
+    );
+
     // 立即注册视图提供者 - 放在所有其他逻辑之前
     const welcomeProvider = new HoneyguiWelcomeViewProvider(context);
     const quickProvider = new HoneyguiQuickViewProvider(context);
@@ -1003,6 +1018,16 @@ export function activate(context: vscode.ExtensionContext) {
             vscode.window.showInformationMessage('HoneyGUI 日志已清空');
         }),
 
+        // 右键菜单：在文本编辑器中打开
+        vscode.commands.registerCommand('honeygui.openInTextEditor', async (uri: vscode.Uri) => {
+            HmlEditorProvider.openInTextEditor(uri);
+        }),
+
+        // 右键菜单：在设计器中打开
+        vscode.commands.registerCommand('honeygui.openInDesigner', async (uri: vscode.Uri) => {
+            HmlEditorProvider.openInDesigner(context, uri);
+        }),
+
         // 复制日志到剪贴板
         vscode.commands.registerCommand('honeygui.copyLogs', async () => {
             try {
@@ -1069,6 +1094,8 @@ export function activate(context: vscode.ExtensionContext) {
         })
     );
     
+    // 注释掉冲突的监听器 - 现在使用 CustomTextEditorProvider 处理文件打开
+    /*
     // 监听HML文件的打开事件
     context.subscriptions.push(
         vscode.workspace.onDidOpenTextDocument((document) => {
@@ -1086,6 +1113,7 @@ export function activate(context: vscode.ExtensionContext) {
             }
         })
     );
+    */
 
     // 监听文件系统变化，以便在文件被外部修改时通知用户
     const watcher = vscode.workspace.createFileSystemWatcher('**/*.hml');
@@ -1095,6 +1123,7 @@ export function activate(context: vscode.ExtensionContext) {
         })
     );
 
+    /*
     // 监听VSCode启动事件，以便在编辑器启动时进行一些初始化工作
     vscode.window.onDidChangeVisibleTextEditors(() => {
         // 检查当前活动的编辑器是否打开了.hml文件
@@ -1104,13 +1133,14 @@ export function activate(context: vscode.ExtensionContext) {
             DesignerPanel.createOrShow(context, activeEditor.document.uri.fsPath);
         }
     });
-    
+
     // 在扩展激活时立即检查活动编辑器中的.hml文件
     const currentActiveEditor = vscode.window.activeTextEditor;
     if (currentActiveEditor && currentActiveEditor.document.uri.fsPath.endsWith('.hml')) {
         // 自动在设计器中打开HML文件
         DesignerPanel.createOrShow(context, currentActiveEditor.document.uri.fsPath);
     }
+    */
     
     // 当扩展被激活时的通知
     vscode.window.showInformationMessage('HoneyGUI扩展已激活');
