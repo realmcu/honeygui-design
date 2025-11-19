@@ -1904,26 +1904,24 @@
         // 监听来自VSCode扩展的消息
         window.addEventListener('message', event => {
             const message = event.data;
-            
             switch (message.command) {
                 case 'loadHml':
-                    // 加载HML内容
+                    if (message.designerConfig && message.designerConfig.canvasBackgroundColor) {
+                        document.documentElement.style.setProperty('--canvas-bg', message.designerConfig.canvasBackgroundColor);
+                        appState.canvasBackground = message.designerConfig.canvasBackgroundColor;
+                    }
                     loadHmlContent(message.content);
                     break;
                 case 'showMessage':
-                    // 显示消息
                     showNotification(message.text, message.type || 'info');
                     break;
                 case 'error':
-                    // 显示错误
                     showNotification('错误: ' + message.text, 'error');
                     break;
                 case 'codegenProgress':
-                    // 显示代码生成进度
                     showNotification('代码生成中: ' + message.text, 'info');
                     break;
                 case 'codegenComplete':
-                    // 显示代码生成完成
                     showNotification('代码生成完成: ' + message.outputPath, 'success');
                     break;
             }
@@ -1931,8 +1929,107 @@
         
         // 加载HML内容
         function loadHmlContent(hmlContent) {
-            // TODO: 解析HML内容并更新模型
-            console.log('加载HML内容:', hmlContent);
+            try {
+                const domParser = new DOMParser();
+                const xml = domParser.parseFromString(hmlContent, 'application/xml');
+                const parseError = xml.getElementsByTagName('parsererror')[0];
+                if (parseError) {
+                    showNotification('XML解析失败', 'error');
+                    return;
+                }
+
+                const screenEl = xml.querySelector('hml > view > screen');
+                if (!screenEl) {
+                    showNotification('未找到screen组件', 'warning');
+                    return;
+                }
+
+                const screenId = screenEl.getAttribute('id') || 'mainScreen';
+                const screenWidth = parseInt(screenEl.getAttribute('width') || '800');
+                const screenHeight = parseInt(screenEl.getAttribute('height') || '600');
+
+                const screenComponent = {
+                    id: screenId,
+                    type: 'screen',
+                    name: '主屏幕',
+                    x: 50,
+                    y: 50,
+                    width: screenWidth,
+                    height: screenHeight,
+                    properties: {
+                        backgroundColor: '#ffffff',
+                        borderWidth: '1px',
+                        borderStyle: 'solid',
+                        borderColor: '#cccccc'
+                    },
+                    children: []
+                };
+
+                const containerEl = screenEl.querySelector('container');
+                if (containerEl) {
+                    const viewId = containerEl.getAttribute('id') || 'view_1';
+                    const viewComponent = {
+                        id: viewId,
+                        type: 'view',
+                        name: '容器',
+                        x: 0,
+                        y: 0,
+                        width: screenWidth,
+                        height: screenHeight,
+                        properties: {
+                            backgroundColor: 'transparent',
+                            borderWidth: '0',
+                            borderStyle: 'none',
+                            borderColor: 'transparent'
+                        },
+                        children: []
+                    };
+
+                    let currentY = 16;
+                    Array.from(containerEl.children).forEach(child => {
+                        const tag = child.tagName.toLowerCase();
+                        if (tag === 'label' || tag === 'button') {
+                            const id = child.getAttribute('id') || `${tag}_${Date.now()}`;
+                            const text = child.getAttribute('text') || '';
+                            const marginTop = parseInt(child.getAttribute('marginTop') || '0');
+                            const w = getDefaultWidth(tag);
+                            const h = getDefaultHeight(tag);
+                            const x = Math.max(0, Math.round((screenWidth - w) / 2));
+                            const y = currentY + marginTop;
+                            const comp = {
+                                id,
+                                type: tag,
+                                name: getComponentDisplayName(tag),
+                                x,
+                                y,
+                                width: w,
+                                height: h,
+                                properties: { text },
+                                children: []
+                            };
+                            viewComponent.children.push(comp);
+                            currentY = y + h + 8;
+                        }
+                    });
+
+                    screenComponent.children.push(viewComponent);
+                }
+
+                appState.components = [screenComponent];
+
+                const projectEl = xml.querySelector('hml > meta > project');
+                if (projectEl) {
+                    const name = projectEl.getAttribute('name') || '未命名项目';
+                    document.getElementById('project-info').textContent = name;
+                }
+
+                updateCanvas();
+                updateComponentTree();
+                updatePropertyPanel();
+            } catch (e) {
+                console.error(e);
+                showNotification('加载HML失败', 'error');
+            }
         }
         
         // 页面加载完成后初始化

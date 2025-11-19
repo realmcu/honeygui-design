@@ -166,22 +166,19 @@ export class DesignerPanel {
                 'webview'
             );
             
-            // 3. 确定使用哪个路径
+            // 3. 确定使用哪个路径（优先使用传统 designer.html）
             let htmlPath: vscode.Uri;
             let onDiskPath: vscode.Uri;
-            
-            // 检查构建目录是否存在index.html
-            if (fs.existsSync(vscode.Uri.joinPath(buildPath, 'index.html').fsPath)) {
+
+            if (fs.existsSync(vscode.Uri.joinPath(sourcePath, 'designer.html').fsPath)) {
+                onDiskPath = sourcePath;
+                htmlPath = vscode.Uri.joinPath(sourcePath, 'designer.html');
+            } else if (fs.existsSync(vscode.Uri.joinPath(buildPath, 'index.html').fsPath)) {
                 onDiskPath = buildPath;
                 htmlPath = vscode.Uri.joinPath(buildPath, 'index.html');
             } else if (fs.existsSync(vscode.Uri.joinPath(sourcePath, 'index.html').fsPath)) {
-                // 如果构建目录不存在，则使用源码目录
                 onDiskPath = sourcePath;
                 htmlPath = vscode.Uri.joinPath(sourcePath, 'index.html');
-            } else if (fs.existsSync(vscode.Uri.joinPath(sourcePath, 'designer.html').fsPath)) {
-                // 可能使用了不同的文件名
-                onDiskPath = sourcePath;
-                htmlPath = vscode.Uri.joinPath(sourcePath, 'designer.html');
             } else {
                 // 如果都不存在，使用内置的最小HTML模板
                 console.warn('[HoneyGUI Designer] 未找到HTML文件，使用内置最小模板');
@@ -635,6 +632,7 @@ private async _loadFile(filePath: string): Promise<void> {
                     components: frontendComponents
                 }
             },
+            components: frontendComponents,
             projectConfig: projectConfig,
             designerConfig: {
                 canvasBackgroundColor
@@ -700,6 +698,7 @@ private _createNewDocument(): void {
                     components: frontendComponents
                 }
             },
+            components: frontendComponents,
             projectConfig: projectConfig,
             designerConfig: {
                 canvasBackgroundColor
@@ -770,6 +769,7 @@ private _createNewDocument(): void {
                         components: frontendComponents
                     }
                 },
+                components: frontendComponents,
                 projectConfig: projectConfig,
                 designerConfig: {
                     canvasBackgroundColor

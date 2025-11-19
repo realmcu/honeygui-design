@@ -524,16 +524,26 @@ export class HmlController {
             const top = converted.properties.top;
             const width = converted.properties.width;
             const height = converted.properties.height;
-            
-            // 如果有left和top属性，将它们转换为position对象
             if (left !== undefined || top !== undefined) {
                 (converted as any).position = {
-                    left: left || 0,
-                    top: top || 0,
-                    width: width || 'auto',
-                    height: height || 'auto'
+                    x: left || 0,
+                    y: top || 0,
+                    width: typeof width === 'number' ? width : parseInt(width || '0') || 0,
+                    height: typeof height === 'number' ? height : parseInt(height || '0') || 0
                 };
             }
+        }
+
+        // 兼容解析器的 x/y/width/height 字段
+        const hasXY = (component as any).x !== undefined || (component as any).y !== undefined;
+        const hasWH = (component as any).width !== undefined || (component as any).height !== undefined;
+        if (hasXY || hasWH) {
+            (converted as any).position = {
+                x: (component as any).x || 0,
+                y: (component as any).y || 0,
+                width: (component as any).width || 0,
+                height: (component as any).height || 0
+            };
         }
         
         return converted;

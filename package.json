@@ -294,7 +294,7 @@
     "serve:webview": "webpack serve --mode development"
   },
   "devDependencies": {
-    "@esbuild/linux-x64": "^0.27.0",
+    "esbuild": "^0.27.0",
     "@types/node": "^20.19.25",
     "@types/react": "^19.2.4",
     "@types/react-dom": "^19.2.3",
