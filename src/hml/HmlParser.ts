@@ -6,6 +6,7 @@ export type { Document as HmlDocument, Component, ComponentProperties } from './
 
 /**
  * HML解析器，用于解析HML文件内容并转换为组件树
+ * 按照方案一：严格遵循标准格式
  */
 export class HmlParser {
   /**
@@ -34,44 +35,52 @@ export class HmlParser {
         return this._getDefaultDocument();
       }
 
-      // 解析元数据（带有 hml 标签的属性）
-      const hmlAttributes = (result as any)._attributes || {};
-      const meta = this._parseMetaXmlJs((result as any).meta, hmlAttributes);
+      // 确保根标签是hml
+      const hmlElement = (result as any).hml || result;
+
+      // 解析元数据
+      const meta = this._parseMetaXmlJs((hmlElement as any).meta);
+
       // 解析视图
-      const view = this._parseViewXmlJs((result as any).view);
+      const view = this._parseViewXmlJs((hmlElement as any).view, meta);
 
-      // 构建组件树
-      const components: Component[] = [];
-      const componentMap = new Map<string, Component>();
-
-      // 解析所有组件（排除meta和view）
-      Object.entries(result as any).forEach(([key, value]) => {
-        if (key !== 'meta' && key !== 'view' && typeof value === 'object') {
-          const component = this._parseComponentXmlJs(key, value, componentMap, undefined);
-          if (!component.parentId) {
-            components.push(component);
-          }
-        }
-      });
-
-      // 确保组件树是扁平化的
-      const flattenedComponents = this._flattenComponents(components);
-
-      return {
+      // 构建完整的文档对象
+      const document: HmlDocument = {
         meta,
-        view,
-        components: flattenedComponents
+        view
       };
+
+      // 如果view中有components数组，直接添加到文档
+      if (view.components && view.components.length > 0) {
+        document.components = view.components;
+      }
+
+      return document;
     } catch (error) {
       console.error('HML解析过程中出错:', error);
       return this._getDefaultDocument();
     }
   }
-  
+
   /**
    * 获取默认文档（用于解析失败时返回）
    */
   private _getDefaultDocument(): HmlDocument {
+    // 创建包含screen的标准结构
+    const screenComponent: Component = {
+      id: 'main_screen',
+      type: 'screen',
+      x: 0,
+      y: 0,
+      width: 480,
+      height: 800,
+      properties: {
+        backgroundColor: '#f5f5f5',
+        title: 'Default Screen'
+      },
+      children: []
+    };
+
     return {
       meta: {
         title: '未命名页面',
@@ -80,113 +89,138 @@ export class HmlParser {
         height: 800
       },
       view: {
-        id: 'screen',
+        id: 'main_view',
         width: 480,
         height: 800,
-        backgroundColor: '#ffffff'
-      },
-      components: [
-        {
-          id: 'screen',
-          type: 'screen',
-          x: 0,
-          y: 0,
-          width: 480,
-          height: 800,
-          properties: {
-            backgroundColor: '#ffffff'
-          },
-          children: []
-        },
-        {
-          id: 'error-text',
-          type: 'text',
-          x: 20,
-          y: 100,
-          width: 440,
-          height: 40,
-          properties: {
-            text: 'HML解析失败，请检查文件格式',
-            fontSize: 16,
-            color: '#ff0000'
-          },
-          parentId: 'screen'
-        }
-      ]
+        components: [screenComponent]
+      }
     };
   }
-  
+
   /**
    * 生成唯一ID
    */
   private _generateId(type: string): string {
     return `${type}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
   }
-  
+
   /**
    * 解析元数据 (使用xml-js)
    * @param metaElement meta元素
-   * @param hmlAttributes hml标签的属性（id, width, height等）
    */
-  private _parseMetaXmlJs(metaElement: any, hmlAttributes: any = {}): Meta {
-    const metaAttributes = metaElement?._attributes || {};
-
-    // 合并hml标签的属性和meta标签的属性
-    // hml标签的属性（id, width, height）优先级更高
-    return {
-      title: hmlAttributes.id || metaAttributes.title || '未命名页面',
-      description: metaAttributes.description || '',
-      width: parseInt(hmlAttributes.width || metaAttributes.width || '480'),
-      height: parseInt(hmlAttributes.height || metaAttributes.height || '800'),
-      // 保留原始属性以便序列化
-      id: hmlAttributes.id,
-      appId: metaAttributes.appId,
-      resolution: metaAttributes.resolution,
-      minSdk: metaAttributes.minSdk,
-      pixelMode: metaAttributes.pixelMode
-    };
-  }
-  
-  /**
-   * 解析视图 (使用xml-js)
-   */
-  private _parseViewXmlJs(viewElement: any): View {
-    if (!viewElement || typeof viewElement !== 'object') {
+  private _parseMetaXmlJs(metaElement: any): Meta {
+    if (!metaElement || typeof metaElement !== 'object') {
       return {
-        id: 'screen',
+        title: '未命名页面',
+        description: '',
         width: 480,
-        height: 800,
-        backgroundColor: '#ffffff'
+        height: 800
       };
     }
-    
-    const attributes = viewElement._attributes || {};
-    return {
-      id: attributes.id || 'screen',
-      width: parseInt(attributes.width || '480'),
-      height: parseInt(attributes.height || '800'),
-      backgroundColor: attributes.backgroundColor || '#ffffff'
-    };
+
+    const meta: Meta = {};
+
+    // 处理meta的直接属性
+    const attributes = metaElement._attributes || {};
+    if (attributes.title) meta.title = String(attributes.title);
+    if (attributes.description) meta.description = String(attributes.description);
+    if (attributes.width) meta.width = parseInt(attributes.width);
+    if (attributes.height) meta.height = parseInt(attributes.height);
+
+    // 处理meta的子元素（project, author等）
+    const specialElements = ['project', 'author'];
+    Object.keys(metaElement).forEach(key => {
+      if (key !== '_attributes' && specialElements.includes(key)) {
+        const element = metaElement[key];
+        if (element && typeof element === 'object') {
+          const elementAttrs = element._attributes || {};
+          if (key === 'project') {
+            meta.project = { ...elementAttrs };
+          } else if (key === 'author') {
+            meta.author = { ...elementAttrs };
+          }
+        }
+      }
+    });
+
+    // 填充默认值
+    if (!meta.title) meta.title = '未命名页面';
+    if (!meta.width) meta.width = 480;
+    if (!meta.height) meta.height = 800;
+
+    return meta;
   }
-  
+
+  /**
+   * 解析视图 (使用xml-js)
+   * @param viewElement view元素
+   * @param meta meta对象（用于获取宽高等信息）
+   */
+  private _parseViewXmlJs(viewElement: any, meta: Meta): View {
+    if (!viewElement || typeof viewElement !== 'object') {
+      return {
+        id: 'main_view',
+        width: meta.width || 480,
+        height: meta.height || 800,
+        components: []
+      };
+    }
+
+    const attributes = viewElement._attributes || {};
+    const view: View = {
+      id: attributes.id || 'main_view',
+      width: parseInt(attributes.width || meta.width?.toString() || '480'),
+      height: parseInt(attributes.height || meta.height?.toString() || '800')
+    };
+
+    // 解析view中的组件
+    const components: Component[] = [];
+    const componentMap = new Map<string, Component>();
+
+    // 递归解析view中的所有子组件（排除_attributes）
+    Object.keys(viewElement).forEach(key => {
+      if (key !== '_attributes') {
+        const element = (viewElement as any)[key];
+        if (element && typeof element === 'object') {
+          // 处理数组和单个对象情况
+          const elements = Array.isArray(element) ? element : [element];
+          elements.forEach((child: any) => {
+            const component = this._parseComponentXmlJs(key, child, componentMap, undefined);
+            if (!component.parentId) {
+              components.push(component);
+            }
+          });
+        }
+      }
+    });
+
+    view.components = components;
+    return view;
+  }
+
   /**
    * 解析组件 (使用xml-js)
    */
-  private _parseComponentXmlJs(tagName: string, element: any, componentMap: Map<string, Component>, parentId?: string): Component {
+  private _parseComponentXmlJs(
+    tagName: string,
+    element: any,
+    componentMap: Map<string, Component>,
+    parentId?: string
+  ): Component {
     const attributes = element._attributes || {};
     const componentId = attributes.id || this._generateId(tagName.toLowerCase());
-    
+
     // 检查组件是否已经在map中
     if (componentMap.has(componentId)) {
       return componentMap.get(componentId)!;
     }
-    
+
     // 提取位置和尺寸属性
     const x = parseInt(attributes.x || '0');
     const y = parseInt(attributes.y || '0');
     const width = parseInt(attributes.width || '100');
     const height = parseInt(attributes.height || '40');
-    
+
     // 提取其他属性
     const properties: Record<string, any> = {};
     Object.entries(attributes).forEach(([key, value]) => {
@@ -194,10 +228,10 @@ export class HmlParser {
         properties[key] = value;
       }
     });
-    
+
     const component: Component = {
       id: componentId,
-      type: tagName.toLowerCase(),
+      type: tagName,
       x,
       y,
       width,
@@ -206,14 +240,15 @@ export class HmlParser {
       children: [],
       parentId
     };
-    
+
     // 将组件添加到map中
     componentMap.set(componentId, component);
-    
+
     // 递归解析子组件
-    Object.entries(element).forEach(([key, value]) => {
-      if (key !== '_attributes' && key !== '_text' && typeof value === 'object') {
+    Object.keys(element).forEach(key => {
+      if (key !== '_attributes' && key !== '_text' && typeof (element as any)[key] === 'object') {
         // 处理数组和单个对象情况
+        const value = (element as any)[key];
         const children = Array.isArray(value) ? value : [value];
         children.forEach((child: any) => {
           const childComponent = this._parseComponentXmlJs(key, child, componentMap, componentId);
@@ -223,39 +258,7 @@ export class HmlParser {
         });
       }
     });
-    
+
     return component;
-  }
-  
-  /**
-   * 获取元素属性（保留此方法以兼容可能的未来使用）
-   */
-  private _getAttribute(element: any, name: string, defaultValue: string): string {
-    if (!element || typeof element !== 'object') {
-      return defaultValue;
-    }
-    const attributes = element._attributes || {};
-    return attributes[name] !== undefined ? String(attributes[name]) : defaultValue;
-  }
-  
-  /**
-   * 扁平化组件树
-   */
-  private _flattenComponents(components: Component[]): Component[] {
-    const flattened: Component[] = [];
-    
-    function flatten(component: Component) {
-      // 创建一个不包含children数组的组件副本（因为children会通过parentId关联）
-      const { children, ...componentCopy } = component;
-      flattened.push(componentCopy);
-      
-      // 递归扁平化子组件
-      if (children && children.length > 0) {
-        children.forEach(child => flatten(child));
-      }
-    }
-    
-    components.forEach((child: Component) => flatten(child));
-    return flattened;
   }
 }

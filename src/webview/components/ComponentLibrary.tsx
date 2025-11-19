@@ -30,10 +30,10 @@ const componentDefinitions: ComponentDefinition[] = [
     ],
   },
   {
-    type: 'label',
-    name: '标签',
+    type: 'label',  // 统一使用'label'，移除'text'，避免重复
+    name: '标签/文本',
     icon: '🏷️',
-    defaultSize: { width: 80, height: 24 },
+    defaultSize: { width: 100, height: 24 },
     properties: [
       { name: 'text', label: '文本', type: 'string', defaultValue: 'Label', group: 'data' },
       { name: 'fontSize', label: '字体大小', type: 'number', defaultValue: 14, group: 'style' },
@@ -48,16 +48,6 @@ const componentDefinitions: ComponentDefinition[] = [
     properties: [
       { name: 'placeholder', label: '占位符', type: 'string', group: 'data' },
       { name: 'enabled', label: '启用', type: 'boolean', defaultValue: true, group: 'general' },
-    ],
-  },
-  {
-    type: 'text',
-    name: '文本',
-    icon: '📄',
-    defaultSize: { width: 100, height: 24 },
-    properties: [
-      { name: 'text', label: '文本', type: 'string', defaultValue: 'Text', group: 'data' },
-      { name: 'fontSize', label: '字体大小', type: 'number', defaultValue: 16, group: 'style' },
     ],
   },
   {

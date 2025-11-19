@@ -383,7 +383,7 @@ export class HmlController {
                     children: [
                         {
                             id: 'welcome',
-                            type: 'text',
+                            type: 'label',
                             properties: {
                                 text: '欢迎使用 HoneyGUI',
                                 fontSize: 18,
@@ -394,7 +394,7 @@ export class HmlController {
                         },
                         {
                             id: 'subtitle',
-                            type: 'text',
+                            type: 'label',
                             properties: {
                                 text: '请开始设计您的界面',
                                 fontSize: 14,
