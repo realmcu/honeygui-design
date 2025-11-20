@@ -20,6 +20,7 @@ export class DesignerPanel {
     private readonly _hmlController: HmlController;
     private _filePath: string | undefined;
     private _isSaving = false; // 添加保存状态标志，防止文件系统事件触发重新加载
+    private _lastSerializedSnapshot: string | null = null;
 
     /**
      * 设置保存状态
@@ -530,6 +531,7 @@ export class DesignerPanel {
             console.log('[HoneyGUI Designer] 设置isSaving标志，防止重新加载...');
             // 挂起文件系统事件
             this._isSaving = true;
+            this._lastSerializedSnapshot = content;
 
             console.log('[HoneyGUI Designer] 开始保存HML文件...');
             // 首先尝试解析和验证HML内容
@@ -851,6 +853,12 @@ private _createNewDocument(): void {
             try {
                 console.log('[DesignerPanel] updateFromDocument: 重新加载文件', this._filePath);
                 const document = await vscode.workspace.openTextDocument(this._filePath);
+                const diskContent = document.getText();
+                const normalize = (s: string) => s.replace(/\s+/g, ' ').trim();
+                if (this._lastSerializedSnapshot && normalize(diskContent) === normalize(this._lastSerializedSnapshot)) {
+                    console.log('[DesignerPanel] 保存后的内容与内存一致，跳过重载');
+                    return;
+                }
                 await this.loadFromDocument(document);
             } catch (error) {
                 console.error('更新文档失败:', error);

@@ -42,12 +42,17 @@ export class HmlEditorProvider implements vscode.CustomTextEditorProvider {
         // 加载文档内容到设计器
         await designerPanel.loadFromDocument(document);
 
-        // 监听文档变化（排除我们自己的保存操作）
-        const changeDocumentSubscription = vscode.workspace.onDidChangeTextDocument(e => {
-            if (e.document.uri.toString() === document.uri.toString() && !designerPanel.isSaving) {
-                console.log('[HmlEditorProvider] 检测到文件变化，更新设计器...');
+        // 监听保存事件（排除我们自己的保存操作）
+        const changeDocumentSubscription = vscode.workspace.onDidSaveTextDocument(doc => {
+            if (doc.uri.toString() === document.uri.toString() && !designerPanel.isSaving) {
+                console.log('[HmlEditorProvider] 检测到保存事件，更新设计器...');
                 designerPanel.updateFromDocument();
             }
+        });
+        
+        // 面板关闭时清理监听器
+        webviewPanel.onDidDispose(() => {
+            changeDocumentSubscription.dispose();
         });
     }
 
