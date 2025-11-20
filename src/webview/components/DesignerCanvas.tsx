@@ -18,6 +18,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
   const {
     components,
     selectedComponent,
+    selectedComponents,
     setHoveredComponent,
     draggedComponent,
     setDraggedComponent,
@@ -29,9 +30,12 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     setCanvasOffset,
     updateComponent,
     removeComponent,
+    removeComponents,
     editingMode,
     canvasSize,
     canvasBackgroundColor,
+    addToSelection,
+    setSelectedComponents,
   } = useDesignerStore();
   
   // 当store中的画布背景色变化时更新本地状态
@@ -113,7 +117,12 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
 
   const handleComponentMouseDown = (e: React.MouseEvent, componentId: string) => {
     e.stopPropagation();
-    onComponentSelect(componentId);
+    const multi = e.ctrlKey || e.metaKey || e.shiftKey;
+    if (multi) {
+      addToSelection(componentId);
+    } else {
+      onComponentSelect(componentId);
+    }
 
     if (editingMode === 'move') {
       setDraggedComponent(componentId);
@@ -154,13 +163,21 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // 当按下delete或backspace键，并且有选中的组件时，删除该组件
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedComponent) {
+      if ((e.key === 'Delete' || e.key === 'Backspace') && (selectedComponent || (selectedComponents && selectedComponents.length > 0))) {
         // 阻止默认行为，避免在某些浏览器中可能的页面后退或其他默认操作
         e.preventDefault();
-        // 调用store中的removeComponent函数删除选中的组件
-        removeComponent(selectedComponent);
-        // 清除选中状态
-        onComponentSelect(null);
+        const ids = selectedComponents && selectedComponents.length ? selectedComponents : [selectedComponent!];
+        const confirmMsg = ids.length > 1 ? `确认删除选中的 ${ids.length} 个控件？` : '确认删除选中的控件？';
+        const shouldDelete = window.confirm ? window.confirm(confirmMsg) : true;
+        if (shouldDelete) {
+          if (ids.length > 1) {
+            removeComponents(ids);
+          } else {
+            removeComponent(ids[0]);
+          }
+          onComponentSelect(null);
+          setSelectedComponents([]);
+        }
       }
     };
 
@@ -171,10 +188,11 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [selectedComponent, removeComponent, onComponentSelect]);
+  }, [selectedComponent, selectedComponents, removeComponent, removeComponents, onComponentSelect, setSelectedComponents]);
 
   const renderComponent = (component: Component, componentList: Component[] = components) => {
     const isSelected = selectedComponent === component.id;
+    const isMultiSelected = selectedComponents?.includes(component.id);
     const isHovered = !draggedComponent && useDesignerStore.getState().hoveredComponent === component.id;
 
     const style: React.CSSProperties = {
@@ -186,7 +204,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
       display: component.visible ? 'flex' : 'none',
       opacity: component.enabled ? 1 : 0.6,
       cursor: editingMode === 'move' ? 'move' : 'pointer',
-      border: isSelected ? '2px solid #007ACC' : isHovered ? '1px dashed #007ACC' : '1px solid transparent',
+      border: isSelected || isMultiSelected ? '2px solid #007ACC' : isHovered ? '1px dashed #007ACC' : '1px solid transparent',
       background: component.style?.backgroundColor || 'transparent',
       color: component.style?.color || 'inherit',
       fontSize: component.style?.fontSize ? `${component.style.fontSize}px` : undefined,
@@ -194,10 +212,15 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
       userSelect: 'none',
     };
 
-    const handleClick = (e: React.MouseEvent) => {
-      e.stopPropagation();
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const multi = e.ctrlKey || e.metaKey || e.shiftKey;
+    if (multi) {
+      addToSelection(component.id);
+    } else {
       onComponentSelect(component.id);
-    };
+    }
+  };
 
     const handleMouseEnter = () => {
       if (!draggedComponent) {
@@ -211,8 +234,8 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
       }
     };
 
-    switch (component.type) {
-      case 'button':
+      switch (component.type) {
+      case 'hg_button':
         return (
           <button
             key={component.id}
@@ -227,7 +250,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
           </button>
         );
 
-      case 'label':
+      case 'hg_label':
         return (
           <div
             key={component.id}
@@ -241,7 +264,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
           </div>
         );
 
-      case 'text':
+      case 'hg_text':
         return (
           <span
             key={component.id}
@@ -255,7 +278,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
           </span>
         );
 
-      case 'input':
+      case 'hg_input':
         return (
           <input
             key={component.id}
@@ -269,7 +292,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
           />
         );
 
-      case 'image':
+      case 'hg_image':
         return (
           <div
             key={component.id}
@@ -288,10 +311,10 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
           </div>
         );
 
-      case 'panel':
-      case 'view':
-      case 'window':
-      case 'canvas':
+      case 'hg_panel':
+      case 'hg_view':
+      case 'hg_window':
+      case 'hg_canvas':
         /**
          * View/Panel/Window/Canvas 容器组件实现 - 支持嵌套布局和多容器并行
          *
@@ -349,33 +372,33 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
               // 根据容器类型设置边框样式 - 选中状态高亮显示，非选中状态显示默认边框
               border: isSelected
                 ? '2px solid #007ACC' // 选中时高亮边框（蓝色）
-                : component.type === 'window'
+                : component.type === 'hg_window'
                 ? (component.style?.border || '1px solid #ccc') // Window组件使用自定义边框或默认
-                : component.type === 'view'
+                : component.type === 'hg_view'
                 ? (component.style?.border || '1px dashed #bbb') // View组件使用虚线边框，表示可嵌套
                 : (component.style?.border || '1px solid #ccc'), // Panel组件使用实线边框
               // 根据容器类型设置圆角
-              borderRadius: component.type === 'window'
+              borderRadius: component.type === 'hg_window'
                 ? (component.style?.borderRadius || 6) // Window组件圆角
-                : component.type === 'view'
+                : component.type === 'hg_view'
                 ? (component.style?.borderRadius || 4) // View组件圆角
                 : (component.style?.borderRadius || 0), // Panel组件默认无圆角
               // 根据容器类型设置背景色
-              background: component.type === 'window'
+              background: component.type === 'hg_window'
                 ? (component.style?.backgroundColor || '#ffffff') // Window默认白色背景
-                : component.type === 'view'
+                : component.type === 'hg_view'
                 ? (component.style?.backgroundColor || '#f5f5f5') // View默认浅灰色，区分内容区域
                 : (component.style?.backgroundColor || '#ffffff'), // Panel默认白色背景
               // 根据容器类型设置内边距
-              padding: component.type === 'window'
+              padding: component.type === 'hg_window'
                 ? 0 // Window内边距由内容区域控制
-                : component.type === 'view'
+                : component.type === 'hg_view'
                 ? (component.style?.padding || 12) // View默认内边距12px
                 : (component.style?.padding || 8), // Panel默认内边距8px
               // 根据容器类型设置溢出处理
-              overflow: component.type === 'view'
+              overflow: component.type === 'hg_view'
                 ? (component.style?.overflow || 'auto') // View组件默认自动滚动，支持内容超出
-                : component.type === 'panel'
+                : component.type === 'hg_panel'
                 ? (component.style?.overflow || 'hidden') // Panel组件默认隐藏溢出
                 : 'visible', // Window组件默认可见，不处理溢出
             }}
@@ -385,7 +408,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
             onMouseLeave={handleMouseLeave}
           >
             {/* Window组件渲染标题栏 - 模拟操作系统窗口外观 */}
-            {component.type === 'window' && (
+            {component.type === 'hg_window' && (
               <div
                 style={{
                   height: component.style?.titleBarHeight || 36,
@@ -417,9 +440,9 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
               </div>
             )}
             {/* 容器内容区域 - 根据类型设置不同内边距 */}
-            <div style={{ padding: component.type === 'window' ? '12px' : 0 }}>
+            <div style={{ padding: component.type === 'hg_window' ? '12px' : 0 }}>
               {/* 仅View组件显示名称标签(便于识别) */}
-              {component.type === 'view' && (
+              {component.type === 'hg_view' && (
                 <div style={{ fontSize: '12px', opacity: 0.6, marginBottom: '4px', fontWeight: 500 }}>
                   {component.name}
                 </div>
@@ -564,6 +587,21 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
         onMouseLeave={(e) => {
           setShowZoomHint(false);
           handleCanvasMouseUp();
+        }}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          const ids = selectedComponents && selectedComponents.length ? selectedComponents : (selectedComponent ? [selectedComponent] : []);
+          if (ids.length === 0) return;
+          const label = ids.length > 1 ? `删除选中的 ${ids.length} 个控件` : '删除选中控件';
+          const ok = window.confirm(`${label}？`);
+          if (ok) {
+            if (ids.length > 1) {
+              removeComponents(ids);
+            } else {
+              removeComponent(ids[0]);
+            }
+            setSelectedComponents([]);
+          }
         }}
       >
           {/* 缩放提示 */}

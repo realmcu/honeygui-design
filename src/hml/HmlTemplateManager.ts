@@ -40,15 +40,10 @@ export class HmlTemplateManager {
 <hml>
     <meta>
         <project name="${projectName}" appId="${appId || ''}" resolution="${resolution}" minSdk="${minSdk || ''}" pixelMode="${pixelMode || ''}" />
-        <author name="Anonymous" email="" />
+        <author name="Anonymous" />
     </meta>
     <view>
-        <screen id="mainScreen" width="${width}" height="${height}">
-            <container id="root" layout="column" padding="16">
-                <label id="title" text="${projectName}" fontSize="24" marginTop="16" align="center"></label>
-                <button id="welcomeButton" text="Click Me" marginTop="32" align="center" onclickhandler="OnWelcomeButtonClick"></button>
-            </container>
-        </screen>
+        <hg_screen id="mainScreen" width="${width}" height="${height}" />
     </view>
 </hml>`;
     }

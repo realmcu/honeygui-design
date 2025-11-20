@@ -122,6 +122,67 @@ export class HmlController {
     }
 
     /**
+     * 使用前端组件列表更新当前文档（用于Webview状态同步）
+     * @param frontendComponents 前端组件数组（含position/parent/children）
+     */
+    public updateFromFrontendComponents(frontendComponents: any[]): void {
+        if (!frontendComponents || !Array.isArray(frontendComponents)) {
+            throw new Error('无效的前端组件数据');
+        }
+        if (!this._currentDocument) {
+            this._currentDocument = { meta: {}, view: { components: [] } } as HmlDocument;
+        }
+
+        const map = new Map<string, Component>();
+
+        // 先构建所有组件的基本信息
+        for (const fc of frontendComponents) {
+            const c: Component = {
+                id: fc.id,
+                type: fc.type,
+                x: fc.position?.x ?? 0,
+                y: fc.position?.y ?? 0,
+                width: fc.position?.width ?? 0,
+                height: fc.position?.height ?? 0,
+                properties: {},
+                events: undefined,
+                parentId: fc.parent || undefined,
+                children: []
+            };
+
+            // 合并样式到properties
+            if (fc.style && typeof fc.style === 'object') {
+                Object.assign(c.properties, fc.style);
+            }
+            // 合并数据到properties（保持简单映射）
+            if (fc.data && typeof fc.data === 'object') {
+                Object.assign(c.properties, fc.data);
+            }
+
+            map.set(c.id, c);
+        }
+
+        // 建立层级关系
+        for (const fc of frontendComponents) {
+            const parentId: string | null = fc.parent ?? null;
+            const childId: string = fc.id;
+            if (parentId) {
+                const parent = map.get(parentId);
+                const child = map.get(childId);
+                if (parent && child) {
+                    child.parentId = parent.id;
+                    parent.children = parent.children || [];
+                    parent.children.push(child);
+                }
+            }
+        }
+
+        // 更新文档的components列表（包含嵌套结构）
+        this._currentDocument.view.components = Array.from(map.values());
+        this._documentVersion++;
+    }
+
+    /**
      * 创建新的HML文档
      * @param options 文档选项
      * @returns 新创建的HML文档对象
@@ -371,39 +432,14 @@ export class HmlController {
             children: [
                 {
                     id: 'main_screen',
-                    type: 'screen',
+                    type: 'hg_screen',
                     properties: {
                         id: 'main',
                         width: '100%',
                         height: '100%',
-                        backgroundColor: '#f5f5f5',
-                        flexDirection: 'column',
-                        padding: 16
+                        backgroundColor: '#f5f5f5'
                     },
-                    children: [
-                        {
-                            id: 'welcome',
-                            type: 'label',
-                            properties: {
-                                text: '欢迎使用 HoneyGUI',
-                                fontSize: 18,
-                                color: '#333333',
-                                marginTop: 20,
-                                marginLeft: 20
-                            }
-                        },
-                        {
-                            id: 'subtitle',
-                            type: 'label',
-                            properties: {
-                                text: '请开始设计您的界面',
-                                fontSize: 14,
-                                color: '#666666',
-                                marginTop: 8,
-                                marginLeft: 20
-                            }
-                        }
-                    ]
+                    children: []
                 }
             ]
         };
@@ -617,7 +653,7 @@ export class HmlController {
         if (root && root.children) {
             // 检查是否已经有screen类型的组件
             for (const child of root.children) {
-                if (child.type === 'screen') {
+                if (child.type === 'hg_screen') {
                     hasScreenComponent = true;
                     break;
                 }

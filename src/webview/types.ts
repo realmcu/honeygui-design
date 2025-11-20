@@ -53,21 +53,21 @@ export interface Component {
 }
 
 export type ComponentType =
-  | 'button'
-  | 'label'
-  | 'text'
-  | 'input'
-  | 'textarea'
-  | 'checkbox'
-  | 'radio'
-  | 'switch'
-  | 'slider'
-  | 'image'
-  | 'panel'
-  | 'view'
-  | 'window'
-  | 'screen'
-  | 'canvas';
+  | 'hg_button'
+  | 'hg_label'
+  | 'hg_text'
+  | 'hg_input'
+  | 'hg_textarea'
+  | 'hg_checkbox'
+  | 'hg_radio'
+  | 'hg_switch'
+  | 'hg_slider'
+  | 'hg_image'
+  | 'hg_panel'
+  | 'hg_view'
+  | 'hg_window'
+  | 'hg_screen'
+  | 'hg_canvas';
 
 export interface ComponentDefinition {
   type: ComponentType;
@@ -89,6 +89,7 @@ export interface PropertyDefinition {
 export interface DesignerState {
   components: Component[];
   selectedComponent: string | null;
+  selectedComponents: string[];
   hoveredComponent: string | null;
   draggedComponent: string | null;
   zoom: number;

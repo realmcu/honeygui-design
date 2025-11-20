@@ -18,7 +18,62 @@ export class HmlSerializer {
         return new Promise((resolve, reject) => {
             try {
                 const content = this.serialize(document);
-                fs.writeFileSync(filePath, content, 'utf8');
+
+                // 1) 生成临时路径与备份路径
+                const dir = path.dirname(filePath);
+                const base = path.basename(filePath);
+                const tempPath = path.join(dir, `.${base}.tmp`);
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                const backupPath = fs.existsSync(filePath)
+                    ? path.join(dir, `${base}.bak.${timestamp}`)
+                    : '';
+
+                // 2) 写入临时文件
+                fs.writeFileSync(tempPath, content, 'utf8');
+
+                // 3) 完整性校验（解析检查）
+                try {
+                    const { HmlParser } = require('./HmlParser');
+                    const parser = new HmlParser();
+                    const parsed = parser.parse(content);
+                    if (!parsed || !parsed.view) {
+                        throw new Error('序列化结果校验失败：view 结构缺失');
+                    }
+                } catch (verifyErr) {
+                    // 校验失败，删除临时文件并报错
+                    try { fs.unlinkSync(tempPath); } catch {}
+                    throw verifyErr;
+                }
+
+                // 4) 创建备份（如原文件存在）
+                if (backupPath) {
+                    try {
+                        fs.copyFileSync(filePath, backupPath);
+                        // 备份保留策略：最多保留最近5个备份
+                        const prefix = `${base}.bak.`;
+                        const backups = fs.readdirSync(dir)
+                            .filter(f => f.startsWith(prefix))
+                            .sort((a, b) => (a > b ? -1 : 1));
+                        if (backups.length > 5) {
+                            backups.slice(5).forEach(old => {
+                                try { fs.unlinkSync(path.join(dir, old)); } catch {}
+                            });
+                        }
+                    } catch (bkErr) {
+                        // 备份失败不阻止保存，但记录错误
+                        console.warn('[HoneyGUI] 备份创建失败:', bkErr);
+                    }
+                }
+
+                // 5) 原子替换：重命名临时文件到目标文件
+                fs.renameSync(tempPath, filePath);
+
+                // 6) 再次快速读取并校验（保障落盘内容）
+                const written = fs.readFileSync(filePath, 'utf8');
+                if (!written || written.length === 0) {
+                    throw new Error('写入后文件为空');
+                }
+
                 resolve();
             } catch (error) {
                 reject(new Error(`保存HML文件失败: ${error instanceof Error ? error.message : '未知错误'}`));
@@ -90,7 +145,7 @@ export class HmlSerializer {
         }
 
         // 序列化其他顶层meta信息（排除已处理的project和author）
-        const specialKeys = ['project', 'author', 'components'];
+        const specialKeys = ['project', 'author', 'components', 'title', 'width', 'height'];
         Object.keys(meta).forEach(key => {
             if (!specialKeys.includes(key)) {
                 const value = meta[key];

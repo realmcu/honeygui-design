@@ -153,7 +153,7 @@ const App: React.FC = () => {
 
     // 查找画布中的根screen容器(顶级screen组件)
     let screenContainer = components.find(comp =>
-      comp.type === 'screen' && comp.parent === null
+      comp.type === 'hg_screen' && comp.parent === null
     );
 
     // 如果没有找到screen容器，自动创建一个
@@ -165,10 +165,10 @@ const App: React.FC = () => {
       const { width = 800, height = 480 } = useDesignerStore.getState().canvasSize;
 
       // 创建screen组件
-      const screenId = `screen_${Date.now()}`;
+      const screenId = `hg_screen_${Date.now()}`;
       screenContainer = {
         id: screenId,
-        type: 'screen' as ComponentType,
+        type: 'hg_screen' as ComponentType,
         name: 'Screen',
         position: {
           x: 50,
@@ -201,8 +201,8 @@ const App: React.FC = () => {
     // === View组件特殊处理：判断是否为第一个View ===
     // 重新获取最新的组件列表（包含可能刚刚创建的screen）
     const updatedComponents = useDesignerStore.getState().components;
-    const existingViews = updatedComponents.filter(comp => comp.type === 'view');
-    const isFirstView = componentType === 'view' && existingViews.length === 0;
+    const existingViews = updatedComponents.filter(comp => comp.type === 'hg_view');
+    const isFirstView = componentType === 'hg_view' && existingViews.length === 0;
 
     // 计算组件位置和尺寸
     let positionX = x;
@@ -212,7 +212,7 @@ const App: React.FC = () => {
     let parent: string | null = null;
 
     // === 组件添加策略 ===
-    if (componentType === 'view') {
+    if (componentType === 'hg_view') {
       if (isFirstView) {
         // 第一个View: 放入screen容器，尺寸匹配screen
         parent = screenContainer.id;
@@ -226,7 +226,7 @@ const App: React.FC = () => {
         parent = null;
         console.info(`[拖放] 后续View组件，作为顶级容器独立放置`);
       }
-    } else if (['panel', 'window'].includes(componentType)) {
+    } else if (['hg_panel', 'hg_window'].includes(componentType)) {
       // 其他容器组件: 作为顶级组件独立放置
       parent = null;
       console.info(`[拖放] 容器组件 ${componentType} 作为顶级组件`);
@@ -258,9 +258,9 @@ const App: React.FC = () => {
       parent,
       style: {},
       data: {
-        text: componentType === 'button' ? 'Button' :
-              componentType === 'label' ? 'Label' :
-              componentType === 'text' ? 'Text' : '',
+        text: componentType === 'hg_button' ? 'Button' :
+              componentType === 'hg_label' ? 'Label' :
+              componentType === 'hg_text' ? 'Text' : '',
       },
     };
 

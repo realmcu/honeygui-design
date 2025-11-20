@@ -102,7 +102,14 @@ export class DesignerPanel {
             message => {
                 switch (message.command) {
                     case 'save':
-                        this._saveHml(message.content);
+                        try {
+                            if (message?.content?.components && Array.isArray(message.content.components)) {
+                                this._hmlController.updateFromFrontendComponents(message.content.components);
+                            }
+                        } catch (syncErr) {
+                            console.warn('[HoneyGUI Designer] 前端组件同步失败:', syncErr);
+                        }
+                        this._saveHml(message.content?.raw ?? this._hmlController.serializeDocument());
                         break;
                     case 'preview':
                         this._previewUi(message.content);
@@ -525,9 +532,16 @@ export class DesignerPanel {
             // 使用getter方法
             const filePath = this.currentFilePath;
             if (filePath) {
+                const start = Date.now();
                 await this._hmlController.saveDocument(filePath);
                 // 更新VSCode的文件系统缓存
                 await vscode.workspace.fs.stat(vscode.Uri.file(filePath));
+                const cost = Date.now() - start;
+                try {
+                    const loggerChannel = vscode.window.createOutputChannel('HoneyGUI Save');
+                    loggerChannel.appendLine(`[HoneyGUI Save] 保存完成: ${path.basename(filePath)} 用时 ${cost}ms`);
+                    loggerChannel.appendLine(`[HoneyGUI Save] 位置: ${filePath}`);
+                } catch {}
                 vscode.window.showInformationMessage(`设计已保存到 ${path.basename(filePath)}`);
             }
             

@@ -10,7 +10,7 @@ const componentDefinitions: ComponentDefinition[] = [
   // Screen 容器组件 - 仅内部使用，不在组件库面板显示
   // 用于作为UI组件的根容器，提供画布背景
   {
-    type: 'screen',
+    type: 'hg_screen',
     name: 'Screen',
     icon: '📺',
     defaultSize: { width: 1024, height: 768 },
@@ -20,7 +20,7 @@ const componentDefinitions: ComponentDefinition[] = [
     ],
   },
   {
-    type: 'button',
+    type: 'hg_button',
     name: '按钮',
     icon: '🔘',
     defaultSize: { width: 100, height: 32 },
@@ -30,7 +30,7 @@ const componentDefinitions: ComponentDefinition[] = [
     ],
   },
   {
-    type: 'label',  // 统一使用'label'，移除'text'，避免重复
+    type: 'hg_label',  // 统一使用'label'，移除'text'，避免重复
     name: '标签/文本',
     icon: '🏷️',
     defaultSize: { width: 100, height: 24 },
@@ -41,7 +41,7 @@ const componentDefinitions: ComponentDefinition[] = [
     ],
   },
   {
-    type: 'input',
+    type: 'hg_input',
     name: '输入框',
     icon: '📝',
     defaultSize: { width: 200, height: 32 },
@@ -51,7 +51,7 @@ const componentDefinitions: ComponentDefinition[] = [
     ],
   },
   {
-    type: 'image',
+    type: 'hg_image',
     name: '图片',
     icon: '🖼️',
     defaultSize: { width: 150, height: 150 },
@@ -61,7 +61,7 @@ const componentDefinitions: ComponentDefinition[] = [
     ],
   },
   {
-    type: 'checkbox',
+    type: 'hg_checkbox',
     name: '复选框',
     icon: '☑️',
     defaultSize: { width: 20, height: 20 },
@@ -71,7 +71,7 @@ const componentDefinitions: ComponentDefinition[] = [
     ],
   },
   {
-    type: 'radio',
+    type: 'hg_radio',
     name: '单选框',
     icon: '⭕',
     defaultSize: { width: 20, height: 20 },
@@ -82,7 +82,7 @@ const componentDefinitions: ComponentDefinition[] = [
   },
 
   {
-    type: 'panel',
+    type: 'hg_panel',
     name: '面板',
     icon: '🪟',
     defaultSize: { width: 400, height: 300 },
@@ -93,7 +93,7 @@ const componentDefinitions: ComponentDefinition[] = [
     ],
   },
   {
-    type: 'view',
+    type: 'hg_view',
     name: '视图',
     icon: '👁️',
     defaultSize: { width: 350, height: 250 },
@@ -104,7 +104,7 @@ const componentDefinitions: ComponentDefinition[] = [
     ],
   },
   {
-    type: 'window',
+    type: 'hg_window',
     name: '窗口',
     icon: '🪟',
     defaultSize: { width: 450, height: 350 },
@@ -118,7 +118,7 @@ const componentDefinitions: ComponentDefinition[] = [
     ],
   },
   {
-    type: 'canvas',
+    type: 'hg_canvas',
     name: '画布组件',
     icon: '🎨',
     defaultSize: { width: 300, height: 200 },
@@ -145,7 +145,7 @@ const ComponentLibrary: React.FC<ComponentLibraryProps> = ({ onComponentDragStar
       <div className="library-content">
         {componentDefinitions.map((component) => {
           // 不在组件库面板显示 screen 组件（仅供内部使用）
-          if (component.type === 'screen') {
+          if (component.type === 'hg_screen') {
             return null;
           }
           return (

@@ -12,7 +12,9 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
   const {
     components,
     selectedComponent,
+    selectedComponents,
     selectComponent,
+    setSelectedComponents,
     updateComponent,
   } = useDesignerStore();
 
@@ -26,7 +28,15 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
 
   const handleSelect = (e: React.MouseEvent) => {
     e.stopPropagation();
-    selectComponent(componentId);
+    const multi = e.ctrlKey || e.metaKey || e.shiftKey;
+    if (multi) {
+      const next = selectedComponents.includes(componentId)
+        ? selectedComponents.filter((id: string) => id !== componentId)
+        : [...selectedComponents, componentId];
+      setSelectedComponents(next);
+    } else {
+      selectComponent(componentId);
+    }
   };
 
   const handleToggleVisibility = (e: React.MouseEvent) => {

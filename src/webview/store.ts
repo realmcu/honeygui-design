@@ -13,7 +13,12 @@ export interface DesignerStore extends DesignerState {
   addComponent: (component: Component) => void;
   updateComponent: (id: string, updates: Partial<Component>) => void;
   removeComponent: (id: string) => void;
+  removeComponents: (ids: string[]) => void;
   selectComponent: (id: string | null) => void;
+  setSelectedComponents: (ids: string[]) => void;
+  addToSelection: (id: string) => void;
+  removeFromSelection: (id: string) => void;
+  clearSelection: () => void;
   setHoveredComponent: (id: string | null) => void;
   setDraggedComponent: (id: string | null) => void;
 
@@ -51,6 +56,7 @@ export interface DesignerStore extends DesignerState {
 
   // Selection
   getSelectedComponent: () => Component | undefined;
+  getSelectedComponents: () => Component[];
   getComponentById: (id: string) => Component | undefined;
 
   // Project configuration
@@ -101,6 +107,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   components: [], // 初始化时不创建screen，等待projectConfig加载
   projectConfig: null as any, // 项目配置（分辨率等）
   selectedComponent: null,
+  selectedComponents: [],
   hoveredComponent: null,
   draggedComponent: null,
   zoom: 1,
@@ -166,10 +173,36 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     set((state) => ({
       components: state.components.filter((c) => c.id !== id && c.parent !== id)
     }));
+    if (vscodeAPI) {
+      vscodeAPI.postMessage({ command: 'delete', content: { ids: [id], components: get().components } });
+      vscodeAPI.postMessage({ command: 'notify', text: `删除控件: ${id}` });
+    }
     get().saveToFile();
   },
 
-  selectComponent: (id) => set({ selectedComponent: id }),
+  removeComponents: (ids) => {
+    if (!ids || ids.length === 0) return;
+    set((state) => ({
+      components: state.components.filter((c) => !ids.includes(c.id) && !ids.includes(c.parent as any))
+    }));
+    if (vscodeAPI) {
+      vscodeAPI.postMessage({ command: 'delete', content: { ids, components: get().components } });
+      vscodeAPI.postMessage({ command: 'notify', text: `批量删除控件: ${ids.length} 个` });
+    }
+    get().saveToFile();
+  },
+
+  selectComponent: (id) => set({ selectedComponent: id, selectedComponents: id ? [id] : [] }),
+  setSelectedComponents: (ids) => set({ selectedComponents: ids, selectedComponent: ids.length ? ids[0] : null }),
+  addToSelection: (id) => {
+    const current = get().selectedComponents;
+    if (!current.includes(id)) set({ selectedComponents: [...current, id] });
+  },
+  removeFromSelection: (id) => {
+    const current = get().selectedComponents;
+    set({ selectedComponents: current.filter(i => i !== id) });
+  },
+  clearSelection: () => set({ selectedComponents: [], selectedComponent: null }),
   setHoveredComponent: (id) => set({ hoveredComponent: id }),
   setDraggedComponent: (id) => set({ draggedComponent: id }),
 
@@ -314,6 +347,11 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   getSelectedComponent: () => {
     const state = get();
     return state.components.find((c) => c.id === state.selectedComponent);
+  },
+
+  getSelectedComponents: () => {
+    const state = get();
+    return state.components.filter((c) => state.selectedComponents.includes(c.id));
   },
 
   getComponentById: (id) => {

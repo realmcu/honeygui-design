@@ -69,7 +69,7 @@ export class HmlParser {
     // 创建包含screen的标准结构
     const screenComponent: Component = {
       id: 'main_screen',
-      type: 'screen',
+      type: 'hg_screen',
       x: 0,
       y: 0,
       width: 480,
@@ -112,9 +112,7 @@ export class HmlParser {
     if (!metaElement || typeof metaElement !== 'object') {
       return {
         title: '未命名页面',
-        description: '',
-        width: 480,
-        height: 800
+        description: ''
       };
     }
 
@@ -124,8 +122,7 @@ export class HmlParser {
     const attributes = metaElement._attributes || {};
     if (attributes.title) meta.title = String(attributes.title);
     if (attributes.description) meta.description = String(attributes.description);
-    if (attributes.width) meta.width = parseInt(attributes.width);
-    if (attributes.height) meta.height = parseInt(attributes.height);
+    // 统一不再使用meta的width/height，分辨率由project.resolution和hg_screen控制
 
     // 处理meta的子元素（project, author等）
     const specialElements = ['project', 'author'];
@@ -145,8 +142,7 @@ export class HmlParser {
 
     // 填充默认值
     if (!meta.title) meta.title = '未命名页面';
-    if (!meta.width) meta.width = 480;
-    if (!meta.height) meta.height = 800;
+    // 不再填充默认meta.width/height
 
     return meta;
   }
@@ -173,16 +169,16 @@ export class HmlParser {
       height: parseInt(attributes.height || meta.height?.toString() || '800')
     };
 
-    // 解析view中的组件
     const components: Component[] = [];
     const componentMap = new Map<string, Component>();
 
-    // 递归解析view中的所有子组件（排除_attributes）
     Object.keys(viewElement).forEach(key => {
       if (key !== '_attributes') {
+        if (!key.startsWith('hg_')) {
+          return;
+        }
         const element = (viewElement as any)[key];
         if (element && typeof element === 'object') {
-          // 处理数组和单个对象情况
           const elements = Array.isArray(element) ? element : [element];
           elements.forEach((child: any) => {
             const component = this._parseComponentXmlJs(key, child, componentMap, undefined);
