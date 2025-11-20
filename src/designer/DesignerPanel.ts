@@ -173,14 +173,11 @@ export class DesignerPanel {
                 'webview'
             );
             
-            // 3. 确定使用哪个路径（优先使用传统 designer.html）
+            // 3. 确定使用哪个路径
             let htmlPath: vscode.Uri;
             let onDiskPath: vscode.Uri;
 
-            if (fs.existsSync(vscode.Uri.joinPath(sourcePath, 'designer.html').fsPath)) {
-                onDiskPath = sourcePath;
-                htmlPath = vscode.Uri.joinPath(sourcePath, 'designer.html');
-            } else if (fs.existsSync(vscode.Uri.joinPath(buildPath, 'index.html').fsPath)) {
+            if (fs.existsSync(vscode.Uri.joinPath(buildPath, 'index.html').fsPath)) {
                 onDiskPath = buildPath;
                 htmlPath = vscode.Uri.joinPath(buildPath, 'index.html');
             } else if (fs.existsSync(vscode.Uri.joinPath(sourcePath, 'index.html').fsPath)) {
@@ -191,8 +188,6 @@ export class DesignerPanel {
                 console.warn('[HoneyGUI Designer] 未找到HTML文件，使用内置最小模板');
                 return this._getMinimalHtmlTemplate(webview);
             }
-            
-            const webviewUri = webview.asWebviewUri(onDiskPath);
 
             // 读取HTML文件内容
             let htmlContent = fs.readFileSync(htmlPath.fsPath, 'utf8');
@@ -208,12 +203,10 @@ export class DesignerPanel {
                     // 尝试查找带哈希的文件或普通文件名
                     const jsFile = files.find(f => /^main\..+\.js$/.test(f)) || 
                                   files.find(f => f === 'webview.js') || 
-                                  files.find(f => f === 'designer.js') ||
                                   files.find(f => f.endsWith('.js'));
                     
                     const cssFile = files.find(f => /^main\..+\.css$/.test(f)) || 
                                    files.find(f => f === 'styles.css') || 
-                                   files.find(f => f === 'designer.css') ||
                                    files.find(f => f.endsWith('.css'));
 
                     if (jsFile) {

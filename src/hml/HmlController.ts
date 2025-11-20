@@ -668,7 +668,7 @@ export class HmlController {
             // 创建screen组件
             const screenComponent: Component = {
                 id: 'main_screen',
-                type: 'screen',
+                type: 'hg_screen',
                 x: 0,
                 y: 0,
                 width: 100,
@@ -677,7 +677,7 @@ export class HmlController {
                     id: 'main',
                     width: '100%',
                     height: '100%',
-                    backgroundColor: '#f5f5f5',
+                    backgroundColor: '#000000',
                     flexDirection: 'column',
                     padding: 16
                 },

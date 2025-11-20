@@ -176,6 +176,9 @@ const App: React.FC = () => {
           width: width,
           height: height
         },
+        style: {
+          backgroundColor: '#000000'
+        },
         visible: true,
         enabled: true,
         locked: false,
@@ -222,9 +225,11 @@ const App: React.FC = () => {
         height = screenContainer.position.height;
         console.info(`[拖放] 第一个View组件，自动放入screen容器并匹配尺寸`);
       } else {
-        // 后续View: 作为顶级容器组件独立放置
+        // 后续View: 作为顶级容器独立放置，但初始尺寸匹配screen
         parent = null;
-        console.info(`[拖放] 后续View组件，作为顶级容器独立放置`);
+        width = screenContainer.position.width;
+        height = screenContainer.position.height;
+        console.info(`[拖放] 后续View组件，作为顶级容器独立放置，尺寸匹配screen`);
       }
     } else if (['hg_panel', 'hg_window'].includes(componentType)) {
       // 其他容器组件: 作为顶级组件独立放置

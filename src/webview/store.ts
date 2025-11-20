@@ -68,10 +68,7 @@ let vscodeAPI: VSCodeAPI | null = null;
 
 // 创建默认screen容器
 const createDefaultScreen = (resolution?: string): Component => {
-  // 内联简化版ID生成器，避免store初始化时的模块依赖问题
-  const generateSimpleId = (): string => `screen_${Date.now()}`;
-
-  // 解析分辨率，默认 1024x768
+  const generateSimpleId = (): string => `hg_screen_${Date.now()}`;
   const parseResolution = (res?: string) => {
     if (!res) return { width: 1024, height: 768 };
     const parts = res.split('X');
@@ -80,25 +77,26 @@ const createDefaultScreen = (resolution?: string): Component => {
       height: parseInt(parts[1]) || 768
     };
   };
-
   const size = parseResolution(resolution);
-
   return {
     id: generateSimpleId(),
-    type: 'screen' as ComponentType,
-    name: 'Default Screen',
+    type: 'hg_screen' as ComponentType,
+    name: 'Screen',
     position: {
       x: 50,
       y: 50,
-      width: size.width,    // 根据项目配置设置宽度
-      height: size.height   // 根据项目配置设置高度
+      width: size.width,
+      height: size.height
+    },
+    style: {
+      backgroundColor: '#000000'
     },
     visible: true,
     enabled: true,
     locked: false,
     zIndex: 0,
-    children: [], // 子组件数组
-    parent: null // 顶级容器
+    children: [],
+    parent: null
   };
 };
 
@@ -361,18 +359,25 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   // Project configuration
   setProjectConfig: (config) => {
     set({ projectConfig: config });
-    // 根据项目分辨率重新创建 screen
-    if (config?.resolution) {
-      const components = [createDefaultScreen(config.resolution)];
-      set({ components });
+    const state = get();
+    const hasScreen = state.components.some(c => c.type === 'hg_screen');
+    if (!hasScreen) {
+      const screen = createDefaultScreen(config?.resolution);
+      set({ components: [screen, ...state.components] });
     }
   },
 
   // Initialize with project config
   initializeWithProjectConfig: (config) => {
     const resolution = config?.resolution;
-    // 确保至少有一个screen容器，如果config为空则使用默认分辨率
-    const components = resolution ? [createDefaultScreen(resolution)] : [createDefaultScreen()];
+    const current = get().components;
+    let components = current;
+    if (!current || current.length === 0) {
+      components = resolution ? [createDefaultScreen(resolution)] : [createDefaultScreen()];
+    } else if (!current.some(c => c.type === 'hg_screen')) {
+      const screen = createDefaultScreen(resolution);
+      components = [screen, ...current];
+    }
     set({
       components,
       projectConfig: config,
