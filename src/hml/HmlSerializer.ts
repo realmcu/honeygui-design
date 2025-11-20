@@ -45,27 +45,9 @@ export class HmlSerializer {
                     throw verifyErr;
                 }
 
-                // 4) 创建备份（如原文件存在）
-                if (backupPath) {
-                    try {
-                        fs.copyFileSync(filePath, backupPath);
-                        // 备份保留策略：最多保留最近5个备份
-                        const prefix = `${base}.bak.`;
-                        const backups = fs.readdirSync(dir)
-                            .filter(f => f.startsWith(prefix))
-                            .sort((a, b) => (a > b ? -1 : 1));
-                        if (backups.length > 5) {
-                            backups.slice(5).forEach(old => {
-                                try { fs.unlinkSync(path.join(dir, old)); } catch {}
-                            });
-                        }
-                    } catch (bkErr) {
-                        // 备份失败不阻止保存，但记录错误
-                        console.warn('[HoneyGUI] 备份创建失败:', bkErr);
-                    }
-                }
+                // 不创建 .bak 备份文件，直接进行原子替换
 
-                // 5) 原子替换：重命名临时文件到目标文件
+                // 5) 原子替换：重命名临时文件到目标文件（不生成额外备份文件）
                 fs.renameSync(tempPath, filePath);
 
                 // 6) 再次快速读取并校验（保障落盘内容）

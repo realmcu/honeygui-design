@@ -66,18 +66,20 @@ export interface DesignerStore extends DesignerState {
 
 let vscodeAPI: VSCodeAPI | null = null;
 
+// 解析分辨率字符串
+const parseResolutionStr = (res?: string): { width: number; height: number } => {
+  if (!res) return { width: 800, height: 480 };
+  const parts = res.split('X');
+  return {
+    width: parseInt(parts[0]) || 800,
+    height: parseInt(parts[1]) || 480,
+  };
+};
+
 // 创建默认screen容器
 const createDefaultScreen = (resolution?: string): Component => {
   const generateSimpleId = (): string => `hg_screen_${Date.now()}`;
-  const parseResolution = (res?: string) => {
-    if (!res) return { width: 1024, height: 768 };
-    const parts = res.split('X');
-    return {
-      width: parseInt(parts[0]) || 1024,
-      height: parseInt(parts[1]) || 768
-    };
-  };
-  const size = parseResolution(resolution);
+  const size = parseResolutionStr(resolution);
   return {
     id: generateSimpleId(),
     type: 'hg_screen' as ComponentType,
@@ -112,7 +114,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   gridSize: 8,
   snapToGrid: true,
   canvasOffset: { x: 0, y: 0 },
-  canvasSize: { width: 1024, height: 768 }, // 默认画布尺寸
+  canvasSize: { width: 800, height: 480 }, // 默认画布尺寸
   canvasBackgroundColor: '#f0f0f0', // 默认画布背景色为灰色
   editingMode: 'select',
   undoStack: [],
@@ -358,7 +360,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
 
   // Project configuration
   setProjectConfig: (config) => {
-    set({ projectConfig: config });
+    set({ projectConfig: config, canvasSize: parseResolutionStr(config?.resolution) });
     const state = get();
     const hasScreen = state.components.some(c => c.type === 'hg_screen');
     if (!hasScreen) {
@@ -388,7 +390,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       gridSize: 8,
       snapToGrid: true,
       canvasOffset: { x: 0, y: 0 },
-      canvasSize: { width: 1024, height: 768 },
+      canvasSize: parseResolutionStr(resolution),
       canvasBackgroundColor: '#f0f0f0',
       editingMode: 'select',
     });

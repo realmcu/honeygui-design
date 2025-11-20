@@ -18,7 +18,7 @@ const App: React.FC = () => {
     setComponents,
     selectComponent,
     addComponent,
-    initializeWithProjectConfig,
+    setProjectConfig,
     setCanvasBackgroundColor,
   } = useDesignerStore();
 
@@ -59,10 +59,8 @@ const App: React.FC = () => {
           if (message.components) {
             setComponents(message.components);
           }
-          // 总是初始化项目配置，即使没有 projectConfig（会使用默认值）
-          initializeWithProjectConfig(message.projectConfig || null);
+          setProjectConfig(message.projectConfig || null);
           if (message.designerConfig?.canvasBackgroundColor) {
-            // 设置设计器画布背景色
             setCanvasBackgroundColor(message.designerConfig.canvasBackgroundColor);
           }
           break;
