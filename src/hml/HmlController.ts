@@ -81,21 +81,29 @@ export class HmlController {
             if (!this._currentDocument) {
                 throw new Error('没有可保存的文档');
             }
-            
+
+            console.log('[HmlController] 当前文档组件数量:', this._currentDocument.view.components?.length || 0);
+
             // 确定目标文件路径
             const targetPath = filePath || this._currentFilePath;
             if (!targetPath) {
                 throw new Error('未指定保存路径');
             }
-            
+
+            console.log('[HmlController] 保存路径:', targetPath);
+
+            // 先序列化内容，打印出来看看
+            const serialized = this.serializer.serialize(this._currentDocument);
+            console.log('[HmlController] 序列化内容:', serialized);
+
             // 保存文档（格式已统一，无需转换）
             await this.serializer.serializeToFile(this._currentDocument, targetPath);
-            
+
             // 更新当前文件路径
             this._currentFilePath = targetPath;
-            
+
             console.log(`Successfully saved HML file: ${targetPath}`);
-            
+
             return targetPath;
         } catch (error) {
             console.error('保存HML文档失败:', error);
@@ -117,8 +125,8 @@ export class HmlController {
 
     /**
      * 使用前端组件列表更新当前文档（用于Webview状态同步）
-     * 格式已统一，直接保存
-     * @param frontendComponents 前端组件数组
+     * 格式已统一，直接保存所有组件
+     * @param frontendComponents 前端组件数组（包含所有组件，扁平化存储）
      */
     public updateFromFrontendComponents(frontendComponents: Component[]): void {
         if (!frontendComponents || !Array.isArray(frontendComponents)) {
@@ -128,10 +136,9 @@ export class HmlController {
             this._currentDocument = { meta: {}, view: { components: [] } } as HmlDocument;
         }
 
-        // 格式已统一，直接复制
-        // 过滤出顶层组件（没有parent的组件）
-        const topLevelComponents = frontendComponents.filter(c => !c.parent);
-        this._currentDocument.view.components = topLevelComponents;
+        // 格式已统一，直接保存所有组件（扁平化存储，包含所有层级）
+        // 注意：前端发送的是包含所有组件的扁平数组
+        this._currentDocument.view.components = [...frontendComponents];
         this._documentVersion++;
     }
 

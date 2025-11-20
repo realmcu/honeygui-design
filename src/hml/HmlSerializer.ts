@@ -8,6 +8,9 @@ import { Document as HmlDocument, Component } from './types';
  * 按照方案一：只支持标准格式 <hml><meta>...</meta><view>...</view></hml>
  */
 export class HmlSerializer {
+    // 存储所有组件的ID到组件的映射，用于递归序列化时查找子组件
+    private componentMap = new Map<string, Component>();
+
     /**
      * 将HML文档对象序列化为文件
      * @param document HML文档对象
@@ -90,6 +93,14 @@ export class HmlSerializer {
      * 这是唯一的序列化格式
      */
     private _serializeStandardFormat(document: HmlDocument): string {
+        // 清空并重新填充组件映射表
+        this.componentMap.clear();
+        if (document.view.components) {
+            document.view.components.forEach(comp => {
+                this.componentMap.set(comp.id, comp);
+            });
+        }
+
         let hmlContent = '<?xml version="1.0" encoding="UTF-8"?>' + '\n';
         hmlContent += '<hml>' + '\n';
 
@@ -151,21 +162,6 @@ export class HmlSerializer {
 
         // 序列化组件树（从顶层组件开始）
         if (view && view.components && view.components.length > 0) {
-            // 创建ID到组件的映射
-            const idToComponent = new Map<string, Component>();
-            view.components.forEach(comp => {
-                idToComponent.set(comp.id, comp);
-            });
-
-            // 为每个组件添加其子组件对象引用
-            view.components.forEach(comp => {
-                if (comp.children && comp.children.length > 0) {
-                    (comp as any).childrenComponents = comp.children
-                        .map(childId => idToComponent.get(childId))
-                        .filter(Boolean);
-                }
-            });
-
             // 找到顶层组件（没有parent的组件）
             const topLevelComponents = view.components.filter(comp => !comp.parent);
             topLevelComponents.forEach(component => {
@@ -248,14 +244,13 @@ export class HmlSerializer {
             // 有子组件，使用开始和结束标签
             componentContent += indent + '<' + component.type + attributesStr + '>' + '\n';
 
-            // 递归序列化子组件 - 需要根据ID找到组件对象
-            // 这里有个问题：我们只有ID，需要从文档中查找组件对象
-            // 临时方案：假设component对象包含childrenComponents数组
-            if ((component as any).childrenComponents) {
-                (component as any).childrenComponents.forEach((child: Component) => {
-                    componentContent += this._serializeComponent(child, indentLevel + 1);
-                });
-            }
+            // 递归序列化子组件 - 根据ID从componentMap中查找组件对象
+            component.children.forEach(childId => {
+                const childComponent = this.componentMap.get(childId);
+                if (childComponent) {
+                    componentContent += this._serializeComponent(childComponent, indentLevel + 1);
+                }
+            });
 
             componentContent += indent + '</' + component.type + '>' + '\n';
         } else {
