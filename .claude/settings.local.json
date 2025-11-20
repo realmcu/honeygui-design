@@ -2,7 +2,12 @@
   "permissions": {
     "allow": [
       "HoneyGUI vscode plugin",
-      "Bash(npm run compile:*)"
+      "Bash(npm run compile:*)",
+      "Bash(npm install:*)",
+      "Bash(/home/howie_wang/workspace/honeygui-design/src/hml/HmlController.ts)",
+      "Bash(/tmp/hmlcontroller_part1.ts)",
+      "Bash(cat:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []

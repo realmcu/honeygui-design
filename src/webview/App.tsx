@@ -185,8 +185,8 @@ const App: React.FC = () => {
         parent: null
       };
 
-      // 使用store的addComponent方法将screen添加到组件列表
-      useDesignerStore.getState().addComponent(screenContainer);
+      // 使用store的addComponent方法将screen添加到组件列表（不立即保存）
+      useDesignerStore.getState().addComponent(screenContainer, { save: false });
 
       console.info(`[拖放] 自动创建screen容器: ${screenId} (${width}x${height})`);
     }

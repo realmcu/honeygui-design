@@ -1,8 +1,8 @@
-import { Component, Document as HmlDocument, Meta, View, ComponentProperties } from './types';
+import { Component, Document as HmlDocument } from './types';
 import { xml2js } from 'xml-js';
 
 // 导出类型以供其他模块使用
-export type { Document as HmlDocument, Component, ComponentProperties } from './types';
+export type { Document as HmlDocument, Component } from './types';
 
 /**
  * HML解析器，用于解析HML文件内容并转换为组件树
@@ -44,16 +44,11 @@ export class HmlParser {
       // 解析视图
       const view = this._parseViewXmlJs((hmlElement as any).view, meta);
 
-      // 构建完整的文档对象
+      // 构建完整的文档对象（新格式）
       const document: HmlDocument = {
         meta,
         view
       };
-
-      // 如果view中有components数组，直接添加到文档
-      if (view.components && view.components.length > 0) {
-        document.components = view.components;
-      }
 
       return document;
     } catch (error) {
@@ -66,32 +61,37 @@ export class HmlParser {
    * 获取默认文档（用于解析失败时返回）
    */
   private _getDefaultDocument(): HmlDocument {
-    // 创建包含screen的标准结构
+    // 创建包含screen的标准结构（新格式）
     const screenComponent: Component = {
       id: 'main_screen',
       type: 'hg_screen',
-      x: 0,
-      y: 0,
-      width: 480,
-      height: 800,
-      properties: {
-        backgroundColor: '#f5f5f5',
-        title: 'Default Screen'
+      name: 'Screen',
+      position: {
+        x: 0,
+        y: 0,
+        width: 480,
+        height: 800
       },
-      children: []
+      style: {
+        backgroundColor: '#f5f5f5'
+      },
+      data: {
+        text: 'Default Screen'
+      },
+      children: [],
+      parent: null,
+      visible: true,
+      enabled: true,
+      locked: false,
+      zIndex: 0
     };
 
     return {
       meta: {
         title: '未命名页面',
-        description: 'HML解析失败',
-        width: 480,
-        height: 800
+        description: 'HML解析失败'
       },
       view: {
-        id: 'main_view',
-        width: 480,
-        height: 800,
         components: [screenComponent]
       }
     };
@@ -106,9 +106,10 @@ export class HmlParser {
 
   /**
    * 解析元数据 (使用xml-js)
+   * 返回新格式的meta
    * @param metaElement meta元素
    */
-  private _parseMetaXmlJs(metaElement: any): Meta {
+  private _parseMetaXmlJs(metaElement: any): any {
     if (!metaElement || typeof metaElement !== 'object') {
       return {
         title: '未命名页面',
@@ -116,13 +117,12 @@ export class HmlParser {
       };
     }
 
-    const meta: Meta = {};
+    const meta: any = {};
 
     // 处理meta的直接属性
     const attributes = metaElement._attributes || {};
     if (attributes.title) meta.title = String(attributes.title);
     if (attributes.description) meta.description = String(attributes.description);
-    // 统一不再使用meta的width/height，分辨率由project.resolution和hg_screen控制
 
     // 处理meta的子元素（project, author等）
     const specialElements = ['project', 'author'];
@@ -142,60 +142,48 @@ export class HmlParser {
 
     // 填充默认值
     if (!meta.title) meta.title = '未命名页面';
-    // 不再填充默认meta.width/height
 
     return meta;
   }
 
   /**
    * 解析视图 (使用xml-js)
+   * 返回新格式的view（只包含components）
    * @param viewElement view元素
-   * @param meta meta对象（用于获取宽高等信息）
    */
-  private _parseViewXmlJs(viewElement: any, meta: Meta): View {
-    if (!viewElement || typeof viewElement !== 'object') {
-      return {
-        id: 'main_view',
-        width: meta.width || 480,
-        height: meta.height || 800,
-        components: []
-      };
-    }
-
-    const attributes = viewElement._attributes || {};
-    const view: View = {
-      id: attributes.id || 'main_view',
-      width: parseInt(attributes.width || meta.width?.toString() || '480'),
-      height: parseInt(attributes.height || meta.height?.toString() || '800')
-    };
+  private _parseViewXmlJs(viewElement: any, meta: any): any {
+    // View现在是一个简单的对象，只包含components数组
+    const view: any = {};
 
     const components: Component[] = [];
     const componentMap = new Map<string, Component>();
 
-    Object.keys(viewElement).forEach(key => {
-      if (key !== '_attributes') {
-        if (!key.startsWith('hg_')) {
-          return;
+    if (viewElement && typeof viewElement === 'object') {
+      Object.keys(viewElement).forEach(key => {
+        if (key !== '_attributes') {
+          if (!key.startsWith('hg_')) {
+            return;
+          }
+          const element = (viewElement as any)[key];
+          if (element && typeof element === 'object') {
+            const elements = Array.isArray(element) ? element : [element];
+            elements.forEach((child: any) => {
+              const component = this._parseComponentXmlJs(key, child, componentMap, undefined);
+              if (!component.parent) {
+                components.push(component);
+              }
+            });
+          }
         }
-        const element = (viewElement as any)[key];
-        if (element && typeof element === 'object') {
-          const elements = Array.isArray(element) ? element : [element];
-          elements.forEach((child: any) => {
-            const component = this._parseComponentXmlJs(key, child, componentMap, undefined);
-            if (!component.parentId) {
-              components.push(component);
-            }
-          });
-        }
-      }
-    });
+      });
+    }
 
     view.components = components;
     return view;
   }
 
   /**
-   * 解析组件 (使用xml-js)
+   * 解析组件 (使用xml-js) - 生成新格式
    */
   private _parseComponentXmlJs(
     tagName: string,
@@ -217,24 +205,54 @@ export class HmlParser {
     const width = parseInt(attributes.width || '100');
     const height = parseInt(attributes.height || '40');
 
-    // 提取其他属性
-    const properties: Record<string, any> = {};
+    // 分离属性到style、data和其他properties
+    const style: Record<string, any> = {};
+    const data: Record<string, any> = {};
+    const otherProps: Record<string, any> = {};
+
+    // 定义常见的样式属性
+    const styleProps = ['backgroundColor', 'color', 'fontSize', 'fontWeight', 'border', 'borderRadius', 'padding', 'margin', 'overflow', 'title', 'titleBarHeight', 'titleBarColor'];
+
+    // 定义常见的数据属性
+    const dataProps = ['text', 'src', 'value', 'placeholder', 'options'];
+
+    // 定义组件元属性
+    const metaProps = ['name', 'visible', 'enabled', 'locked', 'zIndex'];
+
     Object.entries(attributes).forEach(([key, value]) => {
       if (!['id', 'x', 'y', 'width', 'height'].includes(key)) {
-        properties[key] = value;
+        if (styleProps.includes(key)) {
+          style[key] = value;
+        } else if (dataProps.includes(key)) {
+          data[key] = value;
+        } else if (metaProps.includes(key)) {
+          // 这些会单独处理
+        } else {
+          otherProps[key] = value;
+        }
       }
     });
 
+    // 创建组件（新格式）
     const component: Component = {
       id: componentId,
       type: tagName,
-      x,
-      y,
-      width,
-      height,
-      properties,
+      name: attributes.name || `${tagName}_${componentId.substr(-4)}`,
+      position: {
+        x,
+        y,
+        width,
+        height
+      },
+      style,
+      data,
+      events: undefined,  // 可以后续添加事件处理
       children: [],
-      parentId
+      parent: parentId || null,
+      visible: attributes.visible !== 'false',  // 默认为true
+      enabled: attributes.enabled !== 'false',  // 默认为true
+      locked: attributes.locked === 'true',     // 默认为false
+      zIndex: parseInt(attributes.zIndex || '0')
     };
 
     // 将组件添加到map中
@@ -248,8 +266,9 @@ export class HmlParser {
         const children = Array.isArray(value) ? value : [value];
         children.forEach((child: any) => {
           const childComponent = this._parseComponentXmlJs(key, child, componentMap, componentId);
+          // 只存储子组件ID引用
           if (component.children) {
-            component.children.push(childComponent);
+            component.children.push(childComponent.id);
           }
         });
       }

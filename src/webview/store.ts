@@ -10,7 +10,7 @@ import { CommandManager, AddComponentCommand, DeleteComponentCommand, MoveCompon
 export interface DesignerStore extends DesignerState {
   // Actions
   setComponents: (components: Component[]) => void;
-  addComponent: (component: Component) => void;
+  addComponent: (component: Component, options?: { save?: boolean }) => void;
   updateComponent: (id: string, updates: Partial<Component>) => void;
   removeComponent: (id: string) => void;
   removeComponents: (ids: string[]) => void;
@@ -126,33 +126,37 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     set({ components });
   },
 
-  addComponent: (component) => {
+  addComponent: (component, options?: { save?: boolean }) => {
+    const shouldSave = options?.save !== false; // 默认为true
     set((state) => {
       const newComponents = [...state.components];
-      
+
       // 如果组件有父组件引用，需要将其添加到父组件的children数组中
       if (component.parent && typeof component.parent === 'string') {
         const parentIndex = newComponents.findIndex(comp => comp.id === component.parent);
-        
+
         if (parentIndex !== -1) {
           // 确保父组件有children数组
           if (!newComponents[parentIndex].children) {
             newComponents[parentIndex] = { ...newComponents[parentIndex], children: [] };
           }
-          
+
           // 将当前组件的ID添加到父组件的children数组中
           if (newComponents[parentIndex]?.children && !newComponents[parentIndex].children.includes(component.id)) {
             newComponents[parentIndex].children.push(component.id);
           }
         }
       }
-      
+
       // 添加新组件到components数组
       newComponents.push(component);
-      
+
       return { components: newComponents };
     });
-    get().saveToFile();
+    // 根据选项决定是否保存
+    if (shouldSave) {
+      get().saveToFile();
+    }
   },
 
   updateComponent: (id, updates) => {

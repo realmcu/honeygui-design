@@ -1,12 +1,47 @@
 /**
  * HML组件类型定义
+ * 统一格式：与前端保持一致的格式
  */
 
 /**
- * 组件属性类型
+ * 组件位置类型
  */
-export interface ComponentProperties {
-  [key: string]: any;
+export interface ComponentPosition {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * 组件样式类型
+ */
+export interface ComponentStyle {
+  color?: string;
+  backgroundColor?: string;
+  fontSize?: number;
+  fontWeight?: string;
+  border?: string;
+  borderRadius?: number;
+  padding?: number;
+  margin?: number;
+  overflow?: string;
+  title?: string;
+  titleBarHeight?: number;
+  titleBarColor?: string;
+  [key: string]: any;  // 允许其他样式属性
+}
+
+/**
+ * 组件数据类型
+ */
+export interface ComponentData {
+  text?: string;
+  src?: string;
+  value?: string | number | boolean;
+  placeholder?: string;
+  options?: string[];
+  [key: string]: any;  // 允许其他数据属性
 }
 
 /**
@@ -17,19 +52,22 @@ export interface ComponentEvents {
 }
 
 /**
- * 组件类型
+ * 组件类型 - 统一格式（与前端一致）
  */
 export interface Component {
   id: string;
   type: string;
-  x?: number;
-  y?: number;
-  width?: number;
-  height?: number;
-  properties: ComponentProperties;
+  name: string;
+  position: ComponentPosition;
+  style?: ComponentStyle;
+  data?: ComponentData;
   events?: ComponentEvents;
-  parentId?: string;
-  children?: Component[];
+  children?: string[];  // ID引用，避免循环引用
+  parent?: string | null;
+  visible: boolean;
+  enabled: boolean;
+  locked: boolean;
+  zIndex: number;
 }
 
 /**
@@ -38,16 +76,19 @@ export interface Component {
 export interface Meta {
   title?: string;
   description?: string;
-  width?: number;
-  height?: number;
-  project?: any;
-  author?: any;
-  // 原始HML格式的属性
-  id?: string;              // hml标签的id属性
-  appId?: string;           // APP ID
-  resolution?: string;      // 分辨率
-  minSdk?: string;          // 最小SDK版本
-  pixelMode?: string;       // 像素模式
+  project?: {
+    name?: string;
+    appId?: string;
+    resolution?: string;
+    minSdk?: string;
+    pixelMode?: string;
+    [key: string]: any;
+  };
+  author?: {
+    name?: string;
+    email?: string;
+    [key: string]: any;
+  };
 }
 
 /**
@@ -55,11 +96,7 @@ export interface Meta {
  */
 export interface View {
   id?: string;
-  width?: number;
-  height?: number;
-  backgroundColor?: string;
   components?: Component[];
-  root?: Component;
 }
 
 /**
@@ -68,5 +105,4 @@ export interface View {
 export interface Document {
   meta: Meta;
   view: View;
-  components?: Component[];
 }

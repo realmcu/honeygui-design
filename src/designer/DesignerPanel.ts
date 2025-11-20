@@ -971,7 +971,7 @@ private _createNewDocument(): void {
      */
     private _handleAddComponent(parentId: string, componentData: Omit<Component, 'id'>): void {
         try {
-            const newComponent = this._hmlController.addComponent(parentId, componentData);
+            const newComponent = this._hmlController.addComponent({...componentData, id: `${componentData.type}_${Date.now()}`, parent: parentId || null} as Component);
             
             if (newComponent) {
                 // 通知Webview组件已添加成功

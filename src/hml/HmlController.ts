@@ -34,18 +34,15 @@ export class HmlController {
             // 同步读取文件内容，避免 Promise 相关问题
             const fileContent = fs.readFileSync(filePath, 'utf-8');
             const document = this.parser.parse(fileContent);
-            
-            // 检查并确保文档包含screen组件
-            this._ensureScreenComponent(document);
-            
+
             // 更新当前文档状态
             this._currentDocument = document;
             this._currentFilePath = filePath;
             this._documentVersion++;
-            
+
             console.log(`Successfully loaded HML file: ${filePath}`);
             console.log(`Parsed ${document.view.components?.length || 0} components`);
-            
+
             return document;
         } catch (error) {
             console.error('加载HML文件失败:', error);
@@ -91,11 +88,8 @@ export class HmlController {
                 throw new Error('未指定保存路径');
             }
             
-            // 在保存前转换组件数据结构
-            const documentForSerialization = this._convertForSerialization(this._currentDocument);
-            
-            // 保存文档
-            await this.serializer.serializeToFile(documentForSerialization, targetPath);
+            // 保存文档（格式已统一，无需转换）
+            await this.serializer.serializeToFile(this._currentDocument, targetPath);
             
             // 更新当前文件路径
             this._currentFilePath = targetPath;
@@ -123,9 +117,10 @@ export class HmlController {
 
     /**
      * 使用前端组件列表更新当前文档（用于Webview状态同步）
-     * @param frontendComponents 前端组件数组（含position/parent/children）
+     * 格式已统一，直接保存
+     * @param frontendComponents 前端组件数组
      */
-    public updateFromFrontendComponents(frontendComponents: any[]): void {
+    public updateFromFrontendComponents(frontendComponents: Component[]): void {
         if (!frontendComponents || !Array.isArray(frontendComponents)) {
             throw new Error('无效的前端组件数据');
         }
@@ -133,57 +128,15 @@ export class HmlController {
             this._currentDocument = { meta: {}, view: { components: [] } } as HmlDocument;
         }
 
-        const map = new Map<string, Component>();
-
-        // 先构建所有组件的基本信息
-        for (const fc of frontendComponents) {
-            const c: Component = {
-                id: fc.id,
-                type: fc.type,
-                x: fc.position?.x ?? 0,
-                y: fc.position?.y ?? 0,
-                width: fc.position?.width ?? 0,
-                height: fc.position?.height ?? 0,
-                properties: {},
-                events: undefined,
-                parentId: fc.parent || undefined,
-                children: []
-            };
-
-            // 合并样式到properties
-            if (fc.style && typeof fc.style === 'object') {
-                Object.assign(c.properties, fc.style);
-            }
-            // 合并数据到properties（保持简单映射）
-            if (fc.data && typeof fc.data === 'object') {
-                Object.assign(c.properties, fc.data);
-            }
-
-            map.set(c.id, c);
-        }
-
-        // 建立层级关系
-        for (const fc of frontendComponents) {
-            const parentId: string | null = fc.parent ?? null;
-            const childId: string = fc.id;
-            if (parentId) {
-                const parent = map.get(parentId);
-                const child = map.get(childId);
-                if (parent && child) {
-                    child.parentId = parent.id;
-                    parent.children = parent.children || [];
-                    parent.children.push(child);
-                }
-            }
-        }
-
-        // 更新文档的components列表（包含嵌套结构）
-        this._currentDocument.view.components = Array.from(map.values());
+        // 格式已统一，直接复制
+        // 过滤出顶层组件（没有parent的组件）
+        const topLevelComponents = frontendComponents.filter(c => !c.parent);
+        this._currentDocument.view.components = topLevelComponents;
         this._documentVersion++;
     }
 
     /**
-     * 创建新的HML文档
+     * 创建新的HML文档（新格式）
      * @param options 文档选项
      * @returns 新创建的HML文档对象
      */
@@ -193,15 +146,44 @@ export class HmlController {
         version?: string;
         authorName?: string;
         authorEmail?: string;
+        resolution?: string;
     } = {}): HmlDocument {
-        // 创建默认的HML文档结构
-        const root = this._createDefaultRootComponent();
+        // 创建默认的screen组件（新格式）
+        const resolution = options.resolution || '480X272';
+        const size = this._parseResolution(resolution);
+
+        const screenComponent: Component = {
+            id: 'hg_screen_' + Date.now(),
+            type: 'hg_screen',
+            name: 'Screen',
+            position: {
+                x: 50,
+                y: 50,
+                width: size.width,
+                height: size.height
+            },
+            style: {
+                backgroundColor: '#000000'
+            },
+            data: {},
+            events: undefined,
+            children: [],
+            parent: null,
+            visible: true,
+            enabled: true,
+            locked: false,
+            zIndex: 0
+        };
+
         const document: HmlDocument = {
             meta: {
                 project: {
                     name: options.projectName || 'untitled',
                     description: options.description || 'HoneyGUI Project',
-                    version: options.version || '1.0.0'
+                    version: options.version || '1.0.0',
+                    resolution: resolution,
+                    minSdk: 'API 2: Persim Wear V1.1.0',
+                    pixelMode: 'ARGB8888'
                 },
                 author: {
                     name: options.authorName || 'Anonymous',
@@ -209,22 +191,29 @@ export class HmlController {
                 }
             },
             view: {
-                root,
-                components: [root] // 确保根组件也包含在components数组中
+                components: [screenComponent]
             }
         };
-        
+
         // 更新当前文档状态
         this._currentDocument = document;
         this._currentFilePath = null; // 新建文档尚未保存，所以没有文件路径
         this._documentVersion++;
-        
-        // 生成完整组件列表
-        if (document.view.root) {
-            document.view.components = this._flattenComponentTree(document.view.root);
-        }
-        
+
         return document;
+    }
+
+    /**
+     * 解析分辨率字符串
+     * @private
+     */
+    private _parseResolution(resolution: string): { width: number; height: number } {
+        if (!resolution) return { width: 480, height: 272 };
+        const parts = resolution.split('X');
+        return {
+            width: parseInt(parts[0]) || 480,
+            height: parseInt(parts[1]) || 272
+        };
     }
 
     /**
@@ -272,242 +261,189 @@ export class HmlController {
     }
 
     /**
-     * 更新组件
+     * 更新组件（新格式）
      * @param componentId 组件ID
      * @param updates 更新内容
      */
     public updateComponent(componentId: string, updates: {
         type?: string;
-        properties?: { [key: string]: any };
+        position?: { x?: number; y?: number; width?: number; height?: number };
+        style?: { [key: string]: any };
+        data?: { [key: string]: any };
         events?: { [eventName: string]: string };
+        visible?: boolean;
+        enabled?: boolean;
+        locked?: boolean;
+        zIndex?: number;
+        children?: string[];
+        parent?: string | null;
     }): Component | null {
         if (!this._currentDocument) {
             throw new Error('没有可更新的文档');
         }
-        
-        // 在组件树中查找组件
-        let component: Component | null = null;
-        if (this._currentDocument.view.root) {
-            component = this._findComponentById(this._currentDocument.view.root, componentId);
-        }
-        
+
+        // 在扁平数组中查找组件
+        const component = this._currentDocument.view.components?.find(c => c.id === componentId);
         if (!component) {
             return null;
         }
-        
+
         // 更新组件属性
         if (updates.type !== undefined) {
             component.type = updates.type;
         }
-        
-        if (updates.properties !== undefined) {
-            component.properties = { ...component.properties, ...updates.properties };
+
+        if (updates.position !== undefined) {
+            component.position = { ...component.position, ...updates.position };
         }
-        
+
+        if (updates.style !== undefined) {
+            component.style = { ...component.style, ...updates.style };
+        }
+
+        if (updates.data !== undefined) {
+            component.data = { ...component.data, ...updates.data };
+        }
+
         if (updates.events !== undefined) {
             component.events = { ...component.events, ...updates.events };
         }
-        
+
+        if (updates.visible !== undefined) {
+            component.visible = updates.visible;
+        }
+
+        if (updates.enabled !== undefined) {
+            component.enabled = updates.enabled;
+        }
+
+        if (updates.locked !== undefined) {
+            component.locked = updates.locked;
+        }
+
+        if (updates.zIndex !== undefined) {
+            component.zIndex = updates.zIndex;
+        }
+
+        if (updates.children !== undefined) {
+            component.children = updates.children;
+        }
+
+        if (updates.parent !== undefined) {
+            component.parent = updates.parent;
+        }
+
         // 更新文档版本
         this._documentVersion++;
-        
-        // 重新生成组件列表
-          if (this._currentDocument.view.root) {
-              this._currentDocument.view.components = this._flattenComponentTree(this._currentDocument.view.root);
-          }
-        
+
         return component;
     }
 
     /**
-     * 添加组件
-     * @param parentId 父组件ID
-     * @param component 要添加的组件
+     * 添加组件（新格式）
+     * @param component 要添加的完整组件（必须包含id）
      */
-    public addComponent(parentId: string, component: Omit<Component, 'id'>): Component | null {
+    public addComponent(component: Component): Component {
         if (!this._currentDocument) {
             throw new Error('没有可更新的文档');
         }
-        
-        // 在组件树中查找父组件
-        let parent: Component | null = null;
-        if (this._currentDocument.view.root) {
-            parent = this._findComponentById(this._currentDocument.view.root, parentId);
+
+        // 直接添加到components数组（扁平存储）
+        if (!this._currentDocument.view.components) {
+            this._currentDocument.view.components = [];
         }
-        
-        if (!parent) {
-            return null;
+        this._currentDocument.view.components.push(component);
+
+        // 如果组件有父组件，更新父组件的children数组
+        if (component.parent) {
+            const parent = this._currentDocument.view.components.find(c => c.id === component.parent);
+            if (parent) {
+                if (!parent.children) {
+                    parent.children = [];
+                }
+                if (!parent.children.includes(component.id)) {
+                    parent.children.push(component.id);
+                }
+            }
         }
-        
-        // 确保父组件有children数组
-        if (!parent.children) {
-            parent.children = [];
-        }
-        
-        // 生成唯一ID
-        const id = this._generateUniqueId(component.type);
-        
-        // 创建完整组件对象
-        const newComponent: Component = {
-            ...component,
-            id,
-            parentId
-        };
-        
-        // 添加到父组件
-        parent.children.push(newComponent);
-        
+
         // 更新文档版本
         this._documentVersion++;
-        
-        // 重新生成组件列表
-        if (this._currentDocument.view.root) {
-            this._currentDocument.view.components = this._flattenComponentTree(this._currentDocument.view.root);
-        }
-        
-        return newComponent;
+
+        return component;
     }
 
     /**
-     * 删除组件
+     * 删除组件（新格式）
      * @param componentId 组件ID
      */
     public deleteComponent(componentId: string): boolean {
         if (!this._currentDocument) {
             throw new Error('没有可更新的文档');
         }
-        
-        // 如果要删除根组件，不允许操作
-        if (this._currentDocument.view.root && componentId === this._currentDocument.view.root.id) {
-            throw new Error('不能删除根组件');
+
+        if (!this._currentDocument.view.components) {
+            return false;
         }
-        
-        // 查找并删除组件
-        let success = false;
-        if (this._currentDocument.view.root) {
-            success = this._deleteComponentFromTree(this._currentDocument.view.root, componentId);
+
+        // 找到要删除的组件
+        const componentIndex = this._currentDocument.view.components.findIndex(c => c.id === componentId);
+        if (componentIndex === -1) {
+            return false;
         }
-        
-        if (success) {
-            // 更新文档版本
-            this._documentVersion++;
-            
-            // 重新生成组件列表
-            if (this._currentDocument.view.root) {
-                this._currentDocument.view.components = this._flattenComponentTree(this._currentDocument.view.root);
+
+        const component = this._currentDocument.view.components[componentIndex];
+
+        // 更新父组件的children数组
+        if (component.parent) {
+            const parent = this._currentDocument.view.components.find(c => c.id === component.parent);
+            if (parent && parent.children) {
+                parent.children = parent.children.filter(id => id !== componentId);
             }
         }
-        
-        return success;
+
+        // 递归删除所有子组件
+        if (component.children && component.children.length > 0) {
+            const childIds = [...component.children]; // 复制一份，避免在遍历中修改
+            childIds.forEach(childId => this.deleteComponent(childId));
+        }
+
+        // 从数组中删除组件
+        this._currentDocument.view.components.splice(componentIndex, 1);
+
+        // 更新文档版本
+        this._documentVersion++;
+
+        return true;
     }
 
     /**
-     * 查找组件
+     * 查找组件（新格式）
      * @param componentId 组件ID
      */
     public findComponent(componentId: string): Component | null {
         if (!this._currentDocument) {
             return null;
         }
-        
-        if (this._currentDocument.view.root) {
-            return this._findComponentById(this._currentDocument.view.root, componentId);
-        }
-        return null;
+
+        // 在扁平数组中查找
+        const component = this._currentDocument.view.components?.find(c => c.id === componentId);
+        return component || null;
     }
 
     /**
-     * 创建默认的根组件
+     * 更新_view中的components数组（确保包含所有组件）
+     * 当添加新组件时调用
      */
-    private _createDefaultRootComponent(): Component {
-        return {
-            id: 'main',
-            type: 'div',
-            properties: {
-                width: '100%',
-                height: '100%',
-                backgroundColor: '#ffffff',
-                flexDirection: 'column'
-            },
-            children: [
-                {
-                    id: 'main_screen',
-                    type: 'hg_screen',
-                    properties: {
-                        id: 'main',
-                        width: '100%',
-                        height: '100%',
-                        backgroundColor: '#f5f5f5'
-                    },
-                    children: []
-                }
-            ]
-        };
-    }
+    private _ensureAllComponentsInView(component: Component): void {
+        if (!this._currentDocument?.view.components) {
+            return;
+        }
 
-    /**
-     * 递归查找组件
-     */
-    private _findComponentById(component: Component, id: string): Component | null {
-        // 检查当前组件
-        if (component.id === id) {
-            return component;
+        // 如果组件不在数组中，添加它
+        if (!this._currentDocument.view.components.find(c => c.id === component.id)) {
+            this._currentDocument.view.components.push(component);
         }
-        
-        // 检查子组件
-        if (component.children) {
-            for (const child of component.children) {
-                const found = this._findComponentById(child, id);
-                if (found) {
-                    return found;
-                }
-            }
-        }
-        
-        return null;
-    }
-
-    /**
-     * 递归删除组件
-     */
-    private _deleteComponentFromTree(component: Component, id: string): boolean {
-        if (!component.children) {
-            return false;
-        }
-        
-        // 查找子组件中的目标组件
-        for (let i = 0; i < component.children.length; i++) {
-            if (component.children[i].id === id) {
-                // 找到目标组件，从父组件中删除
-                component.children.splice(i, 1);
-                return true;
-            }
-            
-            // 递归搜索子组件
-            if (this._deleteComponentFromTree(component.children[i], id)) {
-                return true;
-            }
-        }
-        
-        return false;
-    }
-
-    /**
-     * 将组件树展平为数组
-     */
-    private _flattenComponentTree(root: Component): Component[] {
-        const components: Component[] = [];
-        
-        const flatten = (component: Component) => {
-            components.push(component);
-            
-            if (component.children) {
-                component.children.forEach(child => flatten(child));
-            }
-        };
-        
-        flatten(root);
-        return components;
     }
 
     /**
@@ -516,186 +452,36 @@ export class HmlController {
     private _generateUniqueId(componentType: string): string {
         // 确保ID唯一
         let id = `${componentType.toLowerCase()}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-        
+
         // 如果有当前文档，检查ID是否已存在
-        if (this._currentDocument) {
+        if (this._currentDocument && this._currentDocument.view.components) {
             let counter = 1;
-            while (this._currentDocument.view.root && this._findComponentById(this._currentDocument.view.root, id)) {
+            while (this._currentDocument.view.components.find(c => c.id === id)) {
                 id = `${componentType.toLowerCase()}_${Date.now()}_${counter++}`;
-            }
-        }
-        
-        return id;
-    }
-    
-    /**
-     * 为前端准备组件数据
-     * @param document HML文档对象
-     */
-    public prepareComponentsForFrontend(document: HmlDocument): Component[] {
-        // 转换组件数据结构，确保前端需要的position对象格式
-        const components: Component[] = document.view.components || [];
-        return components.map(component => this._convertComponentForFrontend(component));
-    }
-    
-    /**
-     * 为前端转换单个组件数据结构
-     * @private
-     */
-    private _convertComponentForFrontend(component: Component): Component {
-        // 创建一个新对象而不是使用JSON.parse(JSON.stringify())
-        // 这样可以避免循环引用问题并更好地处理类型
-        const converted: Component = {
-            id: component.id,
-            type: component.type,
-            properties: { ...component.properties },
-            events: component.events ? { ...component.events } : undefined,
-            children: component.children ? [...component.children] : undefined,
-            parentId: component.parentId
-        };
-        
-        // 检查并转换位置属性
-        if (converted.properties) {
-            const left = converted.properties.left;
-            const top = converted.properties.top;
-            const width = converted.properties.width;
-            const height = converted.properties.height;
-            if (left !== undefined || top !== undefined) {
-                (converted as any).position = {
-                    x: left || 0,
-                    y: top || 0,
-                    width: typeof width === 'number' ? width : parseInt(width || '0') || 0,
-                    height: typeof height === 'number' ? height : parseInt(height || '0') || 0
-                };
+                counter++;
             }
         }
 
-        // 兼容解析器的 x/y/width/height 字段
-        const hasXY = (component as any).x !== undefined || (component as any).y !== undefined;
-        const hasWH = (component as any).width !== undefined || (component as any).height !== undefined;
-        if (hasXY || hasWH) {
-            (converted as any).position = {
-                x: (component as any).x || 0,
-                y: (component as any).y || 0,
-                width: (component as any).width || 0,
-                height: (component as any).height || 0
-            };
-        }
-        
-        return converted;
+        return id;
     }
     
+
     /**
-     * 转换文档以便序列化
+     * 为前端准备组件数据
+     * 格式已统一，直接返回所有组件
+     * @param document HML文档对象
+     */
+    public prepareComponentsForFrontend(document: HmlDocument): Component[] {
+        // 格式已统一，直接返回所有组件
+        return document.view.components || [];
+    }
+
+    /**
+     * 已废弃：格式已统一，无需转换
      * @private
      */
     private _convertForSerialization(document: HmlDocument): HmlDocument {
-        // 创建一个新对象而不是使用JSON.parse(JSON.stringify())
-        const converted: HmlDocument = {
-            meta: { ...document.meta },
-            view: {
-                root: document.view.root ? { ...document.view.root } : undefined,
-                components: document.view.components ? [...document.view.components] : undefined
-            }
-        };
-        
-        // 转换组件数据结构
-        if (converted.view.components) {
-            converted.view.components = converted.view.components.map(component => {
-                const result: Component = { ...component };
-                // 如果有position对象，将其属性合并到properties中
-                if ((component as any).position && component.properties) {
-                    const position = (component as any).position;
-                    if (!result.properties) {
-                        result.properties = {};
-                    }
-                    result.properties.left = position.left;
-                    result.properties.top = position.top;
-                    if (position.width && position.width !== 'auto') {
-                        result.properties.width = position.width;
-                    }
-                    if (position.height && position.height !== 'auto') {
-                        result.properties.height = position.height;
-                    }
-                }
-                return result;
-            });
-        }
-        
-        // 同样处理root组件
-        if (converted.view.root && (converted.view.root as any).position) {
-            const position = (converted.view.root as any).position;
-            if (!converted.view.root.properties) {
-                converted.view.root.properties = {};
-            }
-            converted.view.root.properties.left = position.left;
-            converted.view.root.properties.top = position.top;
-            if (position.width && position.width !== 'auto') {
-                converted.view.root.properties.width = position.width;
-            }
-            if (position.height && position.height !== 'auto') {
-                converted.view.root.properties.height = position.height;
-            }
-        }
-        
-        return converted;
-    }
-    
-    /**
-     * 检查并确保文档包含screen组件
-     * 如果没有screen组件，则将现有内容包装到screen组件中
-     */
-    private _ensureScreenComponent(document: HmlDocument): void {
-        // 检查根组件的子组件中是否已经包含screen组件
-        const root = document.view.root;
-        let hasScreenComponent = false;
-        
-        if (root && root.children) {
-            // 检查是否已经有screen类型的组件
-            for (const child of root.children) {
-                if (child.type === 'hg_screen') {
-                    hasScreenComponent = true;
-                    break;
-                }
-            }
-        }
-        
-        // 如果没有screen组件，则创建一个screen组件并将现有内容移到其中
-        if (!hasScreenComponent && root) {
-            // 保存现有的子组件
-            const existingChildren = root.children || [];
-            
-            // 创建screen组件
-            const screenComponent: Component = {
-                id: 'main_screen',
-                type: 'hg_screen',
-                x: 0,
-                y: 0,
-                width: 100,
-                height: 100,
-                properties: {
-                    id: 'main',
-                    width: '100%',
-                    height: '100%',
-                    backgroundColor: '#000000',
-                    flexDirection: 'column',
-                    padding: 16
-                },
-                children: existingChildren
-            };
-            
-            // 更新所有子组件的parentId为screen组件的ID
-            for (const child of existingChildren) {
-                child.parentId = screenComponent.id;
-            }
-            
-            // 将screen组件设置为根组件的唯一子组件
-            root.children = [screenComponent];
-            
-            // 重新生成组件列表
-            if (document.view.root) {
-                document.view.components = this._flattenComponentTree(document.view.root);
-            }
-        }
+        // 不再需要转换，直接返回原文档
+        return document;
     }
 }

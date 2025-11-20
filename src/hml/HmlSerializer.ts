@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { Document as HmlDocument, Component, ComponentProperties } from './types';
+import { Document as HmlDocument, Component } from './types';
 
 /**
  * HML序列化器类
@@ -151,8 +151,23 @@ export class HmlSerializer {
 
         // 序列化组件树（从顶层组件开始）
         if (view && view.components && view.components.length > 0) {
-            // 找到顶层组件（没有parentId的组件）
-            const topLevelComponents = view.components.filter(comp => !comp.parentId);
+            // 创建ID到组件的映射
+            const idToComponent = new Map<string, Component>();
+            view.components.forEach(comp => {
+                idToComponent.set(comp.id, comp);
+            });
+
+            // 为每个组件添加其子组件对象引用
+            view.components.forEach(comp => {
+                if (comp.children && comp.children.length > 0) {
+                    (comp as any).childrenComponents = comp.children
+                        .map(childId => idToComponent.get(childId))
+                        .filter(Boolean);
+                }
+            });
+
+            // 找到顶层组件（没有parent的组件）
+            const topLevelComponents = view.components.filter(comp => !comp.parent);
             topLevelComponents.forEach(component => {
                 viewContent += this._serializeComponent(component, 2);
             });
@@ -163,7 +178,7 @@ export class HmlSerializer {
     }
 
     /**
-     * 递归序列化组件对象
+     * 递归序列化组件对象 - 从新格式序列化
      * @param component 组件对象
      * @param indentLevel 缩进级别
      * @returns 序列化后的组件XML字符串
@@ -175,29 +190,49 @@ export class HmlSerializer {
         // 构建组件的属性字符串
         let attributesStr = ' id="' + component.id + '"';
 
-        // 序列化位置属性（x, y, width, height）
-        if (component.x !== undefined && component.x !== null) {
-            attributesStr += ' x="' + component.x + '"';
-        }
-        if (component.y !== undefined && component.y !== null) {
-            attributesStr += ' y="' + component.y + '"';
-        }
-        if (component.width !== undefined && component.width !== null) {
-            attributesStr += ' width="' + component.width + '"';
-        }
-        if (component.height !== undefined && component.height !== null) {
-            attributesStr += ' height="' + component.height + '"';
+        // 序列化位置属性（position.x/y/width/height）
+        if (component.position) {
+            attributesStr += ' x="' + component.position.x + '"';
+            attributesStr += ' y="' + component.position.y + '"';
+            attributesStr += ' width="' + component.position.width + '"';
+            attributesStr += ' height="' + component.position.height + '"';
         }
 
-        // 序列化其他属性
-        if (component.properties) {
-            Object.keys(component.properties).forEach(propName => {
-                const value = component.properties![propName];
-                // 跳过已经序列化的属性
-                if (!['x', 'y', 'width', 'height', 'id'].includes(propName)) {
+        // 序列化样式属性（style对象）
+        if (component.style) {
+            Object.keys(component.style).forEach(propName => {
+                const value = component.style![propName];
+                if (value !== undefined && value !== null && value !== '') {
                     attributesStr += ' ' + propName + '="' + this._escapeXmlValue(this._convertToString(value)) + '"';
                 }
             });
+        }
+
+        // 序列化数据属性（data对象）
+        if (component.data) {
+            Object.keys(component.data).forEach(propName => {
+                const value = component.data![propName];
+                if (value !== undefined && value !== null && value !== '') {
+                    attributesStr += ' ' + propName + '="' + this._escapeXmlValue(this._convertToString(value)) + '"';
+                }
+            });
+        }
+
+        // 序列化元属性（name, visible, enabled, locked, zIndex）
+        if (component.name) {
+            attributesStr += ' name="' + this._escapeXmlValue(component.name) + '"';
+        }
+        if (component.visible === false) {
+            attributesStr += ' visible="false"';
+        }
+        if (component.enabled === false) {
+            attributesStr += ' enabled="false"';
+        }
+        if (component.locked === true) {
+            attributesStr += ' locked="true"';
+        }
+        if (component.zIndex && component.zIndex !== 0) {
+            attributesStr += ' zIndex="' + component.zIndex + '"';
         }
 
         // 序列化事件处理
@@ -213,10 +248,14 @@ export class HmlSerializer {
             // 有子组件，使用开始和结束标签
             componentContent += indent + '<' + component.type + attributesStr + '>' + '\n';
 
-            // 递归序列化子组件
-            component.children.forEach((child: Component) => {
-                componentContent += this._serializeComponent(child, indentLevel + 1);
-            });
+            // 递归序列化子组件 - 需要根据ID找到组件对象
+            // 这里有个问题：我们只有ID，需要从文档中查找组件对象
+            // 临时方案：假设component对象包含childrenComponents数组
+            if ((component as any).childrenComponents) {
+                (component as any).childrenComponents.forEach((child: Component) => {
+                    componentContent += this._serializeComponent(child, indentLevel + 1);
+                });
+            }
 
             componentContent += indent + '</' + component.type + '>' + '\n';
         } else {
