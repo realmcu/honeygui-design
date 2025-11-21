@@ -61,6 +61,10 @@ const App: React.FC = () => {
     // 使用现有的API实例，绝对不尝试重新获取
     setVSCodeAPI(window.vscodeAPI);
     console.log('[HoneyGUI App] Using existing VSCode API instance');
+    
+    // 主动请求加载数据
+    console.log('[HoneyGUI App] 请求加载HML数据...');
+    window.vscodeAPI.postMessage({ command: 'ready' });
 
     // Listen for messages from extension
     window.addEventListener('message', (event) => {
