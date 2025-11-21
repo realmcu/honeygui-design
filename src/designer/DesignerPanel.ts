@@ -124,8 +124,12 @@ export class DesignerPanel {
             message => {
                 switch (message.command) {
                     case 'ready':
-                        logger.info('[DesignerPanel] 收到前端ready消息，重新发送loadHml');
-                        this.reloadCurrentDocument();
+                        logger.info('[DesignerPanel] 收到前端ready消息');
+                        try {
+                            this.reloadCurrentDocument();
+                        } catch (error) {
+                            logger.error(`[DesignerPanel] reloadCurrentDocument失败: ${error}`);
+                        }
                         break;
                     case 'save':
                         logger.debug(`[HoneyGUI Designer] 收到保存请求，组件数量: ${message?.content?.components?.length || 0}`);
@@ -731,28 +735,9 @@ private _createNewDocument(): void {
             const designerConfig = ProjectConfigLoader.getDesignerConfig(projectConfig);
             logger.debug(`[DesignerPanel] 项目配置加载完成`);
 
-            // 发送内容到 Webview
-            logger.info(`[DesignerPanel] 发送 loadHml 消息到 Webview，包含 ${frontendComponents.length} 个组件`);
-            logger.info(`[DesignerPanel] 组件详情: ${frontendComponents.map(c => `${c.type}(id=${c.id})`).join(', ')}`);
-            
-            // 延迟发送，确保webview已准备好
-            setTimeout(() => {
-                this._panel.webview.postMessage({
-                    command: 'loadHml',
-                    content: hmlContent,
-                    document: {
-                        ...hmlDocument,
-                        view: {
-                            ...hmlDocument.view,
-                            components: frontendComponents
-                        }
-                    },
-                    components: frontendComponents,
-                    projectConfig: projectConfig,
-                    designerConfig: designerConfig || { canvasBackgroundColor: '#f0f0f0' }
-                });
-                logger.info(`[DesignerPanel] loadHml消息已发送`);
-            }, 500);
+            // 发送内容到 Webview（不延迟，由前端ready消息触发重新加载）
+            logger.info(`[DesignerPanel] 初始loadHml准备完成，等待前端ready消息`);
+            // 不立即发送，等待前端ready
 
             // 更新面板标题
             const fileName = path.basename(document.fileName);
@@ -1087,32 +1072,42 @@ private _createNewDocument(): void {
     }
     
     private reloadCurrentDocument(): void {
-        if (!this._filePath) return;
-        
-        const hmlDocument = this._hmlController.currentDocument;
-        if (!hmlDocument) return;
-        
-        const hmlContent = this._hmlController.serializeDocument();
-        const frontendComponents = this._hmlController.prepareComponentsForFrontend(hmlDocument);
-        const projectConfig = ProjectConfigLoader.loadConfig(this._filePath);
-        const designerConfig = ProjectConfigLoader.getDesignerConfig(projectConfig);
-        
-        logger.info(`[DesignerPanel] 重新发送loadHml，组件数: ${frontendComponents.length}`);
-        
-        this._panel.webview.postMessage({
-            command: 'loadHml',
-            content: hmlContent,
-            document: {
-                ...hmlDocument,
-                view: {
-                    ...hmlDocument.view,
-                    components: frontendComponents
-                }
-            },
-            components: frontendComponents,
-            projectConfig: projectConfig,
-            designerConfig: designerConfig || { canvasBackgroundColor: '#f0f0f0' }
-        });
+        try {
+            if (!this._filePath) {
+                logger.warn('[DesignerPanel] reloadCurrentDocument: 没有文件路径');
+                return;
+            }
+            
+            const hmlDocument = this._hmlController.currentDocument;
+            if (!hmlDocument) {
+                logger.warn('[DesignerPanel] reloadCurrentDocument: 没有当前文档');
+                return;
+            }
+            
+            const hmlContent = this._hmlController.serializeDocument();
+            const frontendComponents = this._hmlController.prepareComponentsForFrontend(hmlDocument);
+            const projectConfig = ProjectConfigLoader.loadConfig(this._filePath);
+            const designerConfig = ProjectConfigLoader.getDesignerConfig(projectConfig);
+            
+            logger.info(`[DesignerPanel] 重新发送loadHml，组件数: ${frontendComponents.length}`);
+            
+            this._panel.webview.postMessage({
+                command: 'loadHml',
+                content: hmlContent,
+                document: {
+                    ...hmlDocument,
+                    view: {
+                        ...hmlDocument.view,
+                        components: frontendComponents
+                    }
+                },
+                components: frontendComponents,
+                projectConfig: projectConfig,
+                designerConfig: designerConfig || { canvasBackgroundColor: '#f0f0f0' }
+            });
+        } catch (error) {
+            logger.error(`[DesignerPanel] reloadCurrentDocument失败: ${error}`);
+        }
     }
     
     public dispose(): void {

@@ -27,18 +27,8 @@ const App: React.FC = () => {
 
   // 安全初始化VSCode API（确保只使用已有的实例）
   useEffect(() => {
-    // 立即打开 DevTools（调试用）
-    // @ts-ignore
-    if (window.vscodeAPI) {
-      setTimeout(() => {
-        // @ts-ignore
-        if (window.vscodeAPI && window.chrome && (window.chrome as any).webview) {
-          // @ts-ignore
-          (window.chrome as any).webview.openDevTools();
-        }
-      }, 1000);
-    }
-
+    let readySent = false;
+    
     // 添加错误处理
     const handleGlobalError = (e: ErrorEvent) => {
       console.error('[HoneyGUI Designer] Global error:', e.error);
@@ -62,9 +52,12 @@ const App: React.FC = () => {
     setVSCodeAPI(window.vscodeAPI);
     console.log('[HoneyGUI App] Using existing VSCode API instance');
     
-    // 主动请求加载数据
-    console.log('[HoneyGUI App] 请求加载HML数据...');
-    window.vscodeAPI.postMessage({ command: 'ready' });
+    // 主动请求加载数据（只发送一次）
+    if (!readySent) {
+      console.log('[HoneyGUI App] 发送ready消息请求数据...');
+      window.vscodeAPI.postMessage({ command: 'ready' });
+      readySent = true;
+    }
 
     // Listen for messages from extension
     window.addEventListener('message', (event) => {

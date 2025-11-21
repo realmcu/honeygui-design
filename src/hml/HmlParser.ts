@@ -220,6 +220,11 @@ export class HmlParser {
         return; // 跳过元属性
       }
 
+      // 跳过组件类型属性（如 hg_button, hg_panel 等），这些是冗余数据
+      if (ComponentRegistry.isValidComponent(key)) {
+        return;
+      }
+
       if (key.startsWith('on')) {
         events[key] = attributes[key];
       } else if (styleProps.has(key)) {
