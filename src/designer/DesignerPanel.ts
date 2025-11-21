@@ -5,6 +5,8 @@ import { HmlController } from '../hml/HmlController';
 import { Component } from '../hml/types';
 import { CodeGeneratorFactory, CodeGeneratorOptions } from '../codegen/CodeGenerator';
 import { WebviewUtils } from '../common/WebviewUtils';
+import { ProjectConfigLoader } from '../utils/ProjectConfigLoader';
+import { HmlContentComparator } from '../utils/HmlContentComparator';
 
 /**
  * 设计器Webview面板管理类
@@ -21,6 +23,7 @@ export class DesignerPanel {
     private _filePath: string | undefined;
     private _isSaving = false; // 添加保存状态标志，防止文件系统事件触发重新加载
     private _lastSerializedSnapshot: string | null = null;
+    private _contentComparator: typeof HmlContentComparator;
 
     /**
      * 设置保存状态
@@ -91,6 +94,7 @@ export class DesignerPanel {
         this._extensionUri = context.extensionUri;
         this._context = context;
         this._hmlController = new HmlController();
+        this._contentComparator = HmlContentComparator;
 
         // 如果有文档，设置文件路径
         if (document) {
@@ -528,12 +532,16 @@ export class DesignerPanel {
      */
     private async _saveHml(content: string): Promise<void> {
         try {
-            console.log('[HoneyGUI Designer] 设置isSaving标志，防止重新加载...');
-            // 挂起文件系统事件
+            console.log('[HoneyGUI Designer] 开始保存HML文件...');
+            
+            // 开始新的事务，获取事务ID
+            const transactionId = this._hmlController.beginSaveTransaction();
+            console.log(`[HoneyGUI Designer] 开始保存事务，ID: ${transactionId}`);
+            
+            // 设置保存状态标志
             this._isSaving = true;
             this._lastSerializedSnapshot = content;
 
-            console.log('[HoneyGUI Designer] 开始保存HML文件...');
             // 首先尝试解析和验证HML内容
             try {
                 this._hmlController.parseContent(content);
@@ -554,7 +562,6 @@ export class DesignerPanel {
             }
 
             // 使用HML控制器保存文件
-            // 使用getter方法
             const filePath = this.currentFilePath;
             console.log('[HoneyGUI Designer] 文件路径:', filePath);
             if (filePath) {
@@ -566,18 +573,26 @@ export class DesignerPanel {
                 await vscode.workspace.fs.stat(vscode.Uri.file(filePath));
                 const cost = Date.now() - start;
                 console.log(`[HoneyGUI Designer] 保存成功，用时 ${cost}ms`);
+                
+                // 验证事务ID，确保保存过程完整性
+                const isValid = this._hmlController.validateSaveTransaction(transactionId);
+                if (!isValid) {
+                    console.warn(`[HoneyGUI Designer] 保存事务验证失败，ID: ${transactionId}`);
+                } else {
+                    console.log(`[HoneyGUI Designer] 保存事务验证成功，ID: ${transactionId}`);
+                }
+                
                 try {
                     const loggerChannel = vscode.window.createOutputChannel('HoneyGUI Save');
                     loggerChannel.appendLine(`[HoneyGUI Save] 保存完成: ${path.basename(filePath)} 用时 ${cost}ms`);
                     loggerChannel.appendLine(`[HoneyGUI Save] 位置: ${filePath}`);
+                    loggerChannel.appendLine(`[HoneyGUI Save] 事务ID: ${transactionId}`);
                 } catch {}
                 vscode.window.showInformationMessage(`设计已保存到 ${path.basename(filePath)}`);
 
-                // 3秒后重置标志（等待文件系统事件处理完成）
-                setTimeout(() => {
-                    this._isSaving = false;
-                    console.log('[HoneyGUI Designer] 重置isSaving标志');
-                }, 3000);
+                // 重置保存状态
+                this._isSaving = false;
+                console.log('[HoneyGUI Designer] 保存状态重置，事务ID机制完成');
             }
 
         } catch (error) {
@@ -640,36 +655,11 @@ private async _loadFile(filePath: string): Promise<void> {
         // 为前端准备组件数据（转换为前端需要的格式）
         const frontendComponents = this._hmlController.prepareComponentsForFrontend(document);
         
-        // 尝试加载项目配置文件
-        let projectConfig = null;
-        try {
-            // 首先尝试从HML文件所在目录查找
-            const hmlDir = path.dirname(filePath);
-            const configPathInHmlDir = path.join(hmlDir, 'project.json');
-            
-            if (fs.existsSync(configPathInHmlDir)) {
-                const configContent = fs.readFileSync(configPathInHmlDir, 'utf8');
-                projectConfig = JSON.parse(configContent);
-                console.log('[HoneyGUI Designer] 成功从HML目录加载项目配置文件:', projectConfig);
-            } else {
-                // 如果HML目录中找不到，尝试从项目根目录查找（上级目录）
-                const projectRootDir = path.dirname(hmlDir);
-                const configPathInRootDir = path.join(projectRootDir, 'project.json');
-                
-                if (fs.existsSync(configPathInRootDir)) {
-                    const configContent = fs.readFileSync(configPathInRootDir, 'utf8');
-                    projectConfig = JSON.parse(configContent);
-                    console.log('[HoneyGUI Designer] 成功从项目根目录加载项目配置文件:', projectConfig);
-                } else {
-                    console.log('[HoneyGUI Designer] 未找到项目配置文件:', configPathInHmlDir, '和', configPathInRootDir);
-                }
-            }
-        } catch (configError) {
-            console.error('[HoneyGUI Designer] 加载项目配置文件失败:', configError);
-        }
-
-        // 从 project.json 获取设计器配置（画布背景色等）
-        const canvasBackgroundColor = projectConfig?.designer?.canvasBackgroundColor || '#f0f0f0';
+        // 使用统一的配置加载器
+        const projectConfig = ProjectConfigLoader.loadConfig(filePath);
+        const designerConfig = ProjectConfigLoader.getDesignerConfig(projectConfig);
+        
+        console.log('[HoneyGUI Designer] 设计器配置:', designerConfig);
 
         // 发送HML内容和配置信息到Webview，传递转换后的组件数据
         this._panel.webview.postMessage({
@@ -684,9 +674,7 @@ private async _loadFile(filePath: string): Promise<void> {
             },
             components: frontendComponents,
             projectConfig: projectConfig,
-            designerConfig: {
-                canvasBackgroundColor
-            }
+            designerConfig: designerConfig || { canvasBackgroundColor: '#f0f0f0' }
         });
             
             // 更新面板标题
@@ -716,26 +704,12 @@ private _createNewDocument(): void {
         // 为前端准备组件数据
         const frontendComponents = this._hmlController.prepareComponentsForFrontend(document);
 
-        // 尝试从工作区读取项目配置（包含画布背景色）
-        let projectConfig: any = null;
-        try {
-            const workspaceFolders = vscode.workspace.workspaceFolders;
-            if (workspaceFolders && workspaceFolders.length > 0) {
-                const workspaceRoot = workspaceFolders[0].uri.fsPath;
-                const projectJsonPath = path.join(workspaceRoot, 'project.json');
-
-                if (fs.existsSync(projectJsonPath)) {
-                    const configContent = fs.readFileSync(projectJsonPath, 'utf8');
-                    projectConfig = JSON.parse(configContent);
-                    console.log('[HoneyGUI Designer] 从工作区加载 project.json:', projectConfig);
-                }
-            }
-        } catch (configError) {
-            console.log('[HoneyGUI Designer] 无法加载 project.json，使用默认配置');
-        }
-
+        // 使用统一的配置加载器
+        const projectConfig = ProjectConfigLoader.loadConfig();
+        const designerConfig = ProjectConfigLoader.getDesignerConfig(projectConfig);
+        
         // 从 project.json 获取画布背景色，默认灰色
-        const canvasBackgroundColor = projectConfig?.designer?.canvasBackgroundColor || '#f0f0f0';
+        const canvasBackgroundColor = designerConfig?.canvasBackgroundColor || '#f0f0f0';
 
         // 发送HML内容和配置到Webview
         this._panel.webview.postMessage({
@@ -750,9 +724,7 @@ private _createNewDocument(): void {
             },
             components: frontendComponents,
             projectConfig: projectConfig,
-            designerConfig: {
-                canvasBackgroundColor
-            }
+            designerConfig: designerConfig
         });
 
             // 更新面板标题
@@ -783,30 +755,9 @@ private _createNewDocument(): void {
             // 为前端准备组件数据
             const frontendComponents = this._hmlController.prepareComponentsForFrontend(hmlDocument);
 
-            // 尝试加载项目配置文件
-            let projectConfig = null;
-            try {
-                const hmlDir = path.dirname(document.uri.fsPath);
-                const configPathInHmlDir = path.join(hmlDir, 'project.json');
-
-                if (fs.existsSync(configPathInHmlDir)) {
-                    const configContent = fs.readFileSync(configPathInHmlDir, 'utf8');
-                    projectConfig = JSON.parse(configContent);
-                } else {
-                    const projectRootDir = path.dirname(hmlDir);
-                    const configPathInRootDir = path.join(projectRootDir, 'project.json');
-
-                    if (fs.existsSync(configPathInRootDir)) {
-                        const configContent = fs.readFileSync(configPathInRootDir, 'utf8');
-                        projectConfig = JSON.parse(configContent);
-                    }
-                }
-            } catch (configError) {
-                console.error('[HoneyGUI Designer] 加载项目配置文件失败:', configError);
-            }
-
-            // 从 project.json 获取设计器配置
-            const canvasBackgroundColor = projectConfig?.designer?.canvasBackgroundColor || '#f0f0f0';
+            // 使用统一的配置加载器
+            const projectConfig = ProjectConfigLoader.loadConfig(document.uri.fsPath);
+            const designerConfig = ProjectConfigLoader.getDesignerConfig(projectConfig);
 
             // 发送内容到 Webview
             this._panel.webview.postMessage({
@@ -821,9 +772,7 @@ private _createNewDocument(): void {
                 },
                 components: frontendComponents,
                 projectConfig: projectConfig,
-                designerConfig: {
-                    canvasBackgroundColor
-                }
+                designerConfig: designerConfig || { canvasBackgroundColor: '#f0f0f0' }
             });
 
             // 更新面板标题
@@ -854,11 +803,29 @@ private _createNewDocument(): void {
                 console.log('[DesignerPanel] updateFromDocument: 重新加载文件', this._filePath);
                 const document = await vscode.workspace.openTextDocument(this._filePath);
                 const diskContent = document.getText();
-                const normalize = (s: string) => s.replace(/\s+/g, ' ').trim();
-                if (this._lastSerializedSnapshot && normalize(diskContent) === normalize(this._lastSerializedSnapshot)) {
-                    console.log('[DesignerPanel] 保存后的内容与内存一致，跳过重载');
-                    return;
+                
+                // 使用智能内容对比机制
+                if (this._lastSerializedSnapshot) {
+                    const comparison = HmlContentComparator.smartCompare(
+                        diskContent,
+                        this._lastSerializedSnapshot
+                    );
+                    
+                    if (comparison.isEqual) {
+                        console.log('[DesignerPanel] 智能对比：保存后的内容与内存一致，跳过重载');
+                        console.log(`[DesignerPanel] 对比详情: ${comparison.reason}`);
+                        // 清空快照，避免后续误匹配
+                        this._lastSerializedSnapshot = null;
+                        return;
+                    } else {
+                        console.log('[DesignerPanel] 智能对比：文件内容发生变化');
+                        console.log(`[DesignerPanel] 差异原因: ${comparison.reason}`);
+                    }
+                } else {
+                    console.log('[DesignerPanel] 无快照，直接加载文件内容');
                 }
+                
+                console.log('[DesignerPanel] 重新加载到设计器');
                 await this.loadFromDocument(document);
             } catch (error) {
                 console.error('更新文档失败:', error);

@@ -53,7 +53,7 @@
             "filenamePattern": "*.hml"
           }
         ],
-        "priority": "default"
+        "priority": "option"
       }
     ],
     "viewsContainers": {
@@ -205,6 +205,11 @@
         "title": "Restart",
         "category": "HoneyGUI",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "honeygui.toggleEditor",
+        "title": "Toggle Editor Mode",
+        "category": "HoneyGUI"
       }
     ],
     "configuration": {

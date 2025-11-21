@@ -24,6 +24,8 @@ export class HmlEditorProvider implements vscode.CustomTextEditorProvider {
         webviewPanel: vscode.WebviewPanel,
         _token: vscode.CancellationToken
     ): Promise<void> {
+        console.log(`[HmlEditorProvider] resolveCustomTextEditor被调用: ${document.fileName}`);
+        
         // 设置 Webview 选项
         webviewPanel.webview.options = {
             enableScripts: true,
@@ -35,12 +37,16 @@ export class HmlEditorProvider implements vscode.CustomTextEditorProvider {
         // 获取文件名作为标题
         const fileName = path.basename(document.fileName);
         webviewPanel.title = `HML Designer: ${fileName}`;
+        console.log(`[HmlEditorProvider] 设置面板标题: ${webviewPanel.title}`);
 
         // 创建设计器面板实例
         const designerPanel = new DesignerPanel(webviewPanel, this.context);
+        console.log(`[HmlEditorProvider] 创建DesignerPanel实例`);
 
         // 加载文档内容到设计器
+        console.log(`[HmlEditorProvider] 开始加载文档内容到设计器`);
         await designerPanel.loadFromDocument(document);
+        console.log(`[HmlEditorProvider] 文档内容加载完成`);
 
         // 监听保存事件（排除我们自己的保存操作）
         const changeDocumentSubscription = vscode.workspace.onDidSaveTextDocument(doc => {
@@ -52,8 +58,11 @@ export class HmlEditorProvider implements vscode.CustomTextEditorProvider {
         
         // 面板关闭时清理监听器
         webviewPanel.onDidDispose(() => {
+            console.log('[HmlEditorProvider] 面板关闭，清理监听器');
             changeDocumentSubscription.dispose();
         });
+        
+        console.log('[HmlEditorProvider] resolveCustomTextEditor完成');
     }
 
     /**

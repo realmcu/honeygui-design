@@ -10,6 +10,14 @@ export type { Document as HmlDocument, Component } from './types';
  */
 export class HmlParser {
   /**
+   * 检查是否为HoneyGUI组件
+   * HoneyGUI组件统一使用hg_前缀以避免与React组件冲突
+   */
+  private _isHoneyGuiComponent(componentName: string): boolean {
+    return componentName.startsWith('hg_');
+  }
+
+  /**
    * 解析HML内容
    * @param content HML文件内容
    * @returns 解析后的文档对象
@@ -161,7 +169,8 @@ export class HmlParser {
     if (viewElement && typeof viewElement === 'object') {
       Object.keys(viewElement).forEach(key => {
         if (key !== '_attributes') {
-          if (!key.startsWith('hg_')) {
+          if (!this._isHoneyGuiComponent(key)) {
+            console.warn(`[HoneyGUI] 跳过非HoneyGUI组件: ${key}`);
             return;
           }
           const element = (viewElement as any)[key];

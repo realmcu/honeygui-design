@@ -1,11 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as https from 'https';
-import * as http from 'http';
 import { spawn, ChildProcess } from 'child_process';
-import { promisify } from 'util';
-import { pipeline } from 'stream';
 // Simple mock implementation for extract-zip since it's not installed
 const extractZip = (zipPath: string, options: any, callback: (err: Error | null) => void) => {
     callback(null);
@@ -52,15 +48,15 @@ export class PreviewRunner {
 
   private constructor(options: PreviewRunnerOptions = {}) {
     const defaultOptions: PreviewRunnerOptions = {
-      runnerPath: '', // 将自动管理
-      autoDownload: true,
+      runnerPath: '', // 本地Runner路径
+      autoDownload: false, // 离线模式，禁用自动下载
       timeoutMs: 10000,
       logLevel: 'info'
     };
 
     const mergedOptions = { ...defaultOptions, ...options };
     this.runnerPath = mergedOptions.runnerPath || this.getDefaultRunnerPath();
-    this.autoDownload = mergedOptions.autoDownload || true;
+    this.autoDownload = false; // 强制离线模式
     this.timeoutMs = mergedOptions.timeoutMs || 10000;
     this.logLevel = (mergedOptions.logLevel as 'error' | 'debug' | 'info' | 'warn') || 'info';
   }
@@ -100,104 +96,40 @@ export class PreviewRunner {
   }
 
   /**
-   * 获取当前平台的Runner下载信息
+   * 获取当前平台的Runner下载信息 (已废弃)
+   * @deprecated 离线模式下不再使用下载功能
    */
   private getRunnerDownloadInfo(): RunnerDownloadInfo {
-    // 根据不同平台返回不同的下载信息
-    // 注意：这些URL仅为示例，实际应指向真实的下载地址
-    switch (process.platform) {
-      case 'win32':
-        return {
-          url: 'https://example.com/downloads/runner-win32.zip',
-          version: '1.0.0'
-        };
-      case 'darwin':
-        return {
-          url: 'https://example.com/downloads/runner-darwin.zip',
-          version: '1.0.0'
-        };
-      case 'linux':
-        return {
-          url: 'https://example.com/downloads/runner-linux.zip',
-          version: '1.0.0'
-        };
-      default:
-        throw new Error(`不支持的平台: ${process.platform}`);
-    }
+    throw new Error('下载功能已禁用 - HoneyGUI使用离线模式');
   }
 
   /**
-   * 下载并安装Runner
+   * 下载并安装Runner (已废弃 - 离线模式)
+   * @deprecated 此功能已废弃，HoneyGUI现在使用离线模式
    */
   public async downloadRunner(): Promise<void> {
-    try {
-      this.log('正在下载Runner...', 'info');
-      
-      const downloadInfo = this.getRunnerDownloadInfo();
-      const cacheDir = path.dirname(this.runnerPath);
-      
-      // 确保缓存目录存在
-      if (!fs.existsSync(cacheDir)) {
-        fs.mkdirSync(cacheDir, { recursive: true });
-      }
-      
-      // 下载临时ZIP文件
-      const tempZipPath = path.join(cacheDir, `runner-${Date.now()}.zip`);
-      await this.downloadFile(downloadInfo.url, tempZipPath);
-      
-      // 解压文件
-      await this.unzipFile(tempZipPath, cacheDir);
-      
-      // 删除临时ZIP文件
-      fs.unlinkSync(tempZipPath);
-      
-      // 在非Windows平台上，确保文件可执行
-      if (process.platform !== 'win32') {
-        fs.chmodSync(this.runnerPath, '755');
-      }
-      
-      this.log('Runner下载完成', 'info');
-    } catch (error) {
-      this.log(`Runner下载失败: ${error instanceof Error ? error.message : String(error)}`, 'error');
-      throw error;
-    }
+    throw new Error(
+      'Runner自动下载功能已禁用。HoneyGUI现在使用离线模式。\n' +
+      '请手动安装Runner到以下位置之一:\n' +
+      '1. 在VS Code设置中配置 honeygui.preview.runnerPath\n' +
+      '2. 将Runner安装到: ' + this.getDefaultRunnerPath()
+    );
   }
 
   /**
-   * 下载文件
+   * 下载文件 (已废弃)
+   * @deprecated 离线模式下不再使用下载功能
    */
   private async downloadFile(url: string, dest: string): Promise<void> {
-    const streamPipeline = promisify(pipeline);
-    
-    return new Promise((resolve, reject) => {
-      const protocol = url.startsWith('https') ? https : http;
-      
-      protocol.get(url, (response) => {
-        if (response.statusCode !== 200) {
-          return reject(new Error(`下载失败，状态码: ${response.statusCode}`));
-        }
-        
-        const fileStream = fs.createWriteStream(dest);
-        streamPipeline(response, fileStream)
-          .then(() => resolve())
-          .catch(reject);
-      }).on('error', reject);
-    });
+    throw new Error('下载功能已禁用 - HoneyGUI使用离线模式');
   }
 
   /**
-   * 解压ZIP文件
+   * 解压ZIP文件 (已废弃)
+   * @deprecated 离线模式下不再使用解压功能
    */
   private async unzipFile(zipPath: string, dest: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      extractZip(zipPath, { dir: dest }, (err: Error | null) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve();
-        }
-      });
-    });
+    throw new Error('解压功能已禁用 - HoneyGUI使用离线模式');
   }
 
   /**
@@ -214,19 +146,13 @@ export class PreviewRunner {
     try {
       // 检查Runner是否存在
       if (!this.isRunnerInstalled()) {
-        if (this.autoDownload) {
-          // 注意：开发阶段默认禁用自动下载，避免网络访问失败
-          await this.downloadRunner();
-        } else {
-          throw new Error(
-            `HoneyGUI Runner未找到: ${this.runnerPath}\n\n` +
-            '请确保Runner已手动安装到以下位置之一:\n' +
-            '1. 在VS Code设置中配置 honeygui.preview.runnerPath\n' +
-            '2. 将Runner安装到: ~/.honeygui/runner/\n\n' +
-            '当前为离线模式（预览自动下载已禁用）。\n' +
-            '如需启用自动下载，请在设置中将 "honeygui.preview.autoDownload" 设为 true。'
-          );
-        }
+        throw new Error(
+          `HoneyGUI Runner未找到: ${this.runnerPath}\n\n` +
+          'HoneyGUI现在使用离线模式，请手动安装Runner:\n' +
+          '1. 在VS Code设置中配置 honeygui.preview.runnerPath\n' +
+          '2. 将Runner安装到: ~/.honeygui/runner/\n\n' +
+          '自动下载功能已禁用，以确保离线使用。'
+        );
       }
 
       // 如果已有进程在运行，先停止

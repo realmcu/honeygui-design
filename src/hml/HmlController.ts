@@ -14,6 +14,7 @@ export class HmlController {
     private _currentDocument: HmlDocument | null = null;
     private _currentFilePath: string | null = null;
     private _documentVersion: number = 0;
+    private _saveTransactionId: number = 0;  // 保存事务ID，用于防止竞态
 
     /**
      * 构造函数
@@ -109,6 +110,31 @@ export class HmlController {
             console.error('保存HML文档失败:', error);
             throw new Error(`保存HML文档失败: ${error instanceof Error ? error.message : '未知错误'}`);
         }
+    }
+
+    /**
+     * 获取当前保存事务ID
+     */
+    public getSaveTransactionId(): number {
+        return this._saveTransactionId;
+    }
+
+    /**
+     * 开始新的保存事务
+     * @returns 新的事务ID
+     */
+    public beginSaveTransaction(): number {
+        this._saveTransactionId++;
+        return this._saveTransactionId;
+    }
+
+    /**
+     * 验证保存事务ID是否匹配
+     * @param transactionId 要验证的事务ID
+     * @returns 是否匹配当前事务
+     */
+    public validateSaveTransaction(transactionId: number): boolean {
+        return transactionId === this._saveTransactionId;
     }
 
     /**

@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { Document as HmlDocument, Component } from './types';
+import { HmlParser } from './HmlParser';
 
 /**
  * HML序列化器类
@@ -22,21 +23,16 @@ export class HmlSerializer {
             try {
                 const content = this.serialize(document);
 
-                // 1) 生成临时路径与备份路径
+                // 1) 生成临时路径
                 const dir = path.dirname(filePath);
                 const base = path.basename(filePath);
                 const tempPath = path.join(dir, `.${base}.tmp`);
-                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-                const backupPath = fs.existsSync(filePath)
-                    ? path.join(dir, `${base}.bak.${timestamp}`)
-                    : '';
 
                 // 2) 写入临时文件
                 fs.writeFileSync(tempPath, content, 'utf8');
 
                 // 3) 完整性校验（解析检查）
                 try {
-                    const { HmlParser } = require('./HmlParser');
                     const parser = new HmlParser();
                     const parsed = parser.parse(content);
                     if (!parsed || !parsed.view) {
