@@ -68,21 +68,42 @@ const App: React.FC = () => {
 
       switch (message.command) {
         case 'loadHml':
-          console.log('[Webview App] 接收到 loadHml 消息');
+          console.log('========== [Webview App] loadHml 消息处理开始 ==========');
           console.log('[Webview App] 接收到的组件数量:', message.components?.length || 0);
           if (message.components) {
             console.log('[Webview App] 接收到的组件详情:',
               message.components.map((c: any) => `${c.type}(id=${c.id})`).join(', '));
           }
 
-          // 先设置配置，再设置组件（避免配置初始化创建默认组件）
-          setProjectConfig(message.projectConfig || null);
+          // 直接使用store方法，避免闭包问题
+          const store = useDesignerStore.getState();
+          
+          console.log('[Webview App] 设置配置前，当前组件数:', store.components.length);
+          
+          store.setProjectConfig(message.projectConfig || null);
+          console.log('[Webview App] 配置已设置');
+          
           if (message.designerConfig?.canvasBackgroundColor) {
-            setCanvasBackgroundColor(message.designerConfig.canvasBackgroundColor);
+            store.setCanvasBackgroundColor(message.designerConfig.canvasBackgroundColor);
+            console.log('[Webview App] 背景色已设置');
           }
+          
           if (message.components) {
-            setComponents(message.components);
+            console.log('[Webview App] 准备设置组件...');
+            store.setComponents(message.components);
+            console.log('[Webview App] setComponents 调用完成');
+            
+            // 立即验证
+            const currentComponents = useDesignerStore.getState().components;
+            console.log('[Webview App] 验证：当前store中的组件数量:', currentComponents.length);
+            if (currentComponents.length > 0) {
+              console.log('[Webview App] 验证：组件列表:', 
+                currentComponents.map(c => `${c.type}(id=${c.id})`).join(', '));
+            } else {
+              console.error('[Webview App] ❌ 警告：setComponents后组件列表仍为空！');
+            }
           }
+          console.log('========== [Webview App] loadHml 消息处理完成 ==========');
           break;
 
         case 'showMessage':
@@ -133,7 +154,7 @@ const App: React.FC = () => {
    *    - 可以包含其他组件作为子组件，形成嵌套结构
    *    - 可视化设计中可自由拖放、调整位置和尺寸
    *
-   * 2. **UI组件** (Button/Label/Input等): 默认添加到screen容器内作为子组件
+   * 2. **UI组件** (Button/Label/Input等): 默认添加到hg_screen容器内作为子组件
    *    - 必须存在于某个容器内(Screen或View)
    *    - 位置相对于父容器，坐标系以父容器左上角为原点
    *    - 移动父容器时，子组件跟随移动
@@ -157,67 +178,58 @@ const App: React.FC = () => {
   const handleCanvasDrop = (e: React.DragEvent) => {
     e.preventDefault();
 
+    console.log('========== [拖放] handleCanvasDrop 开始 ==========');
+    
     const componentType = e.dataTransfer.getData('component-type') as ComponentType;
-    if (!componentType) return;
+    if (!componentType) {
+      console.log('[拖放] 没有组件类型，退出');
+      return;
+    }
 
     const componentDef = componentDefinitions.find(def => def.type === componentType);
     if (!componentDef) {
-      console.error(`未找到组件类型 ${componentType} 的定义配置`);
+      console.error(`[拖放] 未找到组件类型 ${componentType} 的定义配置`);
       return;
     }
 
     // 获取当前画布中所有已存在的组件列表
     let components = useDesignerStore.getState().components;
 
-    const hasScreen = components.length > 0 && components.some(c => c.type === 'hg_screen');
-    console.log(`[拖放] 组件总数: ${components.length}, 是否有screen: ${hasScreen}`);
+    console.log(`[拖放] 组件类型: ${componentType}`);
+    console.log(`[拖放] 当前组件总数: ${components.length}`);
+    console.log(`[拖放] 组件数组是否为空: ${components.length === 0}`);
+    console.log(`[拖放] 组件数组类型: ${Array.isArray(components) ? 'Array' : typeof components}`);
+    
     if (components.length > 0) {
-      console.log('[拖放] 当前画布中的组件:', components.map(c => `${c.type}(id=${c.id}, parent=${c.parent})`).join(', '));
+      console.log('[拖放] 当前画布中的组件:');
+      components.forEach((c, index) => {
+        console.log(`  [${index}] ${c.type}(id=${c.id}, parent=${c.parent || 'null'})`);
+      });
     } else {
-      console.log('[拖放] 当前画布中没有任何组件！');
+      console.error('[拖放] ❌ 当前画布中没有任何组件！');
     }
 
-    // 查找画布中的screen容器（任何screen，不限制parent）
+    // 查找画布中的hg_screen容器
     let screenContainer = components.find(comp => comp.type === 'hg_screen');
+    
+    console.log(`[拖放] 查找hg_screen结果: ${screenContainer ? `找到(id=${screenContainer.id})` : '未找到'}`);
 
-    // 如果没有找到screen容器，自动创建一个
+    // 必须有hg_screen容器才能添加组件
     if (!screenContainer) {
-      console.warn('未找到screen容器，自动创建默认screen容器');
-
-      // 从项目配置或默认配置获取分辨率
-      const projectConfig = useDesignerStore.getState().projectConfig;
-      const { width = 800, height = 480 } = useDesignerStore.getState().canvasSize;
-
-      // 创建screen组件（使用数据源中的screen或创建新的）
-      const screenId = `hg_screen_${Date.now()}`;
-      screenContainer = {
-        id: screenId,
-        type: 'hg_screen' as ComponentType,
-        name: 'Screen',
-        position: {
-          x: 50,
-          y: 50,
-          width: width,
-          height: height
-        },
-        style: {
-          backgroundColor: '#000000'
-        },
-        visible: true,
-        enabled: true,
-        locked: false,
-        zIndex: 0,
-        children: [],
-        parent: null
-      };
-
-      // 使用store的addComponent方法将screen添加到组件列表（不立即保存）
-      useDesignerStore.getState().addComponent(screenContainer, { save: false });
-
-      console.info(`[拖放] 自动创建screen容器: ${screenId} (${width}x${height})`);
-    } else {
-      console.log(`[拖放] 找到现有screen容器: ${screenContainer.id}`);
+      console.error('[拖放] ❌ 未找到hg_screen容器！');
+      console.error('[拖放] 当前组件列表:', components.map(c => `${c.type}(id=${c.id})`).join(', '));
+      
+      const api = useDesignerStore.getState().vscodeAPI;
+      if (api) {
+        api.postMessage({
+          command: 'error',
+          text: '此HML文件没有hg_screen容器。只有main.hml应该包含hg_screen容器。'
+        });
+      }
+      return;
     }
+    
+    console.log(`[拖放] 找到hg_screen容器: ${screenContainer.id}, 尺寸: ${screenContainer.position.width}x${screenContainer.position.height}`);
 
     // 计算鼠标释放时的画布坐标位置
     const rect = (e.target as HTMLElement).getBoundingClientRect();
@@ -243,13 +255,13 @@ const App: React.FC = () => {
     // === 组件添加策略 ===
     if (componentType === 'hg_view') {
       if (isFirstView) {
-        // 第一个View: 放入screen容器，尺寸匹配screen
+        // 第一个View: 放入hg_screen容器，尺寸匹配hg_screen
         parent = screenContainer.id;
         positionX = 0; // 左上角对齐
         positionY = 0;
         width = screenContainer.position.width;
         height = screenContainer.position.height;
-        console.info(`[拖放] 第一个View组件，自动放入screen容器并匹配尺寸`);
+        console.info(`[拖放] 第一个View组件，自动放入hg_screen容器并匹配尺寸`);
       } else {
         // 后续View: 作为顶级容器独立放置，但初始尺寸匹配screen
         parent = null;
@@ -262,12 +274,12 @@ const App: React.FC = () => {
       parent = null;
       console.info(`[拖放] 容器组件 ${componentType} 作为顶级组件`);
     } else {
-      // UI组件: 添加到screen容器内
+      // UI组件: 添加到hg_screen容器内
       parent = screenContainer.id;
-      // 转换为相对于screen的内部坐标
+      // 转换为相对于hg_screen的内部坐标
       positionX = Math.max(10, x - screenContainer.position.x);
       positionY = Math.max(10, y - screenContainer.position.y);
-      console.info(`[拖放] UI组件 ${componentType} 添加到screen容器`);
+      console.info(`[拖放] UI组件 ${componentType} 添加到hg_screen容器`);
     }
 
     // 创建新组件对象

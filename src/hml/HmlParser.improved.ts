@@ -16,12 +16,60 @@ class ComponentRegistry {
     'hg_checkbox', 'hg_radio', 'hg_progressbar', 'hg_slider',
     'hg_switch', 'hg_canvas', 'hg_list', 'hg_grid', 'hg_tab',
     
+    // GUI组件 (gui_前缀)
+    'gui_button', 'gui_panel', 'gui_text', 'gui_image',
+    
+    // 无前缀组件 (向后兼容)
+    'button', 'panel', 'text', 'image', 'input',
+    'checkbox', 'radio', 'progressbar', 'slider',
+    
     // 容器组件
-    'hg_screen', 'hg_window', 'hg_dialog', 'hg_container', 'hg_view'
+    'screen', 'window', 'dialog', 'container'
   ]);
 
   static isValidComponent(name: string): boolean {
-    return this.VALID_COMPONENTS.has(name) || name.startsWith('hg_') || name.startsWith('custom_');
+    // 1. 检查是否在白名单中
+    if (this.VALID_COMPONENTS.has(name)) {
+      return true;
+    }
+    
+    // 2. 检查是否有有效前缀
+    const validPrefixes = ['hg_', 'gui_'];
+    if (validPrefixes.some(prefix => name.startsWith(prefix))) {
+      return true;
+    }
+    
+    // 3. 自定义组件 (custom_前缀)
+    if (name.startsWith('custom_')) {
+      return true;
+    }
+    
+    return false;
+  }
+
+  static normalizeComponentType(name: string): string {
+    // 标准化组件类型名称
+    // button -> hg_button
+    // gui_button -> hg_button
+    
+    if (name.startsWith('hg_')) {
+      return name;
+    }
+    
+    if (name.startsWith('gui_')) {
+      return name.replace('gui_', 'hg_');
+    }
+    
+    if (name.startsWith('custom_')) {
+      return name;
+    }
+    
+    // 无前缀的添加hg_前缀
+    if (this.VALID_COMPONENTS.has(name)) {
+      return `hg_${name}`;
+    }
+    
+    return name;
   }
 
   static register(componentName: string): void {
@@ -30,9 +78,9 @@ class ComponentRegistry {
 }
 
 /**
- * HML解析器 (改进版本)
+ * 改进的HML解析器
  */
-export class HmlParser {
+export class ImprovedHmlParser {
   private xmlParser: XMLParser;
   private idCounter = 0;
 
@@ -137,18 +185,16 @@ export class HmlParser {
     componentMap: Map<string, Component>,
     parentId?: string
   ): Component {
-    // 优先从 _attributes 中获取，如果不存在则从 element 本身获取
     const attributes = element._attributes || element;
-    // 确保正确提取 id，避免生成新ID
-    const componentId = attributes.id || element.id || this._generateId(tagName);
+    const componentId = attributes.id || this._generateId(tagName);
 
     // 检查是否已存在
     if (componentMap.has(componentId)) {
       return componentMap.get(componentId)!;
     }
 
-    // 直接使用tagName作为组件类型
-    const normalizedType = tagName;
+    // 标准化组件类型
+    const normalizedType = ComponentRegistry.normalizeComponentType(tagName);
 
     // 解析位置和尺寸
     const position: ComponentPosition = {

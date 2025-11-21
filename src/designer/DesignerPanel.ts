@@ -377,7 +377,7 @@ export class DesignerPanel {
                         <li>与VSCode扩展通信</li>
                     </ul>
                 </div>
-                <button onclick="sendMessage('save', {content: '<?xml version=\"1.0\" encoding=\"UTF-8\"?><hml><screen id=\"mainScreen\"></screen></hml>'});">测试保存</button>
+                <button onclick="sendMessage('save', {content: '<?xml version=\"1.0\" encoding=\"UTF-8\"?><hml><hg_screen id=\"mainScreen\"></hg_screen></hml>'});">测试保存</button>
             </div>
             
             <script nonce="${nonce}">

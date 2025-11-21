@@ -207,20 +207,7 @@ export class DesignerModel {
      */
     loadFromHml(hmlContent: string): void {
         // TODO: 实现HML解析逻辑
-        // 这里先创建一个默认的窗口组件
         this.clear();
-        const windowComponent: Component = {
-            id: 'mainWindow',
-            type: 'window',
-            name: '主窗口',
-            x: 0,
-            y: 0,
-            width: 800,
-            height: 600,
-            properties: {},
-            children: []
-        };
-        this.addComponent(windowComponent);
     }
     
     /**
@@ -290,33 +277,13 @@ export interface Component {
 }
 
 /**
- * 支持的组件类型枚举
- */
-export enum ComponentType {
-    Window = 'window',
-    Label = 'label',
-    Button = 'button',
-    Input = 'input',
-    Checkbox = 'checkbox',
-    Radio = 'radio',
-    Select = 'select',
-    Image = 'image',
-    ProgressBar = 'progressBar',
-    List = 'list',
-    Panel = 'panel',
-    VBox = 'vbox',
-    HBox = 'hbox',
-    Grid = 'grid'
-}
-
-/**
  * 组件工厂类，用于创建各种组件
  */
 export class ComponentFactory {
     /**
      * 创建组件
      */
-    static createComponent(type: ComponentType, idPrefix?: string, resolution?: string): Component {
+    static createComponent(type: string, idPrefix?: string, resolution?: string): Component {
         const id = idPrefix ? `${idPrefix}_${Date.now()}` : `${type}_${Date.now()}`;
         
         const baseComponent: Component = {
@@ -331,145 +298,34 @@ export class ComponentFactory {
             children: []
         };
         
-        // 设置特定组件的默认属性
-        switch (type) {
-            case ComponentType.Label:
-                baseComponent.properties = { text: '标签文本' };
-                break;
-            case ComponentType.Button:
-                baseComponent.properties = { text: '按钮', onClick: '' };
-                break;
-            case ComponentType.Input:
-                baseComponent.properties = { text: '', placeholder: '请输入...' };
-                break;
-            case ComponentType.Window:
-                baseComponent.x = 0;
-                baseComponent.y = 0;
-                // 根据分辨率设置窗口默认大小
-                const windowSize = this.getWindowSizeByResolution(resolution);
-                baseComponent.width = windowSize.width;
-                baseComponent.height = windowSize.height;
-                break;
-        }
-        
         return baseComponent;
     }
     
     /**
      * 获取组件显示名称
      */
-    private static getComponentDisplayName(type: ComponentType): string {
-        const displayNames: Record<ComponentType, string> = {
-            [ComponentType.Window]: '窗口',
-            [ComponentType.Label]: '标签',
-            [ComponentType.Button]: '按钮',
-            [ComponentType.Input]: '输入框',
-            [ComponentType.Checkbox]: '复选框',
-            [ComponentType.Radio]: '单选框',
-            [ComponentType.Select]: '下拉框',
-            [ComponentType.Image]: '图片',
-            [ComponentType.ProgressBar]: '进度条',
-            [ComponentType.List]: '列表',
-            [ComponentType.Panel]: '面板',
-            [ComponentType.VBox]: '垂直布局',
-            [ComponentType.HBox]: '水平布局',
-            [ComponentType.Grid]: '网格布局'
-        };
-        
-        return displayNames[type] || type.toString();
+    private static getComponentDisplayName(type: string): string {
+        return type;
     }
     
     /**
      * 获取组件默认宽度
      */
-    private static getDefaultWidth(type: ComponentType, resolution?: string): number {
-        const baseWidths: Record<ComponentType, number> = {
-            [ComponentType.Window]: 800,
-            [ComponentType.Label]: 100,
-            [ComponentType.Button]: 80,
-            [ComponentType.Input]: 200,
-            [ComponentType.Checkbox]: 20,
-            [ComponentType.Radio]: 20,
-            [ComponentType.Select]: 150,
-            [ComponentType.Image]: 100,
-            [ComponentType.ProgressBar]: 200,
-            [ComponentType.List]: 300,
-            [ComponentType.Panel]: 300,
-            [ComponentType.VBox]: 300,
-            [ComponentType.HBox]: 400,
-            [ComponentType.Grid]: 400
-        };
-        
-        const scaleFactor = this.getScaleFactorByResolution(resolution);
-        
-        // 窗口组件的宽度由getWindowSizeByResolution专门处理
-        if (type === ComponentType.Window) {
-            return baseWidths[type];
-        }
-        
-        // 对其他组件应用缩放因子
-        return Math.round(baseWidths[type] * scaleFactor);
+    private static getDefaultWidth(type: string, resolution?: string): number {
+        return 100;
     }
     
     /**
      * 获取组件默认高度
      */
-    private static getDefaultHeight(type: ComponentType, resolution?: string): number {
-        const baseHeights: Record<ComponentType, number> = {
-            [ComponentType.Window]: 600,
-            [ComponentType.Label]: 30,
-            [ComponentType.Button]: 30,
-            [ComponentType.Input]: 30,
-            [ComponentType.Checkbox]: 30,
-            [ComponentType.Radio]: 30,
-            [ComponentType.Select]: 30,
-            [ComponentType.Image]: 100,
-            [ComponentType.ProgressBar]: 20,
-            [ComponentType.List]: 200,
-            [ComponentType.Panel]: 200,
-            [ComponentType.VBox]: 200,
-            [ComponentType.HBox]: 100,
-            [ComponentType.Grid]: 300
-        };
-        
-        const scaleFactor = this.getScaleFactorByResolution(resolution);
-        
-        // 窗口组件的高度由getWindowSizeByResolution专门处理
-        if (type === ComponentType.Window) {
-            return baseHeights[type];
-        }
-        
-        // 对其他组件应用缩放因子
-        return Math.round(baseHeights[type] * scaleFactor);
+    private static getDefaultHeight(type: string, resolution?: string): number {
+        return 100;
     }
     
-    /**
-     * 根据分辨率获取缩放因子
-     */
     private static getScaleFactorByResolution(resolution?: string): number {
-        // 默认分辨率为800x480，缩放因子为1.0
-        if (!resolution) {
-            return 1.0;
-        }
-        
-        // 根据不同分辨率设置不同的缩放因子
-        switch (resolution) {
-            case '480X272':
-                return 0.6; // 较小的分辨率，组件尺寸缩小
-            case '800X480':
-                return 1.0; // 基准分辨率
-            case '1024X600':
-                return 1.2; // 较大的分辨率，组件尺寸适当放大
-            case '1280X720':
-                return 1.5; // 高分辨率，组件尺寸放大更多
-            default:
-                return 1.0;
-        }
+        return 1;
     }
     
-    /**
-     * 根据分辨率获取窗口默认大小
-     */
     private static getWindowSizeByResolution(resolution?: string): { width: number; height: number } {
         if (!resolution) {
             return { width: 800, height: 480 }; // 默认分辨率

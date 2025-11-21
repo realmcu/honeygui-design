@@ -167,10 +167,16 @@ export class HmlController {
             this._currentDocument = { meta: {}, view: { components: [] } } as HmlDocument;
         }
 
+        console.log('[HmlController] updateFromFrontendComponents - 收到组件数:', frontendComponents.length);
+        
+        // 修复父子关系一致性
+        this._ensureParentChildConsistency(frontendComponents);
+        
         // 格式已统一，直接保存所有组件（扁平化存储，包含所有层级）
-        // 注意：前端发送的是包含所有组件的扁平数组
         this._currentDocument.view.components = [...frontendComponents];
         this._documentVersion++;
+        
+        console.log('[HmlController] updateFromFrontendComponents - 更新后组件数:', this._currentDocument.view.components.length);
     }
 
     /**
@@ -511,7 +517,46 @@ export class HmlController {
      */
     public prepareComponentsForFrontend(document: HmlDocument): Component[] {
         // 格式已统一，直接返回所有组件
-        return document.view.components || [];
+        const components = document.view.components || [];
+        
+        console.log('[HmlController] prepareComponentsForFrontend - 原始组件数量:', components.length);
+        components.forEach(c => {
+            console.log(`  [原始] ${c.type}(id=${c.id}, parent=${c.parent || 'null'}, children=[${c.children?.join(', ') || ''}])`);
+        });
+        
+        // 确保父子关系一致性
+        this._ensureParentChildConsistency(components);
+        
+        console.log('[HmlController] prepareComponentsForFrontend - 修复后组件状态:');
+        components.forEach(c => {
+            console.log(`  [修复] ${c.type}(id=${c.id}, parent=${c.parent || 'null'}, children=[${c.children?.join(', ') || ''}])`);
+        });
+        
+        return components;
+    }
+    
+    /**
+     * 确保父子关系一致性
+     * 如果子组件有parent，确保父组件的children数组包含该子组件
+     */
+    private _ensureParentChildConsistency(components: Component[]): void {
+        const componentMap = new Map<string, Component>();
+        components.forEach(c => componentMap.set(c.id, c));
+        
+        components.forEach(component => {
+            if (component.parent) {
+                const parent = componentMap.get(component.parent);
+                if (parent) {
+                    if (!parent.children) {
+                        parent.children = [];
+                    }
+                    if (!parent.children.includes(component.id)) {
+                        console.log(`  [修复] 将 ${component.id} 添加到父组件 ${parent.id} 的children数组`);
+                        parent.children.push(component.id);
+                    }
+                }
+            }
+        });
     }
 
     /**
