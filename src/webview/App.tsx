@@ -27,6 +27,18 @@ const App: React.FC = () => {
 
   // 安全初始化VSCode API（确保只使用已有的实例）
   useEffect(() => {
+    // 立即打开 DevTools（调试用）
+    // @ts-ignore
+    if (window.vscodeAPI) {
+      setTimeout(() => {
+        // @ts-ignore
+        if (window.vscodeAPI && window.chrome && (window.chrome as any).webview) {
+          // @ts-ignore
+          (window.chrome as any).webview.openDevTools();
+        }
+      }, 1000);
+    }
+
     // 添加错误处理
     const handleGlobalError = (e: ErrorEvent) => {
       console.error('[HoneyGUI Designer] Global error:', e.error);
@@ -56,12 +68,20 @@ const App: React.FC = () => {
 
       switch (message.command) {
         case 'loadHml':
+          console.log('[Webview App] 接收到 loadHml 消息');
+          console.log('[Webview App] 接收到的组件数量:', message.components?.length || 0);
           if (message.components) {
-            setComponents(message.components);
+            console.log('[Webview App] 接收到的组件详情:',
+              message.components.map((c: any) => `${c.type}(id=${c.id})`).join(', '));
           }
+
+          // 先设置配置，再设置组件（避免配置初始化创建默认组件）
           setProjectConfig(message.projectConfig || null);
           if (message.designerConfig?.canvasBackgroundColor) {
             setCanvasBackgroundColor(message.designerConfig.canvasBackgroundColor);
+          }
+          if (message.components) {
+            setComponents(message.components);
           }
           break;
 
@@ -149,10 +169,16 @@ const App: React.FC = () => {
     // 获取当前画布中所有已存在的组件列表
     let components = useDesignerStore.getState().components;
 
-    // 查找画布中的根screen容器(顶级screen组件)
-    let screenContainer = components.find(comp =>
-      comp.type === 'hg_screen' && comp.parent === null
-    );
+    const hasScreen = components.length > 0 && components.some(c => c.type === 'hg_screen');
+    console.log(`[拖放] 组件总数: ${components.length}, 是否有screen: ${hasScreen}`);
+    if (components.length > 0) {
+      console.log('[拖放] 当前画布中的组件:', components.map(c => `${c.type}(id=${c.id}, parent=${c.parent})`).join(', '));
+    } else {
+      console.log('[拖放] 当前画布中没有任何组件！');
+    }
+
+    // 查找画布中的screen容器（任何screen，不限制parent）
+    let screenContainer = components.find(comp => comp.type === 'hg_screen');
 
     // 如果没有找到screen容器，自动创建一个
     if (!screenContainer) {
@@ -162,7 +188,7 @@ const App: React.FC = () => {
       const projectConfig = useDesignerStore.getState().projectConfig;
       const { width = 800, height = 480 } = useDesignerStore.getState().canvasSize;
 
-      // 创建screen组件
+      // 创建screen组件（使用数据源中的screen或创建新的）
       const screenId = `hg_screen_${Date.now()}`;
       screenContainer = {
         id: screenId,
@@ -189,6 +215,8 @@ const App: React.FC = () => {
       useDesignerStore.getState().addComponent(screenContainer, { save: false });
 
       console.info(`[拖放] 自动创建screen容器: ${screenId} (${width}x${height})`);
+    } else {
+      console.log(`[拖放] 找到现有screen容器: ${screenContainer.id}`);
     }
 
     // 计算鼠标释放时的画布坐标位置

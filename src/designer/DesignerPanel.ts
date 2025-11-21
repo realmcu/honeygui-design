@@ -702,23 +702,33 @@ private _createNewDocument(): void {
     public async loadFromDocument(document: vscode.TextDocument): Promise<void> {
         this._filePath = document.uri.fsPath;
 
+        logger.info(`[DesignerPanel] loadFromDocument: 开始加载文件 ${this._filePath}`);
+
         try {
             const content = document.getText();
+            logger.debug(`[DesignerPanel] 文件内容长度: ${content.length} 字符`);
 
             // 解析文档内容
+            logger.debug(`[DesignerPanel] 解析HML内容...`);
             const hmlDocument = this._hmlController.parseContent(content);
+            logger.info(`[DesignerPanel] 解析完成，获得 ${hmlDocument.view?.components?.length || 0} 个组件`);
 
             // 序列化文档为字符串
             const hmlContent = this._hmlController.serializeDocument();
+            logger.debug(`[DesignerPanel] 序列化完成，内容长度: ${hmlContent.length}`);
 
             // 为前端准备组件数据
+            logger.debug(`[DesignerPanel] 准备前端组件数据...`);
             const frontendComponents = this._hmlController.prepareComponentsForFrontend(hmlDocument);
+            logger.info(`[DesignerPanel] 前端组件数据准备完成，共 ${frontendComponents.length} 个组件`);
 
             // 使用统一的配置加载器
             const projectConfig = ProjectConfigLoader.loadConfig(document.uri.fsPath);
             const designerConfig = ProjectConfigLoader.getDesignerConfig(projectConfig);
+            logger.debug(`[DesignerPanel] 项目配置加载完成`);
 
             // 发送内容到 Webview
+            logger.info(`[DesignerPanel] 发送 loadHml 消息到 Webview，包含 ${frontendComponents.length} 个组件`);
             this._panel.webview.postMessage({
                 command: 'loadHml',
                 content: hmlContent,
@@ -737,6 +747,7 @@ private _createNewDocument(): void {
             // 更新面板标题
             const fileName = path.basename(document.fileName);
             this._panel.title = `HoneyGUI Designer: ${fileName}`;
+            logger.info(`[DesignerPanel] 文件加载完成并发送到前端: ${fileName}`);
 
         } catch (error) {
             logger.error(`从文档加载HML失败: ${error}`);

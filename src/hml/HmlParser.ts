@@ -24,6 +24,8 @@ export class HmlParser {
    */
   parse(content: string): HmlDocument {
     try {
+      console.log(`[HmlParser] 开始解析HML内容，内容长度: ${content.length} 字符`);
+
       // 使用xml-js解析XML内容
       const result = xml2js(content, {
         compact: true,
@@ -37,19 +39,24 @@ export class HmlParser {
         attributesKey: '_attributes'
       });
 
+      console.log(`[HmlParser] xml2js 解析完成`);
+
       // 检查解析结果
       if (!result || typeof result !== 'object') {
-        console.error('HML解析错误: 无效的XML格式');
+        console.error('[HmlParser] HML解析错误: 无效的XML格式');
         return this._getDefaultDocument();
       }
 
       // 确保根标签是hml
       const hmlElement = (result as any).hml || result;
+      console.log(`[HmlParser] 根元素类型: ${typeof hmlElement}, 键: ${Object.keys(hmlElement || {})}`);
 
       // 解析元数据
+      console.log(`[HmlParser] 解析 meta 部分...`);
       const meta = this._parseMetaXmlJs((hmlElement as any).meta);
 
       // 解析视图
+      console.log(`[HmlParser] 解析 view 部分...`);
       const view = this._parseViewXmlJs((hmlElement as any).view, meta);
 
       // 构建完整的文档对象（新格式）
@@ -58,9 +65,21 @@ export class HmlParser {
         view
       };
 
+      console.log(`[HmlParser] HML解析成功，共获得 ${view.components?.length || 0} 个组件`);
+      if (view.components && view.components.length > 0) {
+        console.log(`[HmlParser] 组件详情:`,
+          view.components.map((c: Component) => ({
+            id: c.id,
+            type: c.type,
+            name: c.name,
+            parent: c.parent,
+            childrenCount: c.children?.length || 0
+          })));
+      }
+
       return document;
     } catch (error) {
-      console.error('HML解析过程中出错:', error);
+      console.error('[HmlParser] HML解析过程中出错:', error);
       return this._getDefaultDocument();
     }
   }
@@ -178,16 +197,15 @@ export class HmlParser {
             const elements = Array.isArray(element) ? element : [element];
             elements.forEach((child: any) => {
               const component = this._parseComponentXmlJs(key, child, componentMap, undefined);
-              if (!component.parent) {
-                components.push(component);
-              }
+              // 所有顶层组件都应添加到列表，无论是否有parent
+              components.push(component);
             });
           }
         }
       });
     }
 
-    view.components = components;
+    view.components = Array.from(componentMap.values());
     return view;
   }
 

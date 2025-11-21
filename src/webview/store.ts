@@ -271,6 +271,12 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     const state = get();
     if (!vscodeAPI) return;
 
+    console.log('[Webview Store] 准备保存到文件');
+    console.log('[Webview Store] 当前组件数量:', state.components.length);
+    console.log('[Webview Store] 当前组件详情:',
+      state.components.map((c: any) =>
+        `${c.type}(id=${c.id})`).join(', '));
+
     vscodeAPI.postMessage({
       command: 'save',
       content: {
@@ -365,27 +371,15 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   // Project configuration
   setProjectConfig: (config) => {
     set({ projectConfig: config, canvasSize: parseResolutionStr(config?.resolution) });
-    const state = get();
-    const hasScreen = state.components.some(c => c.type === 'hg_screen');
-    if (!hasScreen) {
-      const screen = createDefaultScreen(config?.resolution);
-      set({ components: [screen, ...state.components] });
-    }
+    // 不再自动创建默认screen，信任从后端加载的数据
+    // 如果确实需要screen，后端会在loadHml时提供
   },
 
   // Initialize with project config
   initializeWithProjectConfig: (config) => {
-    const resolution = config?.resolution;
-    const current = get().components;
-    let components = current;
-    if (!current || current.length === 0) {
-      components = resolution ? [createDefaultScreen(resolution)] : [createDefaultScreen()];
-    } else if (!current.some(c => c.type === 'hg_screen')) {
-      const screen = createDefaultScreen(resolution);
-      components = [screen, ...current];
-    }
+    // 信任从后端加载的组件数据，不再自动创建默认screen
+    // 后端会在loadHml时提供正确的组件树
     set({
-      components,
       projectConfig: config,
       selectedComponent: null,
       hoveredComponent: null,
@@ -394,7 +388,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       gridSize: 8,
       snapToGrid: true,
       canvasOffset: { x: 0, y: 0 },
-      canvasSize: parseResolutionStr(resolution),
+      canvasSize: parseResolutionStr(config?.resolution),
       canvasBackgroundColor: '#f0f0f0',
       editingMode: 'select',
     });

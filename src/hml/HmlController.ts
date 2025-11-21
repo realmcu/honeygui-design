@@ -58,15 +58,20 @@ export class HmlController {
      */
     public parseContent(content: string): HmlDocument {
         try {
+            console.log(`[HmlController] parseContent: 准备解析 HML 内容`);
+
             const document = this.parser.parse(content);
-            
+
             // 更新当前文档状态
             this._currentDocument = document;
             this._documentVersion++;
-            
+
+            console.log(`[HmlController] parseContent: 解析完成，文档版本号: ${this._documentVersion}`);
+            console.log(`[HmlController] 当前文档状态 - 组件数量: ${document.view?.components?.length || 0}`);
+
             return document;
         } catch (error) {
-            console.error('解析HML内容失败:', error);
+            console.error('[HmlController] 解析HML内容失败:', error);
             throw new Error(`解析HML内容失败: ${error instanceof Error ? error.message : '未知错误'}`);
         }
     }

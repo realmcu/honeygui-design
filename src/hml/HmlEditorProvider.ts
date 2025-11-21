@@ -45,8 +45,20 @@ export class HmlEditorProvider implements vscode.CustomTextEditorProvider {
 
         // 加载文档内容到设计器
         console.log(`[HmlEditorProvider] 开始加载文档内容到设计器`);
+        console.log(`[HmlEditorProvider] 加载的文件路径: ${document.uri.fsPath}`);
+        console.log(`[HmlEditorProvider] 加载的实际内容:\n${'='.repeat(50)}\n${document.getText()}\n${'='.repeat(50)}`);
+
         await designerPanel.loadFromDocument(document);
+
         console.log(`[HmlEditorProvider] 文档内容加载完成`);
+        console.log(`[HmlEditorProvider] 加载到内存内存里面的内容如下:`);
+        const hmlController = (designerPanel as any)._hmlController;
+        if (hmlController && hmlController.currentDocument) {
+            console.log(`[HmlEditorProvider] 内存中的组件数量: ${hmlController.currentDocument.view?.components?.length || 0}`);
+            const components = hmlController.currentDocument.view?.components || [];
+            console.log(`[HmlEditorProvider] 内存中的组件列表:`,
+                components.map((c: any) => `${c.type}(id=${c.id}, name=${c.name}, parent=${c.parent})`).join(', '));
+        }
 
         // 监听保存事件（排除我们自己的保存操作）
         const changeDocumentSubscription = vscode.workspace.onDidSaveTextDocument(doc => {
