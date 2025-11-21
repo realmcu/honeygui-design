@@ -1,12 +1,14 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import { logger } from '../utils/Logger';
 import { HmlController } from '../hml/HmlController';
 import { Component } from '../hml/types';
 import { CodeGeneratorFactory, CodeGeneratorOptions } from '../codegen/CodeGenerator';
 import { WebviewUtils } from '../common/WebviewUtils';
 import { ProjectConfigLoader } from '../utils/ProjectConfigLoader';
 import { HmlContentComparator } from '../utils/HmlContentComparator';
+import { SaveManager } from './SaveManager';
 
 /**
  * 设计器Webview面板管理类
@@ -20,24 +22,23 @@ export class DesignerPanel {
     private readonly _context: vscode.ExtensionContext;
     private _disposables: vscode.Disposable[] = [];
     private readonly _hmlController: HmlController;
+    private readonly _saveManager: SaveManager;
     private _filePath: string | undefined;
-    private _isSaving = false; // 添加保存状态标志，防止文件系统事件触发重新加载
     private _lastSerializedSnapshot: string | null = null;
-    private _contentComparator: typeof HmlContentComparator;
 
     /**
-     * 设置保存状态
+     * 获取当前的保存事务ID
+     * @returns 当前事务ID（0表示没有正在进行的保存操作）
      */
-    public setSaving(isSaving: boolean): void {
-        this._isSaving = isSaving;
-        console.log('[DesignerPanel] 设置isSaving=' + isSaving);
+    public getSaveTransactionId(): number {
+        return this._saveManager.getCurrentTransactionId();
     }
 
     /**
      * 判断是否正在保存
      */
     public get isSaving(): boolean {
-        return this._isSaving;
+        return this._saveManager.isInTransaction();
     }
 
     /**
@@ -94,7 +95,7 @@ export class DesignerPanel {
         this._extensionUri = context.extensionUri;
         this._context = context;
         this._hmlController = new HmlController();
-        this._contentComparator = HmlContentComparator;
+        this._saveManager = new SaveManager(this._hmlController);
 
         // 如果有文档，设置文件路径
         if (document) {
@@ -123,18 +124,18 @@ export class DesignerPanel {
             message => {
                 switch (message.command) {
                     case 'save':
-                        console.log('[HoneyGUI Designer] 收到保存请求，组件数量:', message?.content?.components?.length || 0);
+                        logger.debug(`[HoneyGUI Designer] 收到保存请求，组件数量: ${message?.content?.components?.length || 0}`);
                         try {
                             if (message?.content?.components && Array.isArray(message.content.components)) {
-                                console.log('[HoneyGUI Designer] 更新组件到HmlController...');
+                                logger.debug('[HoneyGUI Designer] 更新组件到HmlController...');
                                 this._hmlController.updateFromFrontendComponents(message.content.components);
-                                console.log('[HoneyGUI Designer] 组件更新完成，当前文档组件数:', this._hmlController.currentDocument?.view?.components?.length || 0);
+                                logger.debug(`[HoneyGUI Designer] 组件更新完成，当前文档组件数: ${this._hmlController.currentDocument?.view?.components?.length || 0}`);
                             }
                         } catch (syncErr) {
-                            console.warn('[HoneyGUI Designer] 前端组件同步失败:', syncErr);
+                            logger.warn(`[HoneyGUI Designer] 前端组件同步失败: ${syncErr}`);
                         }
                         const serializedContent = this._hmlController.serializeDocument();
-                        console.log('[HoneyGUI Designer] 序列化完成，内容长度:', serializedContent.length);
+                        logger.debug(`[HoneyGUI Designer] 序列化完成，内容长度: ${serializedContent.length}`);
                         this._saveHml(message.content?.raw ?? serializedContent);
                         break;
                     case 'preview':
@@ -211,7 +212,7 @@ export class DesignerPanel {
                 htmlPath = vscode.Uri.joinPath(sourcePath, 'index.html');
             } else {
                 // 如果都不存在，使用内置的最小HTML模板
-                console.warn('[HoneyGUI Designer] 未找到HTML文件，使用内置最小模板');
+                logger.warn(`[HoneyGUI Designer] 未找到HTML文件，使用内置最小模板`);
                 return this._getMinimalHtmlTemplate(webview);
             }
 
@@ -244,7 +245,7 @@ export class DesignerPanel {
                     }
                 }
             } catch (e) {
-                console.warn('[HoneyGUI Designer] 无法读取资源文件列表:', e);
+                logger.warn(`[HoneyGUI Designer] 无法读取资源文件列表: ${e}`);
             }
 
             // 5. 替换资源URL
@@ -260,15 +261,25 @@ export class DesignerPanel {
                 htmlContent = htmlContent.replace('</body>', `<script src="${scriptUri}"></script></body>`);
             }
 
-            console.log('[HoneyGUI Designer] Webview 初始化:');
-            console.log('  使用路径:', onDiskPath.toString());
-            if (stylesUri) console.log('  Styles:', stylesUri.toString());
-            if (scriptUri) console.log('  Script:', scriptUri.toString());
+            logger.debug(`[HoneyGUI Designer] Webview 初始化:`);
+            logger.debug(`  使用路径: ${onDiskPath.toString()}`);
+            if (stylesUri) logger.debug(`  Styles: ${stylesUri.toString()}`);
+            if (scriptUri) logger.debug(`  Script: ${scriptUri.toString()}`);
 
-            // 6. 添加CSP meta标签 (放宽 CSP 以允许 React 运行)
+            // 6. 添加CSP meta标签（严格的CSP策略）
+            // 注意：移除了 'unsafe-eval'，React 生产构建不需要它
+            // style-src 仍需要 'unsafe-inline'，因为 React 可能会动态注入样式
             const nonce = this._getNonce();
-            const cspMetaTag = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} https: data:; script-src ${webview.cspSource} 'unsafe-eval' 'unsafe-inline'; style-src ${webview.cspSource} 'unsafe-inline'; font-src ${webview.cspSource}; connect-src ${webview.cspSource};">`;
-            
+            const cspMetaTag = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} https: data:; script-src ${webview.cspSource} 'nonce-${nonce}'; style-src ${webview.cspSource} 'unsafe-inline'; font-src ${webview.cspSource}; connect-src ${webview.cspSource};">`;
+
+            // 将 nonce 添加到 script 标签（如果有）
+            if (scriptUri) {
+                htmlContent = htmlContent.replace(
+                    /<script([^>]*)src=\"([^\"]+)\"([^>]*)><\/script>/g,
+                    `<script$1src="$2"$3 nonce="${nonce}"></script>`
+                );
+            }
+
             // 确保CSP标签被添加，如果已经有则替换
             if (htmlContent.includes('<meta http-equiv="Content-Security-Policy"')) {
                 htmlContent = htmlContent.replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/, cspMetaTag);
@@ -278,7 +289,7 @@ export class DesignerPanel {
 
             return htmlContent;
         } catch (error) {
-            console.error('[HoneyGUI Designer] 加载HTML内容时出错:', error);
+            logger.error(`[HoneyGUI Designer] 加载HTML内容时出错: ${error}`);
             
             // 无论发生什么错误，都返回最小可用的HTML模板
             return this._getMinimalHtmlTemplate(webview, error instanceof Error ? error.message : '未知错误');
@@ -372,25 +383,17 @@ export class DesignerPanel {
             <script nonce="${nonce}">
                 // 基础的VSCode消息通信功能
                 const vscode = acquireVsCodeApi();
-                
+
                 function sendMessage(command, data) {
                     vscode.postMessage({
                         command: command,
                         ...data
                     });
                 }
-                
-                // 监听VSCode消息
+
                 window.addEventListener('message', event => {
                     const message = event.data;
-                    console.log('收到VSCode消息:', message);
-                    
-                    // 可以根据需要扩展消息处理
-                    switch (message.command) {
-                        case 'updateContent':
-                            console.log('更新内容:', message.content);
-                            break;
-                    }
+                    logger.debug("VSCode message: " + JSON.stringify(message));
                 });
             </script>
         </body>
@@ -529,112 +532,68 @@ export class DesignerPanel {
 
     /**
      * 保存HML内容
+     * 使用SaveManager处理保存逻辑
      */
     private async _saveHml(content: string): Promise<void> {
         try {
-            console.log('[HoneyGUI Designer] 开始保存HML文件...');
-            
-            // 开始新的事务，获取事务ID
-            const transactionId = this._hmlController.beginSaveTransaction();
-            console.log(`[HoneyGUI Designer] 开始保存事务，ID: ${transactionId}`);
-            
-            // 设置保存状态标志
-            this._isSaving = true;
+            logger.info('[DesignerPanel] 开始保存HML文件');
+
+            // 保存当前序列化快照（用于后续对比）
             this._lastSerializedSnapshot = content;
 
-            // 首先尝试解析和验证HML内容
-            try {
-                this._hmlController.parseContent(content);
-                console.log('[HoneyGUI Designer] HML内容验证通过');
-            } catch (parseError) {
-                console.error('HML内容验证失败:', parseError);
-                vscode.window.showErrorMessage(`HML内容格式错误: ${parseError instanceof Error ? parseError.message : '未知错误'}`);
-                this._isSaving = false;
-                return;
-            }
-
             if (!this._filePath) {
-                console.log('[HoneyGUI Designer] 没有文件路径，提示用户选择保存位置');
-                // 如果没有当前文件路径，让用户选择保存位置
-                await this._promptSaveLocation(content);
-                this._isSaving = false;
-                return;
-            }
+                logger.info('[DesignerPanel] 没有文件路径，提示用户选择保存位置');
 
-            // 使用HML控制器保存文件
-            const filePath = this.currentFilePath;
-            console.log('[HoneyGUI Designer] 文件路径:', filePath);
-            if (filePath) {
-                const start = Date.now();
-                console.log('[HoneyGUI Designer] 调用saveDocument...');
-                await this._hmlController.saveDocument(filePath);
-                console.log('[HoneyGUI Designer] saveDocument完成');
-                // 更新VSCode的文件系统缓存
-                await vscode.workspace.fs.stat(vscode.Uri.file(filePath));
-                const cost = Date.now() - start;
-                console.log(`[HoneyGUI Designer] 保存成功，用时 ${cost}ms`);
-                
-                // 验证事务ID，确保保存过程完整性
-                const isValid = this._hmlController.validateSaveTransaction(transactionId);
-                if (!isValid) {
-                    console.warn(`[HoneyGUI Designer] 保存事务验证失败，ID: ${transactionId}`);
+                // 提示用户选择保存位置
+                const selectedPath = await this._saveManager.promptSaveLocation(content);
+                if (selectedPath) {
+                    this._filePath = selectedPath;
+
+                    // 更新面板标题
+                    const fileName = path.basename(selectedPath);
+                    this._panel.title = `HoneyGUI 设计器 - ${fileName}`;
                 } else {
-                    console.log(`[HoneyGUI Designer] 保存事务验证成功，ID: ${transactionId}`);
+                    logger.info('[DesignerPanel] 用户取消保存');
+                    return;
                 }
-                
-                try {
-                    const loggerChannel = vscode.window.createOutputChannel('HoneyGUI Save');
-                    loggerChannel.appendLine(`[HoneyGUI Save] 保存完成: ${path.basename(filePath)} 用时 ${cost}ms`);
-                    loggerChannel.appendLine(`[HoneyGUI Save] 位置: ${filePath}`);
-                    loggerChannel.appendLine(`[HoneyGUI Save] 事务ID: ${transactionId}`);
-                } catch {}
-                vscode.window.showInformationMessage(`设计已保存到 ${path.basename(filePath)}`);
-
-                // 重置保存状态
-                this._isSaving = false;
-                console.log('[HoneyGUI Designer] 保存状态重置，事务ID机制完成');
             }
+
+            // 执行保存
+            const filePath = this._filePath;
+            if (!filePath) {
+                throw new Error('文件路径无效');
+            }
+
+            const transactionId = this._saveManager.beginTransaction(filePath, content);
+            logger.debug(`[DesignerPanel] 保存事务ID: ${transactionId}`);
+
+            await this._saveManager.executeSave(filePath, content, transactionId);
+
+            logger.info(`[DesignerPanel] 保存成功: ${path.basename(filePath)}`);
 
         } catch (error) {
-            console.error('保存文件失败:', error);
+            logger.error(`[DesignerPanel] 保存失败: ${error}`);
             vscode.window.showErrorMessage(`保存文件失败: ${error instanceof Error ? error.message : '未知错误'}`);
-            this._isSaving = false;
         }
     }
-    
+
     /**
-     * 提示用户选择保存位置
+     * 提示用户选择保存位置（已弃用，由SaveManager处理）
+     * @deprecated 使用SaveManager.promptSaveLocation替代
      */
     private async _promptSaveLocation(content?: string): Promise<boolean> {
+        logger.warn('[DesignerPanel] _promptSaveLocation 已弃用，将由SaveManager处理');
         try {
-            // 显示保存对话框
-            const uri = await vscode.window.showSaveDialog({
-                defaultUri: vscode.Uri.file('untitled.hml'),
-                filters: {
-                    'HML 文件': ['hml'],
-                    '所有文件': ['*']
-                }
-            });
-            
-            if (uri) {
-                // 使用HML控制器保存文件
-                if (content) {
-                    this._hmlController.parseContent(content);
-                }
-                await this._hmlController.saveDocument(uri.fsPath);
-                this._filePath = uri.fsPath;
-                
-                // 更新面板标题
-                const fileName = path.basename(uri.fsPath);
+            const selectedPath = await this._saveManager.promptSaveLocation(content || '');
+            if (selectedPath) {
+                this._filePath = selectedPath;
+                const fileName = path.basename(selectedPath);
                 this._panel.title = `HoneyGUI 设计器 - ${fileName}`;
-                
-                vscode.window.showInformationMessage(`设计已保存到 ${fileName}`);
                 return true;
             }
             return false;
         } catch (error) {
-            console.error('保存文件失败:', error);
-            vscode.window.showErrorMessage(`保存文件失败: ${error instanceof Error ? error.message : '未知错误'}`);
+            logger.error(`[DesignerPanel] 保存位置选择失败: ${error}`);
             return false;
         }
     }
@@ -659,7 +618,7 @@ private async _loadFile(filePath: string): Promise<void> {
         const projectConfig = ProjectConfigLoader.loadConfig(filePath);
         const designerConfig = ProjectConfigLoader.getDesignerConfig(projectConfig);
         
-        console.log('[HoneyGUI Designer] 设计器配置:', designerConfig);
+        logger.debug(`[HoneyGUI Designer] 设计器配置: ${JSON.stringify(designerConfig)}`);
 
         // 发送HML内容和配置信息到Webview，传递转换后的组件数据
         this._panel.webview.postMessage({
@@ -682,7 +641,7 @@ private async _loadFile(filePath: string): Promise<void> {
             this._panel.title = `HoneyGUI 设计器 - ${fileName}`;
             
         } catch (error) {
-            console.error('加载HML文件失败:', error);
+            logger.error(`加载HML文件失败: ${error}`);
             vscode.window.showErrorMessage(`加载HML文件失败: ${error instanceof Error ? error.message : '未知错误'}`);
             
             // 如果加载失败，创建一个新的空白文档
@@ -732,7 +691,7 @@ private _createNewDocument(): void {
             this._filePath = undefined;
 
         } catch (error) {
-            console.error('创建新文档失败:', error);
+            logger.error(`创建新文档失败: ${error}`);
             vscode.window.showErrorMessage(`创建新文档失败: ${error instanceof Error ? error.message : '未知错误'}`);
         }
     }
@@ -780,7 +739,7 @@ private _createNewDocument(): void {
             this._panel.title = `HoneyGUI Designer: ${fileName}`;
 
         } catch (error) {
-            console.error('从文档加载HML失败:', error);
+            logger.error(`从文档加载HML失败: ${error}`);
             vscode.window.showErrorMessage(`加载HML文件失败: ${error instanceof Error ? error.message : '未知错误'}`);
 
             // 如果加载失败，创建一个新的空白文档
@@ -792,15 +751,15 @@ private _createNewDocument(): void {
      * 从文档更新内容（当文档在外部被修改时）
      */
     public async updateFromDocument(): Promise<void> {
-        // 如果正在保存，不执行更新（避免我们自己的保存操作触发重新加载）
-        if (this._isSaving) {
-            console.log('[DesignerPanel] 正在保存中，跳过updateFromDocument');
+        // 如果正在保存事务中，不执行更新（避免我们自己的保存操作触发重新加载）
+        if (this.getSaveTransactionId() > 0) {
+            logger.debug('[DesignerPanel] 正在保存事务中，跳过updateFromDocument');
             return;
         }
 
         if (this._filePath) {
             try {
-                console.log('[DesignerPanel] updateFromDocument: 重新加载文件', this._filePath);
+                logger.debug(`[DesignerPanel] updateFromDocument: 重新加载文件 ${this._filePath}`);
                 const document = await vscode.workspace.openTextDocument(this._filePath);
                 const diskContent = document.getText();
                 
@@ -812,23 +771,23 @@ private _createNewDocument(): void {
                     );
                     
                     if (comparison.isEqual) {
-                        console.log('[DesignerPanel] 智能对比：保存后的内容与内存一致，跳过重载');
-                        console.log(`[DesignerPanel] 对比详情: ${comparison.reason}`);
+                        logger.debug('[DesignerPanel] 智能对比：保存后的内容与内存一致，跳过重载');
+                        logger.debug(`[DesignerPanel] 对比详情: ${comparison.reason}`);
                         // 清空快照，避免后续误匹配
                         this._lastSerializedSnapshot = null;
                         return;
                     } else {
-                        console.log('[DesignerPanel] 智能对比：文件内容发生变化');
-                        console.log(`[DesignerPanel] 差异原因: ${comparison.reason}`);
+                        logger.debug('[DesignerPanel] 智能对比：文件内容发生变化');
+                        logger.debug(`[DesignerPanel] 差异原因: ${comparison.reason}`);
                     }
                 } else {
-                    console.log('[DesignerPanel] 无快照，直接加载文件内容');
+                    logger.debug('[DesignerPanel] 无快照，直接加载文件内容');
                 }
                 
-                console.log('[DesignerPanel] 重新加载到设计器');
+                logger.debug('[DesignerPanel] 重新加载到设计器');
                 await this.loadFromDocument(document);
             } catch (error) {
-                console.error('更新文档失败:', error);
+                logger.error(`更新文档失败: ${error}`);
             }
         }
     }
@@ -844,7 +803,7 @@ private _createNewDocument(): void {
             // TODO: 实现预览逻辑
             vscode.window.showInformationMessage('预览功能开发中...');
         } catch (error) {
-            console.error('预览失败:', error);
+            logger.error(`预览失败: ${error}`);
             vscode.window.showErrorMessage(`预览失败: ${error instanceof Error ? error.message : '未知错误'}`);
         }
     }
@@ -968,7 +927,7 @@ private _createNewDocument(): void {
             }
 
         } catch (error) {
-            console.error('代码生成错误:', error);
+            logger.error(`代码生成错误: ${error}`);
             vscode.window.showErrorMessage(`代码生成过程中发生错误: ${error instanceof Error ? error.message : '未知错误'}`);
         }
     }
@@ -1011,7 +970,7 @@ private _createNewDocument(): void {
                 });
             }
         } catch (error) {
-            console.error('添加组件失败:', error);
+            logger.error(`添加组件失败: ${error}`);
             this._panel.webview.postMessage({
                 command: 'componentAdded',
                 success: false,
@@ -1042,7 +1001,7 @@ private _createNewDocument(): void {
                 });
             }
         } catch (error) {
-            console.error('更新组件失败:', error);
+            logger.error(`更新组件失败: ${error}`);
             this._panel.webview.postMessage({
                 command: 'componentUpdated',
                 success: false,
@@ -1073,7 +1032,7 @@ private _createNewDocument(): void {
                 });
             }
         } catch (error) {
-            console.error('删除组件失败:', error);
+            logger.error(`删除组件失败: ${error}`);
             this._panel.webview.postMessage({
                 command: 'componentDeleted',
                 success: false,
@@ -1111,8 +1070,13 @@ private _createNewDocument(): void {
 
         // 清理所有监听器
         this._disposables.forEach(d => d.dispose());
-        
+
+        // 清理保存管理器
+        this._saveManager.dispose();
+
         // 销毁面板
         this._panel.dispose();
+
+        logger.info('[DesignerPanel] DesignerPanel 已销毁');
     }
 }

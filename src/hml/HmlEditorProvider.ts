@@ -50,7 +50,12 @@ export class HmlEditorProvider implements vscode.CustomTextEditorProvider {
 
         // 监听保存事件（排除我们自己的保存操作）
         const changeDocumentSubscription = vscode.workspace.onDidSaveTextDocument(doc => {
-            if (doc.uri.toString() === document.uri.toString() && !designerPanel.isSaving) {
+            // 使用 fsPath 进行可靠的文件路径对比
+            // 避免使用 toString() 可能导致的格式和编码问题
+            const isSameUri = doc.uri.fsPath === document.uri.fsPath;
+            const isInDesignSavingTransaction = designerPanel.getSaveTransactionId() > 0;
+
+            if (isSameUri && !isInDesignSavingTransaction) {
                 console.log('[HmlEditorProvider] 检测到保存事件，更新设计器...');
                 designerPanel.updateFromDocument();
             }

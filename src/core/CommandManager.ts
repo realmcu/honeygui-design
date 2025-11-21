@@ -126,7 +126,7 @@ export class CommandManager {
                 
                 // 先关闭当前活动的编辑器
                 const activeEditor = vscode.window.activeTextEditor;
-                if (activeEditor && activeEditor.document.uri.toString() === uri.toString()) {
+                if (activeEditor && activeEditor.document.uri.fsPath === uri.fsPath) {
                     logger.info('关闭当前活动的文本编辑器');
                     await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
                 }

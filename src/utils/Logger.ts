@@ -9,6 +9,9 @@ export class Logger {
     private logLevel: 'debug' | 'info' | 'warn' | 'error' = 'info';
     private cachedLogs: string[] = [];
 
+    // 日志缓存最大条目数，防止内存泄漏
+    private readonly MAX_LOG_ENTRIES = 5000;
+
     constructor(name: string = 'HoneyGUI') {
         this.outputChannel = vscode.window.createOutputChannel(name, { log: true });
     }
@@ -18,7 +21,14 @@ export class Logger {
         return `[${timestamp}] [${level.toUpperCase()}] ${message}`;
     }
 
-    private cacheAndLog(level: string, formatted: string): void {
+private cacheAndLog(level: string, formatted: string): void {
+        // 检查缓存是否超过最大限制，如果超过删除最旧的日志
+        if (this.cachedLogs.length >= this.MAX_LOG_ENTRIES) {
+            // 移除最旧的20%日志，避免每次删除单个元素带来的性能开销
+            const removeCount = Math.floor(this.MAX_LOG_ENTRIES * 0.2);
+            this.cachedLogs.splice(0, removeCount);
+        }
+
         this.cachedLogs.push(formatted);
         switch (level) {
             case 'debug':

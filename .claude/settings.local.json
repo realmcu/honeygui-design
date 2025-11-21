@@ -7,7 +7,8 @@
       "Bash(/home/howie_wang/workspace/honeygui-design/src/hml/HmlController.ts)",
       "Bash(/tmp/hmlcontroller_part1.ts)",
       "Bash(cat:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(__NEW_LINE__ echo \"Fixed remaining logger errors\")"
     ],
     "deny": [],
     "ask": []
