@@ -224,11 +224,29 @@ const App: React.FC = () => {
       // 根据鼠标位置查找目标容器
       let targetContainer: Component | null = null;
       
+      // 计算组件的绝对位置（考虑父组件的位置）
+      const getAbsolutePosition = (comp: Component): { x: number; y: number } => {
+        if (!comp.parent) {
+          return { x: comp.position.x, y: comp.position.y };
+        }
+        const parentComp = components.find(c => c.id === comp.parent);
+        if (!parentComp) {
+          return { x: comp.position.x, y: comp.position.y };
+        }
+        const parentPos = getAbsolutePosition(parentComp);
+        return {
+          x: parentPos.x + comp.position.x,
+          y: parentPos.y + comp.position.y
+        };
+      };
+      
       // 遍历所有组件，找到鼠标位置下的最内层容器
       for (const comp of components) {
-        const { x: cx, y: cy, width: cw, height: ch } = comp.position;
+        const absPos = getAbsolutePosition(comp);
+        const { width: cw, height: ch } = comp.position;
+        
         // 检查鼠标是否在组件范围内
-        if (x >= cx && x <= cx + cw && y >= cy && y <= cy + ch) {
+        if (x >= absPos.x && x <= absPos.x + cw && y >= absPos.y && y <= absPos.y + ch) {
           // 如果还没有目标，或者当前组件比已找到的更内层（面积更小）
           if (!targetContainer || (cw * ch < targetContainer.position.width * targetContainer.position.height)) {
             targetContainer = comp;
@@ -242,9 +260,10 @@ const App: React.FC = () => {
       if (targetContainer) {
         parent = targetContainer.id;
         // 转换为相对于目标容器的坐标
-        positionX = Math.max(0, x - targetContainer.position.x);
-        positionY = Math.max(0, y - targetContainer.position.y);
-        console.info(`[拖放] UI组件 ${componentType} 添加到容器 ${targetContainer.id}`);
+        const targetAbsPos = getAbsolutePosition(targetContainer);
+        positionX = Math.max(0, x - targetAbsPos.x);
+        positionY = Math.max(0, y - targetAbsPos.y);
+        console.info(`[拖放] UI组件 ${componentType} 添加到容器 ${targetContainer.id}, 相对坐标(${positionX}, ${positionY})`);
       } else {
         // 没有找到容器，提示用户
         console.error('[拖放] 鼠标位置下没有容器组件');
