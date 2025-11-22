@@ -179,6 +179,7 @@ const App: React.FC = () => {
     e.preventDefault();
 
     console.log('========== [拖放] handleCanvasDrop 开始 ==========');
+    console.log('[拖放] ⚠️ 如果看不到日志，请右键设计器画布 → 检查元素，打开Webview开发者工具');
     
     const componentType = e.dataTransfer.getData('component-type') as ComponentType;
     if (!componentType) {
