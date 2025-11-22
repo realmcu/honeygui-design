@@ -506,13 +506,13 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     
     const secondaryGridStyle = {
       position: 'absolute' as const,
-      background: 'rgba(255, 255, 255, 0.08)',
+      background: 'rgba(255, 255, 255, 0.15)',
       pointerEvents: 'none' as const,
     };
     
     const primaryGridStyle = {
       position: 'absolute' as const,
-      background: 'rgba(255, 255, 255, 0.15)',
+      background: 'rgba(255, 255, 255, 0.25)',
       pointerEvents: 'none' as const,
     };
 
