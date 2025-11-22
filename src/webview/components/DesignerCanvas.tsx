@@ -28,6 +28,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     snapToGrid,
     canvasOffset,
     setCanvasOffset,
+    setComponents,
     updateComponent,
     removeComponent,
     removeComponents,
@@ -156,6 +157,86 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
   };
 
   const handleComponentMouseUp = () => {
+    if (draggedComponent) {
+      const component = components.find(c => c.id === draggedComponent);
+      if (!component) {
+        setDraggedComponent(null);
+        return;
+      }
+      
+      const { x, y, width, height } = component.position;
+      const centerX = x + width / 2;
+      const centerY = y + height / 2;
+      
+      let newParent: string | undefined = undefined;
+      
+      // 查找包含组件中心点的容器（从后往前，优先上层容器）
+      for (let i = components.length - 1; i >= 0; i--) {
+        const container = components[i];
+        if ((container.type === 'hg_view' || container.type === 'hg_panel' || container.type === 'hg_window') &&
+            container.id !== component.id) {
+          const { x: cx, y: cy, width: cw, height: ch } = container.position;
+          if (centerX >= cx && centerX <= cx + cw && 
+              centerY >= cy && centerY <= cy + ch) {
+            newParent = container.id;
+            break;
+          }
+        }
+      }
+      
+      // 如果父容器发生变化，批量更新所有相关组件
+      if (newParent !== component.parent) {
+        const updates: Array<{ id: string; updates: Partial<Component> }> = [];
+        
+        // 1. 从旧父容器的children中移除
+        if (component.parent) {
+          const oldParent = components.find(c => c.id === component.parent);
+          if (oldParent?.children) {
+            updates.push({
+              id: component.parent,
+              updates: { children: oldParent.children.filter(id => id !== draggedComponent) }
+            });
+          }
+        }
+        
+        // 2. 添加到新父容器的children中
+        if (newParent) {
+          const newParentComp = components.find(c => c.id === newParent);
+          if (newParentComp) {
+            updates.push({
+              id: newParent,
+              updates: { children: [...(newParentComp.children || []), draggedComponent] }
+            });
+          }
+        }
+        
+        // 3. 转换坐标系统：从画布绝对坐标转换为相对于新父容器的坐标
+        let newX = x;
+        let newY = y;
+        if (newParent) {
+          const newParentComp = components.find(c => c.id === newParent);
+          if (newParentComp) {
+            newX = x - newParentComp.position.x;
+            newY = y - newParentComp.position.y;
+          }
+        }
+        
+        // 4. 更新组件的parent属性和坐标
+        updates.push({
+          id: draggedComponent,
+          updates: { 
+            parent: newParent,
+            position: { ...component.position, x: newX, y: newY }
+          }
+        });
+        
+        // 批量应用所有更新
+        setComponents(components.map(c => {
+          const update = updates.find(u => u.id === c.id);
+          return update ? { ...c, ...update.updates } : c;
+        }));
+      }
+    }
     setDraggedComponent(null);
   };
 

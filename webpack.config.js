@@ -6,9 +6,6 @@ const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
 
 module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
-  
-  // 缓存目录
-  const cacheDir = path.resolve(__dirname, '.webpack_cache');
 
   return {
     mode: isProduction ? 'production' : 'development',
@@ -104,15 +101,6 @@ module.exports = (env, argv) => {
       maxAssetSize: 800000, // 提高资产大小限制到800KB
       maxEntrypointSize: 1000000, // 提高入口点大小限制到1MB
       hints: isProduction ? 'warning' : false, // 开发环境不显示警告
-    },
-    
-    // 添加持久化缓存以加速构建
-    cache: {
-      type: 'filesystem',
-      buildDependencies: {
-        config: [__filename],
-      },
-      cacheDirectory: cacheDir,
     },
     
     // 错误处理优化
