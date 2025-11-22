@@ -494,30 +494,25 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     }
   };
 
-  // Render grid - Optimized professional style with primary/secondary grid lines
+  // Render grid - Clean and minimal style
   const renderGrid = () => {
     if (!snapToGrid || gridSize <= 0) return null;
 
     const gridElements = [];
     const gridSizePx = gridSize * zoom;
-    // 主网格线间隔（通常是次网格线的倍数）
-    const primaryGridInterval = 5; // 增加间隔使网格更清晰
+    const primaryGridInterval = 5;
     const width = canvasSize.width * zoom;
     const height = canvasSize.height * zoom;
     
-    // 次网格线样式（更细、更柔和）
     const secondaryGridStyle = {
       position: 'absolute' as const,
-      background: 'var(--vscode-editor-background)',
-      opacity: 0.3,
+      background: 'rgba(255, 255, 255, 0.08)',
       pointerEvents: 'none' as const,
     };
     
-    // 主网格线样式（稍粗、更明显但不突兀）
     const primaryGridStyle = {
       position: 'absolute' as const,
-      background: 'var(--vscode-editor-inactiveSelectionBackground)',
-      opacity: 0.6,
+      background: 'rgba(255, 255, 255, 0.15)',
       pointerEvents: 'none' as const,
     };
 
@@ -533,7 +528,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
             ...lineStyle,
             left: x,
             top: 0,
-            width: isPrimaryLine ? 1.2 : 0.8, // 优化线宽，使主网格更明显但不过粗
+            width: 1,
             height: '100%',
           }}
         />
@@ -553,7 +548,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
             left: 0,
             top: y,
             width: '100%',
-            height: isPrimaryLine ? 1.2 : 0.8, // 优化线宽，使主网格更明显但不过粗
+            height: 1,
           }}
         />
       );
@@ -564,30 +559,17 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
 
   // 扩展画布区域，使其成为可滚动的大型画布
   return (
-    <div className="designer-canvas-container" style={{
-      display: 'flex',
-      overflow: 'auto', // 允许容器滚动
-      width: '100%',
-      height: '100%'
-    }}>
-      {/* 可扩展的画布区域，移除固定宽度和高度限制 */}
+    <div className="designer-canvas-container">
+      {/* 可扩展的画布区域 */}
       <div
         ref={canvasRef}
         className="designer-canvas"
         style={{
-            backgroundColor: canvasBackground, // 使用本地状态的背景色
+            backgroundColor: canvasBackground,
             position: 'relative',
-            minWidth: '1200px', // 最小宽度
-            minHeight: '800px', // 最小高度
-            border: '1px solid var(--vscode-panel-border)',
+            minWidth: '100%',
+            minHeight: '100%',
             cursor: isDragging && editingMode === 'select' ? 'grabbing' : editingMode === 'move' ? 'grab' : 'default',
-            backgroundImage: 'linear-gradient(45deg, rgba(0, 0, 0, 0.05) 25%, transparent 25%, transparent 75%, rgba(0, 0, 0, 0.05) 75%, rgba(0, 0, 0, 0.05)), linear-gradient(45deg, rgba(0, 0, 0, 0.05) 25%, transparent 25%, transparent 75%, rgba(0, 0, 0, 0.05) 75%, rgba(0, 0, 0, 0.05))',
-            backgroundSize: '10px 10px',
-            backgroundPosition: '0 0, 5px 5px',
-            backgroundBlendMode: 'overlay',
-            opacity: 1,
-            zIndex: 1,
-            // 确保滚轮事件能够正确触发
             touchAction: 'none',
             WebkitUserSelect: 'none',
             msUserSelect: 'none',
@@ -596,14 +578,11 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
         onMouseDown={handleCanvasMouseDown}
         onMouseMove={handleComponentMouseMove}
         onMouseUp={handleComponentMouseUp}
-        // 使用捕获模式绑定滚轮事件，确保优先处理
         onWheel={(e) => {
-          // 判断是否按下Ctrl键，是则缩放，否则滚动
           if (e.ctrlKey) {
             e.preventDefault();
             handleWheel(e);
           }
-          // 否则允许默认滚动行为
         }}
         onMouseEnter={() => setShowZoomHint(true)}
         onMouseLeave={(e) => {
