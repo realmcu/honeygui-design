@@ -224,37 +224,59 @@ const App: React.FC = () => {
       // 根据鼠标位置查找目标容器
       let targetContainer: Component | null = null;
       
+      console.log(`[拖放] ========== 开始查找目标容器 ==========`);
+      console.log(`[拖放] 鼠标画布坐标: (${x}, ${y})`);
+      console.log(`[拖放] 当前组件总数: ${components.length}`);
+      
       // 计算组件的绝对位置（考虑父组件的位置）
       const getAbsolutePosition = (comp: Component): { x: number; y: number } => {
         if (!comp.parent) {
+          console.log(`[拖放]   组件 ${comp.id} 是顶级组件，位置: (${comp.position.x}, ${comp.position.y})`);
           return { x: comp.position.x, y: comp.position.y };
         }
         const parentComp = components.find(c => c.id === comp.parent);
         if (!parentComp) {
+          console.log(`[拖放]   组件 ${comp.id} 的父组件未找到，使用相对位置: (${comp.position.x}, ${comp.position.y})`);
           return { x: comp.position.x, y: comp.position.y };
         }
         const parentPos = getAbsolutePosition(parentComp);
-        return {
+        const absPos = {
           x: parentPos.x + comp.position.x,
           y: parentPos.y + comp.position.y
         };
+        console.log(`[拖放]   组件 ${comp.id} 父组件位置: (${parentPos.x}, ${parentPos.y}), 相对位置: (${comp.position.x}, ${comp.position.y}), 绝对位置: (${absPos.x}, ${absPos.y})`);
+        return absPos;
       };
       
       // 遍历所有组件，找到鼠标位置下的最内层容器
       for (const comp of components) {
+        console.log(`[拖放] 检查组件: ${comp.type}(${comp.id})`);
         const absPos = getAbsolutePosition(comp);
         const { width: cw, height: ch } = comp.position;
         
+        console.log(`[拖放]   绝对位置: (${absPos.x}, ${absPos.y}), 尺寸: ${cw}x${ch}`);
+        console.log(`[拖放]   范围: X[${absPos.x} - ${absPos.x + cw}], Y[${absPos.y} - ${absPos.y + ch}]`);
+        
         // 检查鼠标是否在组件范围内
-        if (x >= absPos.x && x <= absPos.x + cw && y >= absPos.y && y <= absPos.y + ch) {
+        const inRangeX = x >= absPos.x && x <= absPos.x + cw;
+        const inRangeY = y >= absPos.y && y <= absPos.y + ch;
+        console.log(`[拖放]   鼠标在X范围内: ${inRangeX}, 在Y范围内: ${inRangeY}`);
+        
+        if (inRangeX && inRangeY) {
+          console.log(`[拖放]   ✓ 鼠标在此组件范围内`);
           // 如果还没有目标，或者当前组件比已找到的更内层（面积更小）
           if (!targetContainer || (cw * ch < targetContainer.position.width * targetContainer.position.height)) {
+            console.log(`[拖放]   ✓ 设置为目标容器 (面积: ${cw * ch})`);
             targetContainer = comp;
+          } else {
+            console.log(`[拖放]   × 面积更大，不是最内层 (当前: ${cw * ch}, 已有: ${targetContainer.position.width * targetContainer.position.height})`);
           }
+        } else {
+          console.log(`[拖放]   × 鼠标不在此组件范围内`);
         }
       }
       
-      console.log(`[拖放] 鼠标位置 (${x}, ${y})`);
+      console.log(`[拖放] ========== 查找结果 ==========`);
       console.log(`[拖放] 找到目标容器:`, targetContainer ? `${targetContainer.type}(${targetContainer.id})` : '未找到');
       
       if (targetContainer) {
@@ -263,7 +285,9 @@ const App: React.FC = () => {
         const targetAbsPos = getAbsolutePosition(targetContainer);
         positionX = Math.max(0, x - targetAbsPos.x);
         positionY = Math.max(0, y - targetAbsPos.y);
-        console.info(`[拖放] UI组件 ${componentType} 添加到容器 ${targetContainer.id}, 相对坐标(${positionX}, ${positionY})`);
+        console.log(`[拖放] 目标容器绝对位置: (${targetAbsPos.x}, ${targetAbsPos.y})`);
+        console.log(`[拖放] UI组件相对坐标: (${positionX}, ${positionY})`);
+        console.info(`[拖放] ✓ UI组件 ${componentType} 添加到容器 ${targetContainer.id}`);
       } else {
         // 没有找到容器，提示用户
         console.error('[拖放] 鼠标位置下没有容器组件');
