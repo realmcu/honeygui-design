@@ -69,6 +69,13 @@ const PropertiesPanel: React.FC = () => {
     });
   };
 
+  const handleSelectImagePath = () => {
+    window.vscodeAPI?.postMessage({
+      command: 'selectImagePath',
+      componentId: selectedComponent
+    });
+  };
+
   const renderPropertyEditor = (property: any, value: any, onChange: (value: any) => void) => {
     const inputStyle: React.CSSProperties = {
       width: '100%',
@@ -79,6 +86,36 @@ const PropertiesPanel: React.FC = () => {
       border: '1px solid var(--vscode-input-border)',
       borderRadius: '2px',
     };
+
+    // 特殊处理：image组件的src属性
+    if (property.name === 'src' && selected?.type === 'hg_image') {
+      return (
+        <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
+          <input
+            type="text"
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="图片路径"
+            style={{ ...inputStyle, marginTop: 0, flex: 1 }}
+          />
+          <button
+            onClick={handleSelectImagePath}
+            style={{
+              padding: '4px 8px',
+              backgroundColor: 'var(--vscode-button-background)',
+              color: 'var(--vscode-button-foreground)',
+              border: 'none',
+              borderRadius: '2px',
+              cursor: 'pointer',
+              fontSize: '12px'
+            }}
+            title="选择图片文件"
+          >
+            📁
+          </button>
+        </div>
+      );
+    }
 
     switch (property.type) {
       case 'boolean':

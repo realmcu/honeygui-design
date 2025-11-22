@@ -146,6 +146,9 @@ export class DesignerPanel {
                         logger.debug(`[HoneyGUI Designer] 序列化完成，内容长度: ${serializedContent.length}`);
                         this._saveHml(message.content?.raw ?? serializedContent);
                         break;
+                    case 'selectImagePath':
+                        this._handleSelectImagePath(message.componentId);
+                        break;
                     case 'preview':
                         this._previewUi(message.content);
                         break;
@@ -1107,6 +1110,51 @@ private _createNewDocument(): void {
             });
         } catch (error) {
             logger.error(`[DesignerPanel] reloadCurrentDocument失败: ${error}`);
+        }
+    }
+
+    /**
+     * 处理选择图片路径
+     */
+    private async _handleSelectImagePath(componentId: string): Promise<void> {
+        try {
+            const options: vscode.OpenDialogOptions = {
+                canSelectFiles: true,
+                canSelectFolders: false,
+                canSelectMany: false,
+                filters: {
+                    'Images': ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'webp']
+                },
+                openLabel: '选择图片'
+            };
+
+            const fileUri = await vscode.window.showOpenDialog(options);
+            if (fileUri && fileUri.length > 0) {
+                const filePath = fileUri[0].fsPath;
+                
+                // 获取工作区路径
+                const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+                let relativePath = filePath;
+                
+                if (workspaceFolder) {
+                    // 转换为相对路径
+                    relativePath = path.relative(workspaceFolder.uri.fsPath, filePath);
+                    // 统一使用正斜杠
+                    relativePath = relativePath.replace(/\\/g, '/');
+                }
+                
+                // 发送路径到webview
+                this._panel.webview.postMessage({
+                    command: 'updateImagePath',
+                    componentId: componentId,
+                    path: relativePath
+                });
+                
+                logger.info(`[DesignerPanel] 选择图片路径: ${relativePath}`);
+            }
+        } catch (error) {
+            logger.error(`[DesignerPanel] 选择图片路径失败: ${error}`);
+            vscode.window.showErrorMessage('选择图片失败');
         }
     }
     

@@ -112,6 +112,23 @@ const App: React.FC = () => {
           // Show error message
           console.error(message.text);
           break;
+
+        case 'updateImagePath':
+          // 更新图片组件的路径
+          if (message.componentId && message.path) {
+            const store = useDesignerStore.getState();
+            const component = store.components.find(c => c.id === message.componentId);
+            if (component) {
+              store.updateComponent(message.componentId, {
+                data: {
+                  ...component.data,
+                  src: message.path
+                }
+              });
+              console.log(`[Webview App] 更新图片路径: ${message.path}`);
+            }
+          }
+          break;
       }
     });
 
