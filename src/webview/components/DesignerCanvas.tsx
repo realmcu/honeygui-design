@@ -375,7 +375,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
                 : component.type === 'hg_window'
                 ? (component.style?.border || '1px solid #ccc') // Window组件使用自定义边框或默认
                 : component.type === 'hg_view'
-                ? (component.style?.border || '1px dashed #bbb') // View组件使用虚线边框，表示可嵌套
+                ? (component.style?.border || '2px solid #666') // View组件使用实线边框，更明显
                 : (component.style?.border || '1px solid #ccc'), // Panel组件使用实线边框
               // 根据容器类型设置圆角
               borderRadius: component.type === 'hg_window'
@@ -387,7 +387,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
               background: component.type === 'hg_window'
                 ? (component.style?.backgroundColor || '#ffffff') // Window默认白色背景
                 : component.type === 'hg_view'
-                ? (component.style?.backgroundColor || '#f5f5f5') // View默认浅灰色，区分内容区域
+                ? (component.style?.backgroundColor || '#ffffff') // View默认白色背景，便于在深色画布上看清
                 : (component.style?.backgroundColor || '#ffffff'), // Panel默认白色背景
               // 根据容器类型设置内边距
               padding: component.type === 'hg_window'
