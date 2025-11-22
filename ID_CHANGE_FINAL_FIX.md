@@ -5,10 +5,10 @@
 ### 问题现象
 ```xml
 <!-- 初始加载 -->
-<hg_screen id="mainScreen" x="50" y="50" width="480" height="272" />
+<hg_view id="mainScreen" x="50" y="50" width="480" height="272" />
 
 <!-- 添加子组件后保存 -->
-<hg_screen id="hg_screen_1763716199064" x="50" y="50" width="800" height="480" />
+<hg_view id="hg_view_1763716199064" x="50" y="50" width="800" height="480" />
 ```
 
 ### 根本原因
@@ -18,11 +18,11 @@
 **问题代码**:
 ```typescript
 // 查找screen容器
-let screenContainer = components.find(comp => comp.type === 'hg_screen');
+let screenContainer = components.find(comp => comp.type === 'hg_view');
 
 // 如果没有找到screen容器，自动创建一个 ❌
 if (!screenContainer) {
-  const screenId = `hg_screen_${Date.now()}`;  // 生成新ID！
+  const screenId = `hg_view_${Date.now()}`;  // 生成新ID！
   const { width = 800, height = 480 } = useDesignerStore.getState().canvasSize;
   
   screenContainer = {
@@ -59,7 +59,7 @@ if (!screenContainer) {
 
 ```typescript
 // 查找画布中的screen容器
-let screenContainer = components.find(comp => comp.type === 'hg_screen');
+let screenContainer = components.find(comp => comp.type === 'hg_view');
 
 // 如果没有找到screen容器，报错而不是自动创建
 if (!screenContainer) {
@@ -138,9 +138,9 @@ private _ensureParentChildConsistency(components: Component[]): void {
 
 ✅ **成功标志**:
 ```xml
-<hg_screen id="mainScreen" x="50" y="50" width="480" height="272">
+<hg_view id="mainScreen" x="50" y="50" width="480" height="272">
     <hg_button id="hg_button_xxx" ... />
-</hg_screen>
+</hg_view>
 ```
 
 - ID保持为 `mainScreen`
@@ -148,7 +148,7 @@ private _ensureParentChildConsistency(components: Component[]): void {
 - 子组件正确嵌套
 
 ❌ **失败标志**:
-- ID变成 `hg_screen_xxx`
+- ID变成 `hg_view_xxx`
 - 尺寸变成 `800x480`
 - 弹出错误提示"未找到screen容器"
 
@@ -180,8 +180,8 @@ private _ensureParentChildConsistency(components: Component[]): void {
 ### 修复前
 ```
 加载: mainScreen (480x272)
-拖拽: 找不到screen → 创建 hg_screen_xxx (800x480)
-保存: hg_screen_xxx (800x480) ❌
+拖拽: 找不到screen → 创建 hg_view_xxx (800x480)
+保存: hg_view_xxx (800x480) ❌
 ```
 
 ### 修复后

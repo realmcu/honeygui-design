@@ -7,9 +7,9 @@ import { generateHoneyGuiCode, Component } from './index';
 // 示例：创建一个简单的GUI设计
 const exampleComponents: Component[] = [
   {
-    id: 'mainScreen',
-    type: 'hg_screen',
-    name: '主屏幕',
+    id: 'mainView',
+    type: 'hg_view',
+    name: '主视图',
     position: { x: 0, y: 0, width: 480, height: 272 },
     parent: null,
     children: ['titleLabel', 'startButton'],
@@ -21,7 +21,7 @@ const exampleComponents: Component[] = [
     type: 'hg_label',
     name: '标题标签',
     position: { x: 100, y: 50, width: 280, height: 40 },
-    parent: 'mainScreen',
+    parent: 'mainView',
     data: { text: 'Welcome to HoneyGUI', fontSize: 24 },
     style: { color: '#FFFFFF' },
     visible: true
@@ -31,7 +31,7 @@ const exampleComponents: Component[] = [
     type: 'hg_button',
     name: '启动按钮',
     position: { x: 150, y: 120, width: 180, height: 60 },
-    parent: 'mainScreen',
+    parent: 'mainView',
     data: { text: 'Start' },
     style: { backgroundColor: '#007ACC' },
     events: { onClick: 'on_start_button_click' },

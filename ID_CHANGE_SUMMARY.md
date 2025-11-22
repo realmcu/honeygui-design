@@ -4,10 +4,10 @@
 
 ```xml
 <!-- 初始 -->
-<hg_screen id="mainScreen" x="50" y="50" width="480" height="272" />
+<hg_view id="mainScreen" x="50" y="50" width="480" height="272" />
 
 <!-- 保存后 -->
-<hg_screen id="hg_screen_1763715650463" x="50" y="50" width="800" height="480" />
+<hg_view id="hg_view_1763715650463" x="50" y="50" width="800" height="480" />
 ```
 
 **问题**: 组件ID从 `mainScreen` 变成了自动生成的ID
@@ -96,7 +96,7 @@ components.forEach(c => {
 查看输出日志：
 ```
 [HmlController] prepareComponentsForFrontend - 原始组件数量: 1
-  [原始] hg_screen(id=mainScreen, parent=null, children=[])
+  [原始] hg_view(id=mainScreen, parent=null, children=[])
 ```
 
 **预期**: ID应该是 `mainScreen`
@@ -109,11 +109,11 @@ components.forEach(c => {
 **预期日志**:
 ```
 [HmlController] prepareComponentsForFrontend - 原始组件数量: 2
-  [原始] hg_screen(id=mainScreen, parent=null, children=[])
+  [原始] hg_view(id=mainScreen, parent=null, children=[])
   [原始] hg_button(id=hg_button_xxx, parent=mainScreen, children=[])
   [修复] 将 hg_button_xxx 添加到父组件 mainScreen 的children数组
 [HmlController] prepareComponentsForFrontend - 修复后组件状态:
-  [修复] hg_screen(id=mainScreen, parent=null, children=[hg_button_xxx])
+  [修复] hg_view(id=mainScreen, parent=null, children=[hg_button_xxx])
   [修复] hg_button(id=hg_button_xxx, parent=mainScreen, children=[])
 ```
 
@@ -124,9 +124,9 @@ components.forEach(c => {
 
 **预期**:
 ```xml
-<hg_screen id="mainScreen" ...>
+<hg_view id="mainScreen" ...>
     <hg_button id="hg_button_xxx" ... />
-</hg_screen>
+</hg_view>
 ```
 
 **关键**: `mainScreen` ID应该保持不变

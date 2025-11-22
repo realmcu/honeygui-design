@@ -34,17 +34,6 @@ export class HoneyGuiApiMapper {
    * 初始化组件到API的映射关系
    */
   private initMappings(): void {
-    // 屏幕容器
-    this.mappings.set('hg_screen', {
-      componentType: 'hg_screen',
-      createFunction: 'gui_screen_create',
-      propertySetters: [
-        { property: 'backgroundColor', apiFunction: 'gui_obj_set_color', valueTransform: this.colorToHex }
-      ],
-      eventHandlers: [],
-      includeHeader: 'gui_screen.h'
-    });
-
     // 视图容器
     this.mappings.set('hg_view', {
       componentType: 'hg_view',

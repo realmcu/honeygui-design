@@ -163,13 +163,13 @@ const App: React.FC = () => {
    * 处理画布上的拖放事件，将组件从组件库添加到设计器画布
    *
    * 组件添加策略：
-   * 1. **容器组件** (View/Panel/Window/Screen): 作为顶级组件放置在画布上，支持多容器并行布局
+   * 1. **容器组件** (View/Panel/Window): 作为顶级组件放置在画布上，支持多容器并行布局
    *    - 这些组件有自己的位置和尺寸，独立存在于画布上
    *    - 可以包含其他组件作为子组件，形成嵌套结构
    *    - 可视化设计中可自由拖放、调整位置和尺寸
    *
-   * 2. **UI组件** (Button/Label/Input等): 默认添加到hg_screen容器内作为子组件
-   *    - 必须存在于某个容器内(Screen或View)
+   * 2. **UI组件** (Button/Label/Input等): 默认添加到第一个View容器内作为子组件
+   *    - 必须存在于某个容器内(View或其他容器)
    *    - 位置相对于父容器，坐标系以父容器左上角为原点
    *    - 移动父容器时，子组件跟随移动
    *
@@ -211,39 +211,13 @@ const App: React.FC = () => {
 
     console.log(`[拖放] 组件类型: ${componentType}`);
     console.log(`[拖放] 当前组件总数: ${components.length}`);
-    console.log(`[拖放] 组件数组是否为空: ${components.length === 0}`);
-    console.log(`[拖放] 组件数组类型: ${Array.isArray(components) ? 'Array' : typeof components}`);
-    
-    if (components.length > 0) {
-      console.log('[拖放] 当前画布中的组件:');
-      components.forEach((c, index) => {
-        console.log(`  [${index}] ${c.type}(id=${c.id}, parent=${c.parent || 'null'})`);
-      });
-    } else {
-      console.error('[拖放] ❌ 当前画布中没有任何组件！');
-    }
 
-    // 查找画布中的hg_screen容器
-    let screenContainer = components.find(comp => comp.type === 'hg_screen');
+    // 查找第一个View容器作为默认父容器
+    let defaultContainer = components.find(comp => comp.type === 'hg_view');
     
-    console.log(`[拖放] 查找hg_screen结果: ${screenContainer ? `找到(id=${screenContainer.id})` : '未找到'}`);
-
-    // 必须有hg_screen容器才能添加组件
-    if (!screenContainer) {
-      console.error('[拖放] ❌ 未找到hg_screen容器！');
-      console.error('[拖放] 当前组件列表:', components.map(c => `${c.type}(id=${c.id})`).join(', '));
-      
-      const api = useDesignerStore.getState().vscodeAPI;
-      if (api) {
-        api.postMessage({
-          command: 'error',
-          text: '此HML文件没有hg_screen容器。只有main.hml应该包含hg_screen容器。'
-        });
-      }
-      return;
+    if (defaultContainer) {
+      console.log(`[拖放] 找到默认容器: ${defaultContainer.id}, 尺寸: ${defaultContainer.position.width}x${defaultContainer.position.height}`);
     }
-    
-    console.log(`[拖放] 找到hg_screen容器: ${screenContainer.id}, 尺寸: ${screenContainer.position.width}x${screenContainer.position.height}`);
 
     // 计算鼠标释放时的画布坐标位置
     const rect = (e.target as HTMLElement).getBoundingClientRect();
@@ -253,12 +227,6 @@ const App: React.FC = () => {
     // 生成唯一组件ID
     const componentId = `${componentType}_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
 
-    // === View组件特殊处理：判断是否为第一个View ===
-    // 重新获取最新的组件列表（包含可能刚刚创建的screen）
-    const updatedComponents = useDesignerStore.getState().components;
-    const existingViews = updatedComponents.filter(comp => comp.type === 'hg_view');
-    const isFirstView = componentType === 'hg_view' && existingViews.length === 0;
-
     // 计算组件位置和尺寸
     let positionX = x;
     let positionY = y;
@@ -267,33 +235,23 @@ const App: React.FC = () => {
     let parent: string | null = null;
 
     // === 组件添加策略 ===
-    if (componentType === 'hg_view') {
-      if (isFirstView) {
-        // 第一个View: 放入hg_screen容器，尺寸匹配hg_screen
-        parent = screenContainer.id;
-        positionX = 0; // 左上角对齐
-        positionY = 0;
-        width = screenContainer.position.width;
-        height = screenContainer.position.height;
-        console.info(`[拖放] 第一个View组件，自动放入hg_screen容器并匹配尺寸`);
-      } else {
-        // 后续View: 作为顶级容器独立放置，但初始尺寸匹配screen
-        parent = null;
-        width = screenContainer.position.width;
-        height = screenContainer.position.height;
-        console.info(`[拖放] 后续View组件，作为顶级容器独立放置，尺寸匹配screen`);
-      }
-    } else if (['hg_panel', 'hg_window'].includes(componentType)) {
-      // 其他容器组件: 作为顶级组件独立放置
+    if (['hg_view', 'hg_panel', 'hg_window'].includes(componentType)) {
+      // 容器组件: 作为顶级组件独立放置
       parent = null;
       console.info(`[拖放] 容器组件 ${componentType} 作为顶级组件`);
     } else {
-      // UI组件: 添加到hg_screen容器内
-      parent = screenContainer.id;
-      // 转换为相对于hg_screen的内部坐标
-      positionX = Math.max(10, x - screenContainer.position.x);
-      positionY = Math.max(10, y - screenContainer.position.y);
-      console.info(`[拖放] UI组件 ${componentType} 添加到hg_screen容器`);
+      // UI组件: 添加到第一个View容器内（如果存在）
+      if (defaultContainer) {
+        parent = defaultContainer.id;
+        // 转换为相对于容器的内部坐标
+        positionX = Math.max(10, x - defaultContainer.position.x);
+        positionY = Math.max(10, y - defaultContainer.position.y);
+        console.info(`[拖放] UI组件 ${componentType} 添加到容器 ${defaultContainer.id}`);
+      } else {
+        // 没有容器时，作为顶级组件
+        parent = null;
+        console.info(`[拖放] 没有容器，UI组件 ${componentType} 作为顶级组件`);
+      }
     }
 
     // 创建新组件对象

@@ -138,7 +138,7 @@ console.info(`[拖放] 容器组件 ${componentType} 作为顶级组件`);
 ### 当前使用的标准格式（带 hg_ 前缀）
 
 **容器组件**:
-- `hg_screen` - 屏幕容器
+- `hg_view` - 屏幕容器
 - `hg_panel` - 面板
 - `hg_view` - 视图
 - `hg_window` - 窗口
@@ -168,7 +168,7 @@ console.info(`[拖放] 容器组件 ${componentType} 作为顶级组件`);
 ```typescript
 type: 'hg_button'
 component.type === 'hg_panel'
-<hg_screen id="mainScreen" />
+<hg_view id="mainScreen" />
 ```
 
 **注释中**:
@@ -180,7 +180,7 @@ component.type === 'hg_panel'
 **LOG中**:
 ```typescript
 console.log(`组件类型: ${component.type}`);  // 输出: hg_button
-console.info('[拖放] hg_screen容器');
+console.info('[拖放] hg_view容器');
 ```
 
 ### ❌ 错误使用（已修复或标记）

@@ -7,7 +7,7 @@
 ## 组件清单
 
 ### 容器组件
-- ✅ `hg_screen` - 屏幕容器（仅main.hml使用）
+- ✅ `hg_view` - 屏幕容器（仅main.hml使用）
 - ✅ `hg_panel` - 面板
 - ✅ `hg_view` - 视图
 - ✅ `hg_window` - 窗口
@@ -37,14 +37,14 @@
 ```typescript
 type: 'hg_button'
 type: 'hg_panel'
-type: 'hg_screen'
+type: 'hg_view'
 ```
 
 **XML标签**:
 ```xml
 <hg_button id="btn1" />
 <hg_panel id="panel1" />
-<hg_screen id="mainScreen" />
+<hg_view id="mainScreen" />
 ```
 
 **代码判断**:
@@ -77,7 +77,7 @@ type: 'ui_button'   // ❌ 错误
 // ✅ HoneyGUI组件
 'hg_button'
 'hg_panel'
-'hg_screen'
+'hg_view'
 ```
 
 ### React组件 (不使用前缀)
@@ -132,7 +132,7 @@ grep -r "<hg_\|</hg_" ui/
 ```typescript
 private readonly VALID_COMPONENTS = new Set([
   // HoneyGUI标准组件 (hg_前缀)
-  'hg_button', 'hg_panel', 'hg_screen', ...
+  'hg_button', 'hg_panel', 'hg_view', ...
   
   // 无前缀组件 (向后兼容) - 解析时自动转换为hg_前缀
   'button', 'panel', 'text', ...
@@ -167,13 +167,13 @@ static normalizeComponentType(name: string): string {
 - ✅ 所有其他组件...
 
 ### 不显示在组件库中
-- ❌ `hg_screen` - 仅供内部使用，由main.hml自动包含
+- ❌ `hg_view` - 仅供内部使用，由main.hml自动包含
 
 **代码**:
 ```typescript
 // ComponentLibrary.tsx
 {componentDefinitions.map((component) => {
-  if (component.type === 'hg_screen') {
+  if (component.type === 'hg_view') {
     return null;  // 不显示
   }
   return <ComponentItem ... />;

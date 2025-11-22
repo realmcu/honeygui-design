@@ -235,28 +235,6 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     };
 
       switch (component.type) {
-      case 'hg_screen':
-        return (
-          <div
-            key={component.id}
-            style={{
-              ...style,
-              border: isSelected ? '2px solid #007ACC' : '1px solid #333',
-              borderRadius: 0,
-              background: component.style?.backgroundColor || '#000000',
-              overflow: 'hidden',
-            }}
-            onMouseDown={(e) => handleComponentMouseDown(e, component.id)}
-            onClick={handleClick}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-          >
-            {component.children?.map((childId) => {
-              const child = components.find((c) => c.id === childId);
-              return child ? renderComponent(child) : null;
-            })}
-          </div>
-        );
       case 'hg_button':
         return (
           <button

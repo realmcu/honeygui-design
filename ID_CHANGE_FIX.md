@@ -5,13 +5,13 @@
 **现象**:
 ```xml
 <!-- 初始加载 -->
-<hg_screen id="mainScreen" x="50" y="50" width="480" height="272" />
+<hg_view id="mainScreen" x="50" y="50" width="480" height="272" />
 
 <!-- 保存后变成 -->
-<hg_screen id="hg_screen_1763715650463" x="50" y="50" width="800" height="480" />
+<hg_view id="hg_view_1763715650463" x="50" y="50" width="800" height="480" />
 ```
 
-组件ID从 `mainScreen` 变成了 `hg_screen_1763715650463`
+组件ID从 `mainScreen` 变成了 `hg_view_1763715650463`
 
 ---
 
@@ -29,7 +29,7 @@
 
 测试验证：
 ```javascript
-// 输入: <hg_screen id="mainScreen" x="50" y="50" />
+// 输入: <hg_view id="mainScreen" x="50" y="50" />
 // 输出: { id: "mainScreen", x: 50, y: 50 }
 ```
 
@@ -74,7 +74,7 @@ private _ensureParentChildConsistency(components: Component[]): void {
 
 ```typescript
 const createDefaultScreen = (resolution?: string): Component => {
-  const generateSimpleId = (): string => `hg_screen_${Date.now()}`;  // ❌ 总是生成新ID
+  const generateSimpleId = (): string => `hg_view_${Date.now()}`;  // ❌ 总是生成新ID
   return {
     id: generateSimpleId(),  // 问题所在
     ...
@@ -178,7 +178,7 @@ public async save(document: HmlDocument, filePath: string): Promise<void> {
 
 1. 创建新项目，生成 `main.hml`:
 ```xml
-<hg_screen id="mainScreen" x="50" y="50" width="480" height="272" />
+<hg_view id="mainScreen" x="50" y="50" width="480" height="272" />
 ```
 
 2. 打开设计器，不做任何修改
@@ -199,9 +199,9 @@ public async save(document: HmlDocument, filePath: string): Promise<void> {
 
 4. **预期**:
 ```xml
-<hg_screen id="mainScreen" ...>
+<hg_view id="mainScreen" ...>
     <hg_button id="hg_button_xxx" ... />
-</hg_screen>
+</hg_view>
 ```
 
 5. **实际**: 检查保存后的文件

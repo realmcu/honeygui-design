@@ -20,7 +20,7 @@ import { generateHoneyGuiCode, Component } from './codegen/honeygui';
 const components: Component[] = [
   {
     id: 'mainScreen',
-    type: 'hg_screen',
+    type: 'hg_view',
     name: '主屏幕',
     position: { x: 0, y: 0, width: 480, height: 272 },
     parent: null,
@@ -84,7 +84,7 @@ void on_button_click(gui_obj_t *obj) {
 
 | 组件类型 | HoneyGUI API | 说明 |
 |---------|-------------|------|
-| hg_screen | gui_screen_create | 屏幕容器 |
+| hg_view | gui_screen_create | 屏幕容器 |
 | hg_view | gui_view_create | 视图容器 |
 | hg_button | gui_button_create | 按钮 |
 | hg_label | gui_text_create | 文本标签 |

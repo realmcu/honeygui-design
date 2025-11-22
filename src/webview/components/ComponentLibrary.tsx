@@ -7,18 +7,6 @@ interface ComponentLibraryProps {
 }
 
 const componentDefinitions: ComponentDefinition[] = [
-  // Screen 容器组件 - 仅内部使用，不在组件库面板显示
-  // 用于作为UI组件的根容器，提供画布背景
-  {
-    type: 'hg_screen',
-    name: 'Screen',
-    icon: '📺',
-    defaultSize: { width: 1024, height: 768 },
-    properties: [
-      { name: 'backgroundColor', label: '背景色', type: 'color', defaultValue: '#000000', group: 'style' },
-      { name: 'title', label: '标题', type: 'string', defaultValue: 'Screen', group: 'general' },
-    ],
-  },
   {
     type: 'hg_button',
     name: '按钮',
@@ -143,24 +131,18 @@ const ComponentLibrary: React.FC<ComponentLibraryProps> = ({ onComponentDragStar
         <h3>组件库</h3>
       </div>
       <div className="library-content">
-        {componentDefinitions.map((component) => {
-          // 不在组件库面板显示 screen 组件（仅供内部使用）
-          if (component.type === 'hg_screen') {
-            return null;
-          }
-          return (
-            <div
-              key={component.type}
-              className="component-item"
-              draggable
-              onDragStart={(e) => handleDragStart(e, component.type)}
-              title={component.name}
-            >
-              <div className="component-icon">{component.icon}</div>
-              <div className="component-name">{component.name}</div>
-            </div>
-          );
-        })}
+        {componentDefinitions.map((component) => (
+          <div
+            key={component.type}
+            className="component-item"
+            draggable
+            onDragStart={(e) => handleDragStart(e, component.type)}
+            title={component.name}
+          >
+            <div className="component-icon">{component.icon}</div>
+            <div className="component-name">{component.name}</div>
+          </div>
+        ))}
       </div>
     </div>
   );
