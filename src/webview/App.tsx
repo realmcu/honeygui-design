@@ -221,46 +221,41 @@ const App: React.FC = () => {
       console.info(`[拖放] 容器组件 ${componentType} 作为顶级组件`);
     } else {
       // UI组件：必须放在某个组件内
-      console.log(`[拖放] 当前组件列表:`, components.map(c => `${c.type}(${c.id})`));
-      console.log(`[拖放] 当前选中组件: ${currentSelected}`);
+      // 根据鼠标位置查找目标容器
+      let targetContainer: Component | null = null;
       
-      if (currentSelected) {
-        // 放到当前选中的组件内
-        const selectedComp = components.find(c => c.id === currentSelected);
-        if (selectedComp) {
-          parent = currentSelected;
-          positionX = Math.max(10, x - selectedComp.position.x);
-          positionY = Math.max(10, y - selectedComp.position.y);
-          console.info(`[拖放] UI组件 ${componentType} 添加到选中组件 ${currentSelected}`);
+      // 遍历所有组件，找到鼠标位置下的最内层容器
+      for (const comp of components) {
+        const { x: cx, y: cy, width: cw, height: ch } = comp.position;
+        // 检查鼠标是否在组件范围内
+        if (x >= cx && x <= cx + cw && y >= cy && y <= cy + ch) {
+          // 如果还没有目标，或者当前组件比已找到的更内层（面积更小）
+          if (!targetContainer || (cw * ch < targetContainer.position.width * targetContainer.position.height)) {
+            targetContainer = comp;
+          }
         }
       }
       
-      if (!parent) {
-        // 没有选中组件或选中的组件无效，放到第一个容器内
-        const firstContainer = components.find(c => 
-          ['hg_view', 'hg_panel', 'hg_window'].includes(c.type)
-        );
-        
-        console.log(`[拖放] 查找第一个容器结果:`, firstContainer ? `${firstContainer.type}(${firstContainer.id})` : '未找到');
-        
-        if (firstContainer) {
-          parent = firstContainer.id;
-          positionX = Math.max(10, x - firstContainer.position.x);
-          positionY = Math.max(10, y - firstContainer.position.y);
-          console.info(`[拖放] UI组件 ${componentType} 添加到第一个容器 ${firstContainer.id}`);
-        } else {
-          // 没有任何容器，提示用户
-          console.error('[拖放] 没有容器组件，无法添加UI组件');
-          console.error('[拖放] 组件列表详情:', components);
-          const api = useDesignerStore.getState().vscodeAPI;
-          if (api) {
-            api.postMessage({
-              command: 'error',
-              text: '请先创建一个容器组件（View/Panel/Window）'
-            });
-          }
-          return;
+      console.log(`[拖放] 鼠标位置 (${x}, ${y})`);
+      console.log(`[拖放] 找到目标容器:`, targetContainer ? `${targetContainer.type}(${targetContainer.id})` : '未找到');
+      
+      if (targetContainer) {
+        parent = targetContainer.id;
+        // 转换为相对于目标容器的坐标
+        positionX = Math.max(0, x - targetContainer.position.x);
+        positionY = Math.max(0, y - targetContainer.position.y);
+        console.info(`[拖放] UI组件 ${componentType} 添加到容器 ${targetContainer.id}`);
+      } else {
+        // 没有找到容器，提示用户
+        console.error('[拖放] 鼠标位置下没有容器组件');
+        const api = useDesignerStore.getState().vscodeAPI;
+        if (api) {
+          api.postMessage({
+            command: 'error',
+            text: '请将组件拖放到容器内（View/Panel/Window）'
+          });
         }
+        return;
       }
     }
 
