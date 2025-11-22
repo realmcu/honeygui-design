@@ -94,7 +94,7 @@
         },
         {
           "command": "honeygui.createNewHmlFile",
-          "when": "explorerResourceIsFolder && resourceFilename == ui",
+          "when": "explorerResourceIsFolder",
           "group": "2_new@1"
         }
       ],
@@ -116,6 +116,11 @@
         "command": "honeygui.switchView",
         "title": "Switch View",
         "icon": "$(swap-horizontal)"
+      },
+      {
+        "command": "honeygui.createNewHmlInWorkspace",
+        "title": "HoneyGUI: Create New HML File",
+        "category": "HoneyGUI"
       },
       {
         "command": "honeygui.openInTextEditor",

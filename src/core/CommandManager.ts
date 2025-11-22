@@ -153,13 +153,20 @@ export class CommandManager {
                 
                 // 获取文件夹路径
                 const folderPath = fs.statSync(uri.fsPath).isDirectory() ? uri.fsPath : path.dirname(uri.fsPath);
+                
+                // 使用文件夹名作为默认文件名
+                const folderName = path.basename(folderPath);
+                const defaultFileName = `${folderName}.hml`;
+                
                 const fileName = await vscode.window.showInputBox({
                     prompt: '请输入HML文件名',
-                    placeHolder: 'design.hml',
-                    value: 'design.hml',
+                    placeHolder: defaultFileName,
+                    value: defaultFileName,
                     validateInput: (value) => {
                         if (!value.trim()) return '文件名不能为空';
                         if (!value.endsWith('.hml')) return '文件必须以.hml结尾';
+                        const targetPath = path.join(folderPath, value);
+                        if (fs.existsSync(targetPath)) return '文件已存在';
                         return null;
                     }
                 });
@@ -170,8 +177,8 @@ export class CommandManager {
                     // 创建默认的HML内容
                     const defaultContent = `<?xml version="1.0" encoding="UTF-8"?>
 <hml version="1.0">
-    <view id="main" width="320" height="240" background-color="#f0f0f0">
-        <hg_screen id="screen" width="320" height="240">
+    <view id="main" width="480" height="272" background-color="#f0f0f0">
+        <hg_screen id="screen" width="480" height="272">
             <!-- 在这里添加您的组件 -->
         </hg_screen>
     </view>
@@ -179,9 +186,9 @@ export class CommandManager {
 
                     fs.writeFileSync(filePath, defaultContent, 'utf8');
                     
-                    // 在编辑器中打开新创建的文件
+                    // 在设计器中打开新创建的文件
                     const document = await vscode.workspace.openTextDocument(filePath);
-                    await vscode.window.showTextDocument(document);
+                    await vscode.commands.executeCommand('honeygui.openInDesigner', vscode.Uri.file(filePath));
                     
                     vscode.window.showInformationMessage(`HML文件已创建: ${fileName}`);
                 }
@@ -199,6 +206,37 @@ export class CommandManager {
             } catch (error) {
                 logger.error(`视图切换失败: ${error instanceof Error ? error.message : String(error)}`);
                 vscode.window.showErrorMessage(`视图切换失败: ${error instanceof Error ? error.message : '未知错误'}`);
+            }
+        });
+
+        // 从工作区创建HML文件
+        this.registerCommand('honeygui.createNewHmlInWorkspace', async () => {
+            try {
+                logger.info('执行命令: honeygui.createNewHmlInWorkspace');
+                
+                // 获取工作区文件夹
+                const workspaceFolders = vscode.workspace.workspaceFolders;
+                if (!workspaceFolders || workspaceFolders.length === 0) {
+                    vscode.window.showErrorMessage('请先打开一个工作区');
+                    return;
+                }
+                
+                // 选择保存位置
+                const folderUri = await vscode.window.showOpenDialog({
+                    canSelectFiles: false,
+                    canSelectFolders: true,
+                    canSelectMany: false,
+                    defaultUri: workspaceFolders[0].uri,
+                    openLabel: '选择保存位置'
+                });
+                
+                if (folderUri && folderUri.length > 0) {
+                    // 调用创建HML文件命令
+                    await vscode.commands.executeCommand('honeygui.createNewHmlFile', folderUri[0]);
+                }
+            } catch (error) {
+                logger.error(`创建HML文件失败: ${error instanceof Error ? error.message : String(error)}`);
+                vscode.window.showErrorMessage(`创建HML文件失败: ${error instanceof Error ? error.message : '未知错误'}`);
             }
         });
 
