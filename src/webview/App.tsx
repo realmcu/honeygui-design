@@ -221,6 +221,9 @@ const App: React.FC = () => {
       console.info(`[拖放] 容器组件 ${componentType} 作为顶级组件`);
     } else {
       // UI组件：必须放在某个组件内
+      console.log(`[拖放] 当前组件列表:`, components.map(c => `${c.type}(${c.id})`));
+      console.log(`[拖放] 当前选中组件: ${currentSelected}`);
+      
       if (currentSelected) {
         // 放到当前选中的组件内
         const selectedComp = components.find(c => c.id === currentSelected);
@@ -230,11 +233,15 @@ const App: React.FC = () => {
           positionY = Math.max(10, y - selectedComp.position.y);
           console.info(`[拖放] UI组件 ${componentType} 添加到选中组件 ${currentSelected}`);
         }
-      } else {
-        // 没有选中组件，放到第一个容器内
+      }
+      
+      if (!parent) {
+        // 没有选中组件或选中的组件无效，放到第一个容器内
         const firstContainer = components.find(c => 
           ['hg_view', 'hg_panel', 'hg_window'].includes(c.type)
         );
+        
+        console.log(`[拖放] 查找第一个容器结果:`, firstContainer ? `${firstContainer.type}(${firstContainer.id})` : '未找到');
         
         if (firstContainer) {
           parent = firstContainer.id;
@@ -243,6 +250,8 @@ const App: React.FC = () => {
           console.info(`[拖放] UI组件 ${componentType} 添加到第一个容器 ${firstContainer.id}`);
         } else {
           // 没有任何容器，提示用户
+          console.error('[拖放] 没有容器组件，无法添加UI组件');
+          console.error('[拖放] 组件列表详情:', components);
           const api = useDesignerStore.getState().vscodeAPI;
           if (api) {
             api.postMessage({
@@ -250,7 +259,6 @@ const App: React.FC = () => {
               text: '请先创建一个容器组件（View/Panel/Window）'
             });
           }
-          console.error('[拖放] 没有容器组件，无法添加UI组件');
           return;
         }
       }
