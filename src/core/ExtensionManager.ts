@@ -13,7 +13,6 @@ export class ExtensionManager {
     private commandManager: CommandManager;
     private hmlEditorProvider: HmlEditorProvider;
     private disposables: vscode.Disposable[] = [];
-    private welcomeMessageShown = false;
 
     constructor(private context: vscode.ExtensionContext) {
         this.commandManager = new CommandManager(context);
@@ -133,35 +132,30 @@ export class ExtensionManager {
      * 显示欢迎信息（仅首次激活时显示）
      */
     private showWelcomeMessage(): void {
-        // 防止重复显示欢迎消息
-        if (this.welcomeMessageShown) {
+        // 使用globalState持久化存储，防止重复显示
+        const hasShownWelcome = this.context.globalState.get<boolean>('honeygui.welcomeMessageShown', false);
+        
+        if (hasShownWelcome) {
             return;
         }
 
-        const config = vscode.workspace.getConfiguration('honeygui');
-        const showWelcome = config.get<boolean>('showWelcomeMessage', true);
-
-        if (showWelcome) {
-            this.welcomeMessageShown = true;
-            vscode.window.showInformationMessage(
-                'HoneyGUI设计器已启动！使用 Ctrl+Shift+P 搜索 "HoneyGUI" 开始创建项目。',
-                '创建项目',
-                '查看文档',
-                '不再显示'
-            ).then(selection => {
-                switch (selection) {
-                    case '创建项目':
-                        vscode.commands.executeCommand('honeygui.createProject');
-                        break;
-                    case '查看文档':
-                        vscode.env.openExternal(vscode.Uri.parse('https://gitee.com/realmcu/honeygui-design'));
-                        break;
-                    case '不再显示':
-                        config.update('showWelcomeMessage', false, vscode.ConfigurationTarget.Global);
-                        break;
-                }
-            });
-        }
+        // 标记为已显示
+        this.context.globalState.update('honeygui.welcomeMessageShown', true);
+        
+        vscode.window.showInformationMessage(
+            'HoneyGUI设计器已启动！使用 Ctrl+Shift+P 搜索 "HoneyGUI" 开始创建项目。',
+            '创建项目',
+            '查看文档'
+        ).then(selection => {
+            switch (selection) {
+                case '创建项目':
+                    vscode.commands.executeCommand('honeygui.newProject');
+                    break;
+                case '查看文档':
+                    vscode.env.openExternal(vscode.Uri.parse('https://gitee.com/realmcu/honeygui-design'));
+                    break;
+            }
+        });
     }
 
     /**

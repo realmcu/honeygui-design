@@ -215,9 +215,8 @@ export class CommandManager {
                 
                 const folderUri = await vscode.window.showOpenDialog(options);
                 if (folderUri && folderUri.length > 0) {
-                    const projectPath = folderUri[0].fsPath;
-                    // 这里可以添加项目验证逻辑
-                    vscode.window.showInformationMessage(`项目已打开: ${path.basename(projectPath)}`);
+                    logger.info(`打开项目文件夹: ${folderUri[0].fsPath}`);
+                    await vscode.commands.executeCommand('vscode.openFolder', folderUri[0]);
                 }
             } catch (error) {
                 logger.error(`打开项目失败: ${error instanceof Error ? error.message : String(error)}`);
