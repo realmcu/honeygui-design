@@ -17,6 +17,7 @@ const App: React.FC = () => {
     setVSCodeAPI,
     setComponents,
     selectComponent,
+    selectedComponent,
     addComponent,
     setProjectConfig,
     setCanvasBackgroundColor,
@@ -163,31 +164,16 @@ const App: React.FC = () => {
    * 处理画布上的拖放事件，将组件从组件库添加到设计器画布
    *
    * 组件添加策略：
-   * 1. **容器组件** (View/Panel/Window): 作为顶级组件放置在画布上，支持多容器并行布局
-   *    - 这些组件有自己的位置和尺寸，独立存在于画布上
-   *    - 可以包含其他组件作为子组件，形成嵌套结构
-   *    - 可视化设计中可自由拖放、调整位置和尺寸
+   * 1. **容器组件** (View/Panel/Window): 作为顶级组件放置在画布上
+   *    - parent = null
+   *    - 可以包含其他组件作为子组件
    *
-   * 2. **UI组件** (Button/Label/Input等): 默认添加到第一个View容器内作为子组件
-   *    - 必须存在于某个容器内(View或其他容器)
-   *    - 位置相对于父容器，坐标系以父容器左上角为原点
-   *    - 移动父容器时，子组件跟随移动
+   * 2. **UI组件** (Button/Label/Input等): 必须放在某个组件内
+   *    - 优先放到当前选中的组件内
+   *    - 如果没有选中组件，放到第一个容器内
+   *    - 如果没有任何容器，提示用户先创建容器
    *
-   * 尺寸控制：
-   * - 从componentDefinitions获取组件的标准默认尺寸
-   * - 遵循组件库定义的尺寸规范，确保一致性
-   * - 可在属性面板中手动调整各组件的width/height
-   *
-   * 层级关系：
-   * - parent: string | null (组件的父容器ID，顶级组件为null)
-   * - children: string[] (子组件ID列表，支持嵌套)
-   * - 画布渲染时递归处理children，确保正确嵌套关系
-   *
-   * @param e 拖放事件对象，包含拖拽源信息和放置位置的坐标
-   *
-   * @see ComponentLibrary.tsx componentDefinitions - 定义各组件类型的默认尺寸和属性
-   * @see store.ts addComponent() - 组件添加到状态管理的逻辑
-   * @see DesignerCanvas.tsx renderComponent() - 组件渲染和嵌套关系处理
+   * @param e 拖放事件对象
    */
   const handleCanvasDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -206,18 +192,11 @@ const App: React.FC = () => {
       return;
     }
 
-    // 获取当前画布中所有已存在的组件列表
-    let components = useDesignerStore.getState().components;
+    const components = useDesignerStore.getState().components;
+    const currentSelected = useDesignerStore.getState().selectedComponent;
 
     console.log(`[拖放] 组件类型: ${componentType}`);
-    console.log(`[拖放] 当前组件总数: ${components.length}`);
-
-    // 查找第一个View容器作为默认父容器
-    let defaultContainer = components.find(comp => comp.type === 'hg_view');
-    
-    if (defaultContainer) {
-      console.log(`[拖放] 找到默认容器: ${defaultContainer.id}, 尺寸: ${defaultContainer.position.width}x${defaultContainer.position.height}`);
-    }
+    console.log(`[拖放] 当前选中: ${currentSelected || '无'}`);
 
     // 计算鼠标释放时的画布坐标位置
     const rect = (e.target as HTMLElement).getBoundingClientRect();
@@ -227,30 +206,53 @@ const App: React.FC = () => {
     // 生成唯一组件ID
     const componentId = `${componentType}_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
 
-    // 计算组件位置和尺寸
     let positionX = x;
     let positionY = y;
     let width = componentDef.defaultSize.width;
     let height = componentDef.defaultSize.height;
     let parent: string | null = null;
 
-    // === 组件添加策略 ===
-    if (['hg_view', 'hg_panel', 'hg_window'].includes(componentType)) {
-      // 容器组件: 作为顶级组件独立放置
+    // 判断是否为容器组件
+    const isContainer = ['hg_view', 'hg_panel', 'hg_window'].includes(componentType);
+
+    if (isContainer) {
+      // 容器组件：作为顶级组件
       parent = null;
       console.info(`[拖放] 容器组件 ${componentType} 作为顶级组件`);
     } else {
-      // UI组件: 添加到第一个View容器内（如果存在）
-      if (defaultContainer) {
-        parent = defaultContainer.id;
-        // 转换为相对于容器的内部坐标
-        positionX = Math.max(10, x - defaultContainer.position.x);
-        positionY = Math.max(10, y - defaultContainer.position.y);
-        console.info(`[拖放] UI组件 ${componentType} 添加到容器 ${defaultContainer.id}`);
+      // UI组件：必须放在某个组件内
+      if (currentSelected) {
+        // 放到当前选中的组件内
+        const selectedComp = components.find(c => c.id === currentSelected);
+        if (selectedComp) {
+          parent = currentSelected;
+          positionX = Math.max(10, x - selectedComp.position.x);
+          positionY = Math.max(10, y - selectedComp.position.y);
+          console.info(`[拖放] UI组件 ${componentType} 添加到选中组件 ${currentSelected}`);
+        }
       } else {
-        // 没有容器时，作为顶级组件
-        parent = null;
-        console.info(`[拖放] 没有容器，UI组件 ${componentType} 作为顶级组件`);
+        // 没有选中组件，放到第一个容器内
+        const firstContainer = components.find(c => 
+          ['hg_view', 'hg_panel', 'hg_window'].includes(c.type)
+        );
+        
+        if (firstContainer) {
+          parent = firstContainer.id;
+          positionX = Math.max(10, x - firstContainer.position.x);
+          positionY = Math.max(10, y - firstContainer.position.y);
+          console.info(`[拖放] UI组件 ${componentType} 添加到第一个容器 ${firstContainer.id}`);
+        } else {
+          // 没有任何容器，提示用户
+          const api = useDesignerStore.getState().vscodeAPI;
+          if (api) {
+            api.postMessage({
+              command: 'error',
+              text: '请先创建一个容器组件（View/Panel/Window）'
+            });
+          }
+          console.error('[拖放] 没有容器组件，无法添加UI组件');
+          return;
+        }
       }
     }
 

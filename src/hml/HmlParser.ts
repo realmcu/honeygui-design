@@ -15,9 +15,10 @@ class ComponentRegistry {
     'hg_button', 'hg_panel', 'hg_text', 'hg_image', 'hg_input',
     'hg_checkbox', 'hg_radio', 'hg_progressbar', 'hg_slider',
     'hg_switch', 'hg_canvas', 'hg_list', 'hg_grid', 'hg_tab',
+    'hg_label',
     
     // 容器组件
-    'hg_screen', 'hg_window', 'hg_dialog', 'hg_container', 'hg_view'
+    'hg_window', 'hg_dialog', 'hg_container', 'hg_view'
   ]);
 
   static isValidComponent(name: string): boolean {
