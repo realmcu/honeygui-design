@@ -13,7 +13,7 @@ import './App.css';
 import './types';
 
 // 调试开关 - 生产环境应设为false
-const DEBUG_DROP = false;
+const DEBUG_DROP = true;
 
 const App: React.FC = () => {
   const {
