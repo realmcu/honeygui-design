@@ -404,7 +404,7 @@ export class DesignerPanel {
 
                 window.addEventListener('message', event => {
                     const message = event.data;
-                    logger.debug("VSCode message: " + JSON.stringify(message));
+                    console.log("[Webview] VSCode message:", JSON.stringify(message));
                 });
             </script>
         </body>
