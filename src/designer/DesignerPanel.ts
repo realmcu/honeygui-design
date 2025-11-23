@@ -68,12 +68,16 @@ export class DesignerPanel {
             column || vscode.ViewColumn.One,
             {
                 enableScripts: true,
+                retainContextWhenHidden: true,
                 localResourceRoots: [
                     vscode.Uri.joinPath(context.extensionUri, 'src', 'designer', 'webview'),
                     vscode.Uri.joinPath(context.extensionUri, 'out', 'designer', 'webview')
                 ]
             }
         );
+
+        // 开启开发者工具（调试用）
+        (panel.webview as any).openDevTools?.();
 
         DesignerPanel.currentPanel = new DesignerPanel(panel, context);
 
