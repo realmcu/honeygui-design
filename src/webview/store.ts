@@ -294,12 +294,14 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     const state = get();
     if (!vscodeAPI) return;
 
+    // 先保存当前设计
+    get().saveToFile();
+
+    // 不传content，让后端从文件加载完整的HML
     vscodeAPI.postMessage({
       command: 'codegen',
       language,
-      content: {
-        components: state.components,
-      },
+      content: undefined,  // 不传content
     });
   },
 
