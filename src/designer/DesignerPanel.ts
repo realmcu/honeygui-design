@@ -153,7 +153,7 @@ export class DesignerPanel {
                         this._previewUi(message.content);
                         break;
                     case 'codegen':
-                this._generateCode(message.language || 'cpp', message.options, message.content);
+                this.generateCode(message.language || 'cpp', message.options, message.content);
                 break;
                     case 'notify':
                         vscode.window.showInformationMessage(message.text);
