@@ -157,8 +157,35 @@ export const useKeyboardShortcuts = () => {
     const nudgeComponent = (key: string, distance: number) => {
       if (!selectedComponent) return;
 
-      // This will be implemented to move components
-      console.log(`Nudge component ${selectedComponent} ${distance}px ${key}`);
+      const { components, updateComponent } = useDesignerStore.getState();
+      const component = components.find(c => c.id === selectedComponent);
+      if (!component) return;
+
+      let deltaX = 0;
+      let deltaY = 0;
+
+      switch (key) {
+        case 'ArrowUp':
+          deltaY = -distance;
+          break;
+        case 'ArrowDown':
+          deltaY = distance;
+          break;
+        case 'ArrowLeft':
+          deltaX = -distance;
+          break;
+        case 'ArrowRight':
+          deltaX = distance;
+          break;
+      }
+
+      updateComponent(selectedComponent, {
+        position: {
+          ...component.position,
+          x: Math.max(0, component.position.x + deltaX),
+          y: Math.max(0, component.position.y + deltaY),
+        },
+      });
     };
 
     window.addEventListener('keydown', handleKeyDown);

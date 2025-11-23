@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useDesignerStore } from '../store';
-import { Save, Code, Play, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, Grid3x3, MousePointer, Move } from 'lucide-react';
+import { Save, Code, Play, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, Grid3x3, MousePointer } from 'lucide-react';
 import './Toolbar.css';
 
 const Toolbar: React.FC = () => {
@@ -28,10 +28,6 @@ const Toolbar: React.FC = () => {
 
   const handleSelectMode = () => {
     setEditingMode('select');
-  };
-
-  const handleMoveMode = () => {
-    setEditingMode('move');
   };
 
   const handleToggleGrid = () => {
@@ -101,25 +97,6 @@ const Toolbar: React.FC = () => {
       </div>
 
       <div className="toolbar-divider" />
-
-      <div className="toolbar-section">
-        <button
-          className={`toolbar-button ${editingMode === 'select' ? 'active' : ''}`}
-          onClick={handleSelectMode}
-          title="选择模式"
-        >
-          <MousePointer size={16} />
-          <span>选择</span>
-        </button>
-        <button
-          className={`toolbar-button ${editingMode === 'move' ? 'active' : ''}`}
-          onClick={handleMoveMode}
-          title="移动模式"
-        >
-          <Move size={16} />
-          <span>移动</span>
-        </button>
-      </div>
 
       <div className="toolbar-divider" />
 

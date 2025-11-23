@@ -125,13 +125,12 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
       onComponentSelect(componentId);
     }
 
-    if (editingMode === 'move') {
-      setDraggedComponent(componentId);
-    }
+    // 选中即可拖动，不需要切换到移动模式
+    setDraggedComponent(componentId);
   };
 
   const handleComponentMouseMove = (e: React.MouseEvent) => {
-    if (draggedComponent && editingMode === 'move') {
+    if (draggedComponent) {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (!rect) return;
 
