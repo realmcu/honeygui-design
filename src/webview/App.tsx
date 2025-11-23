@@ -216,8 +216,16 @@ const App: React.FC = () => {
 
     let positionX = x;
     let positionY = y;
-    let width = componentDef.defaultSize.width;
-    let height = componentDef.defaultSize.height;
+    
+    // 对于hg_view，使用项目配置的分辨率作为默认大小
+    const canvasSize = useDesignerStore.getState().canvasSize;
+    let width = componentType === 'hg_view' && canvasSize 
+      ? canvasSize.width 
+      : componentDef.defaultSize.width;
+    let height = componentType === 'hg_view' && canvasSize 
+      ? canvasSize.height 
+      : componentDef.defaultSize.height;
+    
     let parent: string | null = null;
 
     // 判断是否为容器组件
