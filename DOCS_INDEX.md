@@ -17,6 +17,7 @@
 
 ### 维护文档
 - **[RECENT_FIXES.md](RECENT_FIXES.md)** - 最近的BUG修复记录
+- **[FRONTEND_LOG_GUIDE.md](FRONTEND_LOG_GUIDE.md)** - 前端LOG查看指南
 - **[CLAUDE.md](CLAUDE.md)** - Claude AI协作记录
 
 ### 需求文档
@@ -49,6 +50,7 @@ npm run watch:webview # 监听前端
 1. **README.md** - 从这里开始
 2. **DEVELOPMENT.md** - 开发者必读
 3. **RECENT_FIXES.md** - 了解最新变更
+4. **FRONTEND_LOG_GUIDE.md** - 前端调试必读
 
 ### 参考文档（按需查阅）
 - 需要了解架构 → ARCHITECTURE_ANALYSIS.md

@@ -122,6 +122,7 @@ npm run rebuild      # 清理并重新构建
 - [快速参考](QUICK_REFERENCE.md) - 常用命令和API
 - [架构分析](ARCHITECTURE_ANALYSIS.md) - 项目架构说明
 - [最近修复](RECENT_FIXES.md) - 最新的BUG修复记录
+- [LOG查看指南](QUICK_LOG_GUIDE.md) - 快速查看前端/后端日志
 
 ## 许可证
 
