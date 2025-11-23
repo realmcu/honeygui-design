@@ -37,7 +37,7 @@ export class PreviewService {
     const config = vscode.workspace.getConfiguration('honeygui.preview');
     return {
       runnerPath: config.get<string>('runnerPath', ''),
-      autoDownload: config.get<boolean>('autoDownload', true),
+      autoDownload: config.get<boolean>('autoDownload', false),
       timeoutMs: config.get<number>('timeoutMs', 10000),
       logLevel: config.get<'debug' | 'info' | 'warn' | 'error'>('logLevel', 'info')
     };

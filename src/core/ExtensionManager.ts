@@ -29,6 +29,12 @@ export class ExtensionManager {
             // 注册命令
             this.commandManager.registerCommands();
 
+            // 注册预览相关命令
+            const previewServiceModule = await import('../preview/PreviewService');
+            const PreviewService = previewServiceModule.PreviewService;
+            const previewService = new PreviewService(this.context);
+            previewService.registerCommands();
+
             // 注册HML编辑器提供者
             this.registerHmlEditorProvider();
 

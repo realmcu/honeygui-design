@@ -160,11 +160,22 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   },
 
   updateComponent: (id, updates) => {
-    set((state) => ({
-      components: state.components.map((comp) =>
-        comp.id === id ? { ...comp, ...updates } : comp
-      ),
-    }));
+    const state = get();
+    const before = state.components.find(c => c.id === id);
+    if (!before) return;
+    const cmd = new UpdatePropertyCommand(
+      id,
+      before,
+      { ...before, ...updates },
+      {
+        components: state.components,
+        setComponents: (components: Component[]) => set({ components }),
+        updateComponent: (cid: string, ups: Partial<Component>) => set({
+          components: get().components.map(comp => (comp.id === cid ? { ...comp, ...ups } : comp))
+        })
+      }
+    );
+    commandManager.execute(cmd);
     get().saveToFile();
   },
 
@@ -172,11 +183,15 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     const state = get();
     const component = state.components.find((c) => c.id === id);
     if (!component) return;
-
-    // 直接修改状态，不通过命令模式，避免无限递归
-    set((state) => ({
-      components: state.components.filter((c) => c.id !== id && c.parent !== id)
-    }));
+    const children = state.components.filter(c => c.parent === id);
+    const cmd = new DeleteComponentCommand(component, children, {
+      components: state.components,
+      setComponents: (components: Component[]) => set({ components }),
+      removeComponent: (cid: string) => set({
+        components: get().components.filter(c => c.id !== cid && c.parent !== cid)
+      })
+    });
+    commandManager.execute(cmd);
     if (vscodeAPI) {
       vscodeAPI.postMessage({ command: 'delete', content: { ids: [id], components: get().components } });
       vscodeAPI.postMessage({ command: 'notify', text: `删除控件: ${id}` });

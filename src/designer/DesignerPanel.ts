@@ -820,7 +820,7 @@ private _createNewDocument(): void {
     /**
      * 生成代码
      */
-    private async _generateCode(language: 'cpp' | 'c' = 'cpp', options?: Partial<CodeGenOptions>, content?: string): Promise<void> {
+    public async generateCode(language: 'cpp' | 'c' = 'cpp', options?: Partial<CodeGenOptions>, content?: string): Promise<void> {
         try {
             // 确保当前设计已保存
             if (!this._filePath) {

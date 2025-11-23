@@ -19,7 +19,7 @@ export class CommandManager {
      * 注册所有命令
      */
     registerCommands(): void {
-        // 创建新项目
+        // 创建新项目（保持兼容别名）
         this.registerCommand('honeygui.createProject', async () => {
             try {
                 logger.info('执行命令: honeygui.createProject');
@@ -27,6 +27,17 @@ export class CommandManager {
             } catch (error) {
                 logger.error(`创建项目失败: ${error instanceof Error ? error.message : String(error)}`);
                 vscode.window.showErrorMessage(`创建项目失败: ${error instanceof Error ? error.message : '未知错误'}`);
+            }
+        });
+
+        // 兼容 package.json 的激活事件命令: honeygui.newProject
+        this.registerCommand('honeygui.newProject', async () => {
+            try {
+                logger.info('执行命令: honeygui.newProject');
+                await CreateProjectPanel.createOrShow(this.context);
+            } catch (error) {
+                logger.error(`新建项目失败: ${error instanceof Error ? error.message : String(error)}`);
+                vscode.window.showErrorMessage(`新建项目失败: ${error instanceof Error ? error.message : '未知错误'}`);
             }
         });
 
@@ -146,6 +157,26 @@ export class CommandManager {
             }
         });
 
+        // 兼容 package.json 的命令: honeygui.openDesigner（无参时打开当前活动HML）
+        this.registerCommand('honeygui.openDesigner', async () => {
+            try {
+                logger.info('执行命令: honeygui.openDesigner');
+                const active = vscode.window.activeTextEditor;
+                if (!active || !active.document.fileName.endsWith('.hml')) {
+                    vscode.window.showWarningMessage('请在文本编辑器中打开一个HML文件后再执行该命令');
+                    return;
+                }
+                await vscode.commands.executeCommand(
+                    'vscode.openWith',
+                    active.document.uri,
+                    'honeygui.hmlEditor'
+                );
+            } catch (error) {
+                logger.error(`打开设计器失败: ${error instanceof Error ? error.message : String(error)}`);
+                vscode.window.showErrorMessage(`打开设计器失败: ${error instanceof Error ? error.message : '未知错误'}`);
+            }
+        });
+
         // 创建新的HML文件
         this.registerCommand('honeygui.createNewHmlFile', async (uri: vscode.Uri) => {
             try {
@@ -195,6 +226,25 @@ export class CommandManager {
             } catch (error) {
                 logger.error(`创建HML文件失败: ${error instanceof Error ? error.message : String(error)}`);
                 vscode.window.showErrorMessage(`创建HML文件失败: ${error instanceof Error ? error.message : '未知错误'}`);
+            }
+        });
+
+        // 代码生成命令（从当前设计器面板触发）
+        this.registerCommand('honeygui.codegen', async () => {
+            try {
+                logger.info('执行命令: honeygui.codegen');
+                const panel = (DesignerPanel as any).currentPanel as DesignerPanel | undefined;
+                if (!panel) {
+                    vscode.window.showWarningMessage('请先打开HoneyGUI设计器');
+                    return;
+                }
+                // 读取用户配置中的语言选项
+                const config = vscode.workspace.getConfiguration('honeygui.codegen');
+                const language = (config.get<string>('language', 'cpp') as 'cpp' | 'c');
+                await (panel as any).generateCode(language);
+            } catch (error) {
+                logger.error(`代码生成失败: ${error instanceof Error ? error.message : String(error)}`);
+                vscode.window.showErrorMessage(`代码生成失败: ${error instanceof Error ? error.message : '未知错误'}`);
             }
         });
 
