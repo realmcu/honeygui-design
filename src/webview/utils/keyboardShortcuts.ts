@@ -15,6 +15,16 @@ export const useKeyboardShortcuts = () => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // 如果焦点在输入框、文本域或可编辑元素中，不处理快捷键
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
       const isModKey = e.ctrlKey || e.metaKey; // Ctrl on Windows/Linux, Command on Mac
       const isShift = e.shiftKey;
 
