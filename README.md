@@ -2,6 +2,8 @@
 
 一个强大的VSCode插件，为GUI应用程序开发提供可视化设计环境和代码生成工具。
 
+> 📝 **最近更新**: 查看 [RECENT_FIXES.md](RECENT_FIXES.md) 了解最新的BUG修复和优化
+
 ## 功能特性
 
 ### 核心功能
@@ -88,9 +90,38 @@
 
 - Visual Studio Code Extension API
 - TypeScript
+- React + Zustand
+- Webpack
 - HTML/CSS/JavaScript
 - C++/C
 - CMake
+
+## 开发相关
+
+### 构建项目
+```bash
+npm install          # 安装依赖
+npm run compile      # 编译TypeScript
+npm run build:webview # 构建前端
+```
+
+### 开发模式
+```bash
+npm run watch        # 监听后端变化
+npm run watch:webview # 监听前端变化
+```
+
+### 清理缓存
+```bash
+npm run clean        # 清理所有缓存
+npm run rebuild      # 清理并重新构建
+```
+
+### 文档
+- [开发指南](DEVELOPMENT.md) - 开发环境配置和工作流
+- [快速参考](QUICK_REFERENCE.md) - 常用命令和API
+- [架构分析](ARCHITECTURE_ANALYSIS.md) - 项目架构说明
+- [最近修复](RECENT_FIXES.md) - 最新的BUG修复记录
 
 ## 许可证
 
