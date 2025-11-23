@@ -76,9 +76,6 @@ export class DesignerPanel {
             }
         );
 
-        // 开启开发者工具（调试用）
-        (panel.webview as any).openDevTools?.();
-
         DesignerPanel.currentPanel = new DesignerPanel(panel, context);
 
         // 如果提供了文件路径，加载该文件，否则创建新文档
