@@ -78,3 +78,13 @@ Thumbs.db
 
 # pnpm
 pnpm-lock.yaml
+
+# Backup and temporary development files
+*.bak
+*.backup
+*.backup.*
+*_backup.*
+*.improved.*
+*.old
+*.orig
+*~
