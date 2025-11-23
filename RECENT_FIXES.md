@@ -4,11 +4,126 @@
 
 ---
 
-## 1. LOG实现BUG修复
+## 1. 拖拽组件到正确容器（严重BUG修复）
 
-### 修复的问题
+### 问题描述
+拖拽组件到第二个view时，组件总是被添加到第一个view，无法准确放置到目标容器。
 
-#### 1.1 Logger双重格式化BUG（严重）
+### 根本原因
+使用 `e.target` 获取鼠标坐标参考点时，获取的是被点击的具体元素（可能是某个view），而不是画布容器本身，导致坐标计算错误。
+
+### 修复方案
+```typescript
+// 修改前
+const rect = (e.target as HTMLElement).getBoundingClientRect();
+
+// 修改后
+const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+```
+
+**关键差异**：
+- `e.target`：鼠标实际点击的元素（可能是子元素）
+- `e.currentTarget`：事件绑定的元素（画布容器）
+
+### 验证结果
+✅ 拖拽到第二个view正确添加
+✅ 坐标计算准确
+✅ 嵌套容器识别正常
+
+**文件**: `src/webview/App.tsx`  
+**提交**: 2855038
+
+---
+
+## 2. hg_view默认大小使用项目分辨率
+
+### 问题描述
+新建hg_view时大小固定为350x250，与项目配置的分辨率（如800x480）不一致，需要手动调整。
+
+### 修复方案
+```typescript
+// 对于hg_view，使用项目配置的分辨率作为默认大小
+const canvasSize = useDesignerStore.getState().canvasSize;
+let width = componentType === 'hg_view' && canvasSize 
+  ? canvasSize.width 
+  : componentDef.defaultSize.width;
+let height = componentType === 'hg_view' && canvasSize 
+  ? canvasSize.height 
+  : componentDef.defaultSize.height;
+```
+
+### 验证结果
+✅ 项目分辨率800x480时，新建hg_view大小为800x480
+✅ 没有项目配置时，回退到默认值350x250
+✅ 其他组件不受影响
+
+**文件**: `src/webview/App.tsx`  
+**提交**: d17b397
+
+---
+
+## 3. 前端调试日志可查看
+
+### 问题描述
+前端LOG无法查看，Webpack生产模式会删除所有console.log，导致调试困难。
+
+### 修复方案
+
+#### 3.1 添加DEBUG开关
+```typescript
+// src/webview/App.tsx
+const DEBUG_DROP = true; // 控制拖放调试日志
+```
+
+#### 3.2 Webpack配置保留日志
+```javascript
+// webpack.config.js
+new TerserPlugin({
+  terserOptions: {
+    compress: {
+      drop_console: false, // 保留console.log
+      drop_debugger: isProduction,
+      pure_funcs: [],
+    },
+  },
+})
+```
+
+#### 3.3 查看日志方法
+1. Ctrl+Shift+P → "Developer: Open Webview Developer Tools"
+2. 查看Console标签页
+
+### 验证结果
+✅ 能够查看前端console.log输出
+✅ DEBUG开关工作正常
+✅ 日志格式清晰
+
+**文件**: `src/webview/App.tsx`, `webpack.config.js`  
+**提交**: 52a8e8a, 46f22bb
+
+---
+
+## 4. 项目结构清理
+
+### 清理内容
+- 删除重复文件：`ConfigManager.improved.ts`, `HmlParser.improved.ts`
+- 删除备份文件：`extension_backup.ts`, `*.bak`
+- 删除异常文件：`bject Name`
+- 更新 `.gitignore` 规则
+
+### 清理结果
+✅ 删除6个重复/备份文件
+✅ 重新安装671个依赖包
+✅ 编译和构建成功
+✅ Git仓库状态正常
+
+**提交**: a965931, eec5c3c
+
+---
+
+## 5. LOG实现BUG修复
+
+### 5.1 Logger双重格式化BUG
 
 **问题**: `Logger.ts` 中的 `cacheAndLog` 方法将已格式化的消息传递给VSCode的 `LogOutputChannel`，导致双重格式化。
 
@@ -28,160 +143,44 @@ private cacheAndLog(level: string, message: string, formatted: string): void {
 
 **文件**: `src/utils/Logger.ts`
 
-#### 1.2 前端拖放日志过多（性能）
+### 5.2 Webpack缓存机制优化
 
-**问题**: `App.tsx` 的拖放函数中有20+条 `console.log`，影响性能。
-
-**修复**: 添加 `DEBUG_DROP` 开关（默认false），将调试日志包裹在条件判断中。
-
-```typescript
-const DEBUG_DROP = false; // 生产环境设为false
-
-if (DEBUG_DROP) {
-    console.log('[拖放] 调试信息...');
-}
-```
-
-**文件**: `src/webview/App.tsx`
-
-#### 1.3 Webpack配置优化
-
-**问题**: `pure_funcs` 配置不完整。
-
-**修复**: 添加 `console.info` 到清理列表。
-
-```javascript
-pure_funcs: isProduction ? ['console.log', 'console.debug', 'console.warn', 'console.info'] : [],
-```
-
-**文件**: `webpack.config.js`
-
-#### 1.4 VSCode API fallback改进
-
-**问题**: API获取失败时，fallback不记录消息内容。
-
-**修复**: 
-```typescript
-postMessage: (message: any) => {
-    console.error('[HoneyGUI] VSCode API not available, cannot send message:', message);
-},
-```
-
-**文件**: `src/webview/index.tsx`
-
----
-
-## 2. Webpack缓存机制优化
-
-### 禁用缓存
-
-**原因**: 避免调试过程中的缓存风险，确保每次构建使用最新代码。
-
-**配置**: `webpack.config.js`
+**配置**: 禁用缓存避免调试风险
 ```javascript
 module.exports = (env, argv) => {
   return {
-    // 禁用缓存机制
-    cache: false,
-    // ...
+    cache: false, // 禁用缓存
   };
 };
 ```
 
-### 缓存清理工具
-
-**脚本**:
-- `scripts/clear-cache.js` - Node.js版本（跨平台）
-- `scripts/clear-cache.sh` - Bash版本
-
-**npm命令**:
+**清理工具**:
 ```bash
 npm run clean        # 清理缓存
-npm run clean:all    # 清理缓存并重装依赖
-npm run rebuild      # 清理缓存并重新构建
-```
-
-**清理内容**:
-- Webpack缓存 (`.webpack_cache/`, `node_modules/.cache/`)
-- TypeScript构建信息 (`*.tsbuildinfo`)
-- 输出目录 (`out/`)
-- Linter缓存 (`.eslintcache`, `.stylelintcache`)
-- 通用缓存 (`.cache/`)
-
----
-
-## 使用建议
-
-### 日常开发
-```bash
-npm run watch:webview  # 启动watch模式
-```
-
-### 遇到问题
-```bash
-npm run rebuild  # 清理并重建
-```
-
-### 提交代码前
-```bash
-npm run clean
-npm run compile
-npm run build:webview
-npm run lint
-```
-
-### 启用调试日志
-```typescript
-// src/webview/App.tsx
-const DEBUG_DROP = true;  // 临时改为true
-```
-
----
-
-## 相关文件
-
-### 修改的文件
-- `src/utils/Logger.ts` - 修复双重格式化
-- `src/webview/App.tsx` - 添加调试开关
-- `src/webview/index.tsx` - 改进API fallback
-- `webpack.config.js` - 禁用缓存，优化配置
-- `package.json` - 添加清理脚本命令
-
-### 新增的文件
-- `scripts/clear-cache.js` - 缓存清理脚本
-- `scripts/clear-cache.sh` - Bash清理脚本
-
----
-
-## 验证方法
-
-### 验证LOG修复
-1. 打开VSCode输出面板 → HoneyGUI
-2. 执行任意操作
-3. 检查日志格式（应该只有一层时间戳）
-
-### 验证缓存禁用
-```bash
-# 修改代码后重新构建
-npm run build:webview
-
-# 检查输出文件时间戳
-ls -l out/designer/webview/
-```
-
-### 验证清理脚本
-```bash
-npm run clean
-# 应该看到清理成功的消息
+npm run rebuild      # 清理并重建
 ```
 
 ---
 
 ## 总结
 
-✅ 修复了4个LOG相关BUG
-✅ 禁用了Webpack缓存机制
-✅ 提供了完整的缓存清理工具
-✅ 优化了开发工作流
+### 本次修复
+✅ 修复拖拽到错误容器的严重BUG
+✅ hg_view默认大小自动匹配项目分辨率
+✅ 前端调试日志可查看
+✅ 清理项目重复文件
+✅ 修复LOG双重格式化
+✅ 优化Webpack缓存机制
 
-**效果**: 更可靠的构建、更好的调试体验、更清晰的日志输出
+### 影响范围
+- 拖拽功能：准确性大幅提升
+- 用户体验：减少手动调整
+- 开发效率：调试更便捷
+- 代码质量：结构更清晰
+
+---
+
+## 相关文档
+- [需求文档](doc/需求文档.md) - R-004, R-005, R-006
+- [项目修复总结](PROJECT_FIX_SUMMARY.md)
+- [快速开始指南](QUICK_START_AFTER_FIX.md)
