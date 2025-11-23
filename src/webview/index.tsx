@@ -26,7 +26,9 @@ if (!window.vscodeAPI) {
     console.error('[HoneyGUI] Error acquiring VSCode API:', error);
     // 即使获取失败，也确保vscodeAPI存在，避免后续代码重复尝试
     window.vscodeAPI = {
-      postMessage: () => console.warn('VSCode API not available'),
+      postMessage: (message: any) => {
+        console.error('[HoneyGUI] VSCode API not available, cannot send message:', message);
+      },
       setState: () => {},
       getState: () => null
     };

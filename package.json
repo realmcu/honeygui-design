@@ -301,7 +301,10 @@
     "build:webview": "webpack --mode production",
     "build:webview:dev": "webpack --mode development",
     "watch:webview": "webpack --mode development --watch",
-    "serve:webview": "webpack serve --mode development"
+    "serve:webview": "webpack serve --mode development",
+    "clean": "node scripts/clear-cache.js",
+    "clean:all": "npm run clean && rimraf node_modules && npm install",
+    "rebuild": "npm run clean && npm run compile && npm run build:webview"
   },
   "devDependencies": {
     "esbuild": "^0.27.0",

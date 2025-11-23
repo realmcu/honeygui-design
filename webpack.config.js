@@ -9,6 +9,11 @@ module.exports = (env, argv) => {
 
   return {
     mode: isProduction ? 'production' : 'development',
+    
+    // 禁用缓存机制，避免调试过程中的风险
+    // Webpack 5 默认启用文件系统缓存，这可能导致修改后的代码不生效
+    cache: false,
+    
     entry: './src/webview/index.tsx',
     output: {
       path: path.resolve(__dirname, 'out/designer/webview'),
@@ -82,7 +87,8 @@ module.exports = (env, argv) => {
             compress: {
               drop_console: isProduction, // 生产环境删除console.log
               drop_debugger: isProduction,
-              pure_funcs: isProduction ? ['console.log', 'console.debug', 'console.warn'] : [],
+              pure_funcs: isProduction ? ['console.log', 'console.debug', 'console.warn', 'console.info'] : [],
+              // 注意: console.error 保留用于错误报告
             },
             format: {
               comments: false,

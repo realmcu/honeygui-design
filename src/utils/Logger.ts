@@ -21,7 +21,7 @@ export class Logger {
         return `[${timestamp}] [${level.toUpperCase()}] ${message}`;
     }
 
-private cacheAndLog(level: string, formatted: string): void {
+    private cacheAndLog(level: string, message: string, formatted: string): void {
         // 检查缓存是否超过最大限制，如果超过删除最旧的日志
         if (this.cachedLogs.length >= this.MAX_LOG_ENTRIES) {
             // 移除最旧的20%日志，避免每次删除单个元素带来的性能开销
@@ -29,19 +29,22 @@ private cacheAndLog(level: string, formatted: string): void {
             this.cachedLogs.splice(0, removeCount);
         }
 
+        // 缓存使用格式化版本（包含时间戳）
         this.cachedLogs.push(formatted);
+        
+        // 输出到VSCode使用原始消息（VSCode LogOutputChannel会自动添加时间戳）
         switch (level) {
             case 'debug':
-                this.outputChannel.debug(formatted);
+                this.outputChannel.debug(message);
                 break;
             case 'info':
-                this.outputChannel.info(formatted);
+                this.outputChannel.info(message);
                 break;
             case 'warn':
-                this.outputChannel.warn(formatted);
+                this.outputChannel.warn(message);
                 break;
             case 'error':
-                this.outputChannel.error(formatted);
+                this.outputChannel.error(message);
                 break;
         }
     }
@@ -56,28 +59,28 @@ private cacheAndLog(level: string, formatted: string): void {
     debug(message: string): void {
         if (this.shouldLog('debug')) {
             const formatted = this.formatMessage('debug', message);
-            this.cacheAndLog('debug', formatted);
+            this.cacheAndLog('debug', message, formatted);
         }
     }
 
     info(message: string): void {
         if (this.shouldLog('info')) {
             const formatted = this.formatMessage('info', message);
-            this.cacheAndLog('info', formatted);
+            this.cacheAndLog('info', message, formatted);
         }
     }
 
     warn(message: string): void {
         if (this.shouldLog('warn')) {
             const formatted = this.formatMessage('warn', message);
-            this.cacheAndLog('warn', formatted);
+            this.cacheAndLog('warn', message, formatted);
         }
     }
 
     error(message: string): void {
         if (this.shouldLog('error')) {
             const formatted = this.formatMessage('error', message);
-            this.cacheAndLog('error', formatted);
+            this.cacheAndLog('error', message, formatted);
         }
     }
 
