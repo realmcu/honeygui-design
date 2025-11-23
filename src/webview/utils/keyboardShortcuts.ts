@@ -5,7 +5,6 @@
 
 import { useEffect } from 'react';
 import { useDesignerStore } from '../store';
-import { commandManager } from '../store';
 
 export const useKeyboardShortcuts = () => {
   const {
@@ -35,34 +34,34 @@ export const useKeyboardShortcuts = () => {
           }
           break;
 
-        // Undo (Ctrl+Z or Command+Z)
-        case 'z':
-        case 'Z':
-          if (isModKey && !isShift) {
-            e.preventDefault();
-            if (commandManager.canUndo()) {
-              commandManager.undo();
-            }
-          }
-          // Redo (Ctrl+Shift+Z or Command+Shift+Z)
-          else if (isModKey && isShift) {
-            e.preventDefault();
-            if (commandManager.canRedo()) {
-              commandManager.redo();
-            }
-          }
-          break;
+        // Undo (Ctrl+Z or Command+Z) - TODO: Implement command manager
+        // case 'z':
+        // case 'Z':
+        //   if (isModKey && !isShift) {
+        //     e.preventDefault();
+        //     if (commandManager.canUndo()) {
+        //       commandManager.undo();
+        //     }
+        //   }
+        //   // Redo (Ctrl+Shift+Z or Command+Shift+Z)
+        //   else if (isModKey && isShift) {
+        //     e.preventDefault();
+        //     if (commandManager.canRedo()) {
+        //       commandManager.redo();
+        //     }
+        //   }
+        //   break;
 
-        // Redo (Ctrl+Y or Command+Y)
-        case 'y':
-        case 'Y':
-          if (isModKey) {
-            e.preventDefault();
-            if (commandManager.canRedo()) {
-              commandManager.redo();
-            }
-          }
-          break;
+        // Redo (Ctrl+Y or Command+Y) - TODO: Implement command manager
+        // case 'y':
+        // case 'Y':
+        //   if (isModKey) {
+        //     e.preventDefault();
+        //     if (commandManager.canRedo()) {
+        //       commandManager.redo();
+        //     }
+        //   }
+        //   break;
 
         // Delete (Delete or Backspace)
         case 'Delete':

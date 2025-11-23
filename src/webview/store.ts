@@ -409,6 +409,3 @@ export const snapToGrid = (value: number, gridSize: number): number => {
 export const generateId = (): string => {
   return `component_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 };
-
-// Command manager instance
-export const commandManager = new CommandManager(50);

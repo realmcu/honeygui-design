@@ -14,6 +14,8 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [canvasOffsetStart, setCanvasOffsetStart] = useState({ x: 0, y: 0 });
   const [canvasBackground, setCanvasBackground] = useState<string>('#f0f0f0'); // 默认灰色背景
+  const [pendingDragComponent, setPendingDragComponent] = useState<string | null>(null); // 待拖动的组件
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 }); // 鼠标相对组件的偏移
 
   const {
     components,
@@ -118,6 +120,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
 
   const handleComponentMouseDown = (e: React.MouseEvent, componentId: string) => {
     e.stopPropagation();
+    
     const multi = e.ctrlKey || e.metaKey || e.shiftKey;
     if (multi) {
       addToSelection(componentId);
@@ -125,17 +128,48 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
       onComponentSelect(componentId);
     }
 
-    // 选中即可拖动，不需要切换到移动模式
-    setDraggedComponent(componentId);
+    // 计算鼠标相对于组件的偏移量
+    const component = components.find(c => c.id === componentId);
+    if (component && canvasRef.current) {
+      const rect = canvasRef.current.getBoundingClientRect();
+      const mouseX = (e.clientX - rect.left - canvasOffset.x) / zoom;
+      const mouseY = (e.clientY - rect.top - canvasOffset.y) / zoom;
+      
+      setDragOffset({
+        x: mouseX - component.position.x,
+        y: mouseY - component.position.y,
+      });
+    }
+
+    // 记录待拖动的组件和鼠标位置，但不立即开始拖动
+    setPendingDragComponent(componentId);
+    setDragStart({ x: e.clientX, y: e.clientY });
   };
 
   const handleComponentMouseMove = (e: React.MouseEvent) => {
+    // 如果有待拖动的组件，检查是否移动了足够距离
+    if (pendingDragComponent && !draggedComponent) {
+      const deltaX = Math.abs(e.clientX - dragStart.x);
+      const deltaY = Math.abs(e.clientY - dragStart.y);
+      const threshold = 3; // 移动超过3px才开始拖动
+      
+      if (deltaX > threshold || deltaY > threshold) {
+        setDraggedComponent(pendingDragComponent);
+        setPendingDragComponent(null);
+      }
+    }
+    
     if (draggedComponent) {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (!rect) return;
 
-      const x = (e.clientX - rect.left - canvasOffset.x) / zoom;
-      const y = (e.clientY - rect.top - canvasOffset.y) / zoom;
+      // 计算鼠标在画布中的位置
+      const mouseX = (e.clientX - rect.left - canvasOffset.x) / zoom;
+      const mouseY = (e.clientY - rect.top - canvasOffset.y) / zoom;
+      
+      // 减去偏移量得到组件左上角的位置
+      const x = mouseX - dragOffset.x;
+      const y = mouseY - dragOffset.y;
 
       const snapToGridValue = (value: number) => {
         if (!snapToGrid) return value;
@@ -156,86 +190,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
   };
 
   const handleComponentMouseUp = () => {
-    if (draggedComponent) {
-      const component = components.find(c => c.id === draggedComponent);
-      if (!component) {
-        setDraggedComponent(null);
-        return;
-      }
-      
-      const { x, y, width, height } = component.position;
-      const centerX = x + width / 2;
-      const centerY = y + height / 2;
-      
-      let newParent: string | undefined = undefined;
-      
-      // 查找包含组件中心点的容器（从后往前，优先上层容器）
-      for (let i = components.length - 1; i >= 0; i--) {
-        const container = components[i];
-        if ((container.type === 'hg_view' || container.type === 'hg_panel' || container.type === 'hg_window') &&
-            container.id !== component.id) {
-          const { x: cx, y: cy, width: cw, height: ch } = container.position;
-          if (centerX >= cx && centerX <= cx + cw && 
-              centerY >= cy && centerY <= cy + ch) {
-            newParent = container.id;
-            break;
-          }
-        }
-      }
-      
-      // 如果父容器发生变化，批量更新所有相关组件
-      if (newParent !== component.parent) {
-        const updates: Array<{ id: string; updates: Partial<Component> }> = [];
-        
-        // 1. 从旧父容器的children中移除
-        if (component.parent) {
-          const oldParent = components.find(c => c.id === component.parent);
-          if (oldParent?.children) {
-            updates.push({
-              id: component.parent,
-              updates: { children: oldParent.children.filter(id => id !== draggedComponent) }
-            });
-          }
-        }
-        
-        // 2. 添加到新父容器的children中
-        if (newParent) {
-          const newParentComp = components.find(c => c.id === newParent);
-          if (newParentComp) {
-            updates.push({
-              id: newParent,
-              updates: { children: [...(newParentComp.children || []), draggedComponent] }
-            });
-          }
-        }
-        
-        // 3. 转换坐标系统：从画布绝对坐标转换为相对于新父容器的坐标
-        let newX = x;
-        let newY = y;
-        if (newParent) {
-          const newParentComp = components.find(c => c.id === newParent);
-          if (newParentComp) {
-            newX = x - newParentComp.position.x;
-            newY = y - newParentComp.position.y;
-          }
-        }
-        
-        // 4. 更新组件的parent属性和坐标
-        updates.push({
-          id: draggedComponent,
-          updates: { 
-            parent: newParent,
-            position: { ...component.position, x: newX, y: newY }
-          }
-        });
-        
-        // 批量应用所有更新
-        setComponents(components.map(c => {
-          const update = updates.find(u => u.id === c.id);
-          return update ? { ...c, ...update.updates } : c;
-        }));
-      }
-    }
+    setPendingDragComponent(null);
     setDraggedComponent(null);
   };
 
@@ -292,16 +247,6 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
       userSelect: 'none',
     };
 
-  const handleClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const multi = e.ctrlKey || e.metaKey || e.shiftKey;
-    if (multi) {
-      addToSelection(component.id);
-    } else {
-      onComponentSelect(component.id);
-    }
-  };
-
     const handleMouseEnter = () => {
       if (!draggedComponent) {
         setHoveredComponent(component.id);
@@ -321,7 +266,6 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
             key={component.id}
             style={style}
             onMouseDown={(e) => handleComponentMouseDown(e, component.id)}
-            onClick={handleClick}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
             disabled={!component.enabled}
@@ -336,7 +280,6 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
             key={component.id}
             style={style}
             onMouseDown={(e) => handleComponentMouseDown(e, component.id)}
-            onClick={handleClick}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
           >
@@ -350,7 +293,6 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
             key={component.id}
             style={style}
             onMouseDown={(e) => handleComponentMouseDown(e, component.id)}
-            onClick={handleClick}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
           >
@@ -365,7 +307,6 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
             style={style}
             placeholder={component.data?.placeholder}
             onMouseDown={(e) => handleComponentMouseDown(e, component.id)}
-            onClick={handleClick}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
             disabled={!component.enabled}
@@ -383,7 +324,6 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
               backgroundRepeat: 'no-repeat',
             }}
             onMouseDown={(e) => handleComponentMouseDown(e, component.id)}
-            onClick={handleClick}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
           >
@@ -483,7 +423,6 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
                 : 'visible', // Window组件默认可见，不处理溢出
             }}
             onMouseDown={(e) => handleComponentMouseDown(e, component.id)}
-            onClick={handleClick}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
           >
@@ -542,7 +481,6 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
             key={component.id}
             style={style}
             onMouseDown={(e) => handleComponentMouseDown(e, component.id)}
-            onClick={handleClick}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
           >
