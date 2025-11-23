@@ -207,7 +207,8 @@ const App: React.FC = () => {
     }
 
     // 计算鼠标释放时的画布坐标位置
-    const rect = (e.target as HTMLElement).getBoundingClientRect();
+    // 使用 currentTarget 而不是 target，确保获取的是画布容器而不是子元素
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const x = Math.max(0, Math.round(e.clientX - rect.left));
     const y = Math.max(0, Math.round(e.clientY - rect.top));
 
