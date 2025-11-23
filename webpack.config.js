@@ -85,9 +85,9 @@ module.exports = (env, argv) => {
         new TerserPlugin({
           terserOptions: {
             compress: {
-              drop_console: isProduction, // 生产环境删除console.log
+              drop_console: false, // 临时保留console.log用于调试
               drop_debugger: isProduction,
-              pure_funcs: isProduction ? ['console.log', 'console.debug', 'console.warn', 'console.info'] : [],
+              pure_funcs: [],
               // 注意: console.error 保留用于错误报告
             },
             format: {
