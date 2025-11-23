@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import { logger } from '../utils/Logger';
 import { HmlController } from '../hml/HmlController';
 import { Component } from '../hml/types';
-import { CodeGeneratorFactory, CodeGeneratorOptions } from '../codegen/CodeGenerator';
+import { generateHoneyGuiCode, CodeGenOptions } from '../codegen/honeygui';
 import { WebviewUtils } from '../common/WebviewUtils';
 import { ProjectConfigLoader } from '../utils/ProjectConfigLoader';
 import { HmlContentComparator } from '../utils/HmlContentComparator';
@@ -820,7 +820,7 @@ private _createNewDocument(): void {
     /**
      * 生成代码
      */
-    private async _generateCode(language: 'cpp' | 'c' = 'cpp', options?: Partial<CodeGeneratorOptions>, content?: string): Promise<void> {
+    private async _generateCode(language: 'cpp' | 'c' = 'cpp', options?: Partial<CodeGenOptions>, content?: string): Promise<void> {
         try {
             // 确保当前设计已保存
             if (!this._filePath) {
@@ -849,16 +849,14 @@ private _createNewDocument(): void {
 
             // 准备代码生成选项
             const projectName = path.basename(this._filePath || 'HoneyGUIApp', '.hml');
-            const generatorOptions: CodeGeneratorOptions = {
+            const generatorOptions: CodeGenOptions = {
                 outputDir,
                 projectName,
                 enableProtectedAreas: true,
-                generateDebugInfo: true,
                 ...options
             };
 
-            // 显示进度通知
-            const progress = await vscode.window.withProgress(
+            const genResult = await vscode.window.withProgress(
                 {
                     location: vscode.ProgressLocation.Notification,
                     title: `正在生成${language.toUpperCase()}代码...`,
@@ -881,18 +879,10 @@ private _createNewDocument(): void {
 
                     progress.report({ increment: 30, message: '创建代码生成器...' });
 
-                    // 创建代码生成器
-                    const generator = CodeGeneratorFactory.createGenerator(
-                        language,
-                        // 简化实现，创建一个简单的DesignerModel对象
-                        { components: [] } as any,
-                        generatorOptions
-                    );
-
                     progress.report({ increment: 50, message: '生成代码文件...' });
 
-                    // 生成代码
-                    const result = await generator.generate();
+                    const components = this._hmlController.currentDocument?.view.components || [];
+                    const result = await generateHoneyGuiCode(components as any, generatorOptions);
 
                     progress.report({ increment: 90, message: '完成代码生成...' });
 
@@ -900,10 +890,9 @@ private _createNewDocument(): void {
                 }
             );
 
-            // 处理生成结果
-            if ((progress as any).success) {
+            if ((genResult as any).success) {
                 // 显示成功消息
-                const generatedFiles = (progress as any).generatedFiles || [];
+                const generatedFiles = (genResult as any).files || [];
                 const message = `成功生成${language.toUpperCase()}代码文件（${generatedFiles.length}个文件）`;
                 vscode.window.showInformationMessage(message);
 
@@ -925,12 +914,13 @@ private _createNewDocument(): void {
                 }
             } else {
                 // 显示错误消息
-                vscode.window.showErrorMessage(`代码生成失败: ${(progress as any).error || '未知错误'}`);
+                const errors = (genResult as any).errors;
+                vscode.window.showErrorMessage(`代码生成失败: ${errors && errors.length ? errors[0] : '未知错误'}`);
             }
 
             // 如果有警告，显示警告
-            if ((progress as any).warnings && (progress as any).warnings.length > 0) {
-                for (const warning of (progress as any).warnings) {
+            if ((genResult as any).warnings && (genResult as any).warnings.length > 0) {
+                for (const warning of (genResult as any).warnings) {
                     vscode.window.showWarningMessage(`警告: ${warning}`);
                 }
             }

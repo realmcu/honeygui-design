@@ -3,54 +3,18 @@
  * 定义所有组件的类型和接口
  */
 
-export interface ComponentPosition {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
+import type {
+  Component as HmlComponent,
+  ComponentPosition as HmlComponentPosition,
+  ComponentStyle as HmlComponentStyle,
+  ComponentData as HmlComponentData
+} from '../hml/types';
 
-export interface ComponentStyle {
-  color?: string;
-  backgroundColor?: string;
-  fontSize?: number;
-  fontWeight?: string;
-  border?: string;
-  borderRadius?: number;
-  padding?: number;
-  margin?: number;
-  
-  // 视图组件属性
-  overflow?: 'auto' | 'hidden' | 'scroll' | 'visible';
-  
-  // 窗口组件属性
-  title?: string;
-  titleBarHeight?: number;
-  titleBarColor?: string;
-}
+export type ComponentPosition = HmlComponentPosition;
+export type ComponentStyle = HmlComponentStyle;
+export type ComponentData = HmlComponentData;
 
-export interface ComponentData {
-  text?: string;
-  src?: string;
-  value?: string | number | boolean;
-  placeholder?: string;
-  options?: string[];
-}
-
-export interface Component {
-  id: string;
-  type: ComponentType;
-  name: string;
-  position: ComponentPosition;
-  style?: ComponentStyle;
-  data?: ComponentData;
-  children?: string[];
-  parent?: string | null;
-  visible: boolean;
-  enabled: boolean;
-  locked: boolean;
-  zIndex: number;
-}
+export type Component = Omit<HmlComponent, 'type'> & { type: ComponentType };
 
 export type ComponentType =
   | 'hg_button'
