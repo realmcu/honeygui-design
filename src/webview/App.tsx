@@ -359,8 +359,11 @@ const App: React.FC = () => {
     e.preventDefault();
   };
 
-  const handleCanvasClick = () => {
-    selectComponent(null);
+  const handleCanvasClick = (e: React.MouseEvent) => {
+    // 只有点击canvas本身（不是子元素）时才清除选择
+    if (e.target === e.currentTarget) {
+      selectComponent(null);
+    }
   };
 
   const handleComponentSelect = (id: string | null) => {
