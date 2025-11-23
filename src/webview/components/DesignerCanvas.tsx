@@ -259,6 +259,10 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
       }
     };
 
+    const handleClick = (e: React.MouseEvent) => {
+      e.stopPropagation(); // 阻止click事件冒泡到canvas-container
+    };
+
       switch (component.type) {
       case 'hg_button':
         return (
@@ -266,6 +270,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
             key={component.id}
             style={style}
             onMouseDown={(e) => handleComponentMouseDown(e, component.id)}
+            onClick={handleClick}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
             disabled={!component.enabled}
@@ -280,6 +285,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
             key={component.id}
             style={style}
             onMouseDown={(e) => handleComponentMouseDown(e, component.id)}
+            onClick={handleClick}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
           >
@@ -293,6 +299,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
             key={component.id}
             style={style}
             onMouseDown={(e) => handleComponentMouseDown(e, component.id)}
+            onClick={handleClick}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
           >
@@ -307,6 +314,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
             style={style}
             placeholder={component.data?.placeholder}
             onMouseDown={(e) => handleComponentMouseDown(e, component.id)}
+            onClick={handleClick}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
             disabled={!component.enabled}
@@ -324,6 +332,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
               backgroundRepeat: 'no-repeat',
             }}
             onMouseDown={(e) => handleComponentMouseDown(e, component.id)}
+            onClick={handleClick}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
           >
@@ -423,6 +432,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
                 : 'visible', // Window组件默认可见，不处理溢出
             }}
             onMouseDown={(e) => handleComponentMouseDown(e, component.id)}
+            onClick={handleClick}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
           >
@@ -481,6 +491,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
             key={component.id}
             style={style}
             onMouseDown={(e) => handleComponentMouseDown(e, component.id)}
+            onClick={handleClick}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
           >
