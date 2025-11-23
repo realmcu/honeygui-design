@@ -5,7 +5,6 @@
 
 import { create } from 'zustand';
 import { Component, ComponentType, DesignerState, VSCodeAPI } from './types';
-import { CommandManager, AddComponentCommand, DeleteComponentCommand, MoveComponentCommand, UpdatePropertyCommand } from './utils/undoRedo';
 
 export interface DesignerStore extends DesignerState {
   // Actions
@@ -253,17 +252,19 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
 
   // Undo/Redo
   undo: () => {
-    commandManager.undo();
+    // TODO: 实现撤销功能
+    console.log('撤销功能待实现');
   },
 
   redo: () => {
-    commandManager.redo();
+    // TODO: 实现重做功能
+    console.log('重做功能待实现');
   },
 
-  canUndo: () => commandManager.canUndo(),
-  canRedo: () => commandManager.canRedo(),
-  getUndoLabel: () => commandManager.getUndoLabel(),
-  getRedoLabel: () => commandManager.getRedoLabel(),
+  canUndo: () => false,
+  canRedo: () => false,
+  getUndoLabel: () => null,
+  getRedoLabel: () => null,
 
   // VSCode communication
   setVSCodeAPI: (api) => {
