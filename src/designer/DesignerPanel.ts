@@ -1430,16 +1430,13 @@ private _createNewDocument(): void {
             const buffer = Buffer.from(fileData);
             fs.writeFileSync(filePath, buffer);
 
-            // 计算相对路径（用于显示）
+            // 计算相对路径（保存到 HML 文件）
             const relativePath = `assets/${fileName}`;
-            
-            // 转换为webview URI（用于实际加载）
-            const webviewUri = this._panel.webview.asWebviewUri(vscode.Uri.file(filePath));
 
-            // 通知前端创建图片控件
+            // 通知前端创建图片控件（使用相对路径）
             this._panel.webview.postMessage({
                 command: 'createImageComponent',
-                imagePath: webviewUri.toString(),
+                imagePath: relativePath,
                 dropPosition,
                 targetContainerId
             });
