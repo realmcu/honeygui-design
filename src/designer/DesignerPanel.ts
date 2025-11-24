@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { logger } from '../utils/Logger';
+import { ProjectUtils } from '../utils/ProjectUtils';
 import { HmlController } from '../hml/HmlController';
 import { Component } from '../hml/types';
 import { generateHoneyGuiCode, CodeGenOptions } from '../codegen/honeygui';
@@ -62,14 +63,36 @@ export class DesignerPanel {
         }
 
         // 创建新面板
-        // 计算本地资源根目录，允许webview访问扩展资源与工作区assets目录
+        // 计算本地资源根目录，允许webview访问扩展资源与项目assets目录
         const localRoots: vscode.Uri[] = [
             vscode.Uri.joinPath(context.extensionUri, 'src', 'designer', 'webview'),
             vscode.Uri.joinPath(context.extensionUri, 'out', 'designer', 'webview')
         ];
-        const ws = vscode.workspace.workspaceFolders?.[0];
-        if (ws) {
-            localRoots.push(vscode.Uri.joinPath(ws.uri, 'assets'));
+        
+        // 推断项目根目录：从HML文件路径向上查找包含project.json的目录
+        let projectRoot: string | undefined;
+        if (filePath) {
+            projectRoot = ProjectUtils.findProjectRoot(filePath);
+            if (projectRoot) {
+                logger.info(`[DesignerPanel] 找到项目根目录: ${projectRoot}`);
+            }
+        }
+        
+        // 如果没找到project.json，尝试使用workspace
+        if (!projectRoot) {
+            projectRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+            if (projectRoot) {
+                logger.info(`[DesignerPanel] 使用workspace作为项目根: ${projectRoot}`);
+            }
+        }
+        
+        if (projectRoot) {
+            // 使用ProjectUtils获取assets目录（支持自定义配置）
+            const assetsDir = ProjectUtils.getAssetsDir(projectRoot);
+            localRoots.push(vscode.Uri.file(assetsDir));
+            logger.info(`[DesignerPanel] Assets目录: ${assetsDir}`);
+        } else {
+            logger.warn(`[DesignerPanel] 未找到项目根目录，assets资源可能无法加载`);
         }
 
         const panel = vscode.window.createWebviewPanel(
@@ -306,7 +329,7 @@ export class DesignerPanel {
             // 注意：移除了 'unsafe-eval'，React 生产构建不需要它
             // style-src 仍需要 'unsafe-inline'，因为 React 可能会动态注入样式
             const nonce = this._getNonce();
-            const cspMetaTag = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} https: data:; script-src ${webview.cspSource} 'nonce-${nonce}'; style-src ${webview.cspSource} 'unsafe-inline'; font-src ${webview.cspSource}; connect-src ${webview.cspSource};">`;
+            const cspMetaTag = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} https: data: vscode-resource: vscode-webview-resource:; script-src ${webview.cspSource} 'nonce-${nonce}'; style-src ${webview.cspSource} 'unsafe-inline'; font-src ${webview.cspSource}; connect-src ${webview.cspSource};">`;
 
             // 将 nonce 添加到 script 标签（如果有）
             if (scriptUri) {
@@ -865,31 +888,33 @@ private _createNewDocument(): void {
                 }
             }
 
-            // 自动计算输出目录：ui/xxx/xxx.hml -> src/xxx/
-            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-            if (!workspaceFolder) {
-                vscode.window.showErrorMessage('未找到工作区');
+            // 查找项目根目录
+            const projectRoot = ProjectUtils.findProjectRoot(this._filePath!);
+            if (!projectRoot) {
+                vscode.window.showErrorMessage('未找到项目根目录（project.json）');
                 return;
             }
             
-            const workspaceRoot = workspaceFolder.uri.fsPath;
-            const relativePath = path.relative(workspaceRoot, this._filePath!);
+            const config = ProjectUtils.loadProjectConfig(projectRoot);
+            const uiDir = ProjectUtils.getUiDir(projectRoot);
+            const relativePath = path.relative(uiDir, this._filePath!);
             
             // 检查是否在ui目录下
-            if (!relativePath.startsWith('ui' + path.sep)) {
-                vscode.window.showErrorMessage('HML文件必须在ui目录下');
+            if (relativePath.startsWith('..')) {
+                vscode.window.showErrorMessage(`HML文件必须在${config.uiDir || 'ui'}目录下`);
                 return;
             }
             
-            // 提取设计稿目录名：ui/main/main.hml -> main
+            // 提取设计稿目录名：main/main.hml -> main
             const pathParts = relativePath.split(path.sep);
-            if (pathParts.length < 3) {
-                vscode.window.showErrorMessage('HML文件路径格式不正确，应为 ui/设计稿名/设计稿名.hml');
+            if (pathParts.length < 2) {
+                vscode.window.showErrorMessage(`HML文件路径格式不正确，应为 ${config.uiDir}/设计稿名/设计稿名.hml`);
                 return;
             }
             
-            const designName = pathParts[1];
-            const outputDir = path.join(workspaceRoot, 'src', designName);
+            const designName = pathParts[0];
+            const srcDir = ProjectUtils.getSrcDir(projectRoot);
+            const outputDir = path.join(srcDir, designName);
 
             // 准备代码生成选项
             const hmlFileName = path.basename(this._filePath || 'HoneyGUIApp', '.hml');
@@ -980,99 +1005,64 @@ private _createNewDocument(): void {
      */
     public async generateAllCode(): Promise<void> {
         try {
-            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-            if (!workspaceFolder) {
-                vscode.window.showErrorMessage('未找到工作区');
+            if (!this._filePath) {
+                vscode.window.showErrorMessage('未找到当前文件路径');
                 return;
             }
 
-            const workspaceRoot = workspaceFolder.uri.fsPath;
-            const uiDir = path.join(workspaceRoot, 'ui');
-
-            // 检查ui目录是否存在
-            if (!fs.existsSync(uiDir)) {
-                vscode.window.showErrorMessage('未找到ui目录');
+            const projectRoot = ProjectUtils.findProjectRoot(this._filePath);
+            if (!projectRoot) {
+                vscode.window.showErrorMessage('未找到项目根目录');
                 return;
             }
 
-            // 扫描ui目录下的所有HML文件
-            const hmlFiles: string[] = [];
-            const designDirs = fs.readdirSync(uiDir, { withFileTypes: true })
-                .filter(dirent => dirent.isDirectory())
-                .map(dirent => dirent.name);
-
-            for (const designName of designDirs) {
-                const hmlFile = path.join(uiDir, designName, `${designName}.hml`);
-                if (fs.existsSync(hmlFile)) {
-                    hmlFiles.push(hmlFile);
-                }
-            }
-
+            const generator = new (await import('../services/BatchCodeGenerator')).BatchCodeGenerator();
+            
+            // 先扫描文件
+            const hmlFiles = await generator.scanHmlFiles(projectRoot);
             if (hmlFiles.length === 0) {
                 vscode.window.showInformationMessage('未找到任何HML文件');
                 return;
             }
 
-            // 生成所有文件的代码
-            let successCount = 0;
-            let totalFiles = 0;
-
-            await vscode.window.withProgress(
+            // 执行批量生成
+            const result = await vscode.window.withProgress(
                 {
                     location: vscode.ProgressLocation.Notification,
-                    title: `正在生成所有设计稿的代码...`,
+                    title: '正在生成所有设计稿的代码...',
                     cancellable: false
                 },
                 async (progress) => {
-                    for (let i = 0; i < hmlFiles.length; i++) {
-                        const hmlFile = hmlFiles[i];
-                        const designName = path.basename(path.dirname(hmlFile));
-                        
-                        progress.report({ 
-                            increment: (100 / hmlFiles.length),
-                            message: `正在生成 ${designName} (${i + 1}/${hmlFiles.length})...` 
+                    return await generator.generateAll(projectRoot, (prog) => {
+                        progress.report({
+                            increment: 100 / prog.total,
+                            message: `正在生成 ${prog.designName} (${prog.current}/${prog.total})...`
                         });
-
-                        try {
-                            // 加载HML文件
-                            const hmlController = new (await import('../hml/HmlController')).HmlController();
-                            await hmlController.loadFile(hmlFile);
-
-                            // 准备代码生成选项
-                            const outputDir = path.join(workspaceRoot, 'src', designName);
-                            const generatorOptions: CodeGenOptions = {
-                                outputDir,
-                                hmlFileName: designName,
-                                enableProtectedAreas: true
-                            };
-
-                            // 生成代码
-                            const components = hmlController.currentDocument?.view.components || [];
-                            const result = await generateHoneyGuiCode(components as any, generatorOptions);
-
-                            if ((result as any).success) {
-                                successCount++;
-                                totalFiles += (result as any).files?.length || 0;
-                            } else {
-                                throw new Error((result as any).errors?.[0] || '生成失败');
-                            }
-                        } catch (error) {
-                            vscode.window.showErrorMessage(
-                                `生成 ${designName} 失败: ${error instanceof Error ? error.message : '未知错误'}`
-                            );
-                            throw error; // 停止后续生成
-                        }
-                    }
+                    });
                 }
             );
 
-            vscode.window.showInformationMessage(
-                `成功生成 ${successCount} 个设计稿的代码，共 ${totalFiles} 个文件`
-            );
+            // 显示结果
+            if (result.success) {
+                vscode.window.showInformationMessage(
+                    `成功生成 ${result.successCount} 个设计稿的代码，共 ${result.totalFiles} 个文件`
+                );
+            } else {
+                const errorMsg = result.errors.map(e => `${e.designName}: ${e.error}`).join('\n');
+                vscode.window.showWarningMessage(
+                    `生成完成，成功 ${result.successCount} 个，失败 ${result.errors.length} 个`,
+                    '查看详情'
+                ).then(selection => {
+                    if (selection === '查看详情') {
+                        vscode.window.showErrorMessage(errorMsg, { modal: true });
+                    }
+                });
+            }
 
         } catch (error) {
-            logger.error(`批量代码生成错误: ${error}`);
-            // 错误已在循环中显示，这里不再重复显示
+            const errorMsg = error instanceof Error ? error.message : '未知错误';
+            logger.error(`批量代码生成错误: ${errorMsg}`);
+            vscode.window.showErrorMessage(`批量生成失败: ${errorMsg}`);
         }
     }
     
@@ -1282,12 +1272,17 @@ private _createNewDocument(): void {
      */
     private async _handleLoadAssets(): Promise<void> {
         try {
-            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-            if (!workspaceFolder) {
+            if (!this._filePath) {
                 return;
             }
 
-            const assetsDir = path.join(workspaceFolder.uri.fsPath, 'assets');
+            const projectRoot = ProjectUtils.findProjectRoot(this._filePath);
+            if (!projectRoot) {
+                logger.warn('[Assets] 未找到项目根目录');
+                return;
+            }
+
+            const assetsDir = ProjectUtils.getAssetsDir(projectRoot);
             
             // 确保assets目录存在
             if (!fs.existsSync(assetsDir)) {
@@ -1309,6 +1304,7 @@ private _createNewDocument(): void {
                     if (imageExts.includes(ext)) {
                         // 转换为webview可用的URI
                         const webviewUri = this._panel.webview.asWebviewUri(vscode.Uri.file(filePath));
+                        logger.info(`[Assets] 文件: ${file}, 路径: ${filePath}, URI: ${webviewUri.toString()}`);
                         assets.push({
                             name: file,
                             path: webviewUri.toString(),
@@ -1374,12 +1370,18 @@ private _createNewDocument(): void {
      */
     private async _handleOpenAssetsFolder(): Promise<void> {
         try {
-            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-            if (!workspaceFolder) {
+            if (!this._filePath) {
+                vscode.window.showErrorMessage('请先保存设计稿');
                 return;
             }
 
-            const assetsDir = path.join(workspaceFolder.uri.fsPath, 'assets');
+            const projectRoot = ProjectUtils.findProjectRoot(this._filePath);
+            if (!projectRoot) {
+                vscode.window.showErrorMessage('未找到项目根目录');
+                return;
+            }
+
+            const assetsDir = ProjectUtils.getAssetsDir(projectRoot);
             
             // 确保assets目录存在
             if (!fs.existsSync(assetsDir)) {
@@ -1405,13 +1407,18 @@ private _createNewDocument(): void {
         targetContainerId: string
     ): Promise<void> {
         try {
-            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-            if (!workspaceFolder) {
-                vscode.window.showErrorMessage('未找到工作区');
+            if (!this._filePath) {
+                vscode.window.showErrorMessage('请先保存设计稿');
                 return;
             }
 
-            const assetsDir = path.join(workspaceFolder.uri.fsPath, 'assets');
+            const projectRoot = ProjectUtils.findProjectRoot(this._filePath);
+            if (!projectRoot) {
+                vscode.window.showErrorMessage('未找到项目根目录');
+                return;
+            }
+
+            const assetsDir = ProjectUtils.getAssetsDir(projectRoot);
             
             // 确保assets目录存在
             if (!fs.existsSync(assetsDir)) {
