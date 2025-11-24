@@ -204,6 +204,9 @@ export class DesignerPanel {
                     case 'saveImageToAssets':
                         this._handleSaveImageToAssets(message.fileName, message.fileData, message.dropPosition, message.targetContainerId);
                         break;
+                    case 'convertPathToWebviewUri':
+                        this._handleConvertPathToWebviewUri(message.path, message.requestId);
+                        break;
                     case 'notify':
                         vscode.window.showInformationMessage(message.text);
                         break;
@@ -660,16 +663,16 @@ export class DesignerPanel {
 
     /**
      * 统一的发送 loadHml 消息方法
-     * 负责转换图片路径并发送到前端
+     * 负责发送组件数据和项目配置到前端
      */
     private sendLoadHmlMessage(hmlDocument: any, hmlContent: string): void {
         const frontendComponents = this._hmlController.prepareComponentsForFrontend(hmlDocument);
         
-        // 转换图片路径为 webview URI
-        const componentsWithWebviewUri = this.convertImagePathsToWebviewUri(frontendComponents);
-        
         const projectConfig = ProjectConfigLoader.loadConfig(this._filePath!);
         const designerConfig = ProjectConfigLoader.getDesignerConfig(projectConfig);
+        
+        // 获取项目根目录，用于前端转换相对路径
+        const projectRoot = ProjectUtils.findProjectRoot(this._filePath!);
         
         this._panel.webview.postMessage({
             command: 'loadHml',
@@ -678,17 +681,64 @@ export class DesignerPanel {
                 ...hmlDocument,
                 view: {
                     ...hmlDocument.view,
-                    components: componentsWithWebviewUri
+                    components: frontendComponents
                 }
             },
-            components: componentsWithWebviewUri,
+            components: frontendComponents,
             projectConfig: projectConfig,
-            designerConfig: designerConfig || { canvasBackgroundColor: '#f0f0f0' }
+            designerConfig: designerConfig || { canvasBackgroundColor: '#f0f0f0' },
+            projectRoot: projectRoot // 发送项目根目录给前端
         });
     }
 
     /**
+     * 处理转换路径为 webview URI 的请求
+     */
+    private _handleConvertPathToWebviewUri(relativePath: string, requestId: string): void {
+        try {
+            if (!this._filePath) {
+                this._panel.webview.postMessage({
+                    command: 'webviewUriConverted',
+                    requestId,
+                    uri: relativePath,
+                    error: '没有文件路径'
+                });
+                return;
+            }
+
+            const projectRoot = ProjectUtils.findProjectRoot(this._filePath);
+            if (!projectRoot) {
+                this._panel.webview.postMessage({
+                    command: 'webviewUriConverted',
+                    requestId,
+                    uri: relativePath,
+                    error: '未找到项目根目录'
+                });
+                return;
+            }
+
+            // 转换相对路径为绝对路径
+            const absolutePath = path.join(projectRoot, relativePath);
+            const webviewUri = this._panel.webview.asWebviewUri(vscode.Uri.file(absolutePath));
+
+            this._panel.webview.postMessage({
+                command: 'webviewUriConverted',
+                requestId,
+                uri: webviewUri.toString()
+            });
+        } catch (error) {
+            this._panel.webview.postMessage({
+                command: 'webviewUriConverted',
+                requestId,
+                uri: relativePath,
+                error: error instanceof Error ? error.message : '转换失败'
+            });
+        }
+    }
+
+    /**
      * 转换组件中的相对路径为 webview URI
+     * @deprecated 不再使用，前端动态转换
      */
     private convertImagePathsToWebviewUri(components: any[]): any[] {
         if (!this._filePath) {

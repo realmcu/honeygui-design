@@ -1,11 +1,39 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useDesignerStore } from '../store';
 import { Component, ComponentType } from '../types';
+import { useWebviewUri } from '../hooks/useWebviewUri';
 import './DesignerCanvas.css';
 
 interface DesignerCanvasProps {
   onComponentSelect: (id: string | null) => void;
 }
+
+// 图片组件单独提取，使用 Hook 转换路径
+const ImageComponent: React.FC<{
+  component: Component;
+  style: React.CSSProperties;
+  onMouseDown: (e: React.MouseEvent) => void;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
+}> = ({ component, style, onMouseDown, onMouseEnter, onMouseLeave }) => {
+  const webviewUri = useWebviewUri(component.data?.src);
+
+  return (
+    <div
+      style={{
+        ...style,
+        backgroundImage: webviewUri ? `url(${webviewUri})` : undefined,
+        backgroundSize: 'contain',
+        backgroundRepeat: 'no-repeat',
+      }}
+      onMouseDown={onMouseDown}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+      {!webviewUri && '🖼️'}
+    </div>
+  );
+};
 
 const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) => {
   // 设置画布默认背景色为灰色，作为任务1的一部分
@@ -315,20 +343,14 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
 
       case 'hg_image':
         return (
-          <div
+          <ImageComponent
             key={component.id}
-            style={{
-              ...style,
-              backgroundImage: component.data?.src ? `url(${component.data.src})` : undefined,
-              backgroundSize: 'contain',
-              backgroundRepeat: 'no-repeat',
-            }}
+            component={component}
+            style={style}
             onMouseDown={(e) => handleComponentMouseDown(e, component.id)}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
-          >
-            {!component.data?.src && '🖼️'}
-          </div>
+          />
         );
 
       case 'hg_panel':
