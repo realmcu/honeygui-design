@@ -22,7 +22,7 @@ export interface Component {
 
 export interface CodeGenOptions {
   outputDir: string;
-  projectName: string;
+  hmlFileName: string;  // HML文件名（不含扩展名）
   enableProtectedAreas?: boolean;
 }
 
@@ -51,6 +51,7 @@ export class HoneyGuiCCodeGenerator {
   async generate(): Promise<CodeGenResult> {
     try {
       const files: string[] = [];
+      const baseName = this.options.hmlFileName;
 
       // 确保输出目录存在
       if (!fs.existsSync(this.options.outputDir)) {
@@ -58,31 +59,31 @@ export class HoneyGuiCCodeGenerator {
       }
 
       // 生成头文件
-      const headerFile = path.join(this.options.outputDir, 'gui_design.h');
-      fs.writeFileSync(headerFile, this.generateHeader());
+      const headerFile = path.join(this.options.outputDir, `${baseName}.h`);
+      fs.writeFileSync(headerFile, this.generateHeader(baseName));
       files.push(headerFile);
 
       // 生成实现文件
-      const implFile = path.join(this.options.outputDir, 'gui_design.c');
-      fs.writeFileSync(implFile, this.generateImplementation());
+      const implFile = path.join(this.options.outputDir, `${baseName}.c`);
+      fs.writeFileSync(implFile, this.generateImplementation(baseName));
       files.push(implFile);
 
       // 生成回调文件
-      const callbackHeaderFile = path.join(this.options.outputDir, 'gui_callbacks.h');
-      const callbackImplFile = path.join(this.options.outputDir, 'gui_callbacks.c');
+      const callbackHeaderFile = path.join(this.options.outputDir, `${baseName}_callbacks.h`);
+      const callbackImplFile = path.join(this.options.outputDir, `${baseName}_callbacks.c`);
       
       if (!fs.existsSync(callbackHeaderFile)) {
-        fs.writeFileSync(callbackHeaderFile, this.generateCallbackHeader());
+        fs.writeFileSync(callbackHeaderFile, this.generateCallbackHeader(baseName));
         files.push(callbackHeaderFile);
       }
       
       if (!fs.existsSync(callbackImplFile)) {
-        fs.writeFileSync(callbackImplFile, this.generateCallbackImplementation());
+        fs.writeFileSync(callbackImplFile, this.generateCallbackImplementation(baseName));
         files.push(callbackImplFile);
       } else if (this.options.enableProtectedAreas) {
         // 合并保护区
         const existing = fs.readFileSync(callbackImplFile, 'utf-8');
-        const merged = this.mergeProtectedAreas(existing, this.generateCallbackImplementation());
+        const merged = this.mergeProtectedAreas(existing, this.generateCallbackImplementation(baseName));
         fs.writeFileSync(callbackImplFile, merged);
         files.push(callbackImplFile);
       }
@@ -100,12 +101,13 @@ export class HoneyGuiCCodeGenerator {
   /**
    * 生成头文件
    */
-  private generateHeader(): string {
+  private generateHeader(baseName: string): string {
+    const guardName = `${baseName.toUpperCase()}_H`;
     const componentTypes = [...new Set(this.components.map(c => c.type))];
     const headers = this.apiMapper.getRequiredHeaders(componentTypes);
 
-    let code = `#ifndef GUI_DESIGN_H
-#define GUI_DESIGN_H
+    let code = `#ifndef ${guardName}
+#define ${guardName}
 
 #include "gui_api.h"
 `;
@@ -126,12 +128,12 @@ export class HoneyGuiCCodeGenerator {
 
     code += `
 // 初始化函数
-void gui_design_init(void);
+void ${baseName}_init(void);
 
 // 更新函数（可选）
-void gui_design_update(void);
+void ${baseName}_update(void);
 
-#endif // GUI_DESIGN_H
+#endif // ${guardName}
 `;
 
     return code;
@@ -140,9 +142,9 @@ void gui_design_update(void);
   /**
    * 生成实现文件
    */
-  private generateImplementation(): string {
-    let code = `#include "gui_design.h"
-#include "gui_callbacks.h"
+  private generateImplementation(baseName: string): string {
+    let code = `#include "${baseName}.h"
+#include "${baseName}_callbacks.h"
 #include <stddef.h>
 
 // 组件句柄定义
@@ -158,7 +160,7 @@ void gui_design_update(void);
  * 初始化GUI设计
  * 此函数由HoneyGUI设计器自动生成
  */
-void gui_design_init(void) {
+void ${baseName}_init(void) {
 `;
 
     // 生成组件创建代码（按层级顺序）
@@ -172,7 +174,7 @@ void gui_design_init(void) {
 /**
  * 更新GUI（可选）
  */
-void gui_design_update(void) {
+void ${baseName}_update(void) {
     // 动态更新逻辑
 }
 `;
@@ -290,9 +292,10 @@ void gui_design_update(void) {
   /**
    * 生成回调头文件
    */
-  private generateCallbackHeader(): string {
-    let code = `#ifndef GUI_CALLBACKS_H
-#define GUI_CALLBACKS_H
+  private generateCallbackHeader(baseName: string): string {
+    const guardName = `${baseName.toUpperCase()}_CALLBACKS_H`;
+    let code = `#ifndef ${guardName}
+#define ${guardName}
 
 #include "gui_api.h"
 
@@ -309,7 +312,7 @@ void gui_design_update(void) {
     });
 
     code += `
-#endif // GUI_CALLBACKS_H
+#endif // ${guardName}
 `;
 
     return code;
@@ -318,8 +321,8 @@ void gui_design_update(void) {
   /**
    * 生成回调实现文件
    */
-  private generateCallbackImplementation(): string {
-    let code = `#include "gui_callbacks.h"
+  private generateCallbackImplementation(baseName: string): string {
+    let code = `#include "${baseName}_callbacks.h"
 #include <stdio.h>
 
 // 事件回调函数实现

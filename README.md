@@ -2,8 +2,6 @@
 
 一个强大的VSCode插件，为GUI应用程序开发提供可视化设计环境和代码生成工具。
 
-> 📝 **最近更新**: 查看 [RECENT_FIXES.md](RECENT_FIXES.md) 了解最新的BUG修复和优化
-
 ## 功能特性
 
 ### 核心功能
@@ -118,11 +116,13 @@ npm run rebuild      # 清理并重新构建
 ```
 
 ### 文档
-- [开发指南](DEVELOPMENT.md) - 开发环境配置和工作流
-- [快速参考](QUICK_REFERENCE.md) - 常用命令和API
-- [架构分析](ARCHITECTURE_ANALYSIS.md) - 项目架构说明
-- [最近修复](RECENT_FIXES.md) - 最新的BUG修复记录
-- [LOG查看指南](QUICK_LOG_GUIDE.md) - 快速查看前端/后端日志
+- [文档中心](docs/文档导航.md) - 完整文档导航
+- [开发指南](docs/开发指南.md) - 开发环境配置和工作流
+- [架构设计](docs/架构设计.md) - 项目架构说明
+- [C代码生成](docs/C代码生成架构.md) - C代码生成架构
+- [组件规范](docs/组件命名规范.md) - 组件命名规范
+- [产品需求](docs/产品需求.md) - 功能需求与规划
+- [变更日志](docs/变更日志.md) - 版本变更记录
 
 ## 许可证
 
