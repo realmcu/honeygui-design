@@ -33,14 +33,6 @@ export type ComponentType =
   | 'hg_screen'
   | 'hg_canvas';
 
-export interface AssetFile {
-  name: string;
-  type: 'image' | 'font' | 'other';
-  size: number;
-  relativePath: string;
-  webviewPath: string;
-}
-
 export interface ComponentDefinition {
   type: ComponentType;
   name: string;
@@ -74,8 +66,6 @@ export interface DesignerState {
   undoStack: any[];
   redoStack: any[];
   projectConfig?: any; // Project configuration (resolution, etc.)
-  assets?: AssetFile[];
-  assetPreviewMap?: Record<string, string>;
 }
 
 export interface VSCodeAPI {

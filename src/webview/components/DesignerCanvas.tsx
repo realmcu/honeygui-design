@@ -39,7 +39,6 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     canvasBackgroundColor,
     addToSelection,
     setSelectedComponents,
-    assetPreviewMap,
   } = useDesignerStore();
   
   // 当store中的画布背景色变化时更新本地状态
@@ -195,15 +194,6 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     setDraggedComponent(null);
   };
 
-  const resolveImageSrc = (raw?: string) => {
-    if (!raw) return undefined;
-    const normalized = raw.replace(/\\/g, '/');
-    if (/^(https?:)?\/\//i.test(normalized) || normalized.startsWith('data:') || normalized.startsWith('vscode-webview://') || normalized.startsWith('vscode-resource://')) {
-      return normalized;
-    }
-    return assetPreviewMap?.[normalized] || assetPreviewMap?.[`assets/${normalized}`] || normalized;
-  };
-
   // 处理键盘事件，特别是delete键删除选中组件
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -323,14 +313,13 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
           />
         );
 
-      case 'hg_image': {
-        const displaySrc = resolveImageSrc(component.data?.src as string);
+      case 'hg_image':
         return (
           <div
             key={component.id}
             style={{
               ...style,
-              backgroundImage: displaySrc ? `url(${displaySrc})` : undefined,
+              backgroundImage: component.data?.src ? `url(${component.data.src})` : undefined,
               backgroundSize: 'contain',
               backgroundRepeat: 'no-repeat',
             }}
@@ -338,10 +327,9 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
           >
-            {!displaySrc && 'No Image'}
+            {!component.data?.src && '🖼️'}
           </div>
         );
-      }
 
       case 'hg_panel':
       case 'hg_view':
