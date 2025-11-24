@@ -119,7 +119,7 @@ const App: React.FC = () => {
           break;
 
         case 'updateImagePath':
-          // 更新图片组件的路径
+          // ����ͼƬ�����·��
           if (message.componentId && message.path) {
             const store = useDesignerStore.getState();
             const component = store.components.find(c => c.id === message.componentId);
@@ -130,7 +130,10 @@ const App: React.FC = () => {
                   src: message.path
                 }
               });
-              console.log(`[Webview App] 更新图片路径: ${message.path}`);
+              if (message.webviewPath) {
+                store.updateAssetPreview(message.path, message.webviewPath);
+              }
+              console.log(`[Webview App] ����ͼƬ·��: ${message.path}`);
             }
           }
           break;
@@ -163,6 +166,9 @@ const App: React.FC = () => {
               const relativeY = Math.max(0, message.dropPosition.y - targetAbsPos.y);
 
               // 创建图片组件
+              const assetPath = message.imagePath;
+              const previewPath = message.webviewPath || message.imagePath;
+
               const imageComponent: Component = {
                 id: `hg_image_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
                 type: 'hg_image',
@@ -181,12 +187,15 @@ const App: React.FC = () => {
                 parent: message.targetContainerId,
                 style: {},
                 data: {
-                  src: message.imagePath
+                  src: assetPath
                 },
               };
 
               store.addComponent(imageComponent);
-              console.log(`[Webview App] 创建图片组件: ${message.imagePath}`);
+              if (previewPath) {
+                store.updateAssetPreview(assetPath, previewPath);
+              }
+              console.log(`[Webview App] 创建图片组件: ${assetPath}`);
             }
           }
           break;

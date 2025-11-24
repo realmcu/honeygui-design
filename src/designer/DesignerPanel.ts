@@ -25,6 +25,7 @@ export class DesignerPanel {
     private readonly _saveManager: SaveManager;
     private _filePath: string | undefined;
     private _lastSerializedSnapshot: string | null = null;
+    private _localResourceRoots: vscode.Uri[] = [];
 
     /**
      * 获取当前的保存事务ID
@@ -104,10 +105,11 @@ export class DesignerPanel {
         this._hmlController = new HmlController();
         this._saveManager = new SaveManager(this._hmlController);
 
-        // 如果有文档，设置文件路径
+        // 如果有文档则存储文件路径
         if (document) {
             this._filePath = document.uri.fsPath;
         }
+        this._refreshLocalResourceRoots();
 
         // 设置Webview内容
         this._update();
@@ -164,6 +166,9 @@ export class DesignerPanel {
                 break;
                     case 'generateAllCode':
                         this.generateAllCode();
+                        break;
+                    case 'importAssets':
+                        this._handleImportAssets();
                         break;
                     case 'loadAssets':
                         this._handleLoadAssets();
@@ -306,7 +311,8 @@ export class DesignerPanel {
             // 注意：移除了 'unsafe-eval'，React 生产构建不需要它
             // style-src 仍需要 'unsafe-inline'，因为 React 可能会动态注入样式
             const nonce = this._getNonce();
-            const cspMetaTag = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} https: data:; script-src ${webview.cspSource} 'nonce-${nonce}'; style-src ${webview.cspSource} 'unsafe-inline'; font-src ${webview.cspSource}; connect-src ${webview.cspSource};">`;
+            // 允许 webview 自身、https、data 以及 VSCode 资源协议加载图片，确保本地缩略图可见
+            const cspMetaTag = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} https: data: vscode-resource: vscode-webview-resource:; script-src ${webview.cspSource} 'nonce-${nonce}'; style-src ${webview.cspSource} 'unsafe-inline'; font-src ${webview.cspSource}; connect-src ${webview.cspSource};">`;
 
             // 将 nonce 添加到 script 标签（如果有）
             if (scriptUri) {
@@ -1233,8 +1239,73 @@ private _createNewDocument(): void {
     }
 
     /**
+     * 根据当前文件和工作区更新可访问资源根目录
+     */
+    private _refreshLocalResourceRoots(): void {
+        const roots: vscode.Uri[] = [
+            vscode.Uri.joinPath(this._context.extensionUri, 'src', 'designer', 'webview'),
+            vscode.Uri.joinPath(this._context.extensionUri, 'out', 'designer', 'webview')
+        ];
+
+        const addIfExists = (fsPath: string | undefined) => {
+            if (fsPath && fs.existsSync(fsPath)) {
+                roots.push(vscode.Uri.file(fsPath));
+            }
+        };
+
+        // 当前文件所在工作区 assets
+        const workspaceFolder = this._getWorkspaceFolderForCurrentFile() || vscode.workspace.workspaceFolders?.[0];
+        if (workspaceFolder) {
+            addIfExists(path.join(workspaceFolder.uri.fsPath, 'assets'));
+        }
+
+        // 显式加入当前文件所在目录（便于相对引用）
+        if (this._filePath) {
+            addIfExists(path.dirname(this._filePath));
+            const projectRoot = workspaceFolder?.uri.fsPath;
+            if (projectRoot) {
+                addIfExists(projectRoot);
+            }
+        }
+
+        this._localResourceRoots = roots;
+        this._panel.webview.options = {
+            ...this._panel.webview.options,
+            localResourceRoots: roots
+        };
+    }
+
+    /**
+     * 获取当前文件所在的工作区（如果有）
+     */
+    private _getWorkspaceFolderForCurrentFile(): vscode.WorkspaceFolder | undefined {
+        if (!this._filePath) {
+            return undefined;
+        }
+        return vscode.workspace.getWorkspaceFolder(vscode.Uri.file(this._filePath)) || undefined;
+    }
+
+    /**
      * 处理选择图片路径
      */
+    private _prepareAssetsDir(): { workspaceFolder: vscode.WorkspaceFolder; assetsDir: string } {
+        const workspaceFolder = this._getWorkspaceFolderForCurrentFile() || vscode.workspace.workspaceFolders?.[0];
+        if (!workspaceFolder) {
+            throw new Error('未找到工作区');
+        }
+
+        const assetsDir = path.join(workspaceFolder.uri.fsPath, 'assets');
+        if (!fs.existsSync(assetsDir)) {
+            fs.mkdirSync(assetsDir, { recursive: true });
+        }
+
+        return { workspaceFolder, assetsDir };
+    }
+
+    private _toPosixPath(targetPath: string): string {
+        return targetPath.replace(/\\/g, '/');
+    }
+
     private async _handleSelectImagePath(componentId: string): Promise<void> {
         try {
             const options: vscode.OpenDialogOptions = {
@@ -1251,25 +1322,29 @@ private _createNewDocument(): void {
             if (fileUri && fileUri.length > 0) {
                 const filePath = fileUri[0].fsPath;
                 
-                // 获取工作区路径
-                const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
                 let relativePath = filePath;
+                let webviewPath = this._panel.webview.asWebviewUri(vscode.Uri.file(filePath)).toString();
                 
-                if (workspaceFolder) {
-                    // 转换为相对路径
-                    relativePath = path.relative(workspaceFolder.uri.fsPath, filePath);
-                    // 统一使用正斜杠
-                    relativePath = relativePath.replace(/\\/g, '/');
+                try {
+                    const workspaceFolder = this._getWorkspaceFolderForCurrentFile() || vscode.workspace.workspaceFolders?.[0];
+                    if (workspaceFolder) {
+                        relativePath = path.relative(workspaceFolder.uri.fsPath, filePath);
+                    }
+                    relativePath = this._toPosixPath(relativePath);
+                } catch (pathError) {
+                    logger.warn(`[DesignerPanel] ��������·��ʧ��ʹ������·��: ${pathError}`);
+                    relativePath = this._toPosixPath(relativePath);
                 }
-                
-                // 发送路径到webview
+
+                // ����·����webview
                 this._panel.webview.postMessage({
                     command: 'updateImagePath',
                     componentId: componentId,
-                    path: relativePath
+                    path: relativePath,
+                    webviewPath
                 });
-                
-                logger.info(`[DesignerPanel] 选择图片路径: ${relativePath}`);
+
+                logger.info(`[DesignerPanel] ѡ��ͼƬ·��: ${relativePath}`);
             }
         } catch (error) {
             logger.error(`[DesignerPanel] 选择图片路径失败: ${error}`);
@@ -1278,23 +1353,62 @@ private _createNewDocument(): void {
     }
     
     /**
+     * 通过文件对话框导入资源（复制到 assets 目录）
+     */
+    private async _handleImportAssets(): Promise<void> {
+        try {
+            const { assetsDir } = this._prepareAssetsDir();
+            this._refreshLocalResourceRoots();
+            const options: vscode.OpenDialogOptions = {
+                canSelectFiles: true,
+                canSelectFolders: false,
+                canSelectMany: true,
+                filters: {
+                    'Images': ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'webp']
+                },
+                openLabel: '选择资源文件'
+            };
+
+            const files = await vscode.window.showOpenDialog(options);
+            if (!files || files.length === 0) {
+                return;
+            }
+
+            for (const file of files) {
+                const filePath = file.fsPath;
+                const fileName = path.basename(filePath);
+                let targetPath = path.join(assetsDir, fileName);
+
+                // 避免同名覆盖，按序号追加
+                if (fs.existsSync(targetPath)) {
+                    const ext = path.extname(fileName);
+                    const base = path.basename(fileName, ext);
+                    let idx = 1;
+                    while (fs.existsSync(targetPath)) {
+                        targetPath = path.join(assetsDir, `${base}_${idx}${ext}`);
+                        idx += 1;
+                    }
+                }
+
+                fs.copyFileSync(filePath, targetPath);
+            }
+
+            vscode.window.showInformationMessage('资源已导入到 assets 目录');
+            this._handleLoadAssets();
+        } catch (error) {
+            logger.error(`导入资源失败: ${error}`);
+            vscode.window.showErrorMessage('导入资源失败');
+        }
+    }
+
+    /**
      * 加载资源文件列表
      */
     private async _handleLoadAssets(): Promise<void> {
         try {
-            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-            if (!workspaceFolder) {
-                return;
-            }
+            const { workspaceFolder, assetsDir } = this._prepareAssetsDir();
+            this._refreshLocalResourceRoots();
 
-            const assetsDir = path.join(workspaceFolder.uri.fsPath, 'assets');
-            
-            // 确保assets目录存在
-            if (!fs.existsSync(assetsDir)) {
-                fs.mkdirSync(assetsDir, { recursive: true });
-            }
-
-            // 扫描assets目录
             const assets: any[] = [];
             const files = fs.readdirSync(assetsDir);
             
@@ -1309,9 +1423,11 @@ private _createNewDocument(): void {
                     if (imageExts.includes(ext)) {
                         // 转换为webview可用的URI
                         const webviewUri = this._panel.webview.asWebviewUri(vscode.Uri.file(filePath));
+                        const relativePath = this._toPosixPath(path.relative(workspaceFolder.uri.fsPath, filePath));
                         assets.push({
                             name: file,
-                            path: webviewUri.toString(),
+                            relativePath,
+                            webviewPath: webviewUri.toString(),
                             type: 'image',
                             size: stats.size
                         });
@@ -1334,8 +1450,18 @@ private _createNewDocument(): void {
      */
     private async _handleDeleteAsset(assetPath: string): Promise<void> {
         try {
-            if (fs.existsSync(assetPath)) {
-                fs.unlinkSync(assetPath);
+            const { workspaceFolder, assetsDir } = this._prepareAssetsDir();
+            const candidatePath = path.isAbsolute(assetPath)
+                ? assetPath
+                : path.join(workspaceFolder.uri.fsPath, assetPath);
+            const normalizedTarget = path.normalize(candidatePath);
+
+            if (!normalizedTarget.startsWith(path.normalize(assetsDir))) {
+                throw new Error(`非法的资源路径: ${assetPath}`);
+            }
+
+            if (fs.existsSync(normalizedTarget)) {
+                fs.unlinkSync(normalizedTarget);
                 vscode.window.showInformationMessage('资源文件已删除');
                 // 重新加载资源列表
                 this._handleLoadAssets();
@@ -1351,15 +1477,24 @@ private _createNewDocument(): void {
      */
     private async _handleRenameAsset(oldPath: string, newName: string): Promise<void> {
         try {
-            const dir = path.dirname(oldPath);
-            const newPath = path.join(dir, newName);
+            const { workspaceFolder, assetsDir } = this._prepareAssetsDir();
+            const absoluteOldPath = path.isAbsolute(oldPath)
+                ? oldPath
+                : path.join(workspaceFolder.uri.fsPath, oldPath);
+            const normalizedOldPath = path.normalize(absoluteOldPath);
+
+            if (!normalizedOldPath.startsWith(path.normalize(assetsDir))) {
+                throw new Error(`非法的资源路径: ${oldPath}`);
+            }
+
+            const newPath = path.join(path.dirname(normalizedOldPath), newName);
             
             if (fs.existsSync(newPath)) {
                 vscode.window.showErrorMessage('文件名已存在');
                 return;
             }
             
-            fs.renameSync(oldPath, newPath);
+            fs.renameSync(normalizedOldPath, newPath);
             vscode.window.showInformationMessage('资源文件已重命名');
             // 重新加载资源列表
             this._handleLoadAssets();
@@ -1374,17 +1509,7 @@ private _createNewDocument(): void {
      */
     private async _handleOpenAssetsFolder(): Promise<void> {
         try {
-            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-            if (!workspaceFolder) {
-                return;
-            }
-
-            const assetsDir = path.join(workspaceFolder.uri.fsPath, 'assets');
-            
-            // 确保assets目录存在
-            if (!fs.existsSync(assetsDir)) {
-                fs.mkdirSync(assetsDir, { recursive: true });
-            }
+            const { assetsDir } = this._prepareAssetsDir();
 
             // 在系统文件管理器中打开
             const uri = vscode.Uri.file(assetsDir);
@@ -1405,34 +1530,25 @@ private _createNewDocument(): void {
         targetContainerId: string
     ): Promise<void> {
         try {
-            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-            if (!workspaceFolder) {
-                vscode.window.showErrorMessage('未找到工作区');
-                return;
-            }
-
-            const assetsDir = path.join(workspaceFolder.uri.fsPath, 'assets');
-            
-            // 确保assets目录存在
-            if (!fs.existsSync(assetsDir)) {
-                fs.mkdirSync(assetsDir, { recursive: true });
-            }
+            const { workspaceFolder, assetsDir } = this._prepareAssetsDir();
+            this._refreshLocalResourceRoots();
 
             // 保存文件
             const filePath = path.join(assetsDir, fileName);
             const buffer = Buffer.from(fileData);
             fs.writeFileSync(filePath, buffer);
 
-            // 计算相对路径（用于显示）
-            const relativePath = `assets/${fileName}`;
+            // 计算相对路径（用于HML和代码生成）
+            const relativePath = this._toPosixPath(path.relative(workspaceFolder.uri.fsPath, filePath));
             
-            // 转换为webview URI（用于实际加载）
+            // 转换为webview URI，用于实时显示
             const webviewUri = this._panel.webview.asWebviewUri(vscode.Uri.file(filePath));
 
             // 通知前端创建图片控件
             this._panel.webview.postMessage({
                 command: 'createImageComponent',
-                imagePath: webviewUri.toString(),
+                imagePath: relativePath,
+                webviewPath: webviewUri.toString(),
                 dropPosition,
                 targetContainerId
             });
@@ -1446,7 +1562,7 @@ private _createNewDocument(): void {
             vscode.window.showErrorMessage('保存图片失败');
         }
     }
-    
+
     public dispose(): void {
         DesignerPanel.currentPanel = undefined;
 

@@ -4,7 +4,7 @@
  */
 
 import { create } from 'zustand';
-import { Component, ComponentType, DesignerState, VSCodeAPI } from './types';
+import { AssetFile, Component, ComponentType, DesignerState, VSCodeAPI } from './types';
 
 export interface DesignerStore extends DesignerState {
   // Actions
@@ -20,6 +20,8 @@ export interface DesignerStore extends DesignerState {
   clearSelection: () => void;
   setHoveredComponent: (id: string | null) => void;
   setDraggedComponent: (id: string | null) => void;
+  setAssetList: (assets: AssetFile[]) => void;
+  updateAssetPreview: (relativePath: string, webviewPath: string) => void;
 
   // Canvas operations
   setZoom: (zoom: number) => void;
@@ -119,10 +121,30 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   undoStack: [],
   redoStack: [],
   vscodeAPI: null,
+  assets: [],
+  assetPreviewMap: {},
 
   // Actions
   setComponents: (components) => {
     set({ components });
+  },
+
+  setAssetList: (assets) => {
+    const previewMap: Record<string, string> = {};
+    assets.forEach((asset) => {
+      previewMap[asset.relativePath] = asset.webviewPath;
+    });
+    set({ assets, assetPreviewMap: previewMap });
+  },
+
+  updateAssetPreview: (relativePath, webviewPath) => {
+    const normalized = relativePath.replace(/\\/g, '/');
+    set((state) => ({
+      assetPreviewMap: {
+        ...state.assetPreviewMap,
+        [normalized]: webviewPath,
+      },
+    }));
   },
 
   addComponent: (component, options?: { save?: boolean }) => {
