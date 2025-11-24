@@ -659,6 +659,35 @@ export class DesignerPanel {
     }
 
     /**
+     * 统一的发送 loadHml 消息方法
+     * 负责转换图片路径并发送到前端
+     */
+    private sendLoadHmlMessage(hmlDocument: any, hmlContent: string): void {
+        const frontendComponents = this._hmlController.prepareComponentsForFrontend(hmlDocument);
+        
+        // 转换图片路径为 webview URI
+        const componentsWithWebviewUri = this.convertImagePathsToWebviewUri(frontendComponents);
+        
+        const projectConfig = ProjectConfigLoader.loadConfig(this._filePath!);
+        const designerConfig = ProjectConfigLoader.getDesignerConfig(projectConfig);
+        
+        this._panel.webview.postMessage({
+            command: 'loadHml',
+            content: hmlContent,
+            document: {
+                ...hmlDocument,
+                view: {
+                    ...hmlDocument.view,
+                    components: componentsWithWebviewUri
+                }
+            },
+            components: componentsWithWebviewUri,
+            projectConfig: projectConfig,
+            designerConfig: designerConfig || { canvasBackgroundColor: '#f0f0f0' }
+        });
+    }
+
+    /**
      * 转换组件中的相对路径为 webview URI
      */
     private convertImagePathsToWebviewUri(components: any[]): any[] {
@@ -716,46 +745,23 @@ private async _loadFile(filePath: string): Promise<void> {
         // 序列化文档为字符串
         const hmlContent = this._hmlController.serializeDocument();
         
-        // 为前端准备组件数据（转换为前端需要的格式）
-        const frontendComponents = this._hmlController.prepareComponentsForFrontend(document);
-        
-        // 转换图片路径为 webview URI
-        const componentsWithWebviewUri = this.convertImagePathsToWebviewUri(frontendComponents);
-        
-        // 使用统一的配置加载器
-        const projectConfig = ProjectConfigLoader.loadConfig(filePath);
-        const designerConfig = ProjectConfigLoader.getDesignerConfig(projectConfig);
-        
-        logger.debug(`[HoneyGUI Designer] 设计器配置: ${JSON.stringify(designerConfig)}`);
+        logger.debug(`[HoneyGUI Designer] 设计器配置加载中...`);
 
-        // 发送HML内容和配置信息到Webview，传递转换后的组件数据
-        this._panel.webview.postMessage({
-            command: 'loadHml',
-            content: hmlContent,
-            document: {
-                ...document,
-                view: {
-                    ...document.view,
-                    components: componentsWithWebviewUri
-                }
-            },
-            components: componentsWithWebviewUri,
-            projectConfig: projectConfig,
-            designerConfig: designerConfig || { canvasBackgroundColor: '#f0f0f0' }
-        });
+        // 发送HML内容和配置信息到Webview
+        this.sendLoadHmlMessage(document, hmlContent);
             
-            // 更新面板标题
-            const fileName = path.basename(filePath);
-            this._panel.title = `HoneyGUI 设计器 - ${fileName}`;
+        // 更新面板标题
+        const fileName = path.basename(filePath);
+        this._panel.title = `HoneyGUI 设计器 - ${fileName}`;
             
-        } catch (error) {
-            logger.error(`加载HML文件失败: ${error}`);
-            vscode.window.showErrorMessage(`加载HML文件失败: ${error instanceof Error ? error.message : '未知错误'}`);
-            
-            // 如果加载失败，创建一个新的空白文档
-            this._createNewDocument();
-        }
+    } catch (error) {
+        logger.error(`加载HML文件失败: ${error}`);
+        vscode.window.showErrorMessage(`加载HML文件失败: ${error instanceof Error ? error.message : '未知错误'}`);
+        
+        // 如果加载失败，创建一个新的空白文档
+        this._createNewDocument();
     }
+}
     
     /**
  * 创建新的空白文档
@@ -1246,30 +1252,11 @@ private _createNewDocument(): void {
             }
             
             const hmlContent = this._hmlController.serializeDocument();
-            const frontendComponents = this._hmlController.prepareComponentsForFrontend(hmlDocument);
             
-            // 转换图片路径为 webview URI
-            const componentsWithWebviewUri = this.convertImagePathsToWebviewUri(frontendComponents);
+            logger.info(`[DesignerPanel] 重新发送loadHml，组件数: ${hmlDocument.view?.components?.length || 0}`);
             
-            const projectConfig = ProjectConfigLoader.loadConfig(this._filePath);
-            const designerConfig = ProjectConfigLoader.getDesignerConfig(projectConfig);
-            
-            logger.info(`[DesignerPanel] 重新发送loadHml，组件数: ${frontendComponents.length}`);
-            
-            this._panel.webview.postMessage({
-                command: 'loadHml',
-                content: hmlContent,
-                document: {
-                    ...hmlDocument,
-                    view: {
-                        ...hmlDocument.view,
-                        components: componentsWithWebviewUri
-                    }
-                },
-                components: componentsWithWebviewUri,
-                projectConfig: projectConfig,
-                designerConfig: designerConfig || { canvasBackgroundColor: '#f0f0f0' }
-            });
+            // 使用统一的发送方法
+            this.sendLoadHmlMessage(hmlDocument, hmlContent);
         } catch (error) {
             logger.error(`[DesignerPanel] reloadCurrentDocument失败: ${error}`);
         }
