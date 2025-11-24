@@ -62,16 +62,23 @@ export class DesignerPanel {
         }
 
         // 创建新面板
+        // 计算本地资源根目录，允许webview访问扩展资源与工作区assets目录
+        const localRoots: vscode.Uri[] = [
+            vscode.Uri.joinPath(context.extensionUri, 'src', 'designer', 'webview'),
+            vscode.Uri.joinPath(context.extensionUri, 'out', 'designer', 'webview')
+        ];
+        const ws = vscode.workspace.workspaceFolders?.[0];
+        if (ws) {
+            localRoots.push(vscode.Uri.joinPath(ws.uri, 'assets'));
+        }
+
         const panel = vscode.window.createWebviewPanel(
             DesignerPanel.viewType,
             'HoneyGUI 设计器',
             column || vscode.ViewColumn.One,
             {
                 enableScripts: true,
-                localResourceRoots: [
-                    vscode.Uri.joinPath(context.extensionUri, 'src', 'designer', 'webview'),
-                    vscode.Uri.joinPath(context.extensionUri, 'out', 'designer', 'webview')
-                ]
+                localResourceRoots: localRoots
             }
         );
 
