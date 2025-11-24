@@ -69,12 +69,17 @@ export class DesignerPanel {
             vscode.Uri.joinPath(context.extensionUri, 'out', 'designer', 'webview')
         ];
         
+        logger.info(`[DesignerPanel] 创建面板，filePath: ${filePath}`);
+        
         // 推断项目根目录：从HML文件路径向上查找包含project.json的目录
         let projectRoot: string | undefined;
         if (filePath) {
             projectRoot = ProjectUtils.findProjectRoot(filePath);
             if (projectRoot) {
                 logger.info(`[DesignerPanel] 找到项目根目录: ${projectRoot}`);
+                localRoots.push(vscode.Uri.file(projectRoot));
+            } else {
+                logger.warn(`[DesignerPanel] 未能从文件路径找到项目根目录: ${filePath}`);
             }
         }
         
@@ -83,17 +88,13 @@ export class DesignerPanel {
             projectRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
             if (projectRoot) {
                 logger.info(`[DesignerPanel] 使用workspace作为项目根: ${projectRoot}`);
+                localRoots.push(vscode.Uri.file(projectRoot));
+            } else {
+                logger.warn(`[DesignerPanel] 未找到workspace`);
             }
         }
         
-        if (projectRoot) {
-            // 使用ProjectUtils获取assets目录（支持自定义配置）
-            const assetsDir = ProjectUtils.getAssetsDir(projectRoot);
-            localRoots.push(vscode.Uri.file(assetsDir));
-            logger.info(`[DesignerPanel] Assets目录: ${assetsDir}`);
-        } else {
-            logger.warn(`[DesignerPanel] 未找到项目根目录，assets资源可能无法加载`);
-        }
+        logger.info(`[DesignerPanel] localResourceRoots: ${localRoots.map(r => r.fsPath).join(', ')}`);
 
         const panel = vscode.window.createWebviewPanel(
             DesignerPanel.viewType,
@@ -656,6 +657,51 @@ export class DesignerPanel {
             return false;
         }
     }
+
+    /**
+     * 转换组件中的相对路径为 webview URI
+     */
+    private convertImagePathsToWebviewUri(components: any[]): any[] {
+        if (!this._filePath) {
+            logger.warn('[convertImagePaths] 没有文件路径');
+            return components;
+        }
+
+        const projectRoot = ProjectUtils.findProjectRoot(this._filePath);
+        if (!projectRoot) {
+            logger.warn('[convertImagePaths] 未找到项目根目录');
+            return components;
+        }
+
+        logger.info(`[convertImagePaths] 项目根目录: ${projectRoot}`);
+        logger.info(`[convertImagePaths] 组件数量: ${components.length}`);
+
+        return components.map(comp => {
+            if (comp.type === 'hg_image' && comp.data?.src) {
+                const src = comp.data.src;
+                logger.info(`[convertImagePaths] 处理图片组件: ${comp.id}, 原始路径: ${src}`);
+                
+                // 如果是相对路径，转换为绝对路径再转为 webview URI
+                if (!src.startsWith('http') && !src.startsWith('vscode-resource')) {
+                    const absolutePath = path.join(projectRoot, src);
+                    const webviewUri = this._panel.webview.asWebviewUri(vscode.Uri.file(absolutePath));
+                    logger.info(`[convertImagePaths] 绝对路径: ${absolutePath}`);
+                    logger.info(`[convertImagePaths] webview URI: ${webviewUri.toString()}`);
+                    
+                    return {
+                        ...comp,
+                        data: {
+                            ...comp.data,
+                            src: webviewUri.toString()
+                        }
+                    };
+                } else {
+                    logger.info(`[convertImagePaths] 跳过转换（已是完整URL）`);
+                }
+            }
+            return comp;
+        });
+    }
     
     /**
  * 加载文件
@@ -673,6 +719,9 @@ private async _loadFile(filePath: string): Promise<void> {
         // 为前端准备组件数据（转换为前端需要的格式）
         const frontendComponents = this._hmlController.prepareComponentsForFrontend(document);
         
+        // 转换图片路径为 webview URI
+        const componentsWithWebviewUri = this.convertImagePathsToWebviewUri(frontendComponents);
+        
         // 使用统一的配置加载器
         const projectConfig = ProjectConfigLoader.loadConfig(filePath);
         const designerConfig = ProjectConfigLoader.getDesignerConfig(projectConfig);
@@ -687,10 +736,10 @@ private async _loadFile(filePath: string): Promise<void> {
                 ...document,
                 view: {
                     ...document.view,
-                    components: frontendComponents
+                    components: componentsWithWebviewUri
                 }
             },
-            components: frontendComponents,
+            components: componentsWithWebviewUri,
             projectConfig: projectConfig,
             designerConfig: designerConfig || { canvasBackgroundColor: '#f0f0f0' }
         });
@@ -1198,6 +1247,10 @@ private _createNewDocument(): void {
             
             const hmlContent = this._hmlController.serializeDocument();
             const frontendComponents = this._hmlController.prepareComponentsForFrontend(hmlDocument);
+            
+            // 转换图片路径为 webview URI
+            const componentsWithWebviewUri = this.convertImagePathsToWebviewUri(frontendComponents);
+            
             const projectConfig = ProjectConfigLoader.loadConfig(this._filePath);
             const designerConfig = ProjectConfigLoader.getDesignerConfig(projectConfig);
             
@@ -1210,10 +1263,10 @@ private _createNewDocument(): void {
                     ...hmlDocument,
                     view: {
                         ...hmlDocument.view,
-                        components: frontendComponents
+                        components: componentsWithWebviewUri
                     }
                 },
-                components: frontendComponents,
+                components: componentsWithWebviewUri,
                 projectConfig: projectConfig,
                 designerConfig: designerConfig || { canvasBackgroundColor: '#f0f0f0' }
             });

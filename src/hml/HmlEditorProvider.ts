@@ -3,6 +3,8 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { DesignerPanel } from '../designer/DesignerPanel';
 import { HmlController } from './HmlController';
+import { ProjectUtils } from '../utils/ProjectUtils';
+import { logger } from '../utils/Logger';
 
 /**
  * HML 文件自定义编辑器提供器
@@ -26,12 +28,32 @@ export class HmlEditorProvider implements vscode.CustomTextEditorProvider {
     ): Promise<void> {
         console.log(`[HmlEditorProvider] resolveCustomTextEditor被调用: ${document.fileName}`);
         
+        // 计算 localResourceRoots
+        const localRoots: vscode.Uri[] = [
+            vscode.Uri.joinPath(this.context.extensionUri, 'src', 'designer', 'webview'),
+            vscode.Uri.joinPath(this.context.extensionUri, 'out', 'designer', 'webview')
+        ];
+        
+        // 从文件路径查找项目根目录
+        const projectRoot = ProjectUtils.findProjectRoot(document.uri.fsPath);
+        if (projectRoot) {
+            localRoots.push(vscode.Uri.file(projectRoot));
+            logger.info(`[HmlEditorProvider] 项目根目录: ${projectRoot}`);
+        } else {
+            // 如果没找到，使用 workspace
+            const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+            if (workspaceRoot) {
+                localRoots.push(vscode.Uri.file(workspaceRoot));
+                logger.info(`[HmlEditorProvider] 使用workspace: ${workspaceRoot}`);
+            }
+        }
+        
+        logger.info(`[HmlEditorProvider] localResourceRoots: ${localRoots.map(r => r.fsPath).join(', ')}`);
+        
         // 设置 Webview 选项
         webviewPanel.webview.options = {
             enableScripts: true,
-            localResourceRoots: [
-                vscode.Uri.joinPath(this.context.extensionUri, 'out', 'designer', 'webview')
-            ]
+            localResourceRoots: localRoots
         };
 
         // 获取文件名作为标题

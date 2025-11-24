@@ -103,9 +103,18 @@ const AssetsPanel: React.FC = () => {
                       <img
                         src={asset.path}
                         alt={asset.name}
+                        onLoad={() => {
+                          console.log('[AssetsPanel] 图片加载成功:', asset.name, asset.path);
+                        }}
                         onError={(e) => {
-                          console.error('图片加载失败:', asset.path);
-                          (e.target as HTMLImageElement).style.display = 'none';
+                          console.error('[AssetsPanel] 图片加载失败:', asset.name, asset.path);
+                          const img = e.target as HTMLImageElement;
+                          img.style.display = 'none';
+                          // 显示错误提示
+                          const preview = img.parentElement;
+                          if (preview) {
+                            preview.innerHTML = '<div style="color: red; font-size: 10px; padding: 4px;">加载失败</div>';
+                          }
                         }}
                       />
                     </div>
