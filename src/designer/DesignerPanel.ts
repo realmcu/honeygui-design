@@ -155,6 +155,9 @@ export class DesignerPanel {
                     case 'codegen':
                 this.generateCode(message.language || 'cpp', message.options, message.content);
                 break;
+                    case 'generateAllCode':
+                        this.generateAllCode();
+                        break;
                     case 'notify':
                         vscode.window.showInformationMessage(message.text);
                         break;
@@ -947,6 +950,107 @@ private _createNewDocument(): void {
         } catch (error) {
             logger.error(`代码生成错误: ${error}`);
             vscode.window.showErrorMessage(`代码生成过程中发生错误: ${error instanceof Error ? error.message : '未知错误'}`);
+        }
+    }
+
+    /**
+     * 生成所有设计稿的代码
+     */
+    public async generateAllCode(): Promise<void> {
+        try {
+            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+            if (!workspaceFolder) {
+                vscode.window.showErrorMessage('未找到工作区');
+                return;
+            }
+
+            const workspaceRoot = workspaceFolder.uri.fsPath;
+            const uiDir = path.join(workspaceRoot, 'ui');
+
+            // 检查ui目录是否存在
+            if (!fs.existsSync(uiDir)) {
+                vscode.window.showErrorMessage('未找到ui目录');
+                return;
+            }
+
+            // 扫描ui目录下的所有HML文件
+            const hmlFiles: string[] = [];
+            const designDirs = fs.readdirSync(uiDir, { withFileTypes: true })
+                .filter(dirent => dirent.isDirectory())
+                .map(dirent => dirent.name);
+
+            for (const designName of designDirs) {
+                const hmlFile = path.join(uiDir, designName, `${designName}.hml`);
+                if (fs.existsSync(hmlFile)) {
+                    hmlFiles.push(hmlFile);
+                }
+            }
+
+            if (hmlFiles.length === 0) {
+                vscode.window.showInformationMessage('未找到任何HML文件');
+                return;
+            }
+
+            // 生成所有文件的代码
+            let successCount = 0;
+            let totalFiles = 0;
+
+            await vscode.window.withProgress(
+                {
+                    location: vscode.ProgressLocation.Notification,
+                    title: `正在生成所有设计稿的代码...`,
+                    cancellable: false
+                },
+                async (progress) => {
+                    for (let i = 0; i < hmlFiles.length; i++) {
+                        const hmlFile = hmlFiles[i];
+                        const designName = path.basename(path.dirname(hmlFile));
+                        
+                        progress.report({ 
+                            increment: (100 / hmlFiles.length),
+                            message: `正在生成 ${designName} (${i + 1}/${hmlFiles.length})...` 
+                        });
+
+                        try {
+                            // 加载HML文件
+                            const hmlController = new (await import('../hml/HmlController')).HmlController();
+                            await hmlController.loadFile(hmlFile);
+
+                            // 准备代码生成选项
+                            const outputDir = path.join(workspaceRoot, 'src', designName);
+                            const generatorOptions: CodeGenOptions = {
+                                outputDir,
+                                hmlFileName: designName,
+                                enableProtectedAreas: true
+                            };
+
+                            // 生成代码
+                            const components = hmlController.currentDocument?.view.components || [];
+                            const result = await generateHoneyGuiCode(components as any, generatorOptions);
+
+                            if ((result as any).success) {
+                                successCount++;
+                                totalFiles += (result as any).files?.length || 0;
+                            } else {
+                                throw new Error((result as any).errors?.[0] || '生成失败');
+                            }
+                        } catch (error) {
+                            vscode.window.showErrorMessage(
+                                `生成 ${designName} 失败: ${error instanceof Error ? error.message : '未知错误'}`
+                            );
+                            throw error; // 停止后续生成
+                        }
+                    }
+                }
+            );
+
+            vscode.window.showInformationMessage(
+                `成功生成 ${successCount} 个设计稿的代码，共 ${totalFiles} 个文件`
+            );
+
+        } catch (error) {
+            logger.error(`批量代码生成错误: ${error}`);
+            // 错误已在循环中显示，这里不再重复显示
         }
     }
     
