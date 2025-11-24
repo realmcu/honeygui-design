@@ -14,6 +14,7 @@ const AssetsPanel: React.FC = () => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [editingAsset, setEditingAsset] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
+  const [isDragOver, setIsDragOver] = useState(false);
 
   console.log('[AssetsPanel] Render - isExpanded:', isExpanded, 'assets:', assets.length);
 
@@ -66,6 +67,52 @@ const AssetsPanel: React.FC = () => {
     });
   };
 
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const files = e.dataTransfer.files;
+      const imageExts = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'webp'];
+
+      // 处理所有图片文件
+      Array.from(files).forEach(file => {
+        const ext = file.name.split('.').pop()?.toLowerCase();
+        
+        if (ext && imageExts.includes(ext)) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const arrayBuffer = event.target?.result as ArrayBuffer;
+            const uint8Array = new Uint8Array(arrayBuffer);
+            
+            // 发送文件到后端保存（不创建组件）
+            window.vscodeAPI?.postMessage({
+              command: 'saveImageToAssets',
+              fileName: file.name,
+              fileData: Array.from(uint8Array),
+              dropPosition: undefined,
+              targetContainerId: undefined
+            });
+          };
+          reader.readAsArrayBuffer(file);
+        }
+      });
+    }
+  };
+
   return (
     <div
       className={`assets-panel ${!isExpanded ? 'collapsed' : ''}`}
@@ -88,7 +135,13 @@ const AssetsPanel: React.FC = () => {
       </div>
 
       {isExpanded && (
-        <div className="assets-content" style={{ minHeight: Math.min(240, Math.max(160, assets.length > 0 ? 160 : 160)) }}>
+        <div 
+          className={`assets-content ${isDragOver ? 'drag-over' : ''}`}
+          style={{ minHeight: Math.min(240, Math.max(160, assets.length > 0 ? 160 : 160)) }}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
           {assets.length === 0 ? (
             <div className="empty-state">
               <p>暂无资源文件</p>
@@ -97,7 +150,15 @@ const AssetsPanel: React.FC = () => {
           ) : (
             <div className="assets-grid">
               {assets.map((asset) => (
-                <div key={asset.path} className="asset-item">
+                <div 
+                  key={asset.path} 
+                  className="asset-item"
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData('asset-path', asset.name);
+                    e.dataTransfer.effectAllowed = 'copy';
+                  }}
+                >
                   {asset.type === 'image' && (
                     <div className="asset-preview">
                       <img

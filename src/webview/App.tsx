@@ -235,14 +235,17 @@ const App: React.FC = () => {
    *
    * @param e 拖放事件对象
    */
-  const handleImageFileDrop = async (e: React.DragEvent, file: File) => {
+  
+  /**
+   * 查找拖放目标容器
+   */
+  const findDropTarget = (e: React.DragEvent): Component | null => {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const x = Math.max(0, Math.round(e.clientX - rect.left));
     const y = Math.max(0, Math.round(e.clientY - rect.top));
 
     const components = useDesignerStore.getState().components;
 
-    // 查找目标容器
     const getAbsolutePosition = (comp: Component): { x: number; y: number } => {
       if (!comp.parent) {
         return { x: comp.position.x, y: comp.position.y };
@@ -270,36 +273,61 @@ const App: React.FC = () => {
       }
     }
 
-    if (!targetContainer) {
-      const api = useDesignerStore.getState().vscodeAPI;
-      if (api) {
-        api.postMessage({
-          command: 'error',
-          text: '请将图片拖放到容器内（View/Panel/Window）'
-        });
+    return targetContainer;
+  };
+
+  const handleImageFileDrop = async (e: React.DragEvent, files: FileList, createComponent: boolean = true) => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const x = Math.max(0, Math.round(e.clientX - rect.left));
+    const y = Math.max(0, Math.round(e.clientY - rect.top));
+
+    let targetContainer: Component | null = null;
+
+    if (createComponent) {
+      targetContainer = findDropTarget(e);
+      
+      if (!targetContainer) {
+        const api = useDesignerStore.getState().vscodeAPI;
+        if (api) {
+          api.postMessage({
+            command: 'error',
+            text: '请将图片拖放到容器内（View/Panel/Window）'
+          });
+        }
+        return;
       }
-      return;
     }
 
-    // 读取文件内容
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const arrayBuffer = event.target?.result as ArrayBuffer;
-      const uint8Array = new Uint8Array(arrayBuffer);
+    // 处理多个文件
+    Array.from(files).forEach((file, index) => {
+      const imageExts = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'webp'];
+      const ext = file.name.split('.').pop()?.toLowerCase();
       
-      // 发送文件到后端保存
-      const api = useDesignerStore.getState().vscodeAPI;
-      if (api) {
-        api.postMessage({
-          command: 'saveImageToAssets',
-          fileName: file.name,
-          fileData: Array.from(uint8Array),
-          dropPosition: { x, y },
-          targetContainerId: targetContainer.id
-        });
+      if (!ext || !imageExts.includes(ext)) {
+        console.warn(`[拖放] 跳过非图片文件: ${file.name}`);
+        return;
       }
-    };
-    reader.readAsArrayBuffer(file);
+
+      // 读取文件内容
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const arrayBuffer = event.target?.result as ArrayBuffer;
+        const uint8Array = new Uint8Array(arrayBuffer);
+        
+        // 发送文件到后端保存
+        const api = useDesignerStore.getState().vscodeAPI;
+        if (api) {
+          api.postMessage({
+            command: 'saveImageToAssets',
+            fileName: file.name,
+            fileData: Array.from(uint8Array),
+            dropPosition: createComponent ? { x: x + index * 20, y: y + index * 20 } : undefined,
+            targetContainerId: createComponent ? targetContainer!.id : undefined
+          });
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    });
   };
 
   const handleCanvasDrop = (e: React.DragEvent) => {
@@ -310,15 +338,55 @@ const App: React.FC = () => {
       console.log('[拖放] ⚠️ 如果看不到日志，请右键设计器画布 → 检查元素，打开Webview开发者工具');
     }
     
+    // 检查是否是从资源面板拖拽
+    const assetPath = e.dataTransfer.getData('asset-path');
+    if (assetPath) {
+      // 从资源面板拖拽图片到画布
+      const targetContainer = findDropTarget(e);
+      if (!targetContainer) {
+        const api = useDesignerStore.getState().vscodeAPI;
+        if (api) {
+          api.postMessage({
+            command: 'error',
+            text: '请将图片拖放到容器内（View/Panel/Window）'
+          });
+        }
+        return;
+      }
+
+      const canvasRect = document.querySelector('.designer-canvas')?.getBoundingClientRect();
+      if (!canvasRect) return;
+
+      const x = (e.clientX - canvasRect.left) / useDesignerStore.getState().zoom;
+      const y = (e.clientY - canvasRect.top) / useDesignerStore.getState().zoom;
+
+      // 创建图片组件
+      const api = useDesignerStore.getState().vscodeAPI;
+      if (api) {
+        api.postMessage({
+          command: 'createImageComponent',
+          imagePath: `assets/${assetPath}`,
+          dropPosition: { x, y },
+          targetContainerId: targetContainer.id
+        });
+      }
+      return;
+    }
+    
     // 检查是否是文件拖拽
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const file = e.dataTransfer.files[0];
+      const files = e.dataTransfer.files;
       const imageExts = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'webp'];
-      const ext = file.name.split('.').pop()?.toLowerCase();
       
-      if (ext && imageExts.includes(ext)) {
-        // 处理图片文件拖拽
-        handleImageFileDrop(e, file);
+      // 检查是否有图片文件
+      const hasImage = Array.from(files).some(file => {
+        const ext = file.name.split('.').pop()?.toLowerCase();
+        return ext && imageExts.includes(ext);
+      });
+      
+      if (hasImage) {
+        // 处理图片文件拖拽（支持多文件）
+        handleImageFileDrop(e, files, true);
         return;
       }
     }

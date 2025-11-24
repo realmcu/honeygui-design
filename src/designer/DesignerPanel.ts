@@ -1488,13 +1488,13 @@ private _createNewDocument(): void {
     }
 
     /**
-     * 保存图片到assets目录并创建图片控件
+     * 保存图片到assets目录并可选创建图片控件
      */
     private async _handleSaveImageToAssets(
         fileName: string,
         fileData: number[],
-        dropPosition: { x: number; y: number },
-        targetContainerId: string
+        dropPosition?: { x: number; y: number },
+        targetContainerId?: string
     ): Promise<void> {
         try {
             if (!this._filePath) {
@@ -1523,13 +1523,15 @@ private _createNewDocument(): void {
             // 计算相对路径（保存到 HML 文件）
             const relativePath = `assets/${fileName}`;
 
-            // 通知前端创建图片控件（使用相对路径）
-            this._panel.webview.postMessage({
-                command: 'createImageComponent',
-                imagePath: relativePath,
-                dropPosition,
-                targetContainerId
-            });
+            // 如果提供了位置和容器ID，则创建图片控件
+            if (dropPosition && targetContainerId) {
+                this._panel.webview.postMessage({
+                    command: 'createImageComponent',
+                    imagePath: relativePath,
+                    dropPosition,
+                    targetContainerId
+                });
+            }
 
             // 重新加载资源列表
             this._handleLoadAssets();
