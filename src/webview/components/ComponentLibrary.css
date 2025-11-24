@@ -6,14 +6,12 @@
   display: flex;
   flex-direction: column;
   background-color: var(--vscode-sideBar-background);
-  flex: 1 1 0;
+  flex: 1;
   min-height: 0;
-  overflow: hidden;
 }
 
 .component-library.collapsed {
   flex: 0 0 auto;
-  overflow: visible;
 }
 
 .library-header {

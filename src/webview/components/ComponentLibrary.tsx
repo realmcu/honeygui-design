@@ -122,13 +122,21 @@ const componentDefinitions: ComponentDefinition[] = [
 const ComponentLibrary: React.FC<ComponentLibraryProps> = ({ onComponentDragStart }) => {
   const [isExpanded, setIsExpanded] = useState(true);
 
+  console.log('[ComponentLibrary] Render - isExpanded:', isExpanded, 'className:', `component-library ${!isExpanded ? 'collapsed' : ''}`);
+
   const handleDragStart = (e: React.DragEvent, type: ComponentType) => {
     e.dataTransfer.setData('component-type', type);
     onComponentDragStart(type);
   };
 
   return (
-    <div className={`component-library ${!isExpanded ? 'collapsed' : ''}`}>
+    <div 
+      className={`component-library ${!isExpanded ? 'collapsed' : ''}`}
+      style={{ 
+        border: '2px solid blue',
+        flex: isExpanded ? '1' : '0 0 auto'
+      }}
+    >
       <div className="library-header" onClick={() => setIsExpanded(!isExpanded)}>
         <span className={`expand-icon ${isExpanded ? 'expanded' : ''}`}>▶</span>
         <h3>组件库</h3>

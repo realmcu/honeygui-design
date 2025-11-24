@@ -113,10 +113,18 @@ const ComponentTree: React.FC = () => {
   const { components } = useDesignerStore();
   const [isExpanded, setIsExpanded] = useState(true);
 
+  console.log('[ComponentTree] Render - isExpanded:', isExpanded, 'components:', components.length, 'className:', `component-tree ${!isExpanded ? 'collapsed' : ''}`);
+
   const rootComponents = components.filter(c => c.parent === null);
 
   return (
-    <div className={`component-tree ${!isExpanded ? 'collapsed' : ''}`}>
+    <div 
+      className={`component-tree ${!isExpanded ? 'collapsed' : ''}`}
+      style={{ 
+        border: '2px solid green',
+        flex: isExpanded ? '1' : '0 0 auto'
+      }}
+    >
       <div className="tree-header" onClick={() => setIsExpanded(!isExpanded)}>
         <span className={`expand-icon ${isExpanded ? 'expanded' : ''}`}>▶</span>
         <h3>控件树</h3>

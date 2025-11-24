@@ -3,14 +3,12 @@
   flex-direction: column;
   background: var(--vscode-sideBar-background);
   border-top: 1px solid var(--vscode-panel-border);
-  flex: 1 1 0;
+  flex: 1;
   min-height: 0;
-  overflow: hidden;
 }
 
 .assets-panel.collapsed {
   flex: 0 0 auto;
-  overflow: visible;
 }
 
 .assets-panel .panel-header {
@@ -25,6 +23,7 @@
   text-transform: uppercase;
   cursor: pointer;
   user-select: none;
+  border-bottom: 1px solid var(--vscode-panel-border);
 }
 
 .assets-panel .panel-header:hover {

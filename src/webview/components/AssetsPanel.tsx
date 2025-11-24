@@ -15,6 +15,8 @@ const AssetsPanel: React.FC = () => {
   const [editingAsset, setEditingAsset] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
 
+  console.log('[AssetsPanel] Render - isExpanded:', isExpanded, 'assets:', assets.length);
+
   useEffect(() => {
     // 请求加载资源列表
     window.vscodeAPI?.postMessage({
@@ -65,7 +67,13 @@ const AssetsPanel: React.FC = () => {
   };
 
   return (
-    <div className={`assets-panel ${!isExpanded ? 'collapsed' : ''}`}>
+    <div 
+      className={`assets-panel ${!isExpanded ? 'collapsed' : ''}`}
+      style={{ 
+        border: '2px solid red',
+        flex: isExpanded ? '1' : '0 0 auto'
+      }}
+    >
       <div className="panel-header" onClick={() => setIsExpanded(!isExpanded)}>
         <span className={`expand-icon ${isExpanded ? 'expanded' : ''}`}>▶</span>
         <Image size={16} />

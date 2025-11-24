@@ -518,9 +518,9 @@ const App: React.FC = () => {
         <div className="left-panel">
           <ComponentLibrary onComponentDragStart={() => {}} />
           <div className="panel-divider" />
-          <ComponentTree />
-          <div className="panel-divider" />
           <AssetsPanel />
+          <div className="panel-divider" />
+          <ComponentTree />
         </div>
 
         {/* Center - Canvas */}
