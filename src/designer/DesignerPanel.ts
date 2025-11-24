@@ -158,6 +158,21 @@ export class DesignerPanel {
                     case 'generateAllCode':
                         this.generateAllCode();
                         break;
+                    case 'loadAssets':
+                        this._handleLoadAssets();
+                        break;
+                    case 'deleteAsset':
+                        this._handleDeleteAsset(message.path);
+                        break;
+                    case 'renameAsset':
+                        this._handleRenameAsset(message.oldPath, message.newName);
+                        break;
+                    case 'openAssetsFolder':
+                        this._handleOpenAssetsFolder();
+                        break;
+                    case 'saveImageToAssets':
+                        this._handleSaveImageToAssets(message.fileName, message.fileData, message.dropPosition, message.targetContainerId);
+                        break;
                     case 'notify':
                         vscode.window.showInformationMessage(message.text);
                         break;
@@ -1252,6 +1267,176 @@ private _createNewDocument(): void {
         } catch (error) {
             logger.error(`[DesignerPanel] 选择图片路径失败: ${error}`);
             vscode.window.showErrorMessage('选择图片失败');
+        }
+    }
+    
+    /**
+     * 加载资源文件列表
+     */
+    private async _handleLoadAssets(): Promise<void> {
+        try {
+            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+            if (!workspaceFolder) {
+                return;
+            }
+
+            const assetsDir = path.join(workspaceFolder.uri.fsPath, 'assets');
+            
+            // 确保assets目录存在
+            if (!fs.existsSync(assetsDir)) {
+                fs.mkdirSync(assetsDir, { recursive: true });
+            }
+
+            // 扫描assets目录
+            const assets: any[] = [];
+            const files = fs.readdirSync(assetsDir);
+            
+            for (const file of files) {
+                const filePath = path.join(assetsDir, file);
+                const stats = fs.statSync(filePath);
+                
+                if (stats.isFile()) {
+                    const ext = path.extname(file).toLowerCase();
+                    const imageExts = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg', '.webp'];
+                    
+                    if (imageExts.includes(ext)) {
+                        // 转换为webview可用的URI
+                        const webviewUri = this._panel.webview.asWebviewUri(vscode.Uri.file(filePath));
+                        assets.push({
+                            name: file,
+                            path: webviewUri.toString(),
+                            type: 'image',
+                            size: stats.size
+                        });
+                    }
+                }
+            }
+
+            // 发送资源列表到webview
+            this._panel.webview.postMessage({
+                command: 'assetsLoaded',
+                assets
+            });
+        } catch (error) {
+            logger.error(`加载资源列表失败: ${error}`);
+        }
+    }
+
+    /**
+     * 删除资源文件
+     */
+    private async _handleDeleteAsset(assetPath: string): Promise<void> {
+        try {
+            if (fs.existsSync(assetPath)) {
+                fs.unlinkSync(assetPath);
+                vscode.window.showInformationMessage('资源文件已删除');
+                // 重新加载资源列表
+                this._handleLoadAssets();
+            }
+        } catch (error) {
+            logger.error(`删除资源文件失败: ${error}`);
+            vscode.window.showErrorMessage('删除资源文件失败');
+        }
+    }
+
+    /**
+     * 重命名资源文件
+     */
+    private async _handleRenameAsset(oldPath: string, newName: string): Promise<void> {
+        try {
+            const dir = path.dirname(oldPath);
+            const newPath = path.join(dir, newName);
+            
+            if (fs.existsSync(newPath)) {
+                vscode.window.showErrorMessage('文件名已存在');
+                return;
+            }
+            
+            fs.renameSync(oldPath, newPath);
+            vscode.window.showInformationMessage('资源文件已重命名');
+            // 重新加载资源列表
+            this._handleLoadAssets();
+        } catch (error) {
+            logger.error(`重命名资源文件失败: ${error}`);
+            vscode.window.showErrorMessage('重命名资源文件失败');
+        }
+    }
+
+    /**
+     * 打开assets文件夹
+     */
+    private async _handleOpenAssetsFolder(): Promise<void> {
+        try {
+            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+            if (!workspaceFolder) {
+                return;
+            }
+
+            const assetsDir = path.join(workspaceFolder.uri.fsPath, 'assets');
+            
+            // 确保assets目录存在
+            if (!fs.existsSync(assetsDir)) {
+                fs.mkdirSync(assetsDir, { recursive: true });
+            }
+
+            // 在系统文件管理器中打开
+            const uri = vscode.Uri.file(assetsDir);
+            await vscode.commands.executeCommand('revealFileInOS', uri);
+        } catch (error) {
+            logger.error(`打开assets文件夹失败: ${error}`);
+            vscode.window.showErrorMessage('打开assets文件夹失败');
+        }
+    }
+
+    /**
+     * 保存图片到assets目录并创建图片控件
+     */
+    private async _handleSaveImageToAssets(
+        fileName: string,
+        fileData: number[],
+        dropPosition: { x: number; y: number },
+        targetContainerId: string
+    ): Promise<void> {
+        try {
+            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+            if (!workspaceFolder) {
+                vscode.window.showErrorMessage('未找到工作区');
+                return;
+            }
+
+            const assetsDir = path.join(workspaceFolder.uri.fsPath, 'assets');
+            
+            // 确保assets目录存在
+            if (!fs.existsSync(assetsDir)) {
+                fs.mkdirSync(assetsDir, { recursive: true });
+            }
+
+            // 保存文件
+            const filePath = path.join(assetsDir, fileName);
+            const buffer = Buffer.from(fileData);
+            fs.writeFileSync(filePath, buffer);
+
+            // 计算相对路径（用于显示）
+            const relativePath = `assets/${fileName}`;
+            
+            // 转换为webview URI（用于实际加载）
+            const webviewUri = this._panel.webview.asWebviewUri(vscode.Uri.file(filePath));
+
+            // 通知前端创建图片控件
+            this._panel.webview.postMessage({
+                command: 'createImageComponent',
+                imagePath: webviewUri.toString(),
+                dropPosition,
+                targetContainerId
+            });
+
+            // 重新加载资源列表
+            this._handleLoadAssets();
+
+            vscode.window.showInformationMessage(`图片已保存到 ${relativePath}`);
+        } catch (error) {
+            logger.error(`保存图片到assets失败: ${error}`);
+            vscode.window.showErrorMessage('保存图片失败');
         }
     }
     

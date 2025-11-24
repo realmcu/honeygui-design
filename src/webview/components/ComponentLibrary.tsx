@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ComponentType, ComponentDefinition } from '../types';
 import './ComponentLibrary.css';
 
@@ -120,30 +120,35 @@ const componentDefinitions: ComponentDefinition[] = [
 ];
 
 const ComponentLibrary: React.FC<ComponentLibraryProps> = ({ onComponentDragStart }) => {
+  const [isExpanded, setIsExpanded] = useState(true);
+
   const handleDragStart = (e: React.DragEvent, type: ComponentType) => {
     e.dataTransfer.setData('component-type', type);
     onComponentDragStart(type);
   };
 
   return (
-    <div className="component-library">
-      <div className="library-header">
+    <div className={`component-library ${!isExpanded ? 'collapsed' : ''}`}>
+      <div className="library-header" onClick={() => setIsExpanded(!isExpanded)}>
+        <span className={`expand-icon ${isExpanded ? 'expanded' : ''}`}>▶</span>
         <h3>组件库</h3>
       </div>
-      <div className="library-content">
-        {componentDefinitions.map((component) => (
-          <div
-            key={component.type}
-            className="component-item"
-            draggable
-            onDragStart={(e) => handleDragStart(e, component.type)}
-            title={component.name}
-          >
-            <div className="component-icon">{component.icon}</div>
-            <div className="component-name">{component.name}</div>
-          </div>
-        ))}
-      </div>
+      {isExpanded && (
+        <div className="library-content">
+          {componentDefinitions.map((component) => (
+            <div
+              key={component.type}
+              className="component-item"
+              draggable
+              onDragStart={(e) => handleDragStart(e, component.type)}
+              title={component.name}
+            >
+              <div className="component-icon">{component.icon}</div>
+              <div className="component-name">{component.name}</div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

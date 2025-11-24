@@ -5,17 +5,40 @@
 .component-library {
   display: flex;
   flex-direction: column;
-  height: 100%;
   background-color: var(--vscode-sideBar-background);
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.component-library.collapsed {
+  flex: 0 0 auto;
+  overflow: visible;
 }
 
 .library-header {
   height: var(--panel-header-height);
   display: flex;
   align-items: center;
+  gap: 8px;
   padding: 0 16px;
   background-color: var(--vscode-sideBarSectionHeader-background);
   border-bottom: 1px solid var(--vscode-panel-border);
+  cursor: pointer;
+  user-select: none;
+}
+
+.library-header:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.library-header .expand-icon {
+  transition: transform 0.2s;
+  font-size: 10px;
+}
+
+.library-header .expand-icon.expanded {
+  transform: rotate(90deg);
 }
 
 .library-header h3 {

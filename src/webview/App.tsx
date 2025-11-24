@@ -4,6 +4,7 @@ import DesignerCanvas from './components/DesignerCanvas';
 import ComponentLibrary, { componentDefinitions } from './components/ComponentLibrary';
 import PropertiesPanel from './components/PropertiesPanel';
 import ComponentTree from './components/ComponentTree';
+import AssetsPanel from './components/AssetsPanel';
 import Toolbar from './components/Toolbar';
 import { Component, ComponentType } from './types';
 import useKeyboardShortcuts from './utils/keyboardShortcuts';
@@ -133,6 +134,62 @@ const App: React.FC = () => {
             }
           }
           break;
+
+        case 'createImageComponent':
+          // 创建图片控件
+          if (message.imagePath && message.targetContainerId) {
+            const store = useDesignerStore.getState();
+            const targetContainer = store.components.find(c => c.id === message.targetContainerId);
+            
+            if (targetContainer) {
+              // 计算相对于容器的坐标
+              const getAbsolutePosition = (comp: Component): { x: number; y: number } => {
+                if (!comp.parent) {
+                  return { x: comp.position.x, y: comp.position.y };
+                }
+                const parentComp = store.components.find(c => c.id === comp.parent);
+                if (!parentComp) {
+                  return { x: comp.position.x, y: comp.position.y };
+                }
+                const parentPos = getAbsolutePosition(parentComp);
+                return {
+                  x: parentPos.x + comp.position.x,
+                  y: parentPos.y + comp.position.y
+                };
+              };
+
+              const targetAbsPos = getAbsolutePosition(targetContainer);
+              const relativeX = Math.max(0, message.dropPosition.x - targetAbsPos.x);
+              const relativeY = Math.max(0, message.dropPosition.y - targetAbsPos.y);
+
+              // 创建图片组件
+              const imageComponent: Component = {
+                id: `hg_image_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+                type: 'hg_image',
+                name: `image_${Date.now().toString().substr(-4)}`,
+                position: {
+                  x: relativeX,
+                  y: relativeY,
+                  width: 100,
+                  height: 100,
+                },
+                visible: true,
+                enabled: true,
+                locked: false,
+                zIndex: 1,
+                children: [],
+                parent: message.targetContainerId,
+                style: {},
+                data: {
+                  src: message.imagePath
+                },
+              };
+
+              store.addComponent(imageComponent);
+              console.log(`[Webview App] 创建图片组件: ${message.imagePath}`);
+            }
+          }
+          break;
       }
     });
 
@@ -178,12 +235,92 @@ const App: React.FC = () => {
    *
    * @param e 拖放事件对象
    */
+  const handleImageFileDrop = async (e: React.DragEvent, file: File) => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const x = Math.max(0, Math.round(e.clientX - rect.left));
+    const y = Math.max(0, Math.round(e.clientY - rect.top));
+
+    const components = useDesignerStore.getState().components;
+
+    // 查找目标容器
+    const getAbsolutePosition = (comp: Component): { x: number; y: number } => {
+      if (!comp.parent) {
+        return { x: comp.position.x, y: comp.position.y };
+      }
+      const parentComp = components.find(c => c.id === comp.parent);
+      if (!parentComp) {
+        return { x: comp.position.x, y: comp.position.y };
+      }
+      const parentPos = getAbsolutePosition(parentComp);
+      return {
+        x: parentPos.x + comp.position.x,
+        y: parentPos.y + comp.position.y
+      };
+    };
+
+    let targetContainer: Component | null = null;
+    for (const comp of components) {
+      const absPos = getAbsolutePosition(comp);
+      const { width: cw, height: ch } = comp.position;
+      
+      if (x >= absPos.x && x <= absPos.x + cw && y >= absPos.y && y <= absPos.y + ch) {
+        if (!targetContainer || (cw * ch < targetContainer.position.width * targetContainer.position.height)) {
+          targetContainer = comp;
+        }
+      }
+    }
+
+    if (!targetContainer) {
+      const api = useDesignerStore.getState().vscodeAPI;
+      if (api) {
+        api.postMessage({
+          command: 'error',
+          text: '请将图片拖放到容器内（View/Panel/Window）'
+        });
+      }
+      return;
+    }
+
+    // 读取文件内容
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const arrayBuffer = event.target?.result as ArrayBuffer;
+      const uint8Array = new Uint8Array(arrayBuffer);
+      
+      // 发送文件到后端保存
+      const api = useDesignerStore.getState().vscodeAPI;
+      if (api) {
+        api.postMessage({
+          command: 'saveImageToAssets',
+          fileName: file.name,
+          fileData: Array.from(uint8Array),
+          dropPosition: { x, y },
+          targetContainerId: targetContainer.id
+        });
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
   const handleCanvasDrop = (e: React.DragEvent) => {
     e.preventDefault();
 
     if (DEBUG_DROP) {
       console.log('========== [拖放] handleCanvasDrop 开始 ==========');
       console.log('[拖放] ⚠️ 如果看不到日志，请右键设计器画布 → 检查元素，打开Webview开发者工具');
+    }
+    
+    // 检查是否是文件拖拽
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const file = e.dataTransfer.files[0];
+      const imageExts = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'webp'];
+      const ext = file.name.split('.').pop()?.toLowerCase();
+      
+      if (ext && imageExts.includes(ext)) {
+        // 处理图片文件拖拽
+        handleImageFileDrop(e, file);
+        return;
+      }
     }
     
     const componentType = e.dataTransfer.getData('component-type') as ComponentType;
@@ -382,6 +519,8 @@ const App: React.FC = () => {
           <ComponentLibrary onComponentDragStart={() => {}} />
           <div className="panel-divider" />
           <ComponentTree />
+          <div className="panel-divider" />
+          <AssetsPanel />
         </div>
 
         {/* Center - Canvas */}
