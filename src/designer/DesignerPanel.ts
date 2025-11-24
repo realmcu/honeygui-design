@@ -848,10 +848,10 @@ private _createNewDocument(): void {
             }
 
             // 准备代码生成选项
-            const projectName = path.basename(this._filePath || 'HoneyGUIApp', '.hml');
+            const hmlFileName = path.basename(this._filePath || 'HoneyGUIApp', '.hml');
             const generatorOptions: CodeGenOptions = {
                 outputDir,
-                projectName,
+                hmlFileName,
                 enableProtectedAreas: true,
                 ...options
             };

@@ -43,7 +43,7 @@ const exampleComponents: Component[] = [
 async function runExample() {
   const result = await generateHoneyGuiCode(exampleComponents, {
     outputDir: './output',
-    projectName: 'MyHoneyGuiApp',
+    hmlFileName: 'MyHoneyGuiApp',
     enableProtectedAreas: true
   });
 
