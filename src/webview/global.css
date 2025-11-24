@@ -253,6 +253,13 @@ textarea:focus {
 }
 
 /* Responsive */
+@media (max-width: 1280px) {
+  :root {
+    --left-panel-width: 260px;
+    --right-panel-width: 280px;
+  }
+}
+
 @media (max-width: 1024px) {
   .left-panel {
     width: 250px;
@@ -260,6 +267,13 @@ textarea:focus {
 
   .right-panel {
     width: 280px;
+  }
+}
+
+@media (max-width: 768px) {
+  .left-panel,
+  .right-panel {
+    display: none;
   }
 }
 

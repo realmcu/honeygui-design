@@ -25,35 +25,7 @@
 }
 
 /* Panels */
-.left-panel {
-  display: flex;
-  flex-direction: column;
-  width: var(--left-panel-width);
-  height: 100%;
-  min-width: 250px;
-  max-width: 400px;
-  background-color: var(--vscode-sideBar-background);
-  border: 1px solid var(--vscode-panel-border);
-  border-top: none;
-  border-bottom: none;
-}
-
-.right-panel {
-  width: var(--right-panel-width);
-  min-width: 280px;
-  max-width: 400px;
-  background-color: var(--vscode-sideBar-background);
-  border: 1px solid var(--vscode-panel-border);
-  border-top: none;
-  border-bottom: none;
-}
-
-/* Panel dividers */
-.panel-divider {
-  height: 1px;
-  background-color: var(--vscode-panel-border);
-  margin: 0;
-}
+/* 移除面板通用样式，统一在 global.css 定义 */
 
 /* Responsive design */
 @media (max-width: 1280px) {
