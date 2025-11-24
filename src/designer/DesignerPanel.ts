@@ -840,12 +840,31 @@ private _createNewDocument(): void {
                 }
             }
 
-            // 询问用户代码输出目录
-            const defaultOutputDir = this._filePath ? path.dirname(this._filePath) + '/generated' : undefined;
-            const outputDir = await this._promptForOutputDirectory(defaultOutputDir);
-            if (!outputDir) {
+            // 自动计算输出目录：ui/xxx/xxx.hml -> src/xxx/
+            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+            if (!workspaceFolder) {
+                vscode.window.showErrorMessage('未找到工作区');
                 return;
             }
+            
+            const workspaceRoot = workspaceFolder.uri.fsPath;
+            const relativePath = path.relative(workspaceRoot, this._filePath!);
+            
+            // 检查是否在ui目录下
+            if (!relativePath.startsWith('ui' + path.sep)) {
+                vscode.window.showErrorMessage('HML文件必须在ui目录下');
+                return;
+            }
+            
+            // 提取设计稿目录名：ui/main/main.hml -> main
+            const pathParts = relativePath.split(path.sep);
+            if (pathParts.length < 3) {
+                vscode.window.showErrorMessage('HML文件路径格式不正确，应为 ui/设计稿名/设计稿名.hml');
+                return;
+            }
+            
+            const designName = pathParts[1];
+            const outputDir = path.join(workspaceRoot, 'src', designName);
 
             // 准备代码生成选项
             const hmlFileName = path.basename(this._filePath || 'HoneyGUIApp', '.hml');
@@ -929,22 +948,6 @@ private _createNewDocument(): void {
             logger.error(`代码生成错误: ${error}`);
             vscode.window.showErrorMessage(`代码生成过程中发生错误: ${error instanceof Error ? error.message : '未知错误'}`);
         }
-    }
-
-    /**
-     * 提示用户选择输出目录
-     */
-    private async _promptForOutputDirectory(defaultPath?: string): Promise<string | undefined> {
-        const options: vscode.OpenDialogOptions = {
-            canSelectFolders: true,
-            canSelectFiles: false,
-            canSelectMany: false,
-            openLabel: '选择输出目录',
-            defaultUri: defaultPath ? vscode.Uri.file(defaultPath) : undefined
-        };
-
-        const uri = await vscode.window.showOpenDialog(options);
-        return uri && uri.length > 0 ? uri[0].fsPath : undefined;
     }
     
     /**

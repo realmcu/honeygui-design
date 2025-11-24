@@ -177,58 +177,6 @@ export class CommandManager {
             }
         });
 
-        // 创建新的HML文件
-        this.registerCommand('honeygui.createNewHmlFile', async (uri: vscode.Uri) => {
-            try {
-                logger.info(`执行命令: honeygui.createNewHmlFile, URI: ${uri.fsPath}`);
-                
-                // 获取文件夹路径
-                const folderPath = fs.statSync(uri.fsPath).isDirectory() ? uri.fsPath : path.dirname(uri.fsPath);
-                
-                // 使用文件夹名作为默认文件名
-                const folderName = path.basename(folderPath);
-                const defaultFileName = `${folderName}.hml`;
-                
-                const fileName = await vscode.window.showInputBox({
-                    prompt: '请输入HML文件名',
-                    placeHolder: defaultFileName,
-                    value: defaultFileName,
-                    validateInput: (value) => {
-                        if (!value.trim()) return '文件名不能为空';
-                        if (!value.endsWith('.hml')) return '文件必须以.hml结尾';
-                        const targetPath = path.join(folderPath, value);
-                        if (fs.existsSync(targetPath)) return '文件已存在';
-                        return null;
-                    }
-                });
-
-                if (fileName) {
-                    const filePath = path.join(folderPath, fileName);
-                    
-                    // 创建默认的HML内容
-                    const defaultContent = `<?xml version="1.0" encoding="UTF-8"?>
-<hml version="1.0">
-    <view id="main" width="480" height="272" background-color="#f0f0f0">
-        <hg_view id="mainView" x="0" y="0" width="480" height="272" name="mainView">
-            <!-- 在这里添加您的组件 -->
-        </hg_view>
-    </view>
-</hml>`;
-
-                    fs.writeFileSync(filePath, defaultContent, 'utf8');
-                    
-                    // 在设计器中打开新创建的文件
-                    const document = await vscode.workspace.openTextDocument(filePath);
-                    await vscode.commands.executeCommand('honeygui.openInDesigner', vscode.Uri.file(filePath));
-                    
-                    vscode.window.showInformationMessage(`HML文件已创建: ${fileName}`);
-                }
-            } catch (error) {
-                logger.error(`创建HML文件失败: ${error instanceof Error ? error.message : String(error)}`);
-                vscode.window.showErrorMessage(`创建HML文件失败: ${error instanceof Error ? error.message : '未知错误'}`);
-            }
-        });
-
         // 代码生成命令（从当前设计器面板触发）
         this.registerCommand('honeygui.codegen', async () => {
             try {
@@ -259,7 +207,7 @@ export class CommandManager {
             }
         });
 
-        // 从工作区创建HML文件
+        // 创建新的设计稿
         this.registerCommand('honeygui.createNewHmlInWorkspace', async () => {
             try {
                 logger.info('执行命令: honeygui.createNewHmlInWorkspace');
@@ -271,22 +219,56 @@ export class CommandManager {
                     return;
                 }
                 
-                // 选择保存位置
-                const folderUri = await vscode.window.showOpenDialog({
-                    canSelectFiles: false,
-                    canSelectFolders: true,
-                    canSelectMany: false,
-                    defaultUri: workspaceFolders[0].uri,
-                    openLabel: '选择保存位置'
+                // 使用第一个工作区的ui目录
+                const workspaceRoot = workspaceFolders[0].uri.fsPath;
+                const uiDir = path.join(workspaceRoot, 'ui');
+                
+                // 确保ui目录存在
+                if (!fs.existsSync(uiDir)) {
+                    fs.mkdirSync(uiDir, { recursive: true });
+                }
+                
+                // 输入设计稿名称
+                const designName = await vscode.window.showInputBox({
+                    prompt: '请输入设计稿名称',
+                    placeHolder: 'untitled',
+                    value: 'untitled',
+                    validateInput: (value) => {
+                        if (!value.trim()) return '设计稿名称不能为空';
+                        if (!/^[a-zA-Z0-9_-]+$/.test(value)) return '设计稿名称只能包含字母、数字、下划线和连字符';
+                        const targetDir = path.join(uiDir, value);
+                        if (fs.existsSync(targetDir)) return '设计稿目录已存在';
+                        return null;
+                    }
                 });
                 
-                if (folderUri && folderUri.length > 0) {
-                    // 调用创建HML文件命令
-                    await vscode.commands.executeCommand('honeygui.createNewHmlFile', folderUri[0]);
+                if (designName) {
+                    // 创建设计稿目录
+                    const designDir = path.join(uiDir, designName);
+                    fs.mkdirSync(designDir, { recursive: true });
+                    
+                    // 创建HML文件
+                    const hmlFilePath = path.join(designDir, `${designName}.hml`);
+                    const viewName = `${designName}View`;
+                    const defaultContent = `<?xml version="1.0" encoding="UTF-8"?>
+<hml version="1.0">
+    <view id="main" width="480" height="272" background-color="#f0f0f0">
+        <hg_view id="${viewName}" x="0" y="0" width="480" height="272" name="${viewName}">
+            <!-- 在这里添加您的组件 -->
+        </hg_view>
+    </view>
+</hml>`;
+                    
+                    fs.writeFileSync(hmlFilePath, defaultContent, 'utf8');
+                    
+                    // 在设计器中打开新创建的文件
+                    await vscode.commands.executeCommand('honeygui.openInDesigner', vscode.Uri.file(hmlFilePath));
+                    
+                    vscode.window.showInformationMessage(`设计稿已创建: ${designName}`);
                 }
             } catch (error) {
-                logger.error(`创建HML文件失败: ${error instanceof Error ? error.message : String(error)}`);
-                vscode.window.showErrorMessage(`创建HML文件失败: ${error instanceof Error ? error.message : '未知错误'}`);
+                logger.error(`创建设计稿失败: ${error instanceof Error ? error.message : String(error)}`);
+                vscode.window.showErrorMessage(`创建设计稿失败: ${error instanceof Error ? error.message : '未知错误'}`);
             }
         });
 

@@ -189,8 +189,8 @@ class WelcomeViewDataProvider implements vscode.TreeDataProvider<vscode.TreeItem
         // 返回欢迎视图的数据项
         const welcomeItems: vscode.TreeItem[] = [];
         
-        const newHmlItem = new vscode.TreeItem('新建HML文件', vscode.TreeItemCollapsibleState.None);
-        newHmlItem.command = { command: 'honeygui.createNewHmlInWorkspace', title: '新建HML文件' };
+        const newHmlItem = new vscode.TreeItem('新建设计稿', vscode.TreeItemCollapsibleState.None);
+        newHmlItem.command = { command: 'honeygui.createNewHmlInWorkspace', title: '新建设计稿' };
         newHmlItem.iconPath = new vscode.ThemeIcon('file-add');
         welcomeItems.push(newHmlItem);
         

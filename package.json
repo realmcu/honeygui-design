@@ -53,7 +53,7 @@
             "filenamePattern": "*.hml"
           }
         ],
-        "priority": "option"
+        "priority": "default"
       }
     ],
     "viewsContainers": {
@@ -91,11 +91,6 @@
           "command": "honeygui.openInDesigner",
           "when": "resourceExtname == .hml",
           "group": "1_open@2"
-        },
-        {
-          "command": "honeygui.createNewHmlFile",
-          "when": "explorerResourceIsFolder",
-          "group": "2_new@1"
         }
       ],
       "view/title": [
@@ -119,7 +114,7 @@
       },
       {
         "command": "honeygui.createNewHmlInWorkspace",
-        "title": "HoneyGUI: Create New HML File",
+        "title": "HoneyGUI: 新建设计稿",
         "category": "HoneyGUI"
       },
       {
@@ -130,11 +125,6 @@
       {
         "command": "honeygui.openInDesigner",
         "title": "Open with HoneyGUI Designer",
-        "category": "HoneyGUI"
-      },
-      {
-        "command": "honeygui.createNewHmlFile",
-        "title": "Create New Design File",
         "category": "HoneyGUI"
       },
       {

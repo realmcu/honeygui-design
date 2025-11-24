@@ -132,11 +132,6 @@ export class TemplateManager {
           "isTemplate": true
         },
         {
-          "source": "src/main.cpp",
-          "target": "src/main.cpp",
-          "isTemplate": true
-        },
-        {
           "source": ".vscode/tasks.json",
           "target": ".vscode/tasks.json",
           "isTemplate": true
@@ -164,29 +159,9 @@ export class TemplateManager {
 </hml>`;
     await promisify(fs.writeFile)(path.join(uiDir, 'main.hml'), uiContent, 'utf8');
 
-    // 创建源代码模板
+    // 创建源代码目录（空目录）
     const srcDir = path.join(templateDir, 'src');
     fs.mkdirSync(srcDir, { recursive: true });
-    const cppContent = `// {{projectName}} 主程序
-// 版本: {{version}}
-
-#include <iostream>
-
-// <honeygui-protect-begin:handler>
-void OnHelloButtonClick() {
-    std::cout << "Hello, HoneyGUI!" << std::endl;
-    // 在这里添加按钮点击逻辑
-}
-// <honeygui-protect-end:handler>
-
-int main() {
-    std::cout << "{{appTitle}} 启动中..." << std::endl;
-    
-    // 初始化代码将由HoneyGUI生成器自动生成
-    
-    return 0;
-}`;
-    await promisify(fs.writeFile)(path.join(srcDir, 'main.cpp'), cppContent, 'utf8');
 
     // 创建tasks.json模板
     const vscodeDir = path.join(templateDir, '.vscode');

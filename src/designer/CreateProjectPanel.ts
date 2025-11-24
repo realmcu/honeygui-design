@@ -760,10 +760,6 @@ export class CreateProjectPanel {
         );
         fs.writeFileSync(path.join(projectPath, 'ui', 'main', 'main.hml'), mainHmlContent, 'utf8');
 
-        // 创建C++文件
-        const cppContent = HmlTemplateManager.generateMainCpp(projectName, appId);
-        fs.writeFileSync(path.join(projectPath, 'src', 'main.cpp'), cppContent, 'utf8');
-
         // 创建README文件
         const readmeContent = HmlTemplateManager.generateReadme(
             projectName,
