@@ -67,12 +67,9 @@ const AssetsPanel: React.FC = () => {
   };
 
   return (
-    <div 
+    <div
       className={`assets-panel ${!isExpanded ? 'collapsed' : ''}`}
-      style={{ 
-        border: '2px solid red',
-        flex: isExpanded ? '1' : '0 0 auto'
-      }}
+      style={{ flex: isExpanded ? '1' : '0 0 auto' }}
     >
       <div className="panel-header" onClick={() => setIsExpanded(!isExpanded)}>
         <span className={`expand-icon ${isExpanded ? 'expanded' : ''}`}>▶</span>
@@ -91,7 +88,7 @@ const AssetsPanel: React.FC = () => {
       </div>
 
       {isExpanded && (
-        <div className="assets-content">
+        <div className="assets-content" style={{ minHeight: Math.min(240, Math.max(160, assets.length > 0 ? 160 : 160)) }}>
           {assets.length === 0 ? (
             <div className="empty-state">
               <p>暂无资源文件</p>

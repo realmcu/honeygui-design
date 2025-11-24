@@ -130,19 +130,16 @@ const ComponentLibrary: React.FC<ComponentLibraryProps> = ({ onComponentDragStar
   };
 
   return (
-    <div 
+    <div
       className={`component-library ${!isExpanded ? 'collapsed' : ''}`}
-      style={{ 
-        border: '2px solid blue',
-        flex: isExpanded ? '1' : '0 0 auto'
-      }}
+      style={{ flex: isExpanded ? '1' : '0 0 auto' }}
     >
       <div className="library-header" onClick={() => setIsExpanded(!isExpanded)}>
         <span className={`expand-icon ${isExpanded ? 'expanded' : ''}`}>▶</span>
         <h3>组件库</h3>
       </div>
       {isExpanded && (
-        <div className="library-content">
+        <div className="library-content" style={{ minHeight: 160 }}>
           {componentDefinitions.map((component) => (
             <div
               key={component.type}

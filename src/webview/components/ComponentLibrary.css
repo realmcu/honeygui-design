@@ -12,6 +12,8 @@
 
 .component-library.collapsed {
   flex: 0 0 auto;
+  height: var(--panel-header-height);
+  overflow: hidden;
 }
 
 .library-header {

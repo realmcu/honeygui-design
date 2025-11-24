@@ -81,7 +81,7 @@ body {
 .panel-divider {
   height: 1px;
   background-color: var(--vscode-panel-border);
-  margin: 8px 0;
+  margin: 0;
 }
 
 /* Scrollbars */
@@ -109,17 +109,8 @@ body {
 .properties-panel {
   display: flex;
   flex-direction: column;
-  height: 50%;
+  min-height: 0;
   overflow: hidden;
-}
-
-.component-library,
-.component-tree {
-  flex: 1;
-}
-
-.properties-panel {
-  flex: 1;
 }
 
 .library-header,

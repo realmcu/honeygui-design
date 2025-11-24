@@ -118,19 +118,16 @@ const ComponentTree: React.FC = () => {
   const rootComponents = components.filter(c => c.parent === null);
 
   return (
-    <div 
+    <div
       className={`component-tree ${!isExpanded ? 'collapsed' : ''}`}
-      style={{ 
-        border: '2px solid green',
-        flex: isExpanded ? '1' : '0 0 auto'
-      }}
+      style={{ flex: isExpanded ? '1' : '0 0 auto' }}
     >
       <div className="tree-header" onClick={() => setIsExpanded(!isExpanded)}>
         <span className={`expand-icon ${isExpanded ? 'expanded' : ''}`}>▶</span>
         <h3>控件树</h3>
       </div>
       {isExpanded && (
-        <div className="tree-content">
+        <div className="tree-content" style={{ minHeight: 160 }}>
           {rootComponents.length === 0 ? (
             <div className="tree-empty">
               暂无组件
