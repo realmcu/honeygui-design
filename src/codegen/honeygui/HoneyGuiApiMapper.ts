@@ -37,10 +37,8 @@ export class HoneyGuiApiMapper {
     // 视图容器
     this.mappings.set('hg_view', {
       componentType: 'hg_view',
-      createFunction: 'gui_view_create',
-      propertySetters: [
-        { property: 'backgroundColor', apiFunction: 'gui_obj_set_color', valueTransform: this.colorToHex }
-      ],
+      createFunction: 'GUI_VIEW_INSTANCE',  // 使用宏而非函数
+      propertySetters: [],  // view 不需要属性设置
       eventHandlers: [],
       includeHeader: 'gui_view.h'
     });

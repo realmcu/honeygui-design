@@ -84,10 +84,89 @@ src/
 
 | 设计器组件 | HoneyGUI API | 说明 |
 |-----------|-------------|------|
-| hg_view | `gui_screen_create()` | 创建屏幕容器 |
-| hg_view   | `gui_view_create()` | 创建视图容器 |
+| hg_view | `GUI_VIEW_INSTANCE()` | 使用宏注册视图实例 |
 | hg_window | `gui_window_create()` | 创建窗口 |
 | hg_panel  | `gui_obj_create()` | 创建面板对象 |
+
+##### hg_view 特殊生成规则
+
+hg_view 不使用传统的 `gui_view_create()` 函数，而是使用 `GUI_VIEW_INSTANCE` 宏注册视图实例。
+
+**生成模板**：
+```c
+static void {name}_switch_out(gui_view_t *view)
+{
+    GUI_UNUSED(view);
+}
+
+static void {name}_switch_in(gui_view_t *view)
+{
+    GUI_UNUSED(view);
+    
+    // 在这里创建 hg_view 的子组件
+    // button1 = gui_button_create(...);
+    // label1 = gui_text_create(...);
+}
+GUI_VIEW_INSTANCE("{name}", false, {name}_switch_in, {name}_switch_out);
+```
+
+**替换规则**：
+- `{name}` - 使用 HML 中 hg_view 的 `name` 属性值，保持原样，不做大小写转换
+- 函数名格式：`{name}_switch_in` 和 `{name}_switch_out`
+- 宏第一个参数：字符串 `"{name}"`
+- 宏第三、四个参数：函数名（不带引号）
+
+**子组件创建规则**：
+- hg_view 的所有子组件在 `{name}_switch_in()` 函数中创建
+- 按照控件树的层级顺序递归创建
+- 子组件的父组件引用使用 NULL（因为 view 本身不是 gui_obj_t 指针）
+
+**必需的头文件**：
+```c
+#include "guidef.h"
+#include "gui_obj.h"
+#include "gui_components_init.h"
+#include "gui_view.h"
+#include "gui_view_instance.h"
+```
+
+**示例**：
+
+HML:
+```xml
+<hg_view id="mainView" name="mainView" x="0" y="0" width="480" height="272">
+  <hg_button id="btn1" name="button1" x="100" y="100" width="120" height="40" text="Click" />
+  <hg_label id="lbl1" name="label1" x="100" y="150" width="200" height="30" text="Hello" />
+</hg_view>
+```
+
+生成代码:
+```c
+static void mainView_switch_out(gui_view_t *view)
+{
+    GUI_UNUSED(view);
+}
+
+static void mainView_switch_in(gui_view_t *view)
+{
+    GUI_UNUSED(view);
+    
+    // 创建button1 (hg_button)
+    btn1 = gui_button_create(NULL, "btn1", 100, 100, 120, 40);
+    gui_button_set_text(btn1, "Click");
+    
+    // 创建label1 (hg_label)
+    lbl1 = gui_text_create(NULL, "lbl1", 100, 150, 200, 30);
+    gui_text_set(lbl1, "Hello");
+}
+GUI_VIEW_INSTANCE("mainView", false, mainView_switch_in, mainView_switch_out);
+```
+
+**注意事项**：
+1. hg_view 不生成句柄变量（不需要 `gui_obj_t *mainView`）
+2. hg_view 不支持属性设置（如 backgroundColor）
+3. 子组件的父组件参数使用 NULL
+4. 子组件在 switch_in 中创建，在视图切换时初始化
 
 #### 3.2 UI组件
 

@@ -105,25 +105,38 @@ export class HoneyGuiCCodeGenerator {
     const guardName = `${baseName.toUpperCase()}_H`;
     const componentTypes = [...new Set(this.components.map(c => c.type))];
     const headers = this.apiMapper.getRequiredHeaders(componentTypes);
+    const hasView = componentTypes.includes('hg_view');
 
     let code = `#ifndef ${guardName}
 #define ${guardName}
 
-#include "gui_api.h"
+#include "guidef.h"
+#include "gui_obj.h"
 `;
 
-    // 包含必要的头文件
+    // hg_view 需要额外的头文件
+    if (hasView) {
+      code += `#include "gui_components_init.h"\n`;
+      code += `#include "gui_view.h"\n`;
+      code += `#include "gui_view_instance.h"\n`;
+    }
+
+    // 包含其他组件的头文件
     headers.forEach(header => {
-      code += `#include "${header}"\n`;
+      if (header !== 'gui_view.h') {  // gui_view.h 已经包含
+        code += `#include "${header}"\n`;
+      }
     });
 
     code += `
 // 组件句柄声明
 `;
 
-    // 声明所有组件句柄
+    // 声明所有非 view 组件的句柄
     this.components.forEach(comp => {
-      code += `extern gui_obj_t *${comp.id};\n`;
+      if (comp.type !== 'hg_view') {
+        code += `extern gui_obj_t *${comp.id};\n`;
+      }
     });
 
     code += `
@@ -150,9 +163,11 @@ void ${baseName}_update(void);
 // 组件句柄定义
 `;
 
-    // 定义所有组件句柄
+    // 定义所有非 view 组件的句柄
     this.components.forEach(comp => {
-      code += `gui_obj_t *${comp.id} = NULL;\n`;
+      if (comp.type !== 'hg_view') {
+        code += `gui_obj_t *${comp.id} = NULL;\n`;
+      }
     });
 
     code += `
@@ -195,6 +210,11 @@ void ${baseName}_update(void) {
     // 生成创建代码
     code += this.generateComponentCreation(component, indent);
 
+    // hg_view 的子组件已在 switch_in 中处理，不在这里递归
+    if (component.type === 'hg_view') {
+      return code;
+    }
+
     // 生成属性设置代码
     code += this.generatePropertySetters(component, indent);
 
@@ -225,10 +245,48 @@ void ${baseName}_update(void) {
       return `${indentStr}// 警告: 未找到${component.type}的API映射\n`;
     }
 
+    // hg_view 使用特殊的生成规则
+    if (component.type === 'hg_view') {
+      return this.generateViewInstance(component, indent);
+    }
+
     const parentRef = component.parent || 'NULL';
     const { x, y, width, height } = component.position;
 
     return `${indentStr}${component.id} = ${mapping.createFunction}(${parentRef}, "${component.id}", ${x}, ${y}, ${width}, ${height});\n`;
+  }
+
+  /**
+   * 生成 hg_view 的 GUI_VIEW_INSTANCE 代码
+   */
+  private generateViewInstance(component: Component, indent: number): string {
+    const indentStr = '    '.repeat(indent);
+    const name = component.name;
+
+    let code = '';
+    code += `${indentStr}static void ${name}_switch_out(gui_view_t *view)\n`;
+    code += `${indentStr}{\n`;
+    code += `${indentStr}    GUI_UNUSED(view);\n`;
+    code += `${indentStr}}\n\n`;
+    code += `${indentStr}static void ${name}_switch_in(gui_view_t *view)\n`;
+    code += `${indentStr}{\n`;
+    code += `${indentStr}    GUI_UNUSED(view);\n`;
+    
+    // 在 switch_in 中创建子组件
+    if (component.children && component.children.length > 0) {
+      code += `\n`;
+      component.children.forEach(childId => {
+        const child = this.componentMap.get(childId);
+        if (child) {
+          code += this.generateComponentTree(child, indent + 1);
+        }
+      });
+    }
+    
+    code += `${indentStr}}\n`;
+    code += `${indentStr}GUI_VIEW_INSTANCE("${name}", false, ${name}_switch_in, ${name}_switch_out);\n`;
+
+    return code;
   }
 
   /**
