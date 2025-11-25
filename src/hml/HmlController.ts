@@ -226,7 +226,7 @@ export class HmlController {
                     description: options.description || 'HoneyGUI Project',
                     version: options.version || '1.0.0',
                     resolution: resolution,
-                    minSdk: 'API 2: Persim Wear V1.1.0',
+                    minSdk: 'API 2: HoneyGUI V1.1.0',
                     pixelMode: 'ARGB8888'
                 },
                 author: {

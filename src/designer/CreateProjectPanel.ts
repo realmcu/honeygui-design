@@ -324,9 +324,9 @@ export class CreateProjectPanel {
                         <div class="form-group">
                             <label for="minSdk">Minimum SDK</label>
                             <select id="minSdk" class="form-control">
-                                <option value="API 2: Persim Wear V1.1.0">API 2: Persim Wear V1.1.0</option>
-                                <option value="API 3: Persim Wear V1.2.0">API 3: Persim Wear V1.2.0</option>
-                                <option value="API 4: Persim Wear V2.0.0">API 4: Persim Wear V2.0.0</option>
+                                <option value="API 2: HoneyGUI V1.1.0">API 2: HoneyGUI V1.1.0</option>
+                                <option value="API 3: HoneyGUI V1.2.0">API 3: HoneyGUI V1.2.0</option>
+                                <option value="API 4: HoneyGUI V2.0.0">API 4: HoneyGUI V2.0.0</option>
                             </select>
                         </div>
 
