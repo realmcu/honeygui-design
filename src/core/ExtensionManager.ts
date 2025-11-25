@@ -189,25 +189,20 @@ class WelcomeViewDataProvider implements vscode.TreeDataProvider<vscode.TreeItem
         // 返回欢迎视图的数据项
         const welcomeItems: vscode.TreeItem[] = [];
         
-        const newHmlItem = new vscode.TreeItem('新建设计稿', vscode.TreeItemCollapsibleState.None);
-        newHmlItem.command = { command: 'honeygui.createNewHmlInWorkspace', title: '新建设计稿' };
-        newHmlItem.iconPath = new vscode.ThemeIcon('file-add');
-        welcomeItems.push(newHmlItem);
-        
         const newProjectItem = new vscode.TreeItem('新建项目', vscode.TreeItemCollapsibleState.None);
         newProjectItem.command = { command: 'honeygui.createProject', title: '新建项目' };
         newProjectItem.iconPath = new vscode.ThemeIcon('add');
         welcomeItems.push(newProjectItem);
         
+        const newHmlItem = new vscode.TreeItem('新建设计', vscode.TreeItemCollapsibleState.None);
+        newHmlItem.command = { command: 'honeygui.createNewHmlInWorkspace', title: '新建设计' };
+        newHmlItem.iconPath = new vscode.ThemeIcon('file-add');
+        welcomeItems.push(newHmlItem);
+        
         const openProjectItem = new vscode.TreeItem('打开项目', vscode.TreeItemCollapsibleState.None);
         openProjectItem.command = { command: 'honeygui.openProject', title: '打开项目' };
         openProjectItem.iconPath = new vscode.ThemeIcon('folder-opened');
         welcomeItems.push(openProjectItem);
-        
-        const importProjectItem = new vscode.TreeItem('导入项目', vscode.TreeItemCollapsibleState.None);
-        importProjectItem.command = { command: 'honeygui.importProject', title: '导入项目' };
-        importProjectItem.iconPath = new vscode.ThemeIcon('cloud-download');
-        welcomeItems.push(importProjectItem);
         
         return welcomeItems;
     }

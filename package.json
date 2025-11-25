@@ -114,7 +114,7 @@
       },
       {
         "command": "honeygui.createNewHmlInWorkspace",
-        "title": "HoneyGUI: 新建设计稿",
+        "title": "HoneyGUI: 新建设计",
         "category": "HoneyGUI"
       },
       {

@@ -294,17 +294,6 @@ export class CommandManager {
             }
         });
 
-        // 导入项目
-        this.registerCommand('honeygui.importProject', async () => {
-            try {
-                logger.info('执行命令: honeygui.importProject');
-                vscode.window.showInformationMessage('项目导入功能开发中...');
-            } catch (error) {
-                logger.error(`导入项目失败: ${error instanceof Error ? error.message : String(error)}`);
-                vscode.window.showErrorMessage(`导入项目失败: ${error instanceof Error ? error.message : '未知错误'}`);
-            }
-        });
-
         // 启动项目
         this.registerCommand('honeygui.startProject', async () => {
             try {
