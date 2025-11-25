@@ -37,12 +37,13 @@ const AssetsPanel: React.FC = () => {
   }, []);
 
   const handleDelete = (assetPath: string) => {
-    if (confirm('确定要删除这个资源文件吗？')) {
-      window.vscodeAPI?.postMessage({
-        command: 'deleteAsset',
-        path: assetPath,
-      });
-    }
+    // 只传递文件名，不传递完整的 webview URI
+    const fileName = assetPath.split('/').pop() || assetPath;
+    console.log('[AssetsPanel] 删除资源:', fileName);
+    window.vscodeAPI?.postMessage({
+      command: 'deleteAsset',
+      fileName: fileName,
+    });
   };
 
   const handleRename = (oldPath: string) => {
@@ -155,8 +156,13 @@ const AssetsPanel: React.FC = () => {
                   className="asset-item"
                   draggable
                   onDragStart={(e) => {
+                    console.log('[AssetsPanel] 开始拖拽:', asset.name);
                     e.dataTransfer.setData('asset-path', asset.name);
                     e.dataTransfer.effectAllowed = 'copy';
+                    console.log('[AssetsPanel] 已设置 asset-path:', asset.name);
+                  }}
+                  onDragEnd={(e) => {
+                    console.log('[AssetsPanel] 拖拽结束:', asset.name, 'dropEffect:', e.dataTransfer.dropEffect);
                   }}
                 >
                   {asset.type === 'image' && (

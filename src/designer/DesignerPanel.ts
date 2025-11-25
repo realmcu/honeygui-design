@@ -193,7 +193,7 @@ export class DesignerPanel {
                         this._handleLoadAssets();
                         break;
                     case 'deleteAsset':
-                        this._handleDeleteAsset(message.path);
+                        this._handleDeleteAsset(message.fileName);
                         break;
                     case 'renameAsset':
                         this._handleRenameAsset(message.oldPath, message.newName);
@@ -1418,13 +1418,47 @@ private _createNewDocument(): void {
     /**
      * 删除资源文件
      */
-    private async _handleDeleteAsset(assetPath: string): Promise<void> {
+    private async _handleDeleteAsset(fileName: string): Promise<void> {
         try {
-            if (fs.existsSync(assetPath)) {
-                fs.unlinkSync(assetPath);
+            logger.info(`[删除资源] 收到删除请求: ${fileName}`);
+            
+            if (!this._filePath) {
+                logger.error('[删除资源] 文件路径未初始化');
+                return;
+            }
+            
+            // 构建完整的文件路径
+            const projectRoot = ProjectUtils.findProjectRoot(this._filePath);
+            if (!projectRoot) {
+                logger.error('[删除资源] 无法找到项目根目录');
+                return;
+            }
+            
+            const assetsDir = path.join(projectRoot, 'assets');
+            const filePath = path.join(assetsDir, fileName);
+            
+            logger.info(`[删除资源] 完整路径: ${filePath}`);
+            
+            if (fs.existsSync(filePath)) {
+                const relativePath = `assets/${fileName}`;
+                
+                logger.info(`[删除资源] 删除文件: ${filePath}, 相对路径: ${relativePath}`);
+                
+                // 删除文件
+                fs.unlinkSync(filePath);
+                
+                // 通知前端删除引用此资源的组件
+                this._panel.webview.postMessage({
+                    command: 'deleteComponentsByImagePath',
+                    imagePath: relativePath
+                });
+                
                 vscode.window.showInformationMessage('资源文件已删除');
                 // 重新加载资源列表
                 this._handleLoadAssets();
+            } else {
+                logger.warn(`[删除资源] 文件不存在: ${filePath}`);
+                vscode.window.showErrorMessage('资源文件不存在');
             }
         } catch (error) {
             logger.error(`删除资源文件失败: ${error}`);

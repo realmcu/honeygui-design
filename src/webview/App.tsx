@@ -136,57 +136,20 @@ const App: React.FC = () => {
           break;
 
         case 'createImageComponent':
-          // 创建图片控件
-          if (message.imagePath && message.targetContainerId) {
+          if (message.imagePath && message.targetContainerId && message.dropPosition) {
+            createImageComponentAtPosition(message.imagePath, message.dropPosition, message.targetContainerId);
+          }
+          break;
+
+        case 'deleteComponentsByImagePath':
+          if (message.imagePath) {
             const store = useDesignerStore.getState();
-            const targetContainer = store.components.find(c => c.id === message.targetContainerId);
-            
-            if (targetContainer) {
-              // 计算相对于容器的坐标
-              const getAbsolutePosition = (comp: Component): { x: number; y: number } => {
-                if (!comp.parent) {
-                  return { x: comp.position.x, y: comp.position.y };
-                }
-                const parentComp = store.components.find(c => c.id === comp.parent);
-                if (!parentComp) {
-                  return { x: comp.position.x, y: comp.position.y };
-                }
-                const parentPos = getAbsolutePosition(parentComp);
-                return {
-                  x: parentPos.x + comp.position.x,
-                  y: parentPos.y + comp.position.y
-                };
-              };
-
-              const targetAbsPos = getAbsolutePosition(targetContainer);
-              const relativeX = Math.max(0, message.dropPosition.x - targetAbsPos.x);
-              const relativeY = Math.max(0, message.dropPosition.y - targetAbsPos.y);
-
-              // 创建图片组件
-              const imageComponent: Component = {
-                id: `hg_image_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-                type: 'hg_image',
-                name: `image_${Date.now().toString().substr(-4)}`,
-                position: {
-                  x: relativeX,
-                  y: relativeY,
-                  width: 100,
-                  height: 100,
-                },
-                visible: true,
-                enabled: true,
-                locked: false,
-                zIndex: 1,
-                children: [],
-                parent: message.targetContainerId,
-                style: {},
-                data: {
-                  src: message.imagePath
-                },
-              };
-
-              store.addComponent(imageComponent);
-              console.log(`[Webview App] 创建图片组件: ${message.imagePath}`);
+            const componentsToDelete = store.components.filter(
+              c => c.type === 'hg_image' && c.data?.src === message.imagePath
+            );
+            if (componentsToDelete.length > 0) {
+              store.removeComponents(componentsToDelete.map(c => c.id));
+              console.log(`[删除组件] 删除了 ${componentsToDelete.length} 个引用 ${message.imagePath} 的图片组件`);
             }
           }
           break;
@@ -239,6 +202,43 @@ const App: React.FC = () => {
   /**
    * 查找拖放目标容器
    */
+  // 统一的图片组件创建函数
+  const createImageComponentAtPosition = (imagePath: string, dropPosition: { x: number; y: number }, targetContainerId: string) => {
+    const store = useDesignerStore.getState();
+    const targetContainer = store.components.find(c => c.id === targetContainerId);
+    if (!targetContainer) return;
+
+    const getAbsolutePosition = (comp: Component): { x: number; y: number } => {
+      if (!comp.parent) return { x: comp.position.x, y: comp.position.y };
+      const parentComp = store.components.find(c => c.id === comp.parent);
+      if (!parentComp) return { x: comp.position.x, y: comp.position.y };
+      const parentPos = getAbsolutePosition(parentComp);
+      return { x: parentPos.x + comp.position.x, y: parentPos.y + comp.position.y };
+    };
+
+    const targetAbsPos = getAbsolutePosition(targetContainer);
+    const relativeX = Math.max(0, dropPosition.x - targetAbsPos.x);
+    const relativeY = Math.max(0, dropPosition.y - targetAbsPos.y);
+
+    const imageComponent: Component = {
+      id: `hg_image_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      type: 'hg_image',
+      name: `image_${Date.now().toString().substr(-4)}`,
+      position: { x: relativeX, y: relativeY, width: 100, height: 100 },
+      visible: true,
+      enabled: true,
+      locked: false,
+      zIndex: 1,
+      children: [],
+      parent: targetContainerId,
+      style: {},
+      data: { src: imagePath },
+    };
+
+    store.addComponent(imageComponent);
+    console.log('[创建组件] 图片组件:', imageComponent.id, imagePath);
+  };
+
   const findDropTarget = (e: React.DragEvent): Component | null => {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const x = Math.max(0, Math.round(e.clientX - rect.left));
@@ -333,17 +333,23 @@ const App: React.FC = () => {
   const handleCanvasDrop = (e: React.DragEvent) => {
     e.preventDefault();
 
+    console.log('========== [拖放] handleCanvasDrop 开始 ==========');
+    console.log('[拖放] dataTransfer.types:', e.dataTransfer.types);
+    console.log('[拖放] dataTransfer.files.length:', e.dataTransfer.files.length);
+    
     if (DEBUG_DROP) {
-      console.log('========== [拖放] handleCanvasDrop 开始 ==========');
       console.log('[拖放] ⚠️ 如果看不到日志，请右键设计器画布 → 检查元素，打开Webview开发者工具');
     }
     
     // 检查是否是从资源面板拖拽
     const assetPath = e.dataTransfer.getData('asset-path');
+    console.log('[拖放] asset-path 数据:', assetPath);
     if (assetPath) {
       // 从资源面板拖拽图片到画布
       const targetContainer = findDropTarget(e);
+      console.log('[拖放] 找到的目标容器:', targetContainer);
       if (!targetContainer) {
+        console.log('[拖放] ❌ 未找到目标容器，需要拖放到容器内');
         const api = useDesignerStore.getState().vscodeAPI;
         if (api) {
           api.postMessage({
@@ -353,6 +359,7 @@ const App: React.FC = () => {
         }
         return;
       }
+      console.log('[拖放] ✅ 目标容器:', targetContainer.type, targetContainer.id);
 
       const canvasRect = document.querySelector('.designer-canvas')?.getBoundingClientRect();
       if (!canvasRect) return;
@@ -360,16 +367,7 @@ const App: React.FC = () => {
       const x = (e.clientX - canvasRect.left) / useDesignerStore.getState().zoom;
       const y = (e.clientY - canvasRect.top) / useDesignerStore.getState().zoom;
 
-      // 创建图片组件
-      const api = useDesignerStore.getState().vscodeAPI;
-      if (api) {
-        api.postMessage({
-          command: 'createImageComponent',
-          imagePath: `assets/${assetPath}`,
-          dropPosition: { x, y },
-          targetContainerId: targetContainer.id
-        });
-      }
+      createImageComponentAtPosition(`assets/${assetPath}`, { x, y }, targetContainer.id);
       return;
     }
     
