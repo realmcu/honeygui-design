@@ -186,7 +186,13 @@
 .assets-tree {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
+}
+
+/* 文件夹容器 */
+.folder-container {
+  display: flex;
+  flex-direction: column;
 }
 
 .folder-item {
@@ -208,10 +214,84 @@
 }
 
 .folder-children {
-  margin-left: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
   border-left: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* 网格布局 - 4列 */
+.assets-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 4px 0;
+}
+
+/* 网格项 */
+.asset-grid-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+  position: relative;
+}
+
+.asset-grid-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.asset-grid-item .asset-preview {
+  width: 100%;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.asset-grid-item .asset-preview img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.asset-grid-item .asset-info {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.asset-grid-item .asset-name {
+  font-size: 11px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.asset-grid-item .asset-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.asset-grid-item:hover .asset-actions {
+  opacity: 1;
+}
+
+/* 列表项样式（文件夹） */
 .asset-item {
   display: flex;
   align-items: center;
@@ -223,24 +303,6 @@
 
 .asset-item:hover {
   background: rgba(255, 255, 255, 0.05);
-}
-
-.asset-preview {
-  width: 32px;
-  height: 32px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.asset-preview img {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
 }
 
 .asset-info {

@@ -13,6 +13,17 @@ const AssetsPanel: React.FC = () => {
 
   console.log('[AssetsPanel] Render - isExpanded:', isExpanded, 'assets:', assets.length);
 
+  // 排序和分类：文件夹在前，文件在后，相同类型按字母顺序
+  const sortedAssets = React.useMemo(() => {
+    return [...assets].sort((a, b) => {
+      // 文件夹优先
+      if (a.type === 'folder' && b.type !== 'folder') return -1;
+      if (a.type !== 'folder' && b.type === 'folder') return 1;
+      // 相同类型按名称排序
+      return a.name.localeCompare(b.name);
+    });
+  }, [assets]);
+
   useEffect(() => {
     // 请求加载资源列表
     window.vscodeAPI?.postMessage({
@@ -82,7 +93,7 @@ const AssetsPanel: React.FC = () => {
 
     if (isFolder) {
       return (
-        <div key={asset.path}>
+        <div key={asset.path} className="folder-container">
           <div 
             className="asset-item folder-item"
             style={{ paddingLeft: `${indent}px` }}
@@ -107,38 +118,35 @@ const AssetsPanel: React.FC = () => {
             </div>
           </div>
           {isExpanded && asset.children && (
-            <div className="folder-children">
-              {asset.children.map(child => renderAssetItem(child, level + 1))}
+            <div className="folder-children" style={{ paddingLeft: `${indent + 16}px` }}>
+              {renderAssetList(asset.children, level + 1)}
             </div>
           )}
         </div>
       );
     }
 
-    // 图片文件
+    // 图片文件 - 网格项
     return (
       <div 
         key={asset.path} 
-        className="asset-item"
-        style={{ paddingLeft: `${indent}px` }}
+        className="asset-grid-item"
         draggable
         onDragStart={(e) => {
           e.dataTransfer.setData('asset-path', asset.path.replace('assets/', ''));
           e.dataTransfer.effectAllowed = 'copy';
         }}
       >
-        {asset.type === 'image' && (
-          <div className="asset-preview">
-            <img
-              src={asset.path}
-              alt={asset.name}
-              onError={(e) => {
-                const img = e.target as HTMLImageElement;
-                img.style.display = 'none';
-              }}
-            />
-          </div>
-        )}
+        <div className="asset-preview">
+          <img
+            src={asset.path}
+            alt={asset.name}
+            onError={(e) => {
+              const img = e.target as HTMLImageElement;
+              img.style.display = 'none';
+            }}
+          />
+        </div>
         <div className="asset-info">
           {editingAsset === asset.path ? (
             <input
@@ -176,6 +184,26 @@ const AssetsPanel: React.FC = () => {
           </div>
         </div>
       </div>
+    );
+  };
+
+  const renderAssetList = (assetList: AssetFile[], level: number = 0) => {
+    // 分离文件夹和文件
+    const folders = assetList.filter(a => a.type === 'folder');
+    const files = assetList.filter(a => a.type !== 'folder');
+
+    return (
+      <>
+        {/* 文件夹：列表布局 */}
+        {folders.map(folder => renderAssetItem(folder, level))}
+        
+        {/* 文件：网格布局 */}
+        {files.length > 0 && (
+          <div className="assets-grid" style={{ paddingLeft: level > 0 ? `${level * 16}px` : 0 }}>
+            {files.map(file => renderAssetItem(file, level))}
+          </div>
+        )}
+      </>
     );
   };
 
@@ -282,14 +310,14 @@ const AssetsPanel: React.FC = () => {
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
         >
-          {assets.length === 0 ? (
+          {sortedAssets.length === 0 ? (
             <div className="empty-state">
               <p>暂无资源文件</p>
               <p className="hint">拖拽图片或文件夹到此处</p>
             </div>
           ) : (
-            <div className="assets-tree">
-              {assets.map((asset) => renderAssetItem(asset))}
+            <div className="assets-container">
+              {renderAssetList(sortedAssets)}
             </div>
           )}
         </div>
