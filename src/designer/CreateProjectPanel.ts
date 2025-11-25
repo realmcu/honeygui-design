@@ -168,6 +168,7 @@ export class CreateProjectPanel {
 
                 .form-group {
                     margin-bottom: 20px;
+                    width: 100%;
                 }
 
                 label {
@@ -185,6 +186,7 @@ export class CreateProjectPanel {
                     border-radius: 3px;
                     color: #d4d4d4;
                     font-size: 14px;
+                    box-sizing: border-box;
                 }
 
                 .form-control:focus {
@@ -252,6 +254,10 @@ export class CreateProjectPanel {
                     gap: 20px;
                 }
 
+                .form-row .form-group {
+                    min-width: 0;
+                }
+
                 @media (max-width: 768px) {
                     .form-row {
                         grid-template-columns: 1fr;
@@ -296,12 +302,12 @@ export class CreateProjectPanel {
                     </div>
                     
                     <div class="form-group">
-                            <label for="saveLocation">Save location</label>
-                            <div class="input-group">
-                                <input type="text" id="saveLocation" class="form-control" placeholder="Please select a project save path" />
-                                <button class="btn-icon" id="selectFolderButton">📁</button>
-                            </div>
+                        <label for="saveLocation">Save location</label>
+                        <div class="input-group">
+                            <input type="text" id="saveLocation" class="form-control" placeholder="Please select a project save path" />
+                            <button class="btn-icon" id="selectFolderButton">📁</button>
                         </div>
+                    </div>
                     
                     <div class="form-row">
                         <div class="form-group">
