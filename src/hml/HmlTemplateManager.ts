@@ -43,7 +43,7 @@ export class HmlTemplateManager {
         <author name="Anonymous" />
     </meta>
     <view>
-        <hg_view id="mainView" x="0" y="0" width="${width}" height="${height}" name="mainView" />
+        <hg_view id="mainView" x="0" y="0" width="${width}" height="${height}" name="mainView" backgroundColor="#000000" />
     </view>
 </hml>`;
     }

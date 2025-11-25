@@ -253,7 +253,7 @@ export class CommandManager {
                     const defaultContent = `<?xml version="1.0" encoding="UTF-8"?>
 <hml version="1.0">
     <view id="main" width="480" height="272" background-color="#f0f0f0">
-        <hg_view id="${viewName}" x="0" y="0" width="480" height="272" name="${viewName}">
+        <hg_view id="${viewName}" x="0" y="0" width="480" height="272" name="${viewName}" backgroundColor="#000000">
             <!-- 在这里添加您的组件 -->
         </hg_view>
     </view>
