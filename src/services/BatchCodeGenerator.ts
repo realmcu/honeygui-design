@@ -35,9 +35,13 @@ export class BatchCodeGenerator {
             .map(dirent => dirent.name);
 
         for (const designName of designDirs) {
-            const hmlFile = path.join(uiDir, designName, `${designName}.hml`);
-            if (fs.existsSync(hmlFile)) {
-                hmlFiles.push(hmlFile);
+            const designDir = path.join(uiDir, designName);
+            // 查找目录下所有 .hml 文件
+            const files = fs.readdirSync(designDir);
+            for (const file of files) {
+                if (file.endsWith('.hml')) {
+                    hmlFiles.push(path.join(designDir, file));
+                }
             }
         }
 
@@ -112,9 +116,10 @@ export class BatchCodeGenerator {
         await hmlController.loadFile(hmlFile);
 
         const outputDir = path.join(srcDir, designName);
+        const hmlFileName = path.basename(hmlFile, '.hml'); // 使用实际的文件名
         const generatorOptions: CodeGenOptions = {
             outputDir,
-            hmlFileName: designName,
+            hmlFileName,
             enableProtectedAreas: true
         };
 

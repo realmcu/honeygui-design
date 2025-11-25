@@ -756,7 +756,8 @@ export class CreateProjectPanel {
         fs.mkdirSync(path.join(projectPath, 'assets'), { recursive: true });
 
         // 使用HmlTemplateManager生成文件内容
-        // 创建 main.hml 文件（包含 screen 容器）
+        // 创建 {ProjectName}Main.hml 文件（包含 screen 容器）
+        const hmlFileName = `${projectName}Main.hml`;
         const mainHmlContent = HmlTemplateManager.generateMainHml(
             projectName,
             resolution,
@@ -764,7 +765,7 @@ export class CreateProjectPanel {
             minSdk,
             pixelMode
         );
-        fs.writeFileSync(path.join(projectPath, 'ui', 'main', 'main.hml'), mainHmlContent, 'utf8');
+        fs.writeFileSync(path.join(projectPath, 'ui', 'main', hmlFileName), mainHmlContent, 'utf8');
 
         // 创建README文件
         const readmeContent = HmlTemplateManager.generateReadme(
@@ -782,7 +783,7 @@ export class CreateProjectPanel {
             resolution: resolution,
             minSdk: minSdk,
             pixelMode: pixelMode,
-            mainHmlFile: 'ui/main/main.hml', // 固定指向 main.hml
+            mainHmlFile: `ui/main/${hmlFileName}`, // 使用新的文件名
             created: new Date().toISOString()
         };
 
