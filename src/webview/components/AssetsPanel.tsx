@@ -1,13 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Image, Trash2, Edit2, FolderOpen } from 'lucide-react';
+import { Image, Trash2, Edit2, FolderOpen, ChevronRight, ChevronDown, Folder } from 'lucide-react';
+import { AssetFile } from '../types';
 import './AssetsPanel.css';
-
-interface AssetFile {
-  name: string;
-  path: string;
-  type: 'image' | 'font';
-  size: number;
-}
 
 const AssetsPanel: React.FC = () => {
   const [assets, setAssets] = useState<AssetFile[]>([]);
@@ -15,6 +9,7 @@ const AssetsPanel: React.FC = () => {
   const [editingAsset, setEditingAsset] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
 
   console.log('[AssetsPanel] Render - isExpanded:', isExpanded, 'assets:', assets.length);
 
@@ -68,6 +63,122 @@ const AssetsPanel: React.FC = () => {
     });
   };
 
+  const toggleFolder = (folderPath: string) => {
+    setExpandedFolders(prev => {
+      const next = new Set(prev);
+      if (next.has(folderPath)) {
+        next.delete(folderPath);
+      } else {
+        next.add(folderPath);
+      }
+      return next;
+    });
+  };
+
+  const renderAssetItem = (asset: AssetFile, level: number = 0): React.ReactNode => {
+    const isFolder = asset.type === 'folder';
+    const isExpanded = expandedFolders.has(asset.path);
+    const indent = level * 16;
+
+    if (isFolder) {
+      return (
+        <div key={asset.path}>
+          <div 
+            className="asset-item folder-item"
+            style={{ paddingLeft: `${indent}px` }}
+            onClick={() => toggleFolder(asset.path)}
+          >
+            <div className="folder-header">
+              {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+              <Folder size={16} />
+              <span className="asset-name">{asset.name}</span>
+              <div className="asset-actions">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(asset.path);
+                  }}
+                  title="删除文件夹"
+                  className="action-btn delete"
+                >
+                  <Trash2 size={12} />
+                </button>
+              </div>
+            </div>
+          </div>
+          {isExpanded && asset.children && (
+            <div className="folder-children">
+              {asset.children.map(child => renderAssetItem(child, level + 1))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // 图片文件
+    return (
+      <div 
+        key={asset.path} 
+        className="asset-item"
+        style={{ paddingLeft: `${indent}px` }}
+        draggable
+        onDragStart={(e) => {
+          e.dataTransfer.setData('asset-path', asset.path.replace('assets/', ''));
+          e.dataTransfer.effectAllowed = 'copy';
+        }}
+      >
+        {asset.type === 'image' && (
+          <div className="asset-preview">
+            <img
+              src={asset.path}
+              alt={asset.name}
+              onError={(e) => {
+                const img = e.target as HTMLImageElement;
+                img.style.display = 'none';
+              }}
+            />
+          </div>
+        )}
+        <div className="asset-info">
+          {editingAsset === asset.path ? (
+            <input
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onBlur={() => handleRenameConfirm(asset.path)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleRenameConfirm(asset.path);
+                if (e.key === 'Escape') setEditingAsset(null);
+              }}
+              autoFocus
+              className="rename-input"
+            />
+          ) : (
+            <span className="asset-name" title={asset.name}>
+              {asset.name}
+            </span>
+          )}
+          <div className="asset-actions">
+            <button
+              onClick={() => handleRename(asset.path)}
+              title="重命名"
+              className="action-btn"
+            >
+              <Edit2 size={12} />
+            </button>
+            <button
+              onClick={() => handleDelete(asset.path)}
+              title="删除"
+              className="action-btn delete"
+            >
+              <Trash2 size={12} />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -80,37 +191,65 @@ const AssetsPanel: React.FC = () => {
     setIsDragOver(false);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(false);
 
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const files = e.dataTransfer.files;
-      const imageExts = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'webp'];
-
-      // 处理所有图片文件
-      Array.from(files).forEach(file => {
-        const ext = file.name.split('.').pop()?.toLowerCase();
-        
-        if (ext && imageExts.includes(ext)) {
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            const arrayBuffer = event.target?.result as ArrayBuffer;
-            const uint8Array = new Uint8Array(arrayBuffer);
-            
-            // 发送文件到后端保存（不创建组件）
-            window.vscodeAPI?.postMessage({
-              command: 'saveImageToAssets',
-              fileName: file.name,
-              fileData: Array.from(uint8Array),
-              dropPosition: undefined,
-              targetContainerId: undefined
-            });
-          };
-          reader.readAsArrayBuffer(file);
+    if (e.dataTransfer.items) {
+      // 使用 DataTransferItemList 支持文件夹
+      const items = Array.from(e.dataTransfer.items);
+      
+      for (const item of items) {
+        const entry = item.webkitGetAsEntry?.();
+        if (entry) {
+          await processEntry(entry, '');
         }
+      }
+    } else if (e.dataTransfer.files) {
+      // 降级处理：只处理文件
+      const files = Array.from(e.dataTransfer.files);
+      files.forEach(file => processFile(file, ''));
+    }
+  };
+
+  const processEntry = async (entry: any, relativePath: string): Promise<void> => {
+    if (entry.isFile) {
+      entry.file((file: File) => {
+        processFile(file, relativePath);
       });
+    } else if (entry.isDirectory) {
+      const reader = entry.createReader();
+      reader.readEntries((entries: any[]) => {
+        entries.forEach(childEntry => {
+          const newPath = relativePath ? `${relativePath}/${entry.name}` : entry.name;
+          processEntry(childEntry, newPath);
+        });
+      });
+    }
+  };
+
+  const processFile = (file: File, relativePath: string) => {
+    const imageExts = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'webp'];
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    
+    if (ext && imageExts.includes(ext)) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const arrayBuffer = event.target?.result as ArrayBuffer;
+        const uint8Array = new Uint8Array(arrayBuffer);
+        
+        // 发送文件到后端保存
+        window.vscodeAPI?.postMessage({
+          command: 'saveImageToAssets',
+          fileName: file.name,
+          fileData: Array.from(uint8Array),
+          relativePath: relativePath, // 保持文件夹结构
+          dropPosition: undefined,
+          targetContainerId: undefined
+        });
+      };
+      reader.readAsArrayBuffer(file);
     }
   };
 
@@ -146,84 +285,11 @@ const AssetsPanel: React.FC = () => {
           {assets.length === 0 ? (
             <div className="empty-state">
               <p>暂无资源文件</p>
-              <p className="hint">拖拽图片到容器上即可添加</p>
+              <p className="hint">拖拽图片或文件夹到此处</p>
             </div>
           ) : (
-            <div className="assets-grid">
-              {assets.map((asset) => (
-                <div 
-                  key={asset.path} 
-                  className="asset-item"
-                  draggable
-                  onDragStart={(e) => {
-                    console.log('[AssetsPanel] 开始拖拽:', asset.name);
-                    e.dataTransfer.setData('asset-path', asset.name);
-                    e.dataTransfer.effectAllowed = 'copy';
-                    console.log('[AssetsPanel] 已设置 asset-path:', asset.name);
-                  }}
-                  onDragEnd={(e) => {
-                    console.log('[AssetsPanel] 拖拽结束:', asset.name, 'dropEffect:', e.dataTransfer.dropEffect);
-                  }}
-                >
-                  {asset.type === 'image' && (
-                    <div className="asset-preview">
-                      <img
-                        src={asset.path}
-                        alt={asset.name}
-                        onLoad={() => {
-                          console.log('[AssetsPanel] 图片加载成功:', asset.name, asset.path);
-                        }}
-                        onError={(e) => {
-                          console.error('[AssetsPanel] 图片加载失败:', asset.name, asset.path);
-                          const img = e.target as HTMLImageElement;
-                          img.style.display = 'none';
-                          // 显示错误提示
-                          const preview = img.parentElement;
-                          if (preview) {
-                            preview.innerHTML = '<div style="color: red; font-size: 10px; padding: 4px;">加载失败</div>';
-                          }
-                        }}
-                      />
-                    </div>
-                  )}
-                  <div className="asset-info">
-                    {editingAsset === asset.path ? (
-                      <input
-                        type="text"
-                        value={newName}
-                        onChange={(e) => setNewName(e.target.value)}
-                        onBlur={() => handleRenameConfirm(asset.path)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleRenameConfirm(asset.path);
-                          if (e.key === 'Escape') setEditingAsset(null);
-                        }}
-                        autoFocus
-                        className="rename-input"
-                      />
-                    ) : (
-                      <span className="asset-name" title={asset.name}>
-                        {asset.name}
-                      </span>
-                    )}
-                    <div className="asset-actions">
-                      <button
-                        onClick={() => handleRename(asset.path)}
-                        title="重命名"
-                        className="action-btn"
-                      >
-                        <Edit2 size={12} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(asset.path)}
-                        title="删除"
-                        className="action-btn delete"
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
+            <div className="assets-tree">
+              {assets.map((asset) => renderAssetItem(asset))}
             </div>
           )}
         </div>

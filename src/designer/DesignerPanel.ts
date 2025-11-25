@@ -202,7 +202,13 @@ export class DesignerPanel {
                         this._handleOpenAssetsFolder();
                         break;
                     case 'saveImageToAssets':
-                        this._handleSaveImageToAssets(message.fileName, message.fileData, message.dropPosition, message.targetContainerId);
+                        this._handleSaveImageToAssets(
+                            message.fileName, 
+                            message.fileData, 
+                            message.dropPosition, 
+                            message.targetContainerId,
+                            message.relativePath
+                        );
                         break;
                     case 'convertPathToWebviewUri':
                         this._handleConvertPathToWebviewUri(message.path, message.requestId);
@@ -1379,31 +1385,8 @@ private _createNewDocument(): void {
                 fs.mkdirSync(assetsDir, { recursive: true });
             }
 
-            // 扫描assets目录
-            const assets: any[] = [];
-            const files = fs.readdirSync(assetsDir);
-            
-            for (const file of files) {
-                const filePath = path.join(assetsDir, file);
-                const stats = fs.statSync(filePath);
-                
-                if (stats.isFile()) {
-                    const ext = path.extname(file).toLowerCase();
-                    const imageExts = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg', '.webp'];
-                    
-                    if (imageExts.includes(ext)) {
-                        // 转换为webview可用的URI
-                        const webviewUri = this._panel.webview.asWebviewUri(vscode.Uri.file(filePath));
-                        logger.info(`[Assets] 文件: ${file}, 路径: ${filePath}, URI: ${webviewUri.toString()}`);
-                        assets.push({
-                            name: file,
-                            path: webviewUri.toString(),
-                            type: 'image',
-                            size: stats.size
-                        });
-                    }
-                }
-            }
+            // 递归扫描assets目录
+            const assets = this._scanAssetsDirectory(assetsDir, assetsDir);
 
             // 发送资源列表到webview
             this._panel.webview.postMessage({
@@ -1413,6 +1396,49 @@ private _createNewDocument(): void {
         } catch (error) {
             logger.error(`加载资源列表失败: ${error}`);
         }
+    }
+
+    /**
+     * 递归扫描资源目录
+     */
+    private _scanAssetsDirectory(dirPath: string, rootPath: string): any[] {
+        const assets: any[] = [];
+        const files = fs.readdirSync(dirPath);
+        
+        for (const file of files) {
+            const filePath = path.join(dirPath, file);
+            const stats = fs.statSync(filePath);
+            
+            if (stats.isDirectory()) {
+                // 递归扫描子目录
+                const children = this._scanAssetsDirectory(filePath, rootPath);
+                if (children.length > 0) {
+                    const webviewUri = this._panel.webview.asWebviewUri(vscode.Uri.file(filePath));
+                    assets.push({
+                        name: file,
+                        path: webviewUri.toString(),
+                        type: 'folder',
+                        size: 0,
+                        children
+                    });
+                }
+            } else if (stats.isFile()) {
+                const ext = path.extname(file).toLowerCase();
+                const imageExts = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg', '.webp'];
+                
+                if (imageExts.includes(ext)) {
+                    const webviewUri = this._panel.webview.asWebviewUri(vscode.Uri.file(filePath));
+                    assets.push({
+                        name: file,
+                        path: webviewUri.toString(),
+                        type: 'image',
+                        size: stats.size
+                    });
+                }
+            }
+        }
+        
+        return assets;
     }
 
     /**
@@ -1528,7 +1554,8 @@ private _createNewDocument(): void {
         fileName: string,
         fileData: number[],
         dropPosition?: { x: number; y: number },
-        targetContainerId?: string
+        targetContainerId?: string,
+        relativePath?: string
     ): Promise<void> {
         try {
             if (!this._filePath) {
@@ -1549,19 +1576,32 @@ private _createNewDocument(): void {
                 fs.mkdirSync(assetsDir, { recursive: true });
             }
 
+            // 构建完整路径（支持子文件夹）
+            let targetDir = assetsDir;
+            let assetRelativePath = fileName;
+            
+            if (relativePath) {
+                targetDir = path.join(assetsDir, relativePath);
+                // 确保子目录存在
+                if (!fs.existsSync(targetDir)) {
+                    fs.mkdirSync(targetDir, { recursive: true });
+                }
+                assetRelativePath = `${relativePath}/${fileName}`;
+            }
+
             // 保存文件
-            const filePath = path.join(assetsDir, fileName);
+            const filePath = path.join(targetDir, fileName);
             const buffer = Buffer.from(fileData);
             fs.writeFileSync(filePath, buffer);
 
             // 计算相对路径（保存到 HML 文件）
-            const relativePath = `assets/${fileName}`;
+            const hmlRelativePath = `assets/${assetRelativePath}`;
 
             // 如果提供了位置和容器ID，则创建图片控件
             if (dropPosition && targetContainerId) {
                 this._panel.webview.postMessage({
                     command: 'createImageComponent',
-                    imagePath: relativePath,
+                    imagePath: hmlRelativePath,
                     dropPosition,
                     targetContainerId
                 });
@@ -1570,7 +1610,7 @@ private _createNewDocument(): void {
             // 重新加载资源列表
             this._handleLoadAssets();
 
-            vscode.window.showInformationMessage(`图片已保存到 ${relativePath}`);
+            vscode.window.showInformationMessage(`图片已保存到 ${hmlRelativePath}`);
         } catch (error) {
             logger.error(`保存图片到assets失败: ${error}`);
             vscode.window.showErrorMessage('保存图片失败');

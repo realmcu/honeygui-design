@@ -79,3 +79,14 @@ declare global {
     acquireVsCodeApi(): VSCodeAPI;
   }
 }
+
+/**
+ * 资源文件类型定义
+ */
+export interface AssetFile {
+  name: string;
+  path: string;
+  type: 'image' | 'font' | 'folder';
+  size: number;
+  children?: AssetFile[]; // 文件夹的子项
+}
