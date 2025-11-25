@@ -1414,9 +1414,11 @@ private _createNewDocument(): void {
                 const children = this._scanAssetsDirectory(filePath, rootPath);
                 if (children.length > 0) {
                     const webviewUri = this._panel.webview.asWebviewUri(vscode.Uri.file(filePath));
+                    const relativePath = path.relative(rootPath, filePath).replace(/\\/g, '/');
                     assets.push({
                         name: file,
                         path: webviewUri.toString(),
+                        relativePath: relativePath,
                         type: 'folder',
                         size: 0,
                         children
@@ -1428,9 +1430,11 @@ private _createNewDocument(): void {
                 
                 if (imageExts.includes(ext)) {
                     const webviewUri = this._panel.webview.asWebviewUri(vscode.Uri.file(filePath));
+                    const relativePath = path.relative(rootPath, filePath).replace(/\\/g, '/');
                     assets.push({
                         name: file,
                         path: webviewUri.toString(),
+                        relativePath: relativePath,
                         type: 'image',
                         size: stats.size
                     });

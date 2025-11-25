@@ -444,6 +444,14 @@ const App: React.FC = () => {
       }
     }
 
+    // 应用默认样式
+    const defaultStyle: Record<string, any> = {};
+    componentDef.properties
+      .filter(prop => prop.group === 'style' && prop.defaultValue !== undefined)
+      .forEach(prop => {
+        defaultStyle[prop.name] = prop.defaultValue;
+      });
+
     // 创建新组件对象
     const newComponent: Component = {
       id: componentId,
@@ -461,7 +469,7 @@ const App: React.FC = () => {
       zIndex: 1,
       children: [],
       parent,
-      style: {},
+      style: defaultStyle,
       data: {
         text: componentType === 'hg_button' ? 'Button' :
               componentType === 'hg_label' ? 'Label' :

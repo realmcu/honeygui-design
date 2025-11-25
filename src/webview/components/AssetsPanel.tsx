@@ -95,7 +95,7 @@ const AssetsPanel: React.FC = () => {
       return (
         <div key={asset.path} className="folder-container">
           <div 
-            className="asset-item folder-item"
+            className="folder-item"
             style={{ paddingLeft: `${indent}px` }}
             onClick={() => toggleFolder(asset.path)}
           >
@@ -133,7 +133,7 @@ const AssetsPanel: React.FC = () => {
         className="asset-grid-item"
         draggable
         onDragStart={(e) => {
-          e.dataTransfer.setData('asset-path', asset.path.replace('assets/', ''));
+          e.dataTransfer.setData('asset-path', asset.relativePath || asset.name);
           e.dataTransfer.effectAllowed = 'copy';
         }}
       >
@@ -199,7 +199,7 @@ const AssetsPanel: React.FC = () => {
         
         {/* 文件：网格布局 */}
         {files.length > 0 && (
-          <div className="assets-grid" style={{ paddingLeft: level > 0 ? `${level * 16}px` : 0 }}>
+          <div className="assets-grid">
             {files.map(file => renderAssetItem(file, level))}
           </div>
         )}
