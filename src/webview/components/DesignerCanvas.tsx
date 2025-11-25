@@ -1,49 +1,21 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useDesignerStore } from '../store';
 import { Component, ComponentType } from '../types';
-import { useWebviewUri } from '../hooks/useWebviewUri';
+import { ImageComponent } from './ImageComponent';
+import { useCanvasZoom } from '../hooks/useCanvasZoom';
+import { useCanvasDrag } from '../hooks/useCanvasDrag';
 import './DesignerCanvas.css';
 
 interface DesignerCanvasProps {
   onComponentSelect: (id: string | null) => void;
 }
 
-// 图片组件单独提取，使用 Hook 转换路径
-const ImageComponent: React.FC<{
-  component: Component;
-  style: React.CSSProperties;
-  onMouseDown: (e: React.MouseEvent) => void;
-  onMouseEnter: () => void;
-  onMouseLeave: () => void;
-}> = ({ component, style, onMouseDown, onMouseEnter, onMouseLeave }) => {
-  const webviewUri = useWebviewUri(component.data?.src);
-
-  return (
-    <div
-      style={{
-        ...style,
-        backgroundImage: webviewUri ? `url(${webviewUri})` : undefined,
-        backgroundSize: 'contain',
-        backgroundRepeat: 'no-repeat',
-      }}
-      onMouseDown={onMouseDown}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
-    >
-      {!webviewUri && '🖼️'}
-    </div>
-  );
-};
-
 const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) => {
-  // 设置画布默认背景色为灰色，作为任务1的一部分
   const canvasRef = useRef<HTMLDivElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [canvasOffsetStart, setCanvasOffsetStart] = useState({ x: 0, y: 0 });
-  const [canvasBackground, setCanvasBackground] = useState<string>('#f0f0f0'); // 默认灰色背景
-  const [pendingDragComponent, setPendingDragComponent] = useState<string | null>(null); // 待拖动的组件
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 }); // 鼠标相对组件的偏移
+  const [canvasBackground, setCanvasBackground] = useState<string>('#f0f0f0');
+  const [pendingDragComponent, setPendingDragComponent] = useState<string | null>(null);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 }); // 组件拖拽起始位置
 
   const {
     components,
@@ -69,82 +41,23 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     setSelectedComponents,
   } = useDesignerStore();
   
+  // 使用画布缩放 Hook
+  const { handleWheel, showZoomHint } = useCanvasZoom(zoom, setZoom);
+  
+  // 使用画布拖拽 Hook
+  const {
+    isDragging,
+    handleCanvasMouseDown,
+    handleCanvasMouseMove,
+    handleCanvasMouseUp
+  } = useCanvasDrag(canvasOffset, setCanvasOffset);
+  
   // 当store中的画布背景色变化时更新本地状态
   useEffect(() => {
     if (canvasBackgroundColor && canvasBackgroundColor !== canvasBackground) {
       setCanvasBackground(canvasBackgroundColor);
     }
   }, [canvasBackgroundColor, canvasBackground]);
-
-  // 处理鼠标滚轮事件，实现Ctrl+鼠标滚轮缩放画布
-  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    // 检查是否按住了Ctrl键（在Mac上也支持Cmd键）
-    if (e.ctrlKey || e.metaKey) {
-      // 确保阻止默认行为
-      e.preventDefault();
-      e.stopPropagation();
-      
-      // 计算缩放增量
-      const scaleAmount = e.deltaY > 0 ? -0.1 : 0.1;
-      const newZoom = zoom + scaleAmount;
-      
-      // 限制缩放范围
-      const clampedZoom = Math.max(0.1, Math.min(5, newZoom));
-      
-      // 更新缩放值
-      setZoom(clampedZoom);
-      
-      // 调试日志（开发环境下可以取消注释）
-      // console.log(`Zoom changed: ${zoom.toFixed(2)} -> ${clampedZoom.toFixed(2)}`);
-    }
-  };
-  
-  // 添加全局鼠标事件监听，确保Ctrl键状态正确检测
-  useEffect(() => {
-    const handleGlobalWheel = (e: WheelEvent) => {
-      // 当鼠标在画布上且按住Ctrl键时，确保事件被正确处理
-      if ((e.ctrlKey || e.metaKey) && canvasRef.current?.contains(e.target as Node)) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    };
-    
-    // 添加全局监听作为备用机制
-    window.addEventListener('wheel', handleGlobalWheel, { passive: false });
-    
-    return () => {
-      window.removeEventListener('wheel', handleGlobalWheel);
-    };
-  }, []);
-
-  // 在画布上显示缩放提示（当鼠标悬停时）
-  const [showZoomHint, setShowZoomHint] = useState(false);
-
-  const handleCanvasMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === canvasRef.current) {
-      onComponentSelect(null);
-
-      // Start panning if not clicking on a component
-      setIsDragging(true);
-      setDragStart({ x: e.clientX, y: e.clientY });
-      setCanvasOffsetStart({ x: canvasOffset.x, y: canvasOffset.y });
-    }
-  };
-
-  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (isDragging && editingMode === 'select') {
-      const deltaX = e.clientX - dragStart.x;
-      const deltaY = e.clientY - dragStart.y;
-      setCanvasOffset({
-        x: canvasOffsetStart.x + deltaX,
-        y: canvasOffsetStart.y + deltaY,
-      });
-    }
-  };
-
-  const handleCanvasMouseUp = () => {
-    setIsDragging(false);
-  };
 
   const handleComponentMouseDown = (e: React.MouseEvent, componentId: string) => {
     e.stopPropagation();
@@ -602,11 +515,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
             handleWheel(e);
           }
         }}
-        onMouseEnter={() => setShowZoomHint(true)}
-        onMouseLeave={(e) => {
-          setShowZoomHint(false);
-          handleCanvasMouseUp();
-        }}
+        onMouseLeave={handleCanvasMouseUp}
         onContextMenu={(e) => {
           e.preventDefault();
           const ids = selectedComponents && selectedComponents.length ? selectedComponents : (selectedComponent ? [selectedComponent] : []);

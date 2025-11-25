@@ -8,6 +8,8 @@ import AssetsPanel from './components/AssetsPanel';
 import Toolbar from './components/Toolbar';
 import { Component, ComponentType } from './types';
 import useKeyboardShortcuts from './utils/keyboardShortcuts';
+import { getAbsolutePosition, findComponentAtPosition } from './utils/componentUtils';
+import { createImageComponentAtPosition } from './services/messageHandler';
 import './App.css';
 
 // 从types.ts导入已有的Window接口扩展
@@ -137,7 +139,14 @@ const App: React.FC = () => {
 
         case 'createImageComponent':
           if (message.imagePath && message.targetContainerId && message.dropPosition) {
-            createImageComponentAtPosition(message.imagePath, message.dropPosition, message.targetContainerId);
+            const store = useDesignerStore.getState();
+            createImageComponentAtPosition(
+              message.imagePath,
+              message.dropPosition,
+              message.targetContainerId,
+              store.components,
+              store.addComponent
+            );
           }
           break;
 
@@ -202,78 +211,12 @@ const App: React.FC = () => {
   /**
    * 查找拖放目标容器
    */
-  // 统一的图片组件创建函数
-  const createImageComponentAtPosition = (imagePath: string, dropPosition: { x: number; y: number }, targetContainerId: string) => {
-    const store = useDesignerStore.getState();
-    const targetContainer = store.components.find(c => c.id === targetContainerId);
-    if (!targetContainer) return;
-
-    const getAbsolutePosition = (comp: Component): { x: number; y: number } => {
-      if (!comp.parent) return { x: comp.position.x, y: comp.position.y };
-      const parentComp = store.components.find(c => c.id === comp.parent);
-      if (!parentComp) return { x: comp.position.x, y: comp.position.y };
-      const parentPos = getAbsolutePosition(parentComp);
-      return { x: parentPos.x + comp.position.x, y: parentPos.y + comp.position.y };
-    };
-
-    const targetAbsPos = getAbsolutePosition(targetContainer);
-    const relativeX = Math.max(0, dropPosition.x - targetAbsPos.x);
-    const relativeY = Math.max(0, dropPosition.y - targetAbsPos.y);
-
-    const imageComponent: Component = {
-      id: `hg_image_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-      type: 'hg_image',
-      name: `image_${Date.now().toString().substr(-4)}`,
-      position: { x: relativeX, y: relativeY, width: 100, height: 100 },
-      visible: true,
-      enabled: true,
-      locked: false,
-      zIndex: 1,
-      children: [],
-      parent: targetContainerId,
-      style: {},
-      data: { src: imagePath },
-    };
-
-    store.addComponent(imageComponent);
-    console.log('[创建组件] 图片组件:', imageComponent.id, imagePath);
-  };
-
   const findDropTarget = (e: React.DragEvent): Component | null => {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const x = Math.max(0, Math.round(e.clientX - rect.left));
     const y = Math.max(0, Math.round(e.clientY - rect.top));
 
-    const components = useDesignerStore.getState().components;
-
-    const getAbsolutePosition = (comp: Component): { x: number; y: number } => {
-      if (!comp.parent) {
-        return { x: comp.position.x, y: comp.position.y };
-      }
-      const parentComp = components.find(c => c.id === comp.parent);
-      if (!parentComp) {
-        return { x: comp.position.x, y: comp.position.y };
-      }
-      const parentPos = getAbsolutePosition(parentComp);
-      return {
-        x: parentPos.x + comp.position.x,
-        y: parentPos.y + comp.position.y
-      };
-    };
-
-    let targetContainer: Component | null = null;
-    for (const comp of components) {
-      const absPos = getAbsolutePosition(comp);
-      const { width: cw, height: ch } = comp.position;
-      
-      if (x >= absPos.x && x <= absPos.x + cw && y >= absPos.y && y <= absPos.y + ch) {
-        if (!targetContainer || (cw * ch < targetContainer.position.width * targetContainer.position.height)) {
-          targetContainer = comp;
-        }
-      }
-    }
-
-    return targetContainer;
+    return findComponentAtPosition(x, y, useDesignerStore.getState().components);
   };
 
   const handleImageFileDrop = async (e: React.DragEvent, files: FileList, createComponent: boolean = true) => {
@@ -367,7 +310,14 @@ const App: React.FC = () => {
       const x = (e.clientX - canvasRect.left) / useDesignerStore.getState().zoom;
       const y = (e.clientY - canvasRect.top) / useDesignerStore.getState().zoom;
 
-      createImageComponentAtPosition(`assets/${assetPath}`, { x, y }, targetContainer.id);
+      const store = useDesignerStore.getState();
+      createImageComponentAtPosition(
+        `assets/${assetPath}`,
+        { x, y },
+        targetContainer.id,
+        store.components,
+        store.addComponent
+      );
       return;
     }
     
@@ -450,30 +400,10 @@ const App: React.FC = () => {
         console.log(`[拖放] 当前组件总数: ${components.length}`);
       }
       
-      // 计算组件的绝对位置（考虑父组件的位置）
-      const getAbsolutePosition = (comp: Component): { x: number; y: number } => {
-        if (!comp.parent) {
-          if (DEBUG_DROP) console.log(`[拖放]   组件 ${comp.id} 是顶级组件，位置: (${comp.position.x}, ${comp.position.y})`);
-          return { x: comp.position.x, y: comp.position.y };
-        }
-        const parentComp = components.find(c => c.id === comp.parent);
-        if (!parentComp) {
-          if (DEBUG_DROP) console.log(`[拖放]   组件 ${comp.id} 的父组件未找到，使用相对位置: (${comp.position.x}, ${comp.position.y})`);
-          return { x: comp.position.x, y: comp.position.y };
-        }
-        const parentPos = getAbsolutePosition(parentComp);
-        const absPos = {
-          x: parentPos.x + comp.position.x,
-          y: parentPos.y + comp.position.y
-        };
-        if (DEBUG_DROP) console.log(`[拖放]   组件 ${comp.id} 父组件位置: (${parentPos.x}, ${parentPos.y}), 相对位置: (${comp.position.x}, ${comp.position.y}), 绝对位置: (${absPos.x}, ${absPos.y})`);
-        return absPos;
-      };
-      
       // 遍历所有组件，找到鼠标位置下的最内层容器
       for (const comp of components) {
         if (DEBUG_DROP) console.log(`[拖放] 检查组件: ${comp.type}(${comp.id})`);
-        const absPos = getAbsolutePosition(comp);
+        const absPos = getAbsolutePosition(comp, components);
         const { width: cw, height: ch } = comp.position;
         
         if (DEBUG_DROP) {
@@ -508,7 +438,7 @@ const App: React.FC = () => {
       if (targetContainer) {
         parent = targetContainer.id;
         // 转换为相对于目标容器的坐标
-        const targetAbsPos = getAbsolutePosition(targetContainer);
+        const targetAbsPos = getAbsolutePosition(targetContainer, components);
         positionX = Math.max(0, x - targetAbsPos.x);
         positionY = Math.max(0, y - targetAbsPos.y);
         if (DEBUG_DROP) {
