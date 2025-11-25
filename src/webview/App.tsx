@@ -10,6 +10,7 @@ import { Component, ComponentType } from './types';
 import useKeyboardShortcuts from './utils/keyboardShortcuts';
 import { getAbsolutePosition, findComponentAtPosition } from './utils/componentUtils';
 import { createImageComponentAtPosition } from './services/messageHandler';
+import { processImageFiles } from './utils/fileUtils';
 import './App.css';
 
 // 从types.ts导入已有的Window接口扩展
@@ -241,35 +242,18 @@ const App: React.FC = () => {
       }
     }
 
-    // 处理多个文件
-    Array.from(files).forEach((file, index) => {
-      const imageExts = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'webp'];
-      const ext = file.name.split('.').pop()?.toLowerCase();
-      
-      if (!ext || !imageExts.includes(ext)) {
-        console.warn(`[拖放] 跳过非图片文件: ${file.name}`);
-        return;
+    // 使用工具函数处理图片文件
+    await processImageFiles(files, (file, index, data) => {
+      const api = useDesignerStore.getState().vscodeAPI;
+      if (api) {
+        api.postMessage({
+          command: 'saveImageToAssets',
+          fileName: file.name,
+          fileData: Array.from(data),
+          dropPosition: createComponent ? { x: x + index * 20, y: y + index * 20 } : undefined,
+          targetContainerId: createComponent ? targetContainer!.id : undefined
+        });
       }
-
-      // 读取文件内容
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const arrayBuffer = event.target?.result as ArrayBuffer;
-        const uint8Array = new Uint8Array(arrayBuffer);
-        
-        // 发送文件到后端保存
-        const api = useDesignerStore.getState().vscodeAPI;
-        if (api) {
-          api.postMessage({
-            command: 'saveImageToAssets',
-            fileName: file.name,
-            fileData: Array.from(uint8Array),
-            dropPosition: createComponent ? { x: x + index * 20, y: y + index * 20 } : undefined,
-            targetContainerId: createComponent ? targetContainer!.id : undefined
-          });
-        }
-      };
-      reader.readAsArrayBuffer(file);
     });
   };
 

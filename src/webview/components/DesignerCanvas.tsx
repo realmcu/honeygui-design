@@ -1,10 +1,10 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useDesignerStore } from '../store';
 import { Component, ComponentType } from '../types';
-import { ImageComponent } from './ImageComponent';
 import { useCanvasZoom } from '../hooks/useCanvasZoom';
 import { useCanvasDrag } from '../hooks/useCanvasDrag';
 import { calculateComponentStyle, createComponentHandlers } from '../utils/componentRenderer';
+import { componentRenderers } from './ComponentRenderers';
 import './DesignerCanvas.css';
 
 interface DesignerCanvasProps {
@@ -200,227 +200,31 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
       handleMouseLeave
     );
 
-      switch (component.type) {
-      case 'hg_button':
-        return (
-          <button
-            key={component.id}
-            style={style}
-            {...handlers}
-            disabled={!component.enabled}
-          >
-            {component.data?.text || component.name}
-          </button>
-        );
-
-      case 'hg_label':
-        return (
-          <div
-            key={component.id}
-            style={style}
-            onMouseDown={(e) => handleComponentMouseDown(e, component.id)}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-          >
-            {component.data?.text || component.name}
-          </div>
-        );
-
-      case 'hg_text':
-        return (
-          <span
-            key={component.id}
-            style={style}
-            onMouseDown={(e) => handleComponentMouseDown(e, component.id)}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-          >
-            {component.data?.text || component.name}
-          </span>
-        );
-
-      case 'hg_input':
-        return (
-          <input
-            key={component.id}
-            style={style}
-            placeholder={component.data?.placeholder}
-            onMouseDown={(e) => handleComponentMouseDown(e, component.id)}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-            disabled={!component.enabled}
-          />
-        );
-
-      case 'hg_image':
-        return (
-          <ImageComponent
-            key={component.id}
-            component={component}
-            style={style}
-            onMouseDown={(e) => handleComponentMouseDown(e, component.id)}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-          />
-        );
-
-      case 'hg_panel':
-      case 'hg_view':
-      case 'hg_window':
-      case 'hg_canvas':
-        /**
-         * View/Panel/Window/Canvas 容器组件实现 - 支持嵌套布局和多容器并行
-         *
-         * 功能特性：
-         * 1. **多容器支持**: 容器组件可作为独立顶级容器，实现多容器并行布局
-         * 2. **嵌套能力**: 所有容器组件都支持包含子组件，形成层级结构
-         * 3. **视觉区分**: 不同类型容器有不同的默认样式和视觉特征
-         * 4. **灵活布局**: 支持在screen内部或外部放置，满足不同场景需求
-         *
-         * 组件类型特性：
-         * - View (👁️): 通用视图容器，默认浅灰背景，支持自动滚动
-         *   * 用途: 分组组件、创建独立区域、实现复杂布局
-         *   * 样式: background: '#f5f5f5', overflow: 'auto'
-         *   * 层级: 可以作为screen的子组件，也可以作为顶级组件
-         *
-         * - Panel (🪟): 面板容器，默认白色背景
-         *   * 用途: 内容分组、卡片式布局
-         *   * 样式: background: '#ffffff'
-         *   * 层级: 通常作为screen的子组件
-         *
-         * - Window (🪟): 窗口容器，模拟操作系统窗口外观
-         *   * 用途: 对话框、独立功能模块
-         *   * 样式: 包含标题栏、窗口控制按钮(关闭、最小化、最大化)
-         *   * 层级: 可以作为顶级组件
-         *
-         * - Canvas (🎨): 画布组件，用于绘图或自定义渲染
-         *   * 用途: 绘图区域、游戏画布、自定义UI
-         *   * 样式: background: '#ffffff', border, overflow控制
-         *   * 层级: 通常作为screen的子组件
-         *   * 注意: 这是UI组件，不是设计器画布
-         *
-         * 布局策略：
-         * - 容器组件拖放到画布: 可以作为顶级组件放置（多容器并行）
-         * - 容器组件拖放到screen内部: 作为screen的子组件（嵌套布局）
-         * - 容器组件拖放到其他View内部: 支持多级嵌套
-         *
-         * 组件关系：
-         * - parent: string | null (父组件ID，顶级组件为null)
-         * - children: string[] (子组件ID数组)
-         * - zIndex: number (层级顺序，可控制显示层级)
-         *
-         * 尺寸控制：
-         * - 所有容器组件都遵循组件库中定义的defaultSize
-         * - 可在属性面板中手动调整尺寸
-         *
-         * @see ComponentLibrary.tsx - componentDefinitions包含各容器类型的默认尺寸
-         * @see App.tsx handleCanvasDrop() - 拖放逻辑决定组件的parent和层级关系
-         * @see PropertiesPanel.tsx - 属性面板支持调整容器样式和尺寸
-         */
-        return (
-          <div
-            key={component.id}
-            style={{
-              ...style,
-              // 根据容器类型设置边框样式 - 选中状态高亮显示，非选中状态显示默认边框
-              border: isSelected
-                ? '2px solid #007ACC' // 选中时高亮边框（蓝色）
-                : component.type === 'hg_window'
-                ? (component.style?.border || '1px solid #ccc') // Window组件使用自定义边框或默认
-                : component.type === 'hg_view'
-                ? (component.style?.border || '2px solid #666') // View组件使用实线边框，更明显
-                : (component.style?.border || '1px solid #ccc'), // Panel组件使用实线边框
-              // 根据容器类型设置圆角
-              borderRadius: component.type === 'hg_window'
-                ? (component.style?.borderRadius || 6) // Window组件圆角
-                : component.type === 'hg_view'
-                ? (component.style?.borderRadius || 4) // View组件圆角
-                : (component.style?.borderRadius || 0), // Panel组件默认无圆角
-              // 根据容器类型设置背景色
-              background: component.type === 'hg_window'
-                ? (component.style?.backgroundColor || '#ffffff') // Window默认白色背景
-                : component.type === 'hg_view'
-                ? (component.style?.backgroundColor || '#ffffff') // View默认白色背景，便于在深色画布上看清
-                : (component.style?.backgroundColor || '#ffffff'), // Panel默认白色背景
-              // 根据容器类型设置内边距
-              padding: component.type === 'hg_window'
-                ? 0 // Window内边距由内容区域控制
-                : component.type === 'hg_view'
-                ? (component.style?.padding || 12) // View默认内边距12px
-                : (component.style?.padding || 8), // Panel默认内边距8px
-              // 根据容器类型设置溢出处理
-              overflow: component.type === 'hg_view'
-                ? (component.style?.overflow || 'auto') // View组件默认自动滚动，支持内容超出
-                : component.type === 'hg_panel'
-                ? (component.style?.overflow || 'hidden') // Panel组件默认隐藏溢出
-                : 'visible', // Window组件默认可见，不处理溢出
-            }}
-            onMouseDown={(e) => handleComponentMouseDown(e, component.id)}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-          >
-            {/* Window组件渲染标题栏 - 模拟操作系统窗口外观 */}
-            {component.type === 'hg_window' && (
-              <div
-                style={{
-                  height: component.style?.titleBarHeight || 36,
-                  backgroundColor: component.style?.titleBarColor || '#f0f0f0',
-                  borderTopLeftRadius: component.style?.borderRadius || 6,
-                  borderTopRightRadius: component.style?.borderRadius || 6,
-                  padding: '0 12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  borderBottom: '1px solid #e0e0e0',
-                  cursor: 'move', // 标题栏显示移动光标，提示可拖动
-                }}
-                onMouseDown={(e) => {
-                  e.stopPropagation();
-                  handleComponentMouseDown(e, component.id);
-                }}
-              >
-                {/* 窗口标题 */}
-                <span style={{ fontWeight: 'bold', fontSize: '14px' }}>
-                  {component.style?.title || component.name}
-                </span>
-                {/* 窗口控制按钮 (关闭、最小化、最大化) */}
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#ff6b6b' }}></div>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#ffd93d' }}></div>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#6bcb77' }}></div>
-                </div>
-              </div>
-            )}
-            {/* 容器内容区域 - 根据类型设置不同内边距 */}
-            <div style={{ padding: component.type === 'hg_window' ? '12px' : 0 }}>
-              {/* 仅View组件显示名称标签(便于识别) */}
-              {component.type === 'hg_view' && (
-                <div style={{ fontSize: '12px', opacity: 0.6, marginBottom: '4px', fontWeight: 500 }}>
-                  {component.name}
-                </div>
-              )}
-              {/* 递归渲染子组件 - 支持嵌套结构 */}
-              {component.children?.map((childId) => {
-                const child = components.find((c) => c.id === childId);
-                return child ? renderComponent(child) : null;
-              })}
-            </div>
-          </div>
-        );
-
-      default:
-        return (
-          <div
-            key={component.id}
-            style={style}
-            onMouseDown={(e) => handleComponentMouseDown(e, component.id)}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-          >
-            {component.name}
-          </div>
-        );
+    // 使用渲染器映射
+    const Renderer = componentRenderers[component.type];
+    
+    if (!Renderer) {
+      // 未知组件类型，显示占位符
+      return (
+        <div key={component.id} style={style} {...handlers}>
+          ⚠️ {component.type}
+        </div>
+      );
     }
+
+    // 容器组件需要渲染子组件
+    const isContainer = ['hg_view', 'hg_panel', 'hg_window', 'hg_screen'].includes(component.type);
+    
+    if (isContainer) {
+      const children = component.children?.map((childId) => {
+        const child = componentList.find((c) => c.id === childId);
+        return child ? renderComponent(child, componentList) : null;
+      });
+
+      return <Renderer component={component} style={style} handlers={handlers}>{children}</Renderer>;
+    }
+
+    return <Renderer component={component} style={style} handlers={handlers} />;
   };
 
   // Render grid - Clean and minimal style
