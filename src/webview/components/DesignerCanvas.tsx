@@ -4,6 +4,7 @@ import { Component, ComponentType } from '../types';
 import { ImageComponent } from './ImageComponent';
 import { useCanvasZoom } from '../hooks/useCanvasZoom';
 import { useCanvasDrag } from '../hooks/useCanvasDrag';
+import { calculateComponentStyle, createComponentHandlers } from '../utils/componentRenderer';
 import './DesignerCanvas.css';
 
 interface DesignerCanvasProps {
@@ -171,22 +172,14 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     const isMultiSelected = selectedComponents?.includes(component.id);
     const isHovered = !draggedComponent && useDesignerStore.getState().hoveredComponent === component.id;
 
-    const style: React.CSSProperties = {
-      position: 'absolute',
-      left: component.position.x * zoom,
-      top: component.position.y * zoom,
-      width: component.position.width * zoom,
-      height: component.position.height * zoom,
-      display: component.visible ? 'flex' : 'none',
-      opacity: component.enabled ? 1 : 0.6,
-      cursor: editingMode === 'move' ? 'move' : 'pointer',
-      border: isSelected || isMultiSelected ? '2px solid #007ACC' : isHovered ? '1px dashed #007ACC' : '1px solid transparent',
-      background: component.style?.backgroundColor || 'transparent',
-      color: component.style?.color || 'inherit',
-      fontSize: component.style?.fontSize ? `${component.style.fontSize}px` : undefined,
-      zIndex: component.zIndex,
-      userSelect: 'none',
-    };
+    const style = calculateComponentStyle(
+      component,
+      zoom,
+      isSelected,
+      isMultiSelected,
+      isHovered,
+      editingMode
+    );
 
     const handleMouseEnter = () => {
       if (!draggedComponent) {
@@ -200,15 +193,20 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
       }
     };
 
+    const handlers = createComponentHandlers(
+      component.id,
+      handleComponentMouseDown,
+      handleMouseEnter,
+      handleMouseLeave
+    );
+
       switch (component.type) {
       case 'hg_button':
         return (
           <button
             key={component.id}
             style={style}
-            onMouseDown={(e) => handleComponentMouseDown(e, component.id)}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
+            {...handlers}
             disabled={!component.enabled}
           >
             {component.data?.text || component.name}
