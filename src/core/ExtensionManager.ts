@@ -119,11 +119,11 @@ export class ExtensionManager {
      * 注册视图提供者
      */
     private registerViewProviders(): void {
-        // 注册欢迎视图提供者
-        const welcomeProvider = new WelcomeViewDataProvider();
-        const welcomeRegistration = vscode.window.registerTreeDataProvider('honeygui.welcome', welcomeProvider);
-        this.disposables.push(welcomeRegistration);
-        this.context.subscriptions.push(welcomeRegistration);
+        // 欢迎视图使用 viewsWelcome 配置，不需要 TreeDataProvider
+        // const welcomeProvider = new WelcomeViewDataProvider();
+        // const welcomeRegistration = vscode.window.registerTreeDataProvider('honeygui.welcome', welcomeProvider);
+        // this.disposables.push(welcomeRegistration);
+        // this.context.subscriptions.push(welcomeRegistration);
 
         // 注册快速操作视图提供者
         const quickProvider = new QuickViewDataProvider();
@@ -174,37 +174,6 @@ export class ExtensionManager {
         this.disposables.forEach(disposable => disposable.dispose());
         
         logger.info('HoneyGUI扩展已清理完成');
-    }
-}
-
-/**
- * 欢迎视图数据提供者
- */
-class WelcomeViewDataProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
-    getTreeItem(element: vscode.TreeItem): vscode.TreeItem | Thenable<vscode.TreeItem> {
-        return element;
-    }
-
-    getChildren(element?: vscode.TreeItem | undefined): vscode.ProviderResult<vscode.TreeItem[]> {
-        // 返回欢迎视图的数据项
-        const welcomeItems: vscode.TreeItem[] = [];
-        
-        const newProjectItem = new vscode.TreeItem('新建项目', vscode.TreeItemCollapsibleState.None);
-        newProjectItem.command = { command: 'honeygui.createProject', title: '新建项目' };
-        newProjectItem.iconPath = new vscode.ThemeIcon('add');
-        welcomeItems.push(newProjectItem);
-        
-        const newHmlItem = new vscode.TreeItem('新建设计', vscode.TreeItemCollapsibleState.None);
-        newHmlItem.command = { command: 'honeygui.createNewHmlInWorkspace', title: '新建设计' };
-        newHmlItem.iconPath = new vscode.ThemeIcon('file-add');
-        welcomeItems.push(newHmlItem);
-        
-        const openProjectItem = new vscode.TreeItem('打开项目', vscode.TreeItemCollapsibleState.None);
-        openProjectItem.command = { command: 'honeygui.openProject', title: '打开项目' };
-        openProjectItem.iconPath = new vscode.ThemeIcon('folder-opened');
-        welcomeItems.push(openProjectItem);
-        
-        return welcomeItems;
     }
 }
 

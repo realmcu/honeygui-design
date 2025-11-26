@@ -80,6 +80,12 @@
         }
       ]
     },
+    "viewsWelcome": [
+      {
+        "view": "honeygui.welcome",
+        "contents": "[$(add) 新建项目](command:honeygui.createProject)\n[$(file-add) 新建设计](command:honeygui.createNewHmlInWorkspace)\n[$(folder-opened) 打开项目](command:honeygui.openProject)"
+      }
+    ],
     "menus": {
       "explorer/context": [
         {
