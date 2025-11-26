@@ -140,12 +140,6 @@ export class HoneyGuiCCodeGenerator {
     });
 
     code += `
-// 初始化函数
-void ${baseName}_init(void);
-
-// 更新函数（可选）
-void ${baseName}_update(void);
-
 #endif // ${guardName}
 `;
 
@@ -170,29 +164,13 @@ void ${baseName}_update(void);
       }
     });
 
-    code += `
-/**
- * 初始化GUI设计
- * 此函数由HoneyGUI设计器自动生成
- */
-void ${baseName}_init(void) {
-`;
+    code += `\n`;
 
-    // 生成组件创建代码（按层级顺序）
+    // 生成组件创建代码（按层级顺序，直接在全局作用域）
     const rootComponents = this.components.filter(c => c.parent === null);
     rootComponents.forEach(comp => {
-      code += this.generateComponentTree(comp, 1);
+      code += this.generateComponentTree(comp, 0);
     });
-
-    code += `}
-
-/**
- * 更新GUI（可选）
- */
-void ${baseName}_update(void) {
-    // 动态更新逻辑
-}
-`;
 
     return code;
   }
@@ -250,10 +228,19 @@ void ${baseName}_update(void) {
       return this.generateViewInstance(component, indent);
     }
 
-    const parentRef = component.parent || 'NULL';
+    // 确定父组件引用
+    let parentRef = 'NULL';
+    if (component.parent) {
+      const parentComp = this.componentMap.get(component.parent);
+      // 如果父组件是 hg_view，使用 NULL（因为 view 没有句柄）
+      if (parentComp && parentComp.type !== 'hg_view') {
+        parentRef = component.parent;
+      }
+    }
+
     const { x, y, width, height } = component.position;
 
-    return `${indentStr}${component.id} = ${mapping.createFunction}(${parentRef}, "${component.id}", ${x}, ${y}, ${width}, ${height});\n`;
+    return `${indentStr}${component.id} = ${mapping.createFunction}(${parentRef}, "${component.name}", ${x}, ${y}, ${width}, ${height});\n`;
   }
 
   /**

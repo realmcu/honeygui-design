@@ -94,6 +94,11 @@ hg_view 不使用传统的 `gui_view_create()` 函数，而是使用 `GUI_VIEW_I
 
 **生成模板**：
 ```c
+// 组件句柄定义
+gui_obj_t *btn1 = NULL;
+gui_obj_t *lbl1 = NULL;
+
+// 直接在全局作用域定义（不在任何函数内）
 static void {name}_switch_out(gui_view_t *view)
 {
     GUI_UNUSED(view);
@@ -104,8 +109,8 @@ static void {name}_switch_in(gui_view_t *view)
     GUI_UNUSED(view);
     
     // 在这里创建 hg_view 的子组件
-    // button1 = gui_button_create(...);
-    // label1 = gui_text_create(...);
+    btn1 = gui_button_create(NULL, "button1", 100, 100, 120, 40);
+    lbl1 = gui_text_create(NULL, "label1", 100, 150, 200, 30);
 }
 GUI_VIEW_INSTANCE("{name}", false, {name}_switch_in, {name}_switch_out);
 ```
@@ -116,10 +121,19 @@ GUI_VIEW_INSTANCE("{name}", false, {name}_switch_in, {name}_switch_out);
 - 宏第一个参数：字符串 `"{name}"`
 - 宏第三、四个参数：函数名（不带引号）
 
+**关键规则**：
+1. **全局作用域**：`GUI_VIEW_INSTANCE` 和回调函数在全局作用域定义，不在任何函数内
+2. **无 init 函数**：不生成 `{baseName}_init()` 和 `{baseName}_update()` 函数
+3. **无句柄变量**：hg_view 不生成 `gui_obj_t *mainView` 句柄变量
+4. **子组件在 switch_in**：所有子组件在 `{name}_switch_in()` 函数中创建
+5. **父组件参数为 NULL**：子组件的父组件参数使用 NULL（因为 view 没有句柄）
+6. **使用 name 属性**：组件创建函数的第二个参数使用 `component.name`，不是 `component.id`
+
 **子组件创建规则**：
 - hg_view 的所有子组件在 `{name}_switch_in()` 函数中创建
 - 按照控件树的层级顺序递归创建
-- 子组件的父组件引用使用 NULL（因为 view 本身不是 gui_obj_t 指针）
+- 子组件的父组件引用使用 NULL
+- 子组件创建函数格式：`{id} = {api_function}(NULL, "{name}", x, y, w, h);`
 
 **必需的头文件**：
 ```c
@@ -130,7 +144,7 @@ GUI_VIEW_INSTANCE("{name}", false, {name}_switch_in, {name}_switch_out);
 #include "gui_view_instance.h"
 ```
 
-**示例**：
+**完整示例**：
 
 HML:
 ```xml
@@ -140,8 +154,36 @@ HML:
 </hg_view>
 ```
 
-生成代码:
+生成的 .h 文件:
 ```c
+#ifndef NEWPROJECTMAIN_H
+#define NEWPROJECTMAIN_H
+
+#include "guidef.h"
+#include "gui_obj.h"
+#include "gui_components_init.h"
+#include "gui_view.h"
+#include "gui_view_instance.h"
+#include "gui_button.h"
+#include "gui_text.h"
+
+// 组件句柄声明（不包含 view）
+extern gui_obj_t *btn1;
+extern gui_obj_t *lbl1;
+
+#endif // NEWPROJECTMAIN_H
+```
+
+生成的 .c 文件:
+```c
+#include "NewProjectMain.h"
+#include "NewProjectMain_callbacks.h"
+#include <stddef.h>
+
+// 组件句柄定义
+gui_obj_t *btn1 = NULL;
+gui_obj_t *lbl1 = NULL;
+
 static void mainView_switch_out(gui_view_t *view)
 {
     GUI_UNUSED(view);
@@ -152,11 +194,11 @@ static void mainView_switch_in(gui_view_t *view)
     GUI_UNUSED(view);
     
     // 创建button1 (hg_button)
-    btn1 = gui_button_create(NULL, "btn1", 100, 100, 120, 40);
+    btn1 = gui_button_create(NULL, "button1", 100, 100, 120, 40);
     gui_button_set_text(btn1, "Click");
     
     // 创建label1 (hg_label)
-    lbl1 = gui_text_create(NULL, "lbl1", 100, 150, 200, 30);
+    lbl1 = gui_text_create(NULL, "label1", 100, 150, 200, 30);
     gui_text_set(lbl1, "Hello");
 }
 GUI_VIEW_INSTANCE("mainView", false, mainView_switch_in, mainView_switch_out);
@@ -167,6 +209,8 @@ GUI_VIEW_INSTANCE("mainView", false, mainView_switch_in, mainView_switch_out);
 2. hg_view 不支持属性设置（如 backgroundColor）
 3. 子组件的父组件参数使用 NULL
 4. 子组件在 switch_in 中创建，在视图切换时初始化
+5. 不生成 init 和 update 函数
+6. 所有代码在全局作用域，不在函数内部
 
 #### 3.2 UI组件
 
