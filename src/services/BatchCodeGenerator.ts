@@ -115,7 +115,7 @@ export class BatchCodeGenerator {
         const hmlController = new HmlController();
         await hmlController.loadFile(hmlFile);
 
-        const outputDir = path.join(srcDir, designName);
+        const outputDir = path.join(srcDir, 'autogen', designName);
         const hmlFileName = path.basename(hmlFile, '.hml'); // 使用实际的文件名
         const generatorOptions: CodeGenOptions = {
             outputDir,
