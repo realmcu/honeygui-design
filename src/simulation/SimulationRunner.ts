@@ -123,11 +123,11 @@ export class SimulationRunner {
             enableProtectedAreas: true
         });
 
-        if (!(result as any).success) {
-            throw new Error((result as any).errors?.[0] || '代码生成失败');
+        if (!result.success) {
+            throw new Error(result.errors?.[0] || '代码生成失败');
         }
 
-        this.log(`代码生成完成: ${(result as any).files?.length || 0} 个文件`);
+        this.log(`代码生成完成: ${result.files.length} 个文件`);
     }
 
     /**

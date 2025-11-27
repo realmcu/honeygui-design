@@ -2,15 +2,10 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { spawn, ChildProcess } from 'child_process';
-// Simple mock implementation for extract-zip since it's not installed
-const extractZip = (zipPath: string, options: any, callback: (err: Error | null) => void) => {
-    callback(null);
-};
 
 // 定义PreviewRunner的配置选项
 interface PreviewRunnerOptions {
   runnerPath?: string;
-  autoDownload?: boolean;
   timeoutMs?: number;
   logLevel?: 'debug' | 'info' | 'warn' | 'error';
 }
@@ -25,20 +20,12 @@ interface PreviewRunnerListener {
   onReload?: () => void;
 }
 
-// 定义Runner的下载信息
-interface RunnerDownloadInfo {
-  url: string;
-  checksum?: string;
-  version: string;
-}
-
 /**
  * 预览运行器类，负责管理HoneyGUI Runner的下载、缓存和进程管理
  */
 export class PreviewRunner {
   private static instance: PreviewRunner;
   private runnerPath: string;
-  private autoDownload: boolean;
   private timeoutMs: number;
   private logLevel: 'debug' | 'info' | 'warn' | 'error';
   private currentProcess: ChildProcess | null = null;
@@ -48,15 +35,13 @@ export class PreviewRunner {
 
   private constructor(options: PreviewRunnerOptions = {}) {
     const defaultOptions: PreviewRunnerOptions = {
-      runnerPath: '', // 本地Runner路径
-      autoDownload: false, // 离线模式，禁用自动下载
+      runnerPath: '',
       timeoutMs: 10000,
       logLevel: 'info'
     };
 
     const mergedOptions = { ...defaultOptions, ...options };
     this.runnerPath = mergedOptions.runnerPath || this.getDefaultRunnerPath();
-    this.autoDownload = false; // 强制离线模式
     this.timeoutMs = mergedOptions.timeoutMs || 10000;
     this.logLevel = (mergedOptions.logLevel as 'error' | 'debug' | 'info' | 'warn') || 'info';
   }
@@ -93,43 +78,6 @@ export class PreviewRunner {
       default:
         throw new Error(`不支持的平台: ${process.platform}`);
     }
-  }
-
-  /**
-   * 获取当前平台的Runner下载信息 (已废弃)
-   * @deprecated 离线模式下不再使用下载功能
-   */
-  private getRunnerDownloadInfo(): RunnerDownloadInfo {
-    throw new Error('下载功能已禁用 - HoneyGUI使用离线模式');
-  }
-
-  /**
-   * 下载并安装Runner (已废弃 - 离线模式)
-   * @deprecated 此功能已废弃，HoneyGUI现在使用离线模式
-   */
-  public async downloadRunner(): Promise<void> {
-    throw new Error(
-      'Runner自动下载功能已禁用。HoneyGUI现在使用离线模式。\n' +
-      '请手动安装Runner到以下位置之一:\n' +
-      '1. 在VS Code设置中配置 honeygui.preview.runnerPath\n' +
-      '2. 将Runner安装到: ' + this.getDefaultRunnerPath()
-    );
-  }
-
-  /**
-   * 下载文件 (已废弃)
-   * @deprecated 离线模式下不再使用下载功能
-   */
-  private async downloadFile(url: string, dest: string): Promise<void> {
-    throw new Error('下载功能已禁用 - HoneyGUI使用离线模式');
-  }
-
-  /**
-   * 解压ZIP文件 (已废弃)
-   * @deprecated 离线模式下不再使用解压功能
-   */
-  private async unzipFile(zipPath: string, dest: string): Promise<void> {
-    throw new Error('解压功能已禁用 - HoneyGUI使用离线模式');
   }
 
   /**
