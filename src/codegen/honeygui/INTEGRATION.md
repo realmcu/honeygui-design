@@ -75,7 +75,11 @@ private getDesignerComponents() {
 
 const handleGenerateCode = () => {
     window.vscodeAPI?.postMessage({
-        command: 'generateCode'
+        command: 'codegen',  // 实际使用的命令名
+        language: 'cpp',
+        options: {
+            enableProtectedAreas: true
+        }
     });
 };
 
@@ -95,8 +99,8 @@ const handleGenerateCode = () => {
 ```typescript
 // src/designer/DesignerPanel.ts
 
-case 'generateCode':
-    await vscode.commands.executeCommand('honeygui.generateCode');
+case 'codegen':  // 实际监听的命令名
+    this.generateCode(message.language || 'cpp', message.options, message.content);
     break;
 ```
 

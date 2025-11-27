@@ -151,7 +151,20 @@
       {
         "command": "honeygui.preview",
         "title": "HoneyGUI: Preview",
-        "category": "HoneyGUI"
+        "category": "HoneyGUI",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "honeygui.simulation",
+        "title": "HoneyGUI: Compile & Simulate",
+        "category": "HoneyGUI",
+        "icon": "$(rocket)"
+      },
+      {
+        "command": "honeygui.simulation.stop",
+        "title": "HoneyGUI: Stop Simulation",
+        "category": "HoneyGUI",
+        "icon": "$(debug-stop)"
       },
       {
         "command": "honeygui.openResourceManager",
@@ -250,6 +263,11 @@
           "type": "number",
           "default": 10000,
           "description": "预览超时时间（毫秒）"
+        },
+        "honeygui.sdk.path": {
+          "type": "string",
+          "default": "",
+          "description": "HoneyGUI SDK 路径（用于编译仿真）"
         },
         "honeygui.ui.gridSize": {
           "type": "number",

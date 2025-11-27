@@ -92,6 +92,28 @@ HML files use XML syntax to describe UI components:
 - Supports nested component hierarchies
 - Custom attributes for positioning and styling
 
+## Preview & Execution Architecture
+
+The extension implements three distinct preview strategies to balance development speed and fidelity:
+
+1. **Webview Preview (Layout Preview)**
+   - **Mechanism**: React-based rendering within the VS Code Webview panel.
+   - **Use Case**: Real-time layout adjustment, property tweaking, drag-and-drop design.
+   - **Pros**: Zero latency, integrated with designer UI.
+   - **Cons**: Approximation of the engine; not pixel-perfect with C renderer.
+
+2. **Simulator Preview (Engine Preview)**
+   - **Mechanism**: External `runner` process (C-based engine simulator) loading HML directly.
+   - **Communication**: IPC (TCP/WebSocket) for real-time property updates without restarting.
+   - **Use Case**: Verifying engine-specific rendering (fonts, anti-aliasing) during design.
+   - **Status**: Currently implemented as basic file-watch-restart; planned upgrade to IPC hot-reload.
+
+3. **Compilation Run (Target Preview)**
+   - **Mechanism**: Full compilation chain (HML -> C Code -> GCC/MinGW -> Native EXE).
+   - **Use Case**: Verifying generated C code logic, callbacks, and performance.
+   - **Pros**: 100% fidelity to final output; validates C compilation.
+   - **Cons**: High latency (requires compilation); state reset on update.
+
 ## Development Notes
 
 - The project uses relaxed ESLint rules - focus on functionality over strict code style

@@ -7,6 +7,7 @@ export interface ProjectConfig {
     assetsDir?: string;  // 资源目录，默认 "assets"
     uiDir?: string;      // UI目录，默认 "ui"
     srcDir?: string;     // 源码目录，默认 "src"
+    honeyguiSdkPath?: string;  // HoneyGUI SDK 路径（用于编译仿真）
 }
 
 /**
