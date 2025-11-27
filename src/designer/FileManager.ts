@@ -16,6 +16,12 @@ export class FileManager {
     private readonly _saveManager: SaveManager;
     private _filePath: string | undefined;
     private _lastSerializedSnapshot: string | null = null;
+    
+    // 事件发射器
+    private readonly _onDidUpdateTitle = new vscode.EventEmitter<string>();
+    
+    // 事件
+    public readonly onDidUpdateTitle = this._onDidUpdateTitle.event;
 
     constructor(panel: vscode.WebviewPanel, hmlController: HmlController, saveManager: SaveManager) {
         this._panel = panel;
@@ -51,7 +57,7 @@ export class FileManager {
                 
             // 更新面板标题
             const fileName = path.basename(filePath);
-            this._panel.title = `HoneyGUI 设计器 - ${fileName}`;
+            this._onDidUpdateTitle.fire(`HoneyGUI 设计器 - ${fileName}`);
                 
         } catch (error) {
             logger.error(`加载HML文件失败: ${error}`);
@@ -97,7 +103,7 @@ export class FileManager {
             });
 
             // 更新面板标题
-            this._panel.title = 'HoneyGUI 设计器 - 未命名';
+            this._onDidUpdateTitle.fire('HoneyGUI 设计器 - 未命名');
             this._filePath = undefined;
 
         } catch (error) {
@@ -143,7 +149,7 @@ export class FileManager {
 
             // 更新面板标题
             const fileName = path.basename(document.fileName);
-            this._panel.title = `HoneyGUI Designer: ${fileName}`;
+            this._onDidUpdateTitle.fire(`HoneyGUI Designer: ${fileName}`);
             logger.info(`[FileManager] 文件加载完成并发送到前端: ${fileName}`);
 
         } catch (error) {
@@ -220,7 +226,7 @@ export class FileManager {
 
                     // 更新面板标题
                     const fileName = path.basename(selectedPath);
-                    this._panel.title = `HoneyGUI 设计器 - ${fileName}`;
+                    this._onDidUpdateTitle.fire(`HoneyGUI 设计器 - ${fileName}`);
                 } else {
                     logger.info('[FileManager] 用户取消保存');
                     return false;
