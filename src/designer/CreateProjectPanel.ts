@@ -854,16 +854,37 @@ export class CreateProjectPanel {
             'utf8'
         );
 
-        // 拷贝 HoneyGUI SDK 的 win32_sim 目录到项目的 src 目录
+        // 拷贝 HoneyGUI SDK 文件到项目
         const sdkPath = honeyguiSdkPath || path.join(require('os').homedir(), '.HoneyGUI-SDK');
+
+        // 拷贝 win32_sim 目录到 src
         const win32SimSource = path.join(sdkPath, 'win32_sim');
         const win32SimDest = path.join(projectPath, 'src', 'win32_sim');
-
         if (fs.existsSync(win32SimSource)) {
             this._copyDirectory(win32SimSource, win32SimDest);
-            console.log(`[CreateProjectPanel] Copied win32_sim from ${win32SimSource} to ${win32SimDest}`);
+            console.log(`[CreateProjectPanel] Copied win32_sim`);
         } else {
             console.warn(`[CreateProjectPanel] win32_sim not found at ${win32SimSource}`);
+        }
+
+        // 拷贝 tool 目录到 src
+        const toolSource = path.join(sdkPath, 'tool');
+        const toolDest = path.join(projectPath, 'src', 'tool');
+        if (fs.existsSync(toolSource)) {
+            this._copyDirectory(toolSource, toolDest);
+            console.log(`[CreateProjectPanel] Copied tool`);
+        } else {
+            console.warn(`[CreateProjectPanel] tool not found at ${toolSource}`);
+        }
+
+        // 拷贝 realgui 目录到 src
+        const realguiSource = path.join(sdkPath, 'realgui');
+        const realguiDest = path.join(projectPath, 'src', 'realgui');
+        if (fs.existsSync(realguiSource)) {
+            this._copyDirectory(realguiSource, realguiDest);
+            console.log(`[CreateProjectPanel] Copied realgui`);
+        } else {
+            console.warn(`[CreateProjectPanel] realgui not found at ${realguiSource}`);
         }
     }
 

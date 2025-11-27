@@ -1025,7 +1025,7 @@ private _createNewDocument(): void {
             
             const designName = pathParts[0];
             const srcDir = ProjectUtils.getSrcDir(projectRoot);
-            const outputDir = path.join(srcDir, designName);
+            const outputDir = path.join(srcDir, 'autogen', designName);
 
             // 准备代码生成选项
             const hmlFileName = path.basename(this._filePath || 'HoneyGUIApp', '.hml');
