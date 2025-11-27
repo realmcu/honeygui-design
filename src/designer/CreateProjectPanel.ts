@@ -81,6 +81,9 @@ export class CreateProjectPanel {
                     case 'selectFolder':
                         await this._selectProjectFolder();
                         break;
+                    case 'selectSdkPath':
+                        await this._selectSdkPath();
+                        break;
                     case 'createProject':
                         await this._createProject(message.config);
                         break;
@@ -304,7 +307,7 @@ export class CreateProjectPanel {
                     <div class="form-group">
                         <label for="saveLocation">Save location</label>
                         <div class="input-group">
-                            <input type="text" id="saveLocation" class="form-control" placeholder="Please select a project save path" />
+                            <input type="text" id="saveLocation" class="form-control" value="${require('os').homedir()}" />
                             <button class="btn-icon" id="selectFolderButton">📁</button>
                         </div>
                     </div>
@@ -344,6 +347,14 @@ export class CreateProjectPanel {
                                 <option value="ARGB4444">ARGB4444</option>
                                 <option value="L8">L8</option>
                             </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="honeyguiSdkPath">HoneyGUI SDK Path</label>
+                        <div class="input-group">
+                            <input type="text" id="honeyguiSdkPath" class="form-control" placeholder="Default: ~/.HoneyGUI-SDK" />
+                            <button class="btn-icon" id="selectSdkButton">📁</button>
                         </div>
                     </div>
                     
@@ -444,6 +455,15 @@ export class CreateProjectPanel {
                             selectFolder();
                         });
                     }
+                    
+                    // 绑定 SDK 路径选择事件
+                    const selectSdkButton = document.getElementById('selectSdkButton');
+                    if (selectSdkButton) {
+                        selectSdkButton.addEventListener('click', function() {
+                            console.log('Select SDK button clicked');
+                            selectSdkPath();
+                        });
+                    }
 
                     // 绑定表单验证事件
                     if (saveLocationInput) {
@@ -497,6 +517,11 @@ export class CreateProjectPanel {
                     vscode.postMessage({ command: 'selectFolder' });
                 }
                 
+                // 选择 SDK 路径
+                function selectSdkPath() {
+                    vscode.postMessage({ command: 'selectSdkPath' });
+                }
+                
                 // 验证表单
                 function validateForm() {
                     console.log('Validating form...');
@@ -527,8 +552,9 @@ export class CreateProjectPanel {
                     const resolution = document.getElementById('resolution').value;
                     const minSdk = document.getElementById('minSdk').value;
                     const pixelMode = document.getElementById('pixelMode').value;
+                    const honeyguiSdkPath = document.getElementById('honeyguiSdkPath').value.trim();
                     
-                    console.log('Project config:', { projectName, saveLocation, appId, resolution, minSdk, pixelMode });
+                    console.log('Project config:', { projectName, saveLocation, appId, resolution, minSdk, pixelMode, honeyguiSdkPath });
                     
                     vscode.postMessage({
                         command: 'createProject',
@@ -538,7 +564,8 @@ export class CreateProjectPanel {
                             appId,
                             resolution,
                             minSdk,
-                            pixelMode
+                            pixelMode,
+                            honeyguiSdkPath: honeyguiSdkPath || ''  // 空字符串表示使用默认路径
                         }
                     });
                 }
@@ -584,6 +611,9 @@ export class CreateProjectPanel {
                             document.getElementById('saveLocation').value = message.folderPath;
                             hideError(); // 清除错误消息
                             validateForm();
+                            break;
+                        case 'sdkPathSelected':
+                            document.getElementById('honeyguiSdkPath').value = message.sdkPath;
                             break;
                         case 'error':
                             // 显示错误消息给用户（不使用alert，改用页面内显示）
@@ -633,16 +663,45 @@ export class CreateProjectPanel {
             WebviewUtils.handleWebviewError(this._panel.webview, 'Failed to select folder');
         }
     }
+    
+    /**
+     * 选择 HoneyGUI SDK 路径
+     */
+    private async _selectSdkPath(): Promise<void> {
+        try {
+            const options: vscode.OpenDialogOptions = {
+                canSelectFolders: true,
+                canSelectFiles: false,
+                canSelectMany: false,
+                openLabel: 'Select HoneyGUI SDK location'
+            };
+            
+            const result = await vscode.window.showOpenDialog(options);
+            if (result && result.length > 0) {
+                this._panel.webview.postMessage({
+                    command: 'sdkPathSelected',
+                    sdkPath: result[0].fsPath
+                });
+            }
+        } catch (error) {
+            console.error('选择 SDK 路径失败:', error);
+            WebviewUtils.handleWebviewError(this._panel.webview, 'Failed to select SDK path');
+        }
+    }
 
     /**
      * 创建项目
      */
     private async _createProject(config: any): Promise<void> {
         try {
-            const { projectName, saveLocation, appId, resolution, minSdk, pixelMode } = config;
+            const { projectName, saveLocation, appId, resolution, minSdk, pixelMode, honeyguiSdkPath } = config;
 
             // 记录日志用于调试
-            console.log(`[CreateProjectPanel] Creating project: projectName=${projectName}, saveLocation=${saveLocation}, appId=${appId}`);
+            console.log(`[CreateProjectPanel] Creating project: projectName=${projectName}, saveLocation=${saveLocation}, appId=${appId}, sdkPath=${honeyguiSdkPath}`);
+
+            // 设置默认 SDK 路径
+            const sdkPath = honeyguiSdkPath || path.join(require('os').homedir(), '.HoneyGUI-SDK');
+            console.log(`[CreateProjectPanel] Using SDK path: ${sdkPath}`);
 
             // 验证必填字段
             if (!projectName || !saveLocation || !appId) {
@@ -701,7 +760,7 @@ export class CreateProjectPanel {
             vscode.window.showInformationMessage(`Creating project: ${projectName}...`);
             
             // 创建项目结构
-            await this._createProjectStructure(projectPath, projectName, appId, resolution, minSdk, pixelMode);
+            await this._createProjectStructure(projectPath, projectName, appId, resolution, minSdk, pixelMode, honeyguiSdkPath);
             
             // 显示成功消息
             this._panel.webview.postMessage({
@@ -746,7 +805,8 @@ export class CreateProjectPanel {
         appId: string,
         resolution: string,
         minSdk: string,
-        pixelMode: string
+        pixelMode: string,
+        honeyguiSdkPath?: string
     ): Promise<void> {
         // 创建目录结构
         fs.mkdirSync(projectPath, { recursive: true });
@@ -784,6 +844,7 @@ export class CreateProjectPanel {
             minSdk: minSdk,
             pixelMode: pixelMode,
             mainHmlFile: `ui/main/${hmlFileName}`, // 使用新的文件名
+            honeyguiSdkPath: honeyguiSdkPath || path.join(require('os').homedir(), '.HoneyGUI-SDK'),
             created: new Date().toISOString()
         };
 
@@ -792,6 +853,40 @@ export class CreateProjectPanel {
             JSON.stringify(projectConfig, null, 2),
             'utf8'
         );
+
+        // 拷贝 HoneyGUI SDK 的 win32_sim 目录到项目的 src 目录
+        const sdkPath = honeyguiSdkPath || path.join(require('os').homedir(), '.HoneyGUI-SDK');
+        const win32SimSource = path.join(sdkPath, 'win32_sim');
+        const win32SimDest = path.join(projectPath, 'src', 'win32_sim');
+
+        if (fs.existsSync(win32SimSource)) {
+            this._copyDirectory(win32SimSource, win32SimDest);
+            console.log(`[CreateProjectPanel] Copied win32_sim from ${win32SimSource} to ${win32SimDest}`);
+        } else {
+            console.warn(`[CreateProjectPanel] win32_sim not found at ${win32SimSource}`);
+        }
+    }
+
+    /**
+     * 递归拷贝目录
+     */
+    private _copyDirectory(source: string, destination: string): void {
+        if (!fs.existsSync(destination)) {
+            fs.mkdirSync(destination, { recursive: true });
+        }
+
+        const entries = fs.readdirSync(source, { withFileTypes: true });
+
+        for (const entry of entries) {
+            const srcPath = path.join(source, entry.name);
+            const destPath = path.join(destination, entry.name);
+
+            if (entry.isDirectory()) {
+                this._copyDirectory(srcPath, destPath);
+            } else {
+                fs.copyFileSync(srcPath, destPath);
+            }
+        }
     }
 
     /**
