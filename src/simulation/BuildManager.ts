@@ -241,30 +241,6 @@ CONFIG_REALTEK_BUILD_LITE3D=y
             `PROJECT_ROOT = '${sdkPathNormalized}'`
         );
         
-        // 如果没有 PROJECT_ROOT，则直接修改 TOOL_ROOT 和 RTK_GUI_ENGINE
-        const toolRoot = path.join(this.sdkPath, 'tool', 'scons-tool').replace(/\\/g, '/');
-        const rtkGuiEngine = path.join(this.sdkPath, 'realgui').replace(/\\/g, '/');
-        
-        content = content.replace(
-            /TOOL_ROOT\s*=\s*os\.path\.join\(PROJECT_ROOT,\s*['"][^'"]+['"]\)/,
-            `TOOL_ROOT = '${toolRoot}'`
-        );
-        
-        content = content.replace(
-            /RTK_GUI_ENGINE\s*=\s*os\.path\.join\(PROJECT_ROOT,\s*['"][^'"]+['"]\)/,
-            `RTK_GUI_ENGINE = '${rtkGuiEngine}'`
-        );
-        
-        // 兼容旧格式：修改 autogen 路径
-        content = content.replace(
-            /GUI_AUTOGEN_CODE\s*=\s*os\.path\.abspath\(['"]\.\.\/\.\.\/autogen\/['"]\)/g,
-            "GUI_AUTOGEN_CODE = os.path.abspath('./autogen/')"
-        );
-        content = content.replace(
-            /GUI_AUTOGEN_CODE\s*=\s*os\.path\.abspath\(['"]\.\/\.\.\/autogen\/['"]\)/g,
-            "GUI_AUTOGEN_CODE = os.path.abspath('./autogen/')"
-        );
-        
         fs.writeFileSync(sconstructPath, content, 'utf-8');
         
         this.log('SConstruct 修改完成');
