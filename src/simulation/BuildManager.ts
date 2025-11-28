@@ -233,21 +233,29 @@ CONFIG_REALTEK_BUILD_LITE3D=y
 
         let content = fs.readFileSync(sconstructPath, 'utf-8');
         
-        // 修改 TOOL_ROOT 为 SDK 的绝对路径
-        const toolRoot = path.join(this.sdkPath, 'tool', 'scons-tool').replace(/\\/g, '/');
+        const sdkPathNormalized = this.sdkPath.replace(/\\/g, '/');
+        
+        // 修改 PROJECT_ROOT 为 SDK 路径
         content = content.replace(
-            /TOOL_ROOT\s*=\s*["'][^"']+["']/,
-            `TOOL_ROOT="${toolRoot}"`
+            /PROJECT_ROOT\s*=\s*os\.path\.dirname\(os\.getcwd\(\)\)/,
+            `PROJECT_ROOT = '${sdkPathNormalized}'`
         );
         
-        // 修改 RTK_GUI_ENGINE 为 SDK 的绝对路径
+        // 如果没有 PROJECT_ROOT，则直接修改 TOOL_ROOT 和 RTK_GUI_ENGINE
+        const toolRoot = path.join(this.sdkPath, 'tool', 'scons-tool').replace(/\\/g, '/');
         const rtkGuiEngine = path.join(this.sdkPath, 'realgui').replace(/\\/g, '/');
+        
         content = content.replace(
-            /RTK_GUI_ENGINE\s*=\s*os\.path\.abspath\(['"][^'"]+['"]\)/,
+            /TOOL_ROOT\s*=\s*os\.path\.join\(PROJECT_ROOT,\s*['"][^'"]+['"]\)/,
+            `TOOL_ROOT = '${toolRoot}'`
+        );
+        
+        content = content.replace(
+            /RTK_GUI_ENGINE\s*=\s*os\.path\.join\(PROJECT_ROOT,\s*['"][^'"]+['"]\)/,
             `RTK_GUI_ENGINE = '${rtkGuiEngine}'`
         );
         
-        // 修改 autogen 路径：从 ./../autogen/ 改为 ./autogen/
+        // 兼容旧格式：修改 autogen 路径
         content = content.replace(
             /GUI_AUTOGEN_CODE\s*=\s*os\.path\.abspath\(['"]\.\.\/\.\.\/autogen\/['"]\)/g,
             "GUI_AUTOGEN_CODE = os.path.abspath('./autogen/')"
