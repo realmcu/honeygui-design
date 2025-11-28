@@ -240,6 +240,13 @@ CONFIG_REALTEK_BUILD_LITE3D=y
             `TOOL_ROOT="${toolRoot}"`
         );
         
+        // 修改 RTK_GUI_ENGINE 为 SDK 的绝对路径
+        const rtkGuiEngine = path.join(this.sdkPath, 'realgui').replace(/\\/g, '/');
+        content = content.replace(
+            /RTK_GUI_ENGINE\s*=\s*os\.path\.abspath\(['"][^'"]+['"]\)/,
+            `RTK_GUI_ENGINE = '${rtkGuiEngine}'`
+        );
+        
         // 修改 autogen 路径：从 ./../autogen/ 改为 ./autogen/
         content = content.replace(
             /GUI_AUTOGEN_CODE\s*=\s*os\.path\.abspath\(['"]\.\.\/\.\.\/autogen\/['"]\)/g,
