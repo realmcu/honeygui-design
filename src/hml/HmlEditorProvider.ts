@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import * as fs from 'fs';
 import { DesignerPanel } from '../designer/DesignerPanel';
 import { ProjectUtils } from '../utils/ProjectUtils';
 import { logger } from '../utils/Logger';

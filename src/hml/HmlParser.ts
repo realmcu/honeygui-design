@@ -5,6 +5,7 @@
 
 import { XMLParser } from 'fast-xml-parser';
 import { Component, Meta, View, Document, ComponentPosition } from './types';
+import { logger } from '../utils/Logger';
 
 /**
  * 组件注册表 - 集中管理所有支持的组件类型
@@ -108,8 +109,7 @@ export class HmlParser {
 
         // 使用改进的组件验证
         if (!ComponentRegistry.isValidComponent(key)) {
-          console.warn(`[HoneyGUI] 跳过未知组件: ${key}`);
-          console.warn(`[HoneyGUI] 提示: 如果这是自定义组件，请使用 'custom_' 前缀或注册到组件表`);
+          logger.warn(`[HoneyGUI] 跳过未知组件: ${key}, 提示: 如果这是自定义组件，请使用 'custom_' 前缀或注册到组件表`);
           return;
         }
 

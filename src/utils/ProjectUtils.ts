@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { ProjectConfig, DEFAULT_PROJECT_CONFIG } from '../common/ProjectConfig';
+import { logger } from './Logger';
 
 /**
  * 项目工具类
@@ -44,7 +45,7 @@ export class ProjectUtils {
                 ...config
             } as ProjectConfig;
         } catch (error) {
-            console.error(`读取项目配置失败: ${error}`);
+            logger.error(`读取项目配置失败: ${error}`);
             return {
                 name: path.basename(projectRoot),
                 ...DEFAULT_PROJECT_CONFIG

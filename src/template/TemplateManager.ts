@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { ProjectTemplate, TemplateVariables } from './ProjectTemplate';
 import { promisify } from 'util';
+import { logger } from '../utils/Logger';
 
 /**
  * 模板管理器类，负责模板的发现、加载和应用
@@ -67,12 +68,12 @@ export class TemplateManager {
               const template = await ProjectTemplate.loadFromDir(currentTemplateDir);
               this.templates.set(template.getId(), template);
             } catch (error) {
-              console.warn(`加载模板失败 (${currentTemplateDir}): ${error instanceof Error ? error.message : String(error)}`);
+              logger.warn(`加载模板失败 (${currentTemplateDir}): ${error instanceof Error ? error.message : String(error)}`);
             }
           }
         }
       } catch (error) {
-        console.warn(`扫描模板目录失败 (${templateDir}): ${error instanceof Error ? error.message : String(error)}`);
+        logger.warn(`扫描模板目录失败 (${templateDir}): ${error instanceof Error ? error.message : String(error)}`);
       }
     }
 
@@ -98,7 +99,7 @@ export class TemplateManager {
       const template = await ProjectTemplate.loadFromDir(defaultTemplateDir);
       this.templates.set(template.getId(), template);
     } catch (error) {
-      console.error('加载默认模板失败:', error);
+      logger.error(`加载默认模板失败: ${error}`);
     }
   }
 

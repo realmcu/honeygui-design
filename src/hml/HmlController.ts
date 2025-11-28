@@ -1,4 +1,3 @@
-import * as path from 'path';
 import * as fs from 'fs';
 import { HmlParser } from './HmlParser';
 import { Document as HmlDocument, Component } from './types';

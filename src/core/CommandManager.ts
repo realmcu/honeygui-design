@@ -1,11 +1,9 @@
 import * as vscode from 'vscode';
 import { logger } from '../utils/Logger';
 import { DesignerPanel } from '../designer/DesignerPanel';
-import { DesignerPanelFactory } from '../designer/DesignerPanelFactory';
 import { CreateProjectPanel } from '../designer/CreateProjectPanel';
 import * as path from 'path';
 import * as fs from 'fs';
-import { HmlEditorProvider } from '../hml/HmlEditorProvider';
 
 /**
  * HoneyGUI命令管理器

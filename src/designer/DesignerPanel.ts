@@ -1,10 +1,6 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
-import * as fs from 'fs';
 import { logger } from '../utils/Logger';
-import { ProjectUtils } from '../utils/ProjectUtils';
 import { HmlController } from '../hml/HmlController';
-import { WebviewUtils } from '../common/WebviewUtils';
 import { SaveManager } from './SaveManager';
 import { AssetManager } from './AssetManager';
 import { CodeGenManager } from './CodeGenManager';
@@ -12,7 +8,6 @@ import { ComponentManager } from './ComponentManager';
 import { FileManager } from './FileManager';
 import { MessageHandler } from './MessageHandler';
 import { CodeGenOptions } from '../codegen/honeygui';
-
 import { WebviewContentProvider } from './WebviewContentProvider';
 import { DesignerService } from './DesignerService';
 

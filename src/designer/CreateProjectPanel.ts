@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { PreviewService } from '../preview/PreviewService';
 import { TemplateManager } from '../template/TemplateManager';
 import { HmlTemplateManager } from '../hml/HmlTemplateManager';
 import { WebviewUtils } from '../common/WebviewUtils';
+import { logger } from '../utils/Logger';
 
 /**
  * 项目创建面板管理类
@@ -155,7 +155,7 @@ export class CreateProjectPanel {
                 });
             }
         } catch (error) {
-            console.error('选择文件夹失败:', error);
+            logger.error(`选择文件夹失败: ${error}`);
             WebviewUtils.handleWebviewError(this._panel.webview, 'Failed to select folder');
         }
     }
@@ -180,7 +180,7 @@ export class CreateProjectPanel {
                 });
             }
         } catch (error) {
-            console.error('选择 SDK 路径失败:', error);
+            logger.error(`选择 SDK 路径失败: ${error}`);
             WebviewUtils.handleWebviewError(this._panel.webview, 'Failed to select SDK path');
         }
     }
@@ -193,15 +193,15 @@ export class CreateProjectPanel {
             const { projectName, saveLocation, appId, resolution, minSdk, pixelMode, honeyguiSdkPath } = config;
 
             // 记录日志用于调试
-            console.log(`[CreateProjectPanel] Creating project: projectName=${projectName}, saveLocation=${saveLocation}, appId=${appId}, sdkPath=${honeyguiSdkPath}`);
+            logger.info(`[CreateProjectPanel] Creating project: projectName=${projectName}, saveLocation=${saveLocation}, appId=${appId}, sdkPath=${honeyguiSdkPath}`);
 
             // 设置默认 SDK 路径
             const sdkPath = honeyguiSdkPath || path.join(require('os').homedir(), '.HoneyGUI-SDK');
-            console.log(`[CreateProjectPanel] Using SDK path: ${sdkPath}`);
+            logger.info(`[CreateProjectPanel] Using SDK path: ${sdkPath}`);
 
             // 验证必填字段
             if (!projectName || !saveLocation || !appId) {
-                console.error('[CreateProjectPanel] Validation failed: Missing required fields');
+                logger.error('[CreateProjectPanel] Validation failed: Missing required fields');
                 this._panel.webview.postMessage({
                     command: 'error',
                     text: '请填写所有必填字段 (项目名称、保存位置、APP ID)'
@@ -212,7 +212,7 @@ export class CreateProjectPanel {
             // 验证项目名称格式
             const invalidChars = /[<>:*"?|\\/]/;
             if (invalidChars.test(projectName)) {
-                console.error(`[CreateProjectPanel] Invalid project name: ${projectName}`);
+                logger.error(`[CreateProjectPanel] Invalid project name: ${projectName}`);
                 this._panel.webview.postMessage({
                     command: 'error',
                     text: '项目名称包含非法字符，不能包含: < > : * " ? | \\ /'
@@ -221,21 +221,21 @@ export class CreateProjectPanel {
             }
 
             const projectPath = path.join(saveLocation, projectName);
-            console.log(`[CreateProjectPanel] Full project path: ${projectPath}`);
+            logger.info(`[CreateProjectPanel] Full project path: ${projectPath}`);
 
             // 检查项目路径是否已存在（增强检测）
             try {
                 if (fs.existsSync(projectPath)) {
                     const stats = fs.statSync(projectPath);
                     if (stats.isDirectory()) {
-                        console.error(`[CreateProjectPanel] Project directory already exists: ${projectPath}`);
+                        logger.error(`[CreateProjectPanel] Project directory already exists: ${projectPath}`);
                         this._panel.webview.postMessage({
                             command: 'error',
                             text: `项目已存在: "${projectName}"\n\n目录 "${projectPath}" 已存在。\n\n请选择其他名称或删除现有项目。`
                         });
                         return;
                     } else {
-                        console.error(`[CreateProjectPanel] Path exists but is not a directory: ${projectPath}`);
+                        logger.error(`[CreateProjectPanel] Path exists but is not a directory: ${projectPath}`);
                         this._panel.webview.postMessage({
                             command: 'error',
                             text: `无法创建项目: "${projectPath}" 已存在且不是一个目录`
@@ -244,7 +244,7 @@ export class CreateProjectPanel {
                     }
                 }
             } catch (error) {
-                console.error(`[CreateProjectPanel] Error checking path existence: ${error}`);
+                logger.error(`[CreateProjectPanel] Error checking path existence: ${error}`);
                 this._panel.webview.postMessage({
                     command: 'error',
                     text: `检查项目路径时出错: ${error instanceof Error ? error.message : '未知错误'}`
@@ -284,7 +284,7 @@ export class CreateProjectPanel {
             this.dispose();
             
         } catch (error) {
-            console.error('创建项目失败:', error);
+            logger.error(`创建项目失败: ${error}`);
             this._panel.webview.postMessage({
                 command: 'error',
                 text: `Failed to create project: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -358,9 +358,9 @@ export class CreateProjectPanel {
         const win32SimDest = path.join(projectPath, 'src', 'win32_sim');
         if (fs.existsSync(win32SimSource)) {
             this._copyDirectory(win32SimSource, win32SimDest);
-            console.log(`[CreateProjectPanel] Copied win32_sim`);
+            logger.info(`[CreateProjectPanel] Copied win32_sim`);
         } else {
-            console.warn(`[CreateProjectPanel] win32_sim not found at ${win32SimSource}`);
+            logger.warn(`[CreateProjectPanel] win32_sim not found at ${win32SimSource}`);
         }
 
         // 拷贝 tool 目录到 src
@@ -368,9 +368,9 @@ export class CreateProjectPanel {
         const toolDest = path.join(projectPath, 'src', 'tool');
         if (fs.existsSync(toolSource)) {
             this._copyDirectory(toolSource, toolDest);
-            console.log(`[CreateProjectPanel] Copied tool`);
+            logger.info(`[CreateProjectPanel] Copied tool`);
         } else {
-            console.warn(`[CreateProjectPanel] tool not found at ${toolSource}`);
+            logger.warn(`[CreateProjectPanel] tool not found at ${toolSource}`);
         }
 
         // 拷贝 realgui 目录到 src
@@ -378,9 +378,9 @@ export class CreateProjectPanel {
         const realguiDest = path.join(projectPath, 'src', 'realgui');
         if (fs.existsSync(realguiSource)) {
             this._copyDirectory(realguiSource, realguiDest);
-            console.log(`[CreateProjectPanel] Copied realgui`);
+            logger.info(`[CreateProjectPanel] Copied realgui`);
         } else {
-            console.warn(`[CreateProjectPanel] realgui not found at ${realguiSource}`);
+            logger.warn(`[CreateProjectPanel] realgui not found at ${realguiSource}`);
         }
     }
 
