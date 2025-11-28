@@ -17,7 +17,7 @@ export class BuildManager {
     constructor(projectRoot: string, sdkPath: string) {
         this.projectRoot = projectRoot;
         this.sdkPath = sdkPath;
-        this.buildDir = path.join(projectRoot, '.honeygui-build');
+        this.buildDir = path.join(projectRoot, '.honeygui-build', 'win32_sim');
         this.outputChannel = vscode.window.createOutputChannel('HoneyGUI Simulation');
     }
 
@@ -27,14 +27,43 @@ export class BuildManager {
     async setupBuildDir(): Promise<void> {
         this.log('准备编译目录...');
 
-        // 创建编译目录
-        if (!fs.existsSync(this.buildDir)) {
-            fs.mkdirSync(this.buildDir, { recursive: true });
+        const parentDir = path.dirname(this.buildDir);
+        
+        // 创建 .honeygui-build 目录
+        if (!fs.existsSync(parentDir)) {
+            fs.mkdirSync(parentDir, { recursive: true });
         }
 
-        // 创建子目录
-        fs.mkdirSync(path.join(this.buildDir, 'src'), { recursive: true });
-        fs.mkdirSync(path.join(this.buildDir, 'build'), { recursive: true });
+        // 拷贝 SDK 的 win32_sim 到 .honeygui-build/win32_sim
+        const sdkWin32Sim = path.join(this.sdkPath, 'win32_sim');
+        if (!fs.existsSync(sdkWin32Sim)) {
+            throw new Error(`SDK win32_sim 目录不存在: ${sdkWin32Sim}`);
+        }
+
+        // 如果目录不存在或需要更新，则拷贝
+        if (!fs.existsSync(this.buildDir)) {
+            this.log('拷贝 win32_sim...');
+            this.copyDirectory(sdkWin32Sim, this.buildDir);
+            this.log('win32_sim 拷贝完成');
+        } else {
+            this.log('win32_sim 已存在，跳过拷贝');
+        }
+
+        // 拷贝 Kconfig.gui
+        const kconfigSource = path.join(this.sdkPath, 'Kconfig.gui');
+        const kconfigDest = path.join(this.buildDir, 'Kconfig.gui');
+        if (fs.existsSync(kconfigSource)) {
+            fs.copyFileSync(kconfigSource, kconfigDest);
+            this.log('Kconfig.gui 拷贝完成');
+        } else {
+            this.log('警告: Kconfig.gui 不存在');
+        }
+
+        // 生成 .config 文件
+        this.generateConfig();
+
+        // 修改 SConstruct
+        this.modifySConstruct();
 
         // 更新 .gitignore
         await this.updateGitignore();
@@ -49,55 +78,18 @@ export class BuildManager {
         this.log('拷贝生成的代码...');
 
         const srcAutogen = path.join(this.projectRoot, 'src', 'autogen');
-        const destAutogen = path.join(this.buildDir, 'src', 'autogen');
+        const destAutogen = path.join(this.buildDir, 'autogen');
 
         if (fs.existsSync(srcAutogen)) {
+            // 清理旧的 autogen 目录
+            if (fs.existsSync(destAutogen)) {
+                fs.rmSync(destAutogen, { recursive: true, force: true });
+            }
             this.copyDirectory(srcAutogen, destAutogen);
             this.log('代码拷贝完成');
         } else {
             throw new Error(`生成的代码目录不存在: ${srcAutogen}`);
         }
-    }
-
-    /**
-     * 拷贝 SDK 的 win32_sim
-     */
-    async copySdkFiles(): Promise<void> {
-        this.log('拷贝 SDK 文件...');
-
-        const sdkWin32Sim = path.join(this.sdkPath, 'win32_sim');
-        const destWin32Sim = path.join(this.buildDir, 'win32_sim');
-
-        if (!fs.existsSync(sdkWin32Sim)) {
-            throw new Error(`SDK win32_sim 目录不存在: ${sdkWin32Sim}`);
-        }
-
-        // 只在首次或不存在时拷贝
-        if (!fs.existsSync(destWin32Sim)) {
-            this.copyDirectory(sdkWin32Sim, destWin32Sim);
-            this.log('SDK 文件拷贝完成');
-        } else {
-            this.log('SDK 文件已存在，跳过拷贝');
-        }
-    }
-
-    /**
-     * 生成 SConstruct
-     */
-    async generateSConstruct(projectName: string): Promise<void> {
-        this.log('生成 SConstruct...');
-
-        const generator = new SConstructGenerator();
-        const content = generator.generate({
-            sdkPath: this.sdkPath,
-            buildDir: this.buildDir,
-            projectName
-        });
-
-        const sconstruct = path.join(this.buildDir, 'SConstruct');
-        fs.writeFileSync(sconstruct, content, 'utf-8');
-
-        this.log('SConstruct 生成完成');
     }
 
     /**
@@ -145,6 +137,115 @@ export class BuildManager {
     getExecutablePath(): string {
         const exeName = process.platform === 'win32' ? 'gui.exe' : 'gui';
         return path.join(this.buildDir, 'build', exeName);
+    }
+
+    /**
+     * 生成 .config 文件
+     */
+    private generateConfig(): void {
+        this.log('生成 .config 文件...');
+
+        const kconfigPath = path.join(this.buildDir, 'Kconfig.gui');
+        
+        if (!fs.existsSync(kconfigPath)) {
+            this.log('警告: Kconfig.gui 不存在，使用默认配置');
+            this.generateDefaultConfig();
+            return;
+        }
+
+        // 解析 Kconfig.gui
+        const kconfigContent = fs.readFileSync(kconfigPath, 'utf-8');
+        const configLines: string[] = [];
+
+        // 启用 HoneyGUI 框架
+        configLines.push('CONFIG_REALTEK_HONEYGUI=y');
+
+        // 解析所有 config 项，只启用 Feature Configuration 中的项
+        let inFeatureMenu = false;
+        const lines = kconfigContent.split('\n');
+        
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            
+            // 检测进入 Feature Configuration 菜单
+            if (line.includes('HoneyGUI Feature Configuration')) {
+                inFeatureMenu = true;
+                continue;
+            }
+            
+            // 检测退出菜单
+            if (inFeatureMenu && line === 'endmenu') {
+                inFeatureMenu = false;
+                continue;
+            }
+            
+            // 在 Feature 菜单中，提取 config 项
+            if (inFeatureMenu && line.startsWith('config ')) {
+                const configName = line.replace('config ', '').trim();
+                if (configName) {
+                    configLines.push(`${configName}=y`);
+                }
+            }
+        }
+
+        const configContent = configLines.join('\n') + '\n';
+        const configPath = path.join(this.buildDir, '.config');
+        fs.writeFileSync(configPath, configContent, 'utf-8');
+        
+        this.log(`.config 文件生成完成，启用了 ${configLines.length} 个配置项`);
+    }
+
+    /**
+     * 生成默认 .config（当 Kconfig.gui 不存在时）
+     */
+    private generateDefaultConfig(): void {
+        const configContent = `CONFIG_REALTEK_HONEYGUI=y
+CONFIG_REALTEK_BUILD_CJSON=y
+CONFIG_REALTEK_BUILD_WEB=y
+CONFIG_REALTEK_BUILD_PINYIN=y
+CONFIG_REALTEK_BUILD_U8G2=y
+CONFIG_REALTEK_BUILD_LITE_GFX=y
+CONFIG_REALTEK_BUILD_LETTER_SHELL=y
+CONFIG_REALTEK_BUILD_MONKEY_TEST=y
+CONFIG_REALTEK_BUILD_GUI_BOX2D=y
+CONFIG_REALTEK_BUILD_GUI_XML_DOM=y
+CONFIG_REALTEK_BUILD_LITE3D=y
+`;
+
+        const configPath = path.join(this.buildDir, '.config');
+        fs.writeFileSync(configPath, configContent, 'utf-8');
+        
+        this.log('.config 文件生成完成（使用默认配置）');
+    }
+
+    /**
+     * 修改 SConstruct 文件
+     */
+    private modifySConstruct(): void {
+        this.log('修改 SConstruct...');
+
+        const sconstructPath = path.join(this.buildDir, 'SConstruct');
+        
+        if (!fs.existsSync(sconstructPath)) {
+            this.log('警告: SConstruct 不存在');
+            return;
+        }
+
+        let content = fs.readFileSync(sconstructPath, 'utf-8');
+        
+        // 修改 autogen 路径：从 ./../autogen/ 改为 ./autogen/
+        content = content.replace(
+            /GUI_AUTOGEN_CODE\s*=\s*os\.path\.abspath\(['"]\.\.\/\.\.\/autogen\/['"]\)/g,
+            "GUI_AUTOGEN_CODE = os.path.abspath('./autogen/')"
+        );
+        content = content.replace(
+            /GUI_AUTOGEN_CODE\s*=\s*os\.path\.abspath\(['"]\.\/\.\.\/autogen\/['"]\)/g,
+            "GUI_AUTOGEN_CODE = os.path.abspath('./autogen/')"
+        );
+        
+        fs.writeFileSync(sconstructPath, content, 'utf-8');
+        
+        this.log('SConstruct 修改完成');
     }
 
     /**

@@ -140,10 +140,6 @@ export class SimulationRunner {
 
         await this.buildManager.setupBuildDir();
         await this.buildManager.copyGeneratedCode();
-        await this.buildManager.copySdkFiles();
-
-        const projectName = path.basename(this.projectRoot);
-        await this.buildManager.generateSConstruct(projectName);
 
         this.log('编译环境准备完成');
     }

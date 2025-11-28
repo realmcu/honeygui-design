@@ -54,14 +54,14 @@ env.Append(CPPPATH=[
     os.path.join(HONEYGUI_SDK, 'realgui/widget'),
     os.path.join(HONEYGUI_SDK, 'realgui/engine'),
     os.path.join(HONEYGUI_SDK, 'realgui/core'),
-    os.path.join(PROJECT_PATH, 'win32_sim/port'),
+    os.path.join(HONEYGUI_SDK, 'win32_sim/port'),
     os.path.join(PROJECT_PATH, 'src'),
 ])
 
 # 链接库配置
 if sys.platform == 'win32':
     # Windows (MinGW)
-    SDL2_LIB_PATH = os.path.join(PROJECT_PATH, 'win32_sim/RTE/SDL2-2.26.0/x86_64-w64-mingw32/lib')
+    SDL2_LIB_PATH = os.path.join(HONEYGUI_SDK, 'win32_sim/RTE/SDL2-2.26.0/x86_64-w64-mingw32/lib')
     env.Append(LIBPATH=[SDL2_LIB_PATH])
     env.Append(LIBS=['SDL2main', 'SDL2', 'opengl32', 'mingw32'])
 else:
@@ -78,8 +78,8 @@ for root, dirs, files in os.walk(os.path.join(HONEYGUI_SDK, 'realgui')):
 
 # 2. 模拟器入口和适配层
 sim_src = []
-sim_src.append(os.path.join(PROJECT_PATH, 'win32_sim/main.c'))
-for root, dirs, files in os.walk(os.path.join(PROJECT_PATH, 'win32_sim/port')):
+sim_src.append(os.path.join(HONEYGUI_SDK, 'win32_sim/main.c'))
+for root, dirs, files in os.walk(os.path.join(HONEYGUI_SDK, 'win32_sim/port')):
     for file in files:
         if file.endswith('.c'):
             sim_src.append(os.path.join(root, file))
