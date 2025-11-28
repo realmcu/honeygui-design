@@ -130,6 +130,7 @@ export class DesignerPanel {
             () => {
                 if (this._panel.visible) {
                     this._update();
+                    DesignerPanel.currentPanel = this;
                 }
             },
             null,
