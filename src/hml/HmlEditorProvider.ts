@@ -6,6 +6,8 @@ import { HmlController } from './HmlController';
 import { ProjectUtils } from '../utils/ProjectUtils';
 import { logger } from '../utils/Logger';
 
+import { DesignerService } from '../designer/DesignerService';
+
 /**
  * HML 文件自定义编辑器提供器
  * 实现 CustomTextEditorProvider 接口，提供设计器视图
@@ -15,7 +17,7 @@ export class HmlEditorProvider implements vscode.CustomTextEditorProvider {
     private hmlController: HmlController;
 
     constructor(private readonly context: vscode.ExtensionContext) {
-        this.hmlController = new HmlController();
+        this.hmlController = DesignerService.getInstance().hmlController;
     }
 
     /**

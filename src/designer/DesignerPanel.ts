@@ -14,6 +14,7 @@ import { MessageHandler } from './MessageHandler';
 import { CodeGenOptions } from '../codegen/honeygui';
 
 import { WebviewContentProvider } from './WebviewContentProvider';
+import { DesignerService } from './DesignerService';
 
 /**
  * 设计器Webview面板管理类
@@ -53,80 +54,12 @@ export class DesignerPanel {
         return this._saveManager.isInTransaction();
     }
 
+
     /**
-     * 创建或获取现有的设计器面板
+     * 显示面板
      */
-    public static createOrShow(context: vscode.ExtensionContext, filePath?: string): DesignerPanel {
-        const column = vscode.window.activeTextEditor
-            ? vscode.window.activeTextEditor.viewColumn
-            : undefined;
-
-        // 如果已有面板，则显示并返回
-        if (DesignerPanel.currentPanel) {
-            DesignerPanel.currentPanel._panel.reveal(column);
-
-            // 如果提供了文件路径，加载该文件
-            if (filePath) {
-                DesignerPanel.currentPanel.loadFile(filePath);
-            }
-
-            return DesignerPanel.currentPanel;
-        }
-
-        // 创建新面板
-        // 计算本地资源根目录，允许webview访问扩展资源与项目assets目录
-        const localRoots: vscode.Uri[] = [
-            vscode.Uri.joinPath(context.extensionUri, 'src', 'designer', 'webview'),
-            vscode.Uri.joinPath(context.extensionUri, 'out', 'designer', 'webview')
-        ];
-        
-        logger.info(`[DesignerPanel] 创建面板，filePath: ${filePath}`);
-        
-        // 推断项目根目录：从HML文件路径向上查找包含project.json的目录
-        let projectRoot: string | undefined;
-        if (filePath) {
-            projectRoot = ProjectUtils.findProjectRoot(filePath);
-            if (projectRoot) {
-                logger.info(`[DesignerPanel] 找到项目根目录: ${projectRoot}`);
-                localRoots.push(vscode.Uri.file(projectRoot));
-            } else {
-                logger.warn(`[DesignerPanel] 未能从文件路径找到项目根目录: ${filePath}`);
-            }
-        }
-        
-        // 如果没找到project.json，尝试使用workspace
-        if (!projectRoot) {
-            projectRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-            if (projectRoot) {
-                logger.info(`[DesignerPanel] 使用workspace作为项目根: ${projectRoot}`);
-                localRoots.push(vscode.Uri.file(projectRoot));
-            } else {
-                logger.warn(`[DesignerPanel] 未找到workspace`);
-            }
-        }
-        
-        logger.info(`[DesignerPanel] localResourceRoots: ${localRoots.map(r => r.fsPath).join(', ')}`);
-
-        const panel = vscode.window.createWebviewPanel(
-            DesignerPanel.viewType,
-            'HoneyGUI 设计器',
-            column || vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                localResourceRoots: localRoots
-            }
-        );
-
-        DesignerPanel.currentPanel = new DesignerPanel(panel, context);
-
-        // 如果提供了文件路径，加载该文件，否则创建新文档
-        if (filePath) {
-            DesignerPanel.currentPanel.loadFile(filePath);
-        } else {
-            DesignerPanel.currentPanel.createNewDocument();
-        }
-
-        return DesignerPanel.currentPanel;
+    public reveal(column?: vscode.ViewColumn): void {
+        this._panel.reveal(column);
     }
 
     /**
@@ -137,8 +70,9 @@ export class DesignerPanel {
         this._extensionUri = context.extensionUri;
         this._context = context;
         
-        // Initialize Core Controllers
-        this._hmlController = new HmlController();
+        // Initialize Core Controllers from Shared Service
+        const designerService = DesignerService.getInstance();
+        this._hmlController = designerService.hmlController;
         this._saveManager = new SaveManager(this._hmlController);
         
         // Initialize Managers
@@ -149,7 +83,6 @@ export class DesignerPanel {
         
         // Initialize Message Handler
         this._messageHandler = new MessageHandler(
-            panel,
             this._assetManager,
             this._codeGenManager,
             this._componentManager,

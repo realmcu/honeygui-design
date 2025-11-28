@@ -10,7 +10,6 @@ import { HmlController } from '../hml/HmlController';
  * 消息处理器 - 负责分发来自Webview的消息
  */
 export class MessageHandler {
-    private readonly _panel: vscode.WebviewPanel;
     private readonly _assetManager: AssetManager;
     private readonly _codeGenManager: CodeGenManager;
     private readonly _componentManager: ComponentManager;
@@ -18,14 +17,12 @@ export class MessageHandler {
     private readonly _hmlController: HmlController;
 
     constructor(
-        panel: vscode.WebviewPanel,
         assetManager: AssetManager,
         codeGenManager: CodeGenManager,
         componentManager: ComponentManager,
         fileManager: FileManager,
         hmlController: HmlController
     ) {
-        this._panel = panel;
         this._assetManager = assetManager;
         this._codeGenManager = codeGenManager;
         this._componentManager = componentManager;
