@@ -233,6 +233,13 @@ CONFIG_REALTEK_BUILD_LITE3D=y
 
         let content = fs.readFileSync(sconstructPath, 'utf-8');
         
+        // 修改 TOOL_ROOT 为 SDK 的绝对路径
+        const toolRoot = path.join(this.sdkPath, 'tool', 'scons-tool').replace(/\\/g, '/');
+        content = content.replace(
+            /TOOL_ROOT\s*=\s*["'][^"']+["']/,
+            `TOOL_ROOT="${toolRoot}"`
+        );
+        
         // 修改 autogen 路径：从 ./../autogen/ 改为 ./autogen/
         content = content.replace(
             /GUI_AUTOGEN_CODE\s*=\s*os\.path\.abspath\(['"]\.\.\/\.\.\/autogen\/['"]\)/g,
