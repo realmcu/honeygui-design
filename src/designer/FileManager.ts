@@ -311,48 +311,4 @@ export class FileManager {
         });
     }
 
-    /**
-     * 处理转换路径为 webview URI 的请求
-     */
-    public handleConvertPathToWebviewUri(relativePath: string, requestId: string): void {
-        try {
-            if (!this._filePath) {
-                this._panel.webview.postMessage({
-                    command: 'webviewUriConverted',
-                    requestId,
-                    uri: relativePath,
-                    error: '没有文件路径'
-                });
-                return;
-            }
-
-            const projectRoot = ProjectUtils.findProjectRoot(this._filePath);
-            if (!projectRoot) {
-                this._panel.webview.postMessage({
-                    command: 'webviewUriConverted',
-                    requestId,
-                    uri: relativePath,
-                    error: '未找到项目根目录'
-                });
-                return;
-            }
-
-            // 转换相对路径为绝对路径
-            const absolutePath = path.join(projectRoot, relativePath);
-            const webviewUri = this._panel.webview.asWebviewUri(vscode.Uri.file(absolutePath));
-
-            this._panel.webview.postMessage({
-                command: 'webviewUriConverted',
-                requestId,
-                uri: webviewUri.toString()
-            });
-        } catch (error) {
-            this._panel.webview.postMessage({
-                command: 'webviewUriConverted',
-                requestId,
-                uri: relativePath,
-                error: error instanceof Error ? error.message : '转换失败'
-            });
-        }
-    }
 }

@@ -20,7 +20,10 @@ import { DesignerService } from './DesignerService';
  * 设计器Webview面板管理类
  */
 export class DesignerPanel {
+    /** @deprecated Use panelRegistry instead for multi-file support */
     public static currentPanel: DesignerPanel | undefined;
+    /** Registry of all active panels by file path */
+    private static panelRegistry: Map<string, DesignerPanel> = new Map();
     public static readonly viewType = 'honeyguiDesigner';
 
     private readonly _panel: vscode.WebviewPanel;
@@ -54,6 +57,19 @@ export class DesignerPanel {
         return this._saveManager.isInTransaction();
     }
 
+    /**
+     * 获取指定文件路径的面板
+     */
+    public static getPanel(filePath: string): DesignerPanel | undefined {
+        return DesignerPanel.panelRegistry.get(filePath);
+    }
+
+    /**
+     * 注册面板到 registry
+     */
+    public static registerPanel(filePath: string, panel: DesignerPanel): void {
+        DesignerPanel.panelRegistry.set(filePath, panel);
+    }
 
     /**
      * 显示面板
@@ -70,9 +86,9 @@ export class DesignerPanel {
         this._extensionUri = context.extensionUri;
         this._context = context;
         
-        // Initialize Core Controllers from Shared Service
-        const designerService = DesignerService.getInstance();
-        this._hmlController = designerService.hmlController;
+        // Initialize Core Controllers - each panel gets its own HmlController
+        // to support multiple files being edited simultaneously
+        this._hmlController = DesignerService.getInstance().createHmlController();
         this._saveManager = new SaveManager(this._hmlController);
         
         // Initialize Managers
@@ -216,6 +232,11 @@ export class DesignerPanel {
     }
     
     public dispose(): void {
+        // 从 registry 中移除
+        const filePath = this._fileManager.currentFilePath;
+        if (filePath) {
+            DesignerPanel.panelRegistry.delete(filePath);
+        }
         DesignerPanel.currentPanel = undefined;
 
         // 清理所有监听器

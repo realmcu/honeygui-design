@@ -18,20 +18,22 @@ export class DesignerPanelFactory {
             ? vscode.window.activeTextEditor.viewColumn
             : undefined;
 
-        // If a panel already exists, show it
-        if (DesignerPanel.currentPanel) {
-            DesignerPanel.currentPanel.reveal(column);
-
-            // If a file path is provided, load it
-            if (filePath) {
-                DesignerPanel.currentPanel.loadFile(filePath);
+        // Check if panel for this file already exists
+        if (filePath) {
+            const existingPanel = DesignerPanel.getPanel(filePath);
+            if (existingPanel) {
+                existingPanel.reveal(column);
+                return existingPanel;
             }
+        }
 
+        // Fallback: if no filePath, check currentPanel for backward compatibility
+        if (!filePath && DesignerPanel.currentPanel) {
+            DesignerPanel.currentPanel.reveal(column);
             return DesignerPanel.currentPanel;
         }
 
         // Create a new panel
-        // Calculate local resource roots to allow webview to access extension resources and project assets
         const localRoots: vscode.Uri[] = [
             vscode.Uri.joinPath(context.extensionUri, 'src', 'designer', 'webview'),
             vscode.Uri.joinPath(context.extensionUri, 'out', 'designer', 'webview')
@@ -39,30 +41,21 @@ export class DesignerPanelFactory {
         
         logger.info(`[DesignerPanelFactory] Creating panel, filePath: ${filePath}`);
         
-        // Infer project root: find the directory containing project.json from the HML file path
         let projectRoot: string | undefined;
         if (filePath) {
             projectRoot = ProjectUtils.findProjectRoot(filePath);
             if (projectRoot) {
                 logger.info(`[DesignerPanelFactory] Found project root: ${projectRoot}`);
                 localRoots.push(vscode.Uri.file(projectRoot));
-            } else {
-                logger.warn(`[DesignerPanelFactory] Could not find project root from file path: ${filePath}`);
             }
         }
         
-        // If project.json is not found, try to use workspace
         if (!projectRoot) {
             projectRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
             if (projectRoot) {
-                logger.info(`[DesignerPanelFactory] Using workspace as project root: ${projectRoot}`);
                 localRoots.push(vscode.Uri.file(projectRoot));
-            } else {
-                logger.warn(`[DesignerPanelFactory] Workspace not found`);
             }
         }
-        
-        logger.info(`[DesignerPanelFactory] localResourceRoots: ${localRoots.map(r => r.fsPath).join(', ')}`);
 
         const panel = vscode.window.createWebviewPanel(
             DesignerPanel.viewType,
@@ -77,9 +70,10 @@ export class DesignerPanelFactory {
         const designerPanel = new DesignerPanel(panel, context);
         DesignerPanel.currentPanel = designerPanel;
 
-        // If a file path is provided, load it; otherwise, create a new document
         if (filePath) {
             designerPanel.loadFile(filePath);
+            // Register in panelRegistry after file is set
+            DesignerPanel.registerPanel(filePath, designerPanel);
         } else {
             designerPanel.createNewDocument();
         }

@@ -1,9 +1,9 @@
-import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { HmlParser } from './HmlParser';
 import { Document as HmlDocument, Component } from './types';
 import { HmlSerializer } from './HmlSerializer';
+import { logger } from '../utils/Logger';
 
 /**
  * HML控制器类，协调解析器和序列化器的工作
@@ -41,12 +41,12 @@ export class HmlController {
             this._currentFilePath = filePath;
             this._documentVersion++;
 
-            console.log(`Successfully loaded HML file: ${filePath}`);
-            console.log(`Parsed ${document.view.components?.length || 0} components`);
+            logger.info(`[HmlController] 成功加载HML文件: ${filePath}`);
+            logger.debug(`[HmlController] 解析到 ${document.view.components?.length || 0} 个组件`);
 
             return document;
         } catch (error) {
-            console.error('加载HML文件失败:', error);
+            logger.error(`[HmlController] 加载HML文件失败: ${error}`);
             throw new Error(`加载HML文件失败: ${error instanceof Error ? error.message : '未知错误'}`);
         }
     }
@@ -58,7 +58,7 @@ export class HmlController {
      */
     public parseContent(content: string): HmlDocument {
         try {
-            console.log(`[HmlController] parseContent: 准备解析 HML 内容`);
+            logger.debug(`[HmlController] parseContent: 准备解析 HML 内容`);
 
             const document = this.parser.parse(content);
 
@@ -66,12 +66,11 @@ export class HmlController {
             this._currentDocument = document;
             this._documentVersion++;
 
-            console.log(`[HmlController] parseContent: 解析完成，文档版本号: ${this._documentVersion}`);
-            console.log(`[HmlController] 当前文档状态 - 组件数量: ${document.view?.components?.length || 0}`);
+            logger.debug(`[HmlController] parseContent: 解析完成，文档版本号: ${this._documentVersion}, 组件数量: ${document.view?.components?.length || 0}`);
 
             return document;
         } catch (error) {
-            console.error('[HmlController] 解析HML内容失败:', error);
+            logger.error(`[HmlController] 解析HML内容失败: ${error}`);
             throw new Error(`解析HML内容失败: ${error instanceof Error ? error.message : '未知错误'}`);
         }
     }
@@ -88,7 +87,7 @@ export class HmlController {
                 throw new Error('没有可保存的文档');
             }
 
-            console.log('[HmlController] 当前文档组件数量:', this._currentDocument.view.components?.length || 0);
+            logger.debug(`[HmlController] 当前文档组件数量: ${this._currentDocument.view.components?.length || 0}`);
 
             // 确定目标文件路径
             const targetPath = filePath || this._currentFilePath;
@@ -96,23 +95,19 @@ export class HmlController {
                 throw new Error('未指定保存路径');
             }
 
-            console.log('[HmlController] 保存路径:', targetPath);
+            logger.debug(`[HmlController] 保存路径: ${targetPath}`);
 
-            // 先序列化内容，打印出来看看
-            const serialized = this.serializer.serialize(this._currentDocument);
-            console.log('[HmlController] 序列化内容:', serialized);
-
-            // 保存文档（格式已统一，无需转换）
+            // 序列化并保存
             await this.serializer.serializeToFile(this._currentDocument, targetPath);
 
             // 更新当前文件路径
             this._currentFilePath = targetPath;
 
-            console.log(`Successfully saved HML file: ${targetPath}`);
+            logger.info(`[HmlController] 成功保存HML文件: ${targetPath}`);
 
             return targetPath;
         } catch (error) {
-            console.error('保存HML文档失败:', error);
+            logger.error(`[HmlController] 保存HML文档失败: ${error}`);
             throw new Error(`保存HML文档失败: ${error instanceof Error ? error.message : '未知错误'}`);
         }
     }
@@ -167,7 +162,7 @@ export class HmlController {
             this._currentDocument = { meta: {}, view: { components: [] } } as HmlDocument;
         }
 
-        console.log('[HmlController] updateFromFrontendComponents - 收到组件数:', frontendComponents.length);
+        logger.debug(`[HmlController] updateFromFrontendComponents - 收到组件数: ${frontendComponents.length}`);
         
         // 修复父子关系一致性
         this._ensureParentChildConsistency(frontendComponents);
@@ -176,7 +171,7 @@ export class HmlController {
         this._currentDocument.view.components = [...frontendComponents];
         this._documentVersion++;
         
-        console.log('[HmlController] updateFromFrontendComponents - 更新后组件数:', this._currentDocument.view.components.length);
+        logger.debug(`[HmlController] updateFromFrontendComponents - 更新后组件数: ${this._currentDocument.view.components.length}`);
     }
 
     /**
@@ -519,18 +514,10 @@ export class HmlController {
         // 格式已统一，直接返回所有组件
         const components = document.view.components || [];
         
-        console.log('[HmlController] prepareComponentsForFrontend - 原始组件数量:', components.length);
-        components.forEach(c => {
-            console.log(`  [原始] ${c.type}(id=${c.id}, parent=${c.parent || 'null'}, children=[${c.children?.join(', ') || ''}])`);
-        });
+        logger.debug(`[HmlController] prepareComponentsForFrontend - 组件数量: ${components.length}`);
         
         // 确保父子关系一致性
         this._ensureParentChildConsistency(components);
-        
-        console.log('[HmlController] prepareComponentsForFrontend - 修复后组件状态:');
-        components.forEach(c => {
-            console.log(`  [修复] ${c.type}(id=${c.id}, parent=${c.parent || 'null'}, children=[${c.children?.join(', ') || ''}])`);
-        });
         
         return components;
     }
@@ -551,7 +538,7 @@ export class HmlController {
                         parent.children = [];
                     }
                     if (!parent.children.includes(component.id)) {
-                        console.log(`  [修复] 将 ${component.id} 添加到父组件 ${parent.id} 的children数组`);
+                        logger.debug(`[HmlController] 修复: 将 ${component.id} 添加到父组件 ${parent.id} 的children数组`);
                         parent.children.push(component.id);
                     }
                 }
