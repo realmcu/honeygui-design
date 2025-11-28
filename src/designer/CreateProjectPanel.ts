@@ -350,60 +350,8 @@ export class CreateProjectPanel {
             'utf8'
         );
 
-        // 拷贝 HoneyGUI SDK 文件到项目
-        const sdkPath = honeyguiSdkPath || path.join(require('os').homedir(), '.HoneyGUI-SDK');
-
-        // 拷贝 win32_sim 目录到 src
-        const win32SimSource = path.join(sdkPath, 'win32_sim');
-        const win32SimDest = path.join(projectPath, 'src', 'win32_sim');
-        if (fs.existsSync(win32SimSource)) {
-            this._copyDirectory(win32SimSource, win32SimDest);
-            logger.info(`[CreateProjectPanel] Copied win32_sim`);
-        } else {
-            logger.warn(`[CreateProjectPanel] win32_sim not found at ${win32SimSource}`);
-        }
-
-        // 拷贝 tool 目录到 src
-        const toolSource = path.join(sdkPath, 'tool');
-        const toolDest = path.join(projectPath, 'src', 'tool');
-        if (fs.existsSync(toolSource)) {
-            this._copyDirectory(toolSource, toolDest);
-            logger.info(`[CreateProjectPanel] Copied tool`);
-        } else {
-            logger.warn(`[CreateProjectPanel] tool not found at ${toolSource}`);
-        }
-
-        // 拷贝 realgui 目录到 src
-        const realguiSource = path.join(sdkPath, 'realgui');
-        const realguiDest = path.join(projectPath, 'src', 'realgui');
-        if (fs.existsSync(realguiSource)) {
-            this._copyDirectory(realguiSource, realguiDest);
-            logger.info(`[CreateProjectPanel] Copied realgui`);
-        } else {
-            logger.warn(`[CreateProjectPanel] realgui not found at ${realguiSource}`);
-        }
-    }
-
-    /**
-     * 递归拷贝目录
-     */
-    private _copyDirectory(source: string, destination: string): void {
-        if (!fs.existsSync(destination)) {
-            fs.mkdirSync(destination, { recursive: true });
-        }
-
-        const entries = fs.readdirSync(source, { withFileTypes: true });
-
-        for (const entry of entries) {
-            const srcPath = path.join(source, entry.name);
-            const destPath = path.join(destination, entry.name);
-
-            if (entry.isDirectory()) {
-                this._copyDirectory(srcPath, destPath);
-            } else {
-                fs.copyFileSync(srcPath, destPath);
-            }
-        }
+        // SDK 路径已保存到 project.json，项目将直接引用 SDK 而不拷贝文件
+        logger.info(`[CreateProjectPanel] Project created, SDK path: ${projectConfig.honeyguiSdkPath || 'default'}`);
     }
 
     /**
