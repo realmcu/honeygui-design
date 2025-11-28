@@ -6,19 +6,10 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { HoneyGuiApiMapper } from './HoneyGuiApiMapper';
+import { Component } from '../../hml/types';
 
-export interface Component {
-  id: string;
-  type: string;
-  name: string;
-  position: { x: number; y: number; width: number; height: number };
-  parent: string | null;
-  children?: string[];
-  style?: { [key: string]: any };
-  data?: { [key: string]: any };
-  events?: { [key: string]: string };
-  visible?: boolean;
-}
+// Re-export for backward compatibility
+export { Component } from '../../hml/types';
 
 export interface CodeGenOptions {
   outputDir: string;

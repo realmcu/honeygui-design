@@ -71,9 +71,9 @@ export class DesignerPanelFactory {
         DesignerPanel.currentPanel = designerPanel;
 
         if (filePath) {
-            designerPanel.loadFile(filePath);
-            // Register in panelRegistry after file is set
+            // Register first, then load (so panel is tracked even if load fails)
             DesignerPanel.registerPanel(filePath, designerPanel);
+            designerPanel.loadFile(filePath);
         } else {
             designerPanel.createNewDocument();
         }

@@ -2,34 +2,10 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { logger } from '../utils/Logger';
+import { ProjectConfig, DEFAULT_PROJECT_CONFIG } from '../common/ProjectConfig';
 
-/**
- * 项目配置文件结构接口
- */
-export interface ProjectConfig {
-    name?: string;
-    version?: string;
-    description?: string;
-    author?: {
-        name?: string;
-        email?: string;
-    };
-    resolution?: string;
-    designer?: {
-        canvasBackgroundColor?: string;
-        gridSize?: number;
-        showGrid?: boolean;
-        snapToGrid?: boolean;
-        [key: string]: any;
-    };
-    preview?: {
-        runnerPath?: string;
-        autoDownload?: boolean;
-        timeoutMs?: number;
-        [key: string]: any;
-    };
-    [key: string]: any;
-}
+// Re-export for backward compatibility
+export { ProjectConfig } from '../common/ProjectConfig';
 
 /**
  * 项目配置加载器

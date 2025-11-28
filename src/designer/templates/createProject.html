@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create application</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src {{cspSource}} 'unsafe-inline'; script-src 'nonce-{{nonce}}';">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            min-height: 100vh;
+        }
+        h1 { font-size: 24px; margin-bottom: 20px; color: #ffffff; }
+        .tabs { display: flex; border-bottom: 1px solid #3e3e42; margin-bottom: 20px; }
+        .tab {
+            padding: 10px 20px; cursor: pointer; background-color: transparent;
+            border: none; color: #969696; font-size: 14px; transition: all 0.2s;
+            user-select: none; outline: none; position: relative; z-index: 10;
+        }
+        .tab.active { color: #007acc; border-bottom: 2px solid #007acc; }
+        .form-container {
+            background-color: #252526; border: 1px solid #3e3e42;
+            border-radius: 4px; padding: 20px;
+        }
+        .form-group { margin-bottom: 20px; width: 100%; }
+        label { display: block; margin-bottom: 8px; font-size: 14px; color: #d4d4d4; }
+        .form-control {
+            width: 100%; padding: 8px 12px; background-color: #3c3c3c;
+            border: 1px solid #3e3e42; border-radius: 3px; color: #d4d4d4;
+            font-size: 14px; box-sizing: border-box;
+        }
+        .form-control:focus { outline: none; border-color: #007acc; }
+        .input-group { display: flex; }
+        .input-group .form-control { flex: 1; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+        .btn-icon {
+            padding: 8px 12px; background-color: #0e639c; border: 1px solid #007acc;
+            border-left: none; border-top-right-radius: 3px; border-bottom-right-radius: 3px;
+            color: #ffffff; cursor: pointer; font-size: 14px;
+        }
+        .btn-icon:hover { background-color: #1177bb; }
+        select.form-control { cursor: pointer; }
+        .btn-create {
+            width: 100%; padding: 12px; background-color: #107c10;
+            border: 1px solid #107c10; border-radius: 4px; color: #ffffff;
+            font-size: 16px; font-weight: 500; cursor: pointer;
+            transition: background-color 0.2s; margin-top: 10px;
+        }
+        .btn-create:hover:not(:disabled) { background-color: #148514; }
+        .btn-create:disabled { background-color: #3c3c3c; border-color: #3e3e42; cursor: not-allowed; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .form-row .form-group { min-width: 0; }
+        @media (max-width: 768px) { .form-row { grid-template-columns: 1fr; } }
+        .error-message {
+            background-color: rgba(231, 76, 60, 0.15); border: 1px solid #e74c3c;
+            border-radius: 4px; color: #e74c3c; padding: 12px; margin-bottom: 20px;
+            white-space: pre-line; font-size: 14px; line-height: 1.4;
+        }
+        .error-message.hidden { display: none; }
+    </style>
+</head>
+<body>
+    <h1>Create project</h1>
+    <div id="errorMessage" class="error-message hidden"></div>
+    
+    <div class="tabs">
+        <button id="tab-empty" class="tab active">Create empty project</button>
+        <button id="tab-template" class="tab">Create template project</button>
+    </div>
+    
+    <div id="empty-tab" class="tab-content" style="display: block;">
+        <div class="form-container">
+            <div class="form-group">
+                <label for="projectName">Project name</label>
+                <input type="text" id="projectName" class="form-control" value="NewProject" />
+            </div>
+            
+            <div class="form-group">
+                <label for="saveLocation">Save location</label>
+                <div class="input-group">
+                    <input type="text" id="saveLocation" class="form-control" value="{{homeDir}}" />
+                    <button class="btn-icon" id="selectFolderButton">📁</button>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="appId">APP ID</label>
+                    <input type="text" id="appId" class="form-control" value="com.example.NewProject" />
+                </div>
+                <div class="form-group">
+                    <label for="resolution">Resolution</label>
+                    <select id="resolution" class="form-control">
+                        <option value="480X272">480X272</option>
+                        <option value="800X480">800X480</option>
+                        <option value="1024X600">1024X600</option>
+                        <option value="1280X720">1280X720</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="minSdk">Minimum SDK</label>
+                    <select id="minSdk" class="form-control">
+                        <option value="API 2: HoneyGUI V1.1.0">API 2: HoneyGUI V1.1.0</option>
+                        <option value="API 3: HoneyGUI V1.2.0">API 3: HoneyGUI V1.2.0</option>
+                        <option value="API 4: HoneyGUI V2.0.0">API 4: HoneyGUI V2.0.0</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="pixelMode">Pixel Mode</label>
+                    <select id="pixelMode" class="form-control">
+                        <option value="ARGB8888">ARGB8888</option>
+                        <option value="RGB565">RGB565</option>
+                        <option value="ARGB4444">ARGB4444</option>
+                        <option value="L8">L8</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="honeyguiSdkPath">HoneyGUI SDK Path</label>
+                <div class="input-group">
+                    <input type="text" id="honeyguiSdkPath" class="form-control" placeholder="Default: ~/.HoneyGUI-SDK" />
+                    <button class="btn-icon" id="selectSdkButton">📁</button>
+                </div>
+            </div>
+            
+            <button id="createButton" class="btn-create" disabled>Create</button>
+        </div>
+    </div>
+    
+    <div id="template-tab" class="tab-content" style="display: none;">
+        <div class="form-container">
+            <p>Template project feature coming soon.</p>
+        </div>
+    </div>
+    
+    <script nonce="{{nonce}}">
+        const vscode = acquireVsCodeApi();
+        
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            const content = document.getElementById(tabId + '-tab');
+            if (content) content.style.display = 'block';
+            const tab = document.getElementById('tab-' + tabId);
+            if (tab) tab.classList.add('active');
+            validateForm();
+        }
+        
+        function selectFolder() { vscode.postMessage({ command: 'selectFolder' }); }
+        function selectSdkPath() { vscode.postMessage({ command: 'selectSdkPath' }); }
+        
+        function validateForm() {
+            const projectName = document.getElementById('projectName').value.trim();
+            const saveLocation = document.getElementById('saveLocation').value.trim();
+            const createButton = document.getElementById('createButton');
+            if (projectName || saveLocation) hideError();
+            if (createButton) createButton.disabled = !projectName || !saveLocation;
+        }
+        
+        function createProject() {
+            vscode.postMessage({
+                command: 'createProject',
+                config: {
+                    projectName: document.getElementById('projectName').value.trim(),
+                    saveLocation: document.getElementById('saveLocation').value.trim(),
+                    appId: document.getElementById('appId').value.trim(),
+                    resolution: document.getElementById('resolution').value,
+                    minSdk: document.getElementById('minSdk').value,
+                    pixelMode: document.getElementById('pixelMode').value,
+                    honeyguiSdkPath: document.getElementById('honeyguiSdkPath').value.trim() || ''
+                }
+            });
+        }
+        
+        function showError(message) {
+            const el = document.getElementById('errorMessage');
+            el.textContent = message;
+            el.classList.remove('hidden');
+            setTimeout(() => hideError(), 5000);
+        }
+        
+        function hideError() {
+            document.getElementById('errorMessage').classList.add('hidden');
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('tab-empty')?.addEventListener('click', () => switchTab('empty'));
+            document.getElementById('tab-template')?.addEventListener('click', () => switchTab('template'));
+            document.getElementById('selectFolderButton')?.addEventListener('click', selectFolder);
+            document.getElementById('selectSdkButton')?.addEventListener('click', selectSdkPath);
+            document.getElementById('createButton')?.addEventListener('click', createProject);
+            
+            ['saveLocation', 'appId', 'projectName'].forEach(id => {
+                document.getElementById(id)?.addEventListener('input', validateForm);
+            });
+            ['resolution', 'minSdk', 'pixelMode'].forEach(id => {
+                document.getElementById(id)?.addEventListener('change', validateForm);
+            });
+            
+            document.getElementById('projectName')?.addEventListener('input', function() {
+                const appIdInput = document.getElementById('appId');
+                const name = this.value.trim();
+                if (appIdInput.value.startsWith('com.example.')) {
+                    appIdInput.value = 'com.example.' + name;
+                }
+            });
+            
+            validateForm();
+        });
+        
+        window.addEventListener('message', event => {
+            const msg = event.data;
+            if (msg.command === 'folderSelected') {
+                document.getElementById('saveLocation').value = msg.folderPath;
+                hideError();
+                validateForm();
+            } else if (msg.command === 'sdkPathSelected') {
+                document.getElementById('honeyguiSdkPath').value = msg.sdkPath;
+            } else if (msg.command === 'error') {
+                showError(msg.text);
+            }
+        });
+    </script>
+</body>
+</html>
