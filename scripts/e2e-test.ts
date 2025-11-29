@@ -19,6 +19,7 @@ import { HoneyGuiCCodeGenerator } from '../src/codegen/honeygui/HoneyGuiCCodeGen
 import { HmlSerializer } from '../src/hml/HmlSerializer';
 import { HmlParser } from '../src/hml/HmlParser';
 import { Document as HmlDocument, Component } from '../src/hml/types';
+import { BuildCore, Logger } from '../src/simulation/BuildCore';
 
 // 配置
 const CONFIG = {
@@ -165,105 +166,35 @@ async function generateCode(projectPath: string): Promise<void> {
 async function compile(projectPath: string): Promise<string> {
   log.step(4, '准备编译环境...');
   
-  const buildDir = path.join(projectPath, '.honeygui-build', 'win32_sim');
-  const sdkWin32Sim = path.join(CONFIG.sdkPath, 'win32_sim');
+  // 使用 BuildCore（与 BuildManager 共享核心逻辑）
+  const logger: Logger = {
+    log: (msg: string, isError?: boolean) => {
+      if (isError) {
+        log.error(msg);
+      } else {
+        log.info(msg);
+      }
+    }
+  };
   
-  // 1. 拷贝 SDK 的 win32_sim 到 .honeygui-build/win32_sim
-  log.info('拷贝 SDK win32_sim...');
+  const buildCore = new BuildCore(projectPath, CONFIG.sdkPath, logger);
+  
+  // 清理旧的编译目录
+  const buildDir = buildCore.getBuildDir();
   if (fs.existsSync(buildDir)) {
     fs.rmSync(buildDir, { recursive: true, force: true });
   }
-  copyDir(sdkWin32Sim, buildDir);
   
-  // 2. 拷贝 Kconfig.gui
-  const kconfigSrc = path.join(CONFIG.sdkPath, 'Kconfig.gui');
-  if (fs.existsSync(kconfigSrc)) {
-    fs.copyFileSync(kconfigSrc, path.join(buildDir, 'Kconfig.gui'));
-  }
-  
-  // 3. 生成 .config
-  const configContent = 'CONFIG_REALTEK_HONEYGUI=y\n';
-  fs.writeFileSync(path.join(buildDir, '.config'), configContent);
-  
-  // 4. 修改 SConstruct，指向 SDK 路径
-  const sconstructPath = path.join(buildDir, 'SConstruct');
-  let scontent = fs.readFileSync(sconstructPath, 'utf-8');
-  const sdkPathNorm = CONFIG.sdkPath.replace(/\\/g, '/');
-  scontent = scontent.replace(
-    /PROJECT_ROOT\s*=\s*os\.path\.dirname\(os\.getcwd\(\)\)/,
-    `PROJECT_ROOT = '${sdkPathNorm}'`
-  );
-  fs.writeFileSync(sconstructPath, scontent);
-  
-  // 5. 拷贝生成的代码到 autogen 目录
-  const srcAutogen = path.join(projectPath, 'src', 'autogen');
-  const destAutogen = path.join(buildDir, 'autogen');
-  copyDir(srcAutogen, destAutogen);
-  
-  // 6. 创建 autogen 的 SConscript
-  const autogenSconscript = `
-from building import *
-import os
-
-cwd = GetCurrentDir()
-src = []
-for root, dirs, files in os.walk(cwd):
-    for f in files:
-        if f.endswith('.c'):
-            src.append(os.path.join(root, f))
-
-CPPPATH = [cwd]
-for root, dirs, files in os.walk(cwd):
-    CPPPATH.append(root)
-
-group = DefineGroup('autogen', src, depend=[''], CPPPATH=CPPPATH)
-Return('group')
-`;
-  fs.writeFileSync(path.join(destAutogen, 'SConscript'), autogenSconscript);
+  await buildCore.setupBuildDir();
+  await buildCore.copyGeneratedCode();
   
   log.info(`编译目录: ${buildDir}`);
   log.step(5, '执行 scons 编译...');
   
-  return new Promise((resolve, reject) => {
-    const scons = spawn('scons', ['-j4'], {
-      cwd: buildDir,
-      shell: true,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
-    
-    let stderr = '';
-    
-    scons.stdout?.on('data', (data) => {
-      const str = data.toString();
-      if (str.includes('error') || str.includes('Error') || str.includes('Linking') || str.includes('TOOL ROOT')) {
-        process.stdout.write(data);
-      }
-    });
-    
-    scons.stderr?.on('data', (data) => {
-      stderr += data.toString();
-      process.stderr.write(data);
-    });
-    
-    const timeout = setTimeout(() => {
-      scons.kill();
-      reject(new Error('编译超时'));
-    }, CONFIG.timeout);
-    
-    scons.on('close', (code) => {
-      clearTimeout(timeout);
-      if (code === 0) {
-        const exeName = process.platform === 'win32' ? 'gui.exe' : 'gui';
-        const exePath = path.join(buildDir, exeName);
-        log.success('编译成功！');
-        resolve(exePath);
-      } else {
-        reject(new Error(`编译失败，退出码: ${code}\n${stderr}`));
-      }
-    });
-    
-    scons.on('error', reject);
-  });
+  await buildCore.compile();
+  
+  log.success('编译成功！');
+  return buildCore.getExecutablePath();
 }
 
 async function runSimulation(exePath: string): Promise<void> {
