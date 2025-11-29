@@ -467,7 +467,8 @@ async function main(): Promise<void> {
   } catch (error) {
     log.error(`测试失败: ${error instanceof Error ? error.message : error}`);
   } finally {
-    cleanup(projectPath);
+    // cleanup(projectPath);  // 暂时注释，保留生成的工程以便检查
+    log.info(`工程保留在: ${projectPath}`);
   }
   
   console.log('\n' + '='.repeat(50));
