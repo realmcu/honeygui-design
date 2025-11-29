@@ -1,9 +1,12 @@
 import * as vscode from 'vscode';
 import { logger } from '../utils/Logger';
 import { DesignerPanel } from '../designer/DesignerPanel';
+import { DesignerPanelFactory } from '../designer/DesignerPanelFactory';
 import { CreateProjectPanel } from '../designer/CreateProjectPanel';
 import * as path from 'path';
 import * as fs from 'fs';
+import { CollaborationService } from './CollaborationService';
+import { StatusBarManager } from '../ui/StatusBarManager';
 
 /**
  * HoneyGUI命令管理器
@@ -11,13 +14,19 @@ import * as fs from 'fs';
  */
 export class CommandManager {
     private disposables: vscode.Disposable[] = [];
+    private statusBarManager: StatusBarManager;
 
-    constructor(private context: vscode.ExtensionContext) {}
+    constructor(private context: vscode.ExtensionContext) {
+        this.statusBarManager = StatusBarManager.getInstance(context);
+    }
 
     /**
      * 注册所有命令
      */
     registerCommands(): void {
+        // 注册协同相关命令
+        this.registerCollaborationCommands();
+
         // 创建新项目（保持兼容别名）
         this.registerCommand('honeygui.createProject', async () => {
             try {
@@ -366,11 +375,92 @@ export class CommandManager {
         logger.info('命令注册完成');
     }
 
+    private registerCollaborationCommands(): void {
+        // 开启协同（作为主机）
+        this.registerCommand('honeygui.collaboration.startHost', async () => {
+            try {
+                const service = CollaborationService.getInstance();
+                if (service.isConnected) {
+                    vscode.window.showWarningMessage('当前已处于协同模式，请先停止');
+                    return;
+                }
+
+                const portInput = await vscode.window.showInputBox({
+                    prompt: '请输入监听端口 (默认: 3000)',
+                    value: '3000',
+                    validateInput: (value) => {
+                        const port = parseInt(value);
+                        return (!isNaN(port) && port > 1024 && port < 65535) ? null : '请输入有效的端口号 (1024-65535)';
+                    }
+                });
+
+                if (!portInput) return;
+
+                const address = await service.startHost(parseInt(portInput));
+                vscode.window.showInformationMessage(`协同服务已启动，请邀请他人连接: ${address}`);
+                
+                // 复制地址到剪贴板
+                await vscode.env.clipboard.writeText(address);
+                vscode.window.setStatusBarMessage('协同地址已复制到剪贴板', 3000);
+
+                this.statusBarManager.updateCollaborationStatus('Host', address);
+            } catch (error) {
+                logger.error(`启动协同失败: ${error}`);
+                vscode.window.showErrorMessage(`启动协同失败: ${error}`);
+            }
+        });
+
+        // 加入协同（作为访客）
+        this.registerCommand('honeygui.collaboration.joinSession', async () => {
+            try {
+                const service = CollaborationService.getInstance();
+                if (service.isConnected) {
+                    vscode.window.showWarningMessage('当前已处于协同模式，请先停止');
+                    return;
+                }
+
+                const addressInput = await vscode.window.showInputBox({
+                    prompt: '请输入主机地址 (IP:Port)',
+                    placeHolder: '192.168.1.x:3000',
+                    validateInput: (value) => {
+                        const parts = value.split(':');
+                        if (parts.length !== 2) return '格式错误，请输入 IP:Port';
+                        const port = parseInt(parts[1]);
+                        if (isNaN(port) || port < 1 || port > 65535) return '端口无效 (1-65535)';
+                        return null;
+                    }
+                });
+
+                if (!addressInput) return;
+
+                await service.joinSession(addressInput);
+                vscode.window.showInformationMessage(`成功加入协同: ${addressInput}`);
+                this.statusBarManager.updateCollaborationStatus('Guest', addressInput);
+
+                // 自动打开设计器
+                DesignerPanelFactory.createOrShow(this.context);
+            } catch (error) {
+                logger.error(`加入协同失败: ${error}`);
+                vscode.window.showErrorMessage(`加入协同失败: ${error}`);
+            }
+        });
+
+        // 停止协同
+        this.registerCommand('honeygui.collaboration.stop', async () => {
+            const service = CollaborationService.getInstance();
+            if (service.isConnected) {
+                service.stop();
+                vscode.window.showInformationMessage('已停止协同会话');
+                this.statusBarManager.updateCollaborationStatus('None');
+            }
+        });
+    }
+
     /**
-     * 注册单个命令
+     * 注册单个命令的辅助方法
      */
-    private registerCommand(command: string, callback: (...args: any[]) => any): void {
-        const disposable = vscode.commands.registerCommand(command, callback);
+    private registerCommand(commandId: string, callback: (...args: any[]) => any): void {
+        const disposable = vscode.commands.registerCommand(commandId, callback);
         this.disposables.push(disposable);
         this.context.subscriptions.push(disposable);
     }

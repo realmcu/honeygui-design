@@ -10,6 +10,7 @@ import { MessageHandler } from './MessageHandler';
 import { CodeGenOptions } from '../codegen/honeygui';
 import { WebviewContentProvider } from './WebviewContentProvider';
 import { DesignerService } from './DesignerService';
+import { CollaborationService, CollaborationMessage } from '../core/CollaborationService';
 
 /**
  * 设计器Webview面板管理类
@@ -35,6 +36,8 @@ export class DesignerPanel {
     private readonly _fileManager: FileManager;
     private readonly _messageHandler: MessageHandler;
     private readonly _webviewContentProvider: WebviewContentProvider;
+    private readonly _collaborationService: CollaborationService;
+    private readonly _collaborationMessageHandler: (message: CollaborationMessage) => void;
 
     /**
      * 获取当前的保存事务ID
@@ -103,6 +106,14 @@ export class DesignerPanel {
 
         // Initialize WebviewContentProvider
         this._webviewContentProvider = new WebviewContentProvider(context.extensionUri);
+        
+        // Initialize Collaboration Service
+        this._collaborationService = CollaborationService.getInstance();
+        
+        // 保存监听器引用，便于精确移除
+        this._collaborationMessageHandler = (message: CollaborationMessage) => {
+            this.handleCollaborationMessage(message);
+        };
 
         // 如果有文档，设置文件路径
         if (document) {
@@ -114,11 +125,18 @@ export class DesignerPanel {
             this._panel.title = title;
         });
 
+        // 监听协同消息
+        this._collaborationService.on('message', this._collaborationMessageHandler);
+
         // 设置Webview内容
         this._update();
 
         // 处理面板关闭事件
-        this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
+        this._panel.onDidDispose(() => {
+            // 精确移除本实例的监听器，不影响其他监听器
+            this._collaborationService.off('message', this._collaborationMessageHandler);
+            this.dispose();
+        }, null, this._disposables);
 
         // 处理面板可见性变化
         this._panel.onDidChangeViewState(
@@ -198,6 +216,55 @@ export class DesignerPanel {
     public async generateAllCode(): Promise<void> {
         await this._codeGenManager.generateAllCode(this._fileManager.currentFilePath);
     }
+
+    /**
+     * 处理协同消息
+     */
+    private handleCollaborationMessage(message: any): void {
+        // TODO: 实现协同消息处理逻辑
+        logger.info(`[DesignerPanel] Received collaboration message: ${JSON.stringify(message)}`);
+        
+        switch (message.type) {
+            case 'WELCOME':
+                // 新访客加入，如果是主机，发送当前文档状态
+                if (this._collaborationService.isHost) {
+                    const doc = this._hmlController.serializeDocument();
+                    this._collaborationService.broadcast({
+                        type: 'SYNC_INIT',
+                        content: doc
+                    });
+                }
+                break;
+            case 'SYNC_INIT':
+                // 访客收到初始文档状态
+                if (this._collaborationService.isGuest && message.content) {
+                    // 更新本地文档
+                    this._hmlController.applyRemoteUpdate(message.content);
+                    // 刷新 Webview
+                    this._update();
+                }
+                break;
+            case 'REMOTE_UPDATE':
+                // 收到增量更新或全量更新（这里先简化为全量同步）
+                if (this._collaborationService.isGuest && message.content) {
+                    this._hmlController.applyRemoteUpdate(message.content);
+                    this._update();
+                } else if (this._collaborationService.isHost && message.content) {
+                    // 主机收到访客的更新，保存并广播
+                    this._hmlController.applyRemoteUpdate(message.content);
+                    this._update();
+                    // 主机作为真理之源，可以触发保存
+                    this._fileManager.saveHml(message.content);
+                }
+                break;
+            case 'OP_DELTA':
+                // 处理增量操作（由 MessageHandler 广播出来的原子操作）
+                // 无论 Host 还是 Guest，收到 OP_DELTA 都意味着这是来自远程的操作
+                // 传入 fromRemote=true 以避免 MessageHandler 再次广播
+                this._messageHandler.handleMessage(message.payload, true);
+                break;
+        }
+    }
     
     /**
      * 获取当前的HML文档
@@ -234,6 +301,9 @@ export class DesignerPanel {
             DesignerPanel.panelRegistry.delete(filePath);
         }
         DesignerPanel.currentPanel = undefined;
+
+        // 精确移除本实例的协同消息监听器
+        this._collaborationService.off('message', this._collaborationMessageHandler);
 
         // 清理所有监听器
         this._disposables.forEach(d => d.dispose());

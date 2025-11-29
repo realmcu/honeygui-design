@@ -75,6 +75,25 @@ export class HmlController {
     }
 
     /**
+     * 应用远程更新
+     * @param content 完整的HML文档内容字符串
+     */
+    public applyRemoteUpdate(content: string): void {
+        try {
+            const document = this.parser.parse(content);
+            
+            // 更新当前文档状态
+            this._currentDocument = document;
+            this._documentVersion++;
+            
+            logger.info('[HmlController] Remote update applied successfully');
+        } catch (error) {
+            logger.error(`[HmlController] Failed to apply remote update: ${error}`);
+            throw error;
+        }
+    }
+
+    /**
      * 保存当前文档到文件
      * @param filePath 文件路径（可选，如果不提供则使用当前文件路径）
      * @returns 保存的文件路径

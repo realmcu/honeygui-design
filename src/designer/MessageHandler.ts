@@ -5,6 +5,7 @@ import { CodeGenManager } from './CodeGenManager';
 import { ComponentManager } from './ComponentManager';
 import { FileManager } from './FileManager';
 import { HmlController } from '../hml/HmlController';
+import { CollaborationService } from '../core/CollaborationService';
 
 /**
  * 消息处理器 - 负责分发来自Webview的消息
@@ -15,6 +16,7 @@ export class MessageHandler {
     private readonly _componentManager: ComponentManager;
     private readonly _fileManager: FileManager;
     private readonly _hmlController: HmlController;
+    private readonly _collaborationService: CollaborationService;
 
     constructor(
         assetManager: AssetManager,
@@ -28,12 +30,35 @@ export class MessageHandler {
         this._componentManager = componentManager;
         this._fileManager = fileManager;
         this._hmlController = hmlController;
+        this._collaborationService = CollaborationService.getInstance();
     }
 
     /**
      * 处理Webview消息
+     * @param message 消息对象
+     * @param fromRemote 是否来自远程（协同模式下），默认为 false
      */
-    public async handleMessage(message: any): Promise<void> {
+    public async handleMessage(message: any, fromRemote: boolean = false): Promise<void> {
+        // 协同模式下的消息广播拦截
+        // 只有修改操作需要广播，查询类操作不需要
+        const broadcastCommands = [
+            'addComponent',
+            'updateComponent',
+            'deleteComponent',
+            'saveImageToAssets'
+        ];
+
+        // 如果已连接协同，且是需要广播的命令，且该命令不是来自远程（即来自本地Webview操作）
+        if (this._collaborationService.isConnected && broadcastCommands.includes(message.command) && !fromRemote) {
+            // 无论 Host 还是 Guest，都先广播给对方
+            // Guest 发给 Host，Host 广播给所有 Guest
+            this._collaborationService.broadcast({
+                type: 'OP_DELTA',
+                payload: message
+            });
+            // 乐观更新：本地继续执行，不阻塞用户操作
+        }
+
         switch (message.command) {
             case 'ready':
                 logger.info('[MessageHandler] 收到前端ready消息');

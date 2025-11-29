@@ -88,7 +88,7 @@
     "viewsWelcome": [
       {
         "view": "honeygui.welcome",
-        "contents": "[$(add) 新建项目](command:honeygui.createProject)\n[$(file-add) 新建设计](command:honeygui.createNewHmlInWorkspace)\n[$(folder-opened) 打开项目](command:honeygui.openProject)"
+        "contents": "[$(add) 新建项目](command:honeygui.createProject)\n[$(file-add) 新建设计](command:honeygui.createNewHmlInWorkspace)\n[$(folder-opened) 打开项目](command:honeygui.openProject)\n\n协同开发:\n[$(broadcast) 开启协同 (主机)](command:honeygui.collaboration.startHost)\n[$(plug) 加入协同 (访客)](command:honeygui.collaboration.joinSession)"
       }
     ],
     "menus": {
@@ -114,6 +114,21 @@
           "command": "honeygui.switchView",
           "when": "view == honeygui.quick",
           "group": "navigation@1"
+        },
+        {
+          "command": "honeygui.collaboration.startHost",
+          "when": "view == honeygui.welcome",
+          "group": "navigation@2"
+        },
+        {
+          "command": "honeygui.collaboration.joinSession",
+          "when": "view == honeygui.welcome",
+          "group": "navigation@2"
+        },
+        {
+          "command": "honeygui.collaboration.stop",
+          "when": "view == honeygui.welcome",
+          "group": "navigation@2"
         }
       ]
     },
@@ -229,6 +244,24 @@
         "command": "honeygui.toggleEditor",
         "title": "Toggle Editor Mode",
         "category": "HoneyGUI"
+      },
+      {
+        "command": "honeygui.collaboration.startHost",
+        "title": "Start Host",
+        "category": "HoneyGUI",
+        "icon": "$(broadcast)"
+      },
+      {
+        "command": "honeygui.collaboration.joinSession",
+        "title": "Join Session",
+        "category": "HoneyGUI",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "honeygui.collaboration.stop",
+        "title": "Stop Collaboration",
+        "category": "HoneyGUI",
+        "icon": "$(debug-stop)"
       }
     ],
     "configuration": {
@@ -332,6 +365,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/vscode": "^1.80.0",
     "@types/webpack": "^5.28.5",
+    "@types/ws": "^8.18.1",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
     "@vitejs/plugin-react": "^5.1.1",
@@ -359,6 +393,7 @@
     "chokidar": "^3.6.0",
     "fast-xml-parser": "^4.3.2",
     "lucide-react": "^0.553.0",
+    "ws": "^8.18.3",
     "xml-js": "^1.6.11",
     "zustand": "^5.0.8"
   }
