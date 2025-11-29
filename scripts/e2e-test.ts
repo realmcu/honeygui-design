@@ -250,29 +250,49 @@ function generateCode(projectPath: string, hmlContent: string): void {
 }
 
 async function compile(projectPath: string): Promise<string> {
-  log.step(4, '编译项目...');
+  log.step(4, '准备编译环境...');
   
-  const win32SimDir = path.join(CONFIG.sdkPath, 'win32_sim');
-  const exampleDir = path.join(CONFIG.sdkPath, 'example');
-  const targetDir = path.join(exampleDir, 'e2e_test');
+  const buildDir = path.join(projectPath, '.honeygui-build', 'win32_sim');
+  const sdkWin32Sim = path.join(CONFIG.sdkPath, 'win32_sim');
   
-  // 清理旧目录
-  if (fs.existsSync(targetDir)) {
-    fs.rmSync(targetDir, { recursive: true, force: true });
+  // 1. 拷贝 SDK 的 win32_sim 到 .honeygui-build/win32_sim
+  log.info('拷贝 SDK win32_sim...');
+  if (fs.existsSync(buildDir)) {
+    fs.rmSync(buildDir, { recursive: true, force: true });
+  }
+  copyDir(sdkWin32Sim, buildDir);
+  
+  // 2. 拷贝 Kconfig.gui
+  const kconfigSrc = path.join(CONFIG.sdkPath, 'Kconfig.gui');
+  if (fs.existsSync(kconfigSrc)) {
+    fs.copyFileSync(kconfigSrc, path.join(buildDir, 'Kconfig.gui'));
   }
   
-  // 复制生成的代码
-  const autogenDir = path.join(projectPath, 'src', 'autogen');
-  copyDir(autogenDir, targetDir);
+  // 3. 生成 .config
+  const configContent = 'CONFIG_REALTEK_HONEYGUI=y\n';
+  fs.writeFileSync(path.join(buildDir, '.config'), configContent);
   
-  // 创建 SConscript - 添加所有必要的 include 路径
-  const sconscript = `
+  // 4. 修改 SConstruct，指向 SDK 路径
+  const sconstructPath = path.join(buildDir, 'SConstruct');
+  let scontent = fs.readFileSync(sconstructPath, 'utf-8');
+  const sdkPathNorm = CONFIG.sdkPath.replace(/\\/g, '/');
+  scontent = scontent.replace(
+    /PROJECT_ROOT\s*=\s*os\.path\.dirname\(os\.getcwd\(\)\)/,
+    `PROJECT_ROOT = '${sdkPathNorm}'`
+  );
+  fs.writeFileSync(sconstructPath, scontent);
+  
+  // 5. 拷贝生成的代码到 autogen 目录
+  const srcAutogen = path.join(projectPath, 'src', 'autogen');
+  const destAutogen = path.join(buildDir, 'autogen');
+  copyDir(srcAutogen, destAutogen);
+  
+  // 6. 创建 autogen 的 SConscript
+  const autogenSconscript = `
 from building import *
 import os
 
 cwd = GetCurrentDir()
-
-# 收集所有 .c 文件
 src = []
 for root, dirs, files in os.walk(cwd):
     for f in files:
@@ -280,17 +300,20 @@ for root, dirs, files in os.walk(cwd):
             src.append(os.path.join(root, f))
 
 CPPPATH = [cwd]
-group = DefineGroup('e2e_test', src, depend=[''], CPPPATH=CPPPATH)
+for root, dirs, files in os.walk(cwd):
+    CPPPATH.append(root)
+
+group = DefineGroup('autogen', src, depend=[''], CPPPATH=CPPPATH)
 Return('group')
 `;
-  fs.writeFileSync(path.join(targetDir, 'SConscript'), sconscript);
+  fs.writeFileSync(path.join(destAutogen, 'SConscript'), autogenSconscript);
   
-  log.info(`代码已复制到: ${targetDir}`);
-  log.info('执行 scons 编译...');
+  log.info(`编译目录: ${buildDir}`);
+  log.step(5, '执行 scons 编译...');
   
   return new Promise((resolve, reject) => {
     const scons = spawn('scons', ['-j4'], {
-      cwd: win32SimDir,
+      cwd: buildDir,
       shell: true,
       stdio: ['pipe', 'pipe', 'pipe'],
     });
@@ -299,7 +322,7 @@ Return('group')
     
     scons.stdout?.on('data', (data) => {
       const str = data.toString();
-      if (str.includes('error') || str.includes('Error') || str.includes('Linking')) {
+      if (str.includes('error') || str.includes('Error') || str.includes('Linking') || str.includes('TOOL ROOT')) {
         process.stdout.write(data);
       }
     });
@@ -318,7 +341,7 @@ Return('group')
       clearTimeout(timeout);
       if (code === 0) {
         const exeName = process.platform === 'win32' ? 'gui.exe' : 'gui';
-        const exePath = path.join(win32SimDir, exeName);
+        const exePath = path.join(buildDir, exeName);
         log.success('编译成功！');
         resolve(exePath);
       } else {
@@ -331,7 +354,7 @@ Return('group')
 }
 
 async function runSimulation(exePath: string): Promise<void> {
-  log.step(5, '运行仿真...');
+  log.step(6, '运行仿真...');
   
   if (!fs.existsSync(exePath)) {
     throw new Error(`可执行文件不存在: ${exePath}`);
@@ -389,7 +412,7 @@ async function runSimulation(exePath: string): Promise<void> {
 }
 
 function cleanup(projectPath: string): void {
-  log.step(6, '清理临时文件...');
+  log.step(7, '清理临时文件...');
   
   try {
     fs.rmSync(projectPath, { recursive: true, force: true });
