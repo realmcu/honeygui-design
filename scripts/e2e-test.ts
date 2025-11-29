@@ -451,8 +451,8 @@ async function main(): Promise<void> {
   console.log('  HoneyGUI Design 端到端测试');
   console.log('='.repeat(50));
   
-  const projectName = `e2e_test_${Date.now()}`;
-  const projectPath = path.join(os.tmpdir(), projectName);
+  const projectName = 'e2e_test_project';
+  const projectPath = path.join(process.cwd(), projectName);
   
   let success = false;
   

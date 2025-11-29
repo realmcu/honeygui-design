@@ -88,3 +88,5 @@ pnpm-lock.yaml
 *.old
 *.orig
 *~
+# E2E测试生成的工程
+e2e_test_project/
