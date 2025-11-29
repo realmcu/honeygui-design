@@ -231,6 +231,13 @@ export class HoneyGuiCCodeGenerator {
 
     const { x, y, width, height } = component.position;
 
+    // 特殊处理图片组件，直接在创建时传入路径
+    if (component.type === 'hg_image') {
+        const src = component.data?.src || '';
+        // gui_img_create_from_fs(parent, name, file, x, y, w, h)
+        return `${indentStr}${component.id} = gui_img_create_from_fs(${parentRef}, "${component.name}", "${src}", ${x}, ${y}, ${width}, ${height});\n`;
+    }
+
     return `${indentStr}${component.id} = ${mapping.createFunction}(${parentRef}, "${component.name}", ${x}, ${y}, ${width}, ${height});\n`;
   }
 

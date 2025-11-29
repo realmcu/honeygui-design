@@ -73,9 +73,9 @@ export class HoneyGuiApiMapper {
     // 图片
     this.mappings.set('hg_image', {
       componentType: 'hg_image',
-      createFunction: 'gui_img_create',
+      createFunction: 'gui_img_create_from_fs',  // 使用支持文件系统的创建函数
       propertySetters: [
-        { property: 'src', apiFunction: 'gui_img_set_attribute' }
+        // { property: 'src', apiFunction: 'gui_img_set_attribute' } // 移除旧的设置方式
       ],
       eventHandlers: [],
       includeHeader: 'gui_img.h'

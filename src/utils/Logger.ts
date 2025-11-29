@@ -1,11 +1,18 @@
-import * as vscode from 'vscode';
+
+// Dynamic import for vscode to support running in CLI/Node.js environment
+let vscode: any;
+try {
+    vscode = require('vscode');
+} catch (e) {
+    // Ignore - running in non-VSCode environment
+}
 
 /**
  * HoneyGUI日志管理器
  * 提供统一的日志记录接口
  */
 export class Logger {
-    private outputChannel: vscode.LogOutputChannel;
+    private outputChannel: any;
     private logLevel: 'debug' | 'info' | 'warn' | 'error' = 'info';
     private cachedLogs: string[] = [];
 
@@ -13,7 +20,18 @@ export class Logger {
     private readonly MAX_LOG_ENTRIES = 5000;
 
     constructor(name: string = 'HoneyGUI') {
-        this.outputChannel = vscode.window.createOutputChannel(name, { log: true });
+        if (vscode && vscode.window) {
+            this.outputChannel = vscode.window.createOutputChannel(name, { log: true });
+        } else {
+            // Fallback implementation for CLI
+            this.outputChannel = {
+                debug: (msg: string) => console.debug(msg),
+                info: (msg: string) => console.info(msg),
+                warn: (msg: string) => console.warn(msg),
+                error: (msg: string) => console.error(msg),
+                show: () => {}
+            };
+        }
     }
 
     private formatMessage(level: string, message: string): string {
@@ -32,20 +50,38 @@ export class Logger {
         // 缓存使用格式化版本（包含时间戳）
         this.cachedLogs.push(formatted);
         
-        // 输出到VSCode使用原始消息（VSCode LogOutputChannel会自动添加时间戳）
-        switch (level) {
-            case 'debug':
-                this.outputChannel.debug(message);
-                break;
-            case 'info':
-                this.outputChannel.info(message);
-                break;
-            case 'warn':
-                this.outputChannel.warn(message);
-                break;
-            case 'error':
-                this.outputChannel.error(message);
-                break;
+        if (vscode) {
+            // 输出到VSCode使用原始消息（VSCode LogOutputChannel会自动添加时间戳）
+            switch (level) {
+                case 'debug':
+                    this.outputChannel.debug(message);
+                    break;
+                case 'info':
+                    this.outputChannel.info(message);
+                    break;
+                case 'warn':
+                    this.outputChannel.warn(message);
+                    break;
+                case 'error':
+                    this.outputChannel.error(message);
+                    break;
+            }
+        } else {
+            // CLI environment: use formatted message
+            switch (level) {
+                case 'debug':
+                    this.outputChannel.debug(formatted);
+                    break;
+                case 'info':
+                    this.outputChannel.info(formatted);
+                    break;
+                case 'warn':
+                    this.outputChannel.warn(formatted);
+                    break;
+                case 'error':
+                    this.outputChannel.error(formatted);
+                    break;
+            }
         }
     }
 
