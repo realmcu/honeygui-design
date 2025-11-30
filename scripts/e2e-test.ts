@@ -18,7 +18,6 @@ import { spawn, execSync, ChildProcess } from 'child_process';
 import { HoneyGuiCCodeGenerator } from '../src/codegen/honeygui/HoneyGuiCCodeGenerator';
 import { HmlSerializer } from '../src/hml/HmlSerializer';
 import { HmlParser } from '../src/hml/HmlParser';
-import { HmlTemplateManager } from '../src/hml/HmlTemplateManager';
 import { Document as HmlDocument, Component } from '../src/hml/types';
 import { BuildCore, Logger } from '../src/simulation/BuildCore';
 
@@ -72,23 +71,81 @@ function createProject(projectPath: string): void {
   log.info(`主 HML 文件: ${HML_FILE_NAME}`);
 }
 
-function generateHml(projectPath: string): void {
-  log.step(2, '生成 HML 文件 (使用 HmlTemplateManager)...');
+/**
+ * 创建测试组件数据
+ * 注意：只使用 SDK 中已验证的组件
+ * - hg_view: 视图容器 ✓
+ * - hg_image: 图片组件 ✓
+ * - hg_label: 文本组件（API 映射需要修复，暂不测试）
+ */
+function createTestComponents(): Component[] {
+  const { width, height } = CONFIG.resolution;
   
-  // 使用插件的 HmlTemplateManager API 生成标准 HML
-  const hmlContent = HmlTemplateManager.generateMainHml(
-    CONFIG.projectName,
-    `${CONFIG.resolution.width}X${CONFIG.resolution.height}`,
-    `com.test.${CONFIG.projectName.toLowerCase()}`,
-    'API 2: HoneyGUI V1.1.0',
-    'ARGB8888'
-  );
+  return [
+    // 主视图
+    {
+      id: 'mainView',
+      type: 'hg_view',
+      name: 'mainView',
+      position: { x: 0, y: 0, width, height },
+      style: { backgroundColor: '#000000' },
+      data: {},
+      events: {},
+      children: ['testImage'],
+      parent: null,
+      visible: true,
+      enabled: true,
+      locked: false,
+      zIndex: 0
+    },
+    // 测试图片
+    {
+      id: 'testImage',
+      type: 'hg_image',
+      name: 'testImage',
+      position: { x: 50, y: 50, width: 200, height: 100 },
+      style: {},
+      data: { src: 'assets/test.png' },
+      events: {},
+      children: [],
+      parent: 'mainView',
+      visible: true,
+      enabled: true,
+      locked: false,
+      zIndex: 1
+    }
+  ];
+}
+
+function generateHml(projectPath: string): void {
+  log.step(2, '生成 HML 文件 (使用 HmlSerializer)...');
+  
+  const components = createTestComponents();
+  
+  // 构造 HML 文档
+  const document: HmlDocument = {
+    meta: {
+      project: {
+        name: CONFIG.projectName,
+        appId: `com.test.${CONFIG.projectName.toLowerCase()}`,
+        resolution: `${CONFIG.resolution.width}X${CONFIG.resolution.height}`,
+        minSdk: 'API 2: HoneyGUI V1.1.0',
+        pixelMode: 'ARGB8888'
+      },
+      author: { name: 'E2E Test' }
+    },
+    view: { components }
+  };
+  
+  // 使用 HmlSerializer 序列化
+  const serializer = new HmlSerializer();
+  const hmlContent = serializer.serialize(document);
 
   const hmlPath = path.join(projectPath, 'ui', 'main', HML_FILE_NAME);
   fs.writeFileSync(hmlPath, hmlContent);
   
-  log.info('HML 文件已生成（使用插件 API）');
-  log.info('内容预览:\n' + hmlContent);
+  log.info(`生成了 ${components.length} 个组件: ${components.map(c => c.type).join(', ')}`);
+  log.info('HML 内容:\n' + hmlContent);
 }
 
 async function generateCode(projectPath: string): Promise<void> {
