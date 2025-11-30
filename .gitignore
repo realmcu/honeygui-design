@@ -90,3 +90,7 @@ pnpm-lock.yaml
 *~
 # E2E测试生成的工程
 e2e_test_project/
+
+# 忽略 src 目录下的编译产物
+src/**/*.js
+src/**/*.js.map
