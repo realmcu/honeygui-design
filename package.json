@@ -355,9 +355,9 @@
   },
   "scripts": {
     "test": "echo 'Unit tests not yet configured. Use npm run test:e2e for E2E tests or F5 for manual testing.'",
-    "test:e2e": "npx ts-node scripts/e2e-test.ts",
+    "test:e2e": "npm run clean:src && npx ts-node scripts/e2e-test.ts",
     "vscode:prepublish": "npm run compile && npm run build:webview",
-    "compile": "tsc -p ./",
+    "compile": "npm run clean:src && tsc -p ./",
     "watch": "tsc -watch -p ./",
     "lint": "eslint . --ext .ts,.tsx",
     "build:webview": "webpack --mode production",
@@ -365,6 +365,7 @@
     "watch:webview": "webpack --mode development --watch",
     "serve:webview": "webpack serve --mode development",
     "clean": "node scripts/clear-cache.js",
+    "clean:src": "find src -name '*.js' -type f -delete 2>/dev/null || true",
     "clean:all": "npm run clean && rimraf node_modules && npm install",
     "rebuild": "npm run clean && npm run compile && npm run build:webview"
   },
