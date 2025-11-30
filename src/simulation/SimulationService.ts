@@ -220,6 +220,15 @@ export class SimulationService {
      */
     private updateStatusBar(text: string): void {
         this.statusBarItem.text = text;
+        
+        // 根据状态切换命令
+        if (text.includes('运行中')) {
+            this.statusBarItem.command = 'honeygui.simulation.stop';
+            this.statusBarItem.tooltip = '点击停止仿真';
+        } else {
+            this.statusBarItem.command = 'honeygui.simulation';
+            this.statusBarItem.tooltip = '点击启动编译仿真';
+        }
     }
 
     /**

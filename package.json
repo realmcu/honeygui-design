@@ -264,6 +264,14 @@
         "icon": "$(debug-stop)"
       }
     ],
+    "keybindings": [
+      {
+        "command": "honeygui.simulation.stop",
+        "key": "ctrl+shift+f5",
+        "mac": "cmd+shift+f5",
+        "when": "editorTextFocus"
+      }
+    ],
     "configuration": {
       "type": "object",
       "title": "HoneyGUI",

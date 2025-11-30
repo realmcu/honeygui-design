@@ -71,8 +71,29 @@ export class SimulationRunner {
      */
     async stop(): Promise<void> {
         if (this.currentProcess) {
-            this.currentProcess.kill();
+            this.log('正在停止仿真器...');
+            
+            // 尝试优雅关闭
+            this.currentProcess.kill('SIGTERM');
+            
+            // 等待 2 秒，如果还没退出则强制杀死
+            await new Promise<void>((resolve) => {
+                const timeout = setTimeout(() => {
+                    if (this.currentProcess && !this.currentProcess.killed) {
+                        this.log('强制终止仿真器进程');
+                        this.currentProcess.kill('SIGKILL');
+                    }
+                    resolve();
+                }, 2000);
+                
+                this.currentProcess?.once('exit', () => {
+                    clearTimeout(timeout);
+                    resolve();
+                });
+            });
+            
             this.currentProcess = null;
+            this.log('仿真器已停止');
         }
         this.isRunning = false;
         this.currentFile = null;
