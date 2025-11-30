@@ -23,11 +23,16 @@ import { BuildCore, Logger } from '../src/simulation/BuildCore';
 
 // 配置
 const CONFIG = {
+  projectName: 'E2ETest',  // 项目名称（可配置）
   sdkPath: path.join(os.homedir(), '.HoneyGUI-SDK'),
   resolution: { width: 480, height: 272 },
   timeout: 120000,
   runDuration: 3000,  // 3 秒足够测试启动和停止
 };
+
+// 根据项目名称生成文件名
+const HML_FILE_NAME = `${CONFIG.projectName}Main.hml`;
+const C_FILE_NAME = `${CONFIG.projectName}Main`;
 
 // 颜色输出
 const log = {
@@ -40,7 +45,7 @@ const log = {
 
 // ============ 测试步骤 ============
 
-function createProject(projectPath: string, projectName: string): void {
+function createProject(projectPath: string): void {
   log.step(1, '创建临时项目...');
   
   fs.mkdirSync(path.join(projectPath, 'ui', 'main'), { recursive: true });
@@ -48,10 +53,13 @@ function createProject(projectPath: string, projectName: string): void {
   fs.mkdirSync(path.join(projectPath, 'assets'), { recursive: true });
   
   const projectConfig = {
-    name: projectName,
-    appId: `com.test.${projectName}`,
+    name: CONFIG.projectName,
+    appId: `com.test.${CONFIG.projectName.toLowerCase()}`,
     version: '1.0.0',
     resolution: `${CONFIG.resolution.width}X${CONFIG.resolution.height}`,
+    minSdk: 'API 2: HoneyGUI V1.1.0',
+    pixelMode: 'ARGB8888',
+    mainHmlFile: `ui/main/${HML_FILE_NAME}`,
   };
   
   fs.writeFileSync(
@@ -60,6 +68,7 @@ function createProject(projectPath: string, projectName: string): void {
   );
   
   log.info(`项目创建于: ${projectPath}`);
+  log.info(`主 HML 文件: ${HML_FILE_NAME}`);
 }
 
 function createMockDesignerData(): Component[] {
@@ -103,8 +112,14 @@ function generateHml(projectPath: string): void {
   const document: HmlDocument = {
       meta: {
           project: {
-              name: 'E2ETest',
-              resolution: `${CONFIG.resolution.width}X${CONFIG.resolution.height}`
+              name: CONFIG.projectName,
+              appId: `com.test.${CONFIG.projectName.toLowerCase()}`,
+              resolution: `${CONFIG.resolution.width}X${CONFIG.resolution.height}`,
+              minSdk: 'API 2: HoneyGUI V1.1.0',
+              pixelMode: 'ARGB8888'
+          },
+          author: {
+              name: 'E2E Test'
           }
       },
       view: {
@@ -116,7 +131,7 @@ function generateHml(projectPath: string): void {
   const serializer = new HmlSerializer();
   const hmlContent = serializer.serialize(document);
 
-  const hmlPath = path.join(projectPath, 'ui', 'main', 'main.hml');
+  const hmlPath = path.join(projectPath, 'ui', 'main', HML_FILE_NAME);
   fs.writeFileSync(hmlPath, hmlContent);
   
   log.info('HML 文件已生成');
@@ -126,7 +141,7 @@ function generateHml(projectPath: string): void {
 async function generateCode(projectPath: string): Promise<void> {
   log.step(3, '生成 C 代码 (模拟编译)...');
   
-  const hmlPath = path.join(projectPath, 'ui', 'main', 'main.hml');
+  const hmlPath = path.join(projectPath, 'ui', 'main', HML_FILE_NAME);
   const hmlContent = fs.readFileSync(hmlPath, 'utf-8');
 
   // 2. 解析：HML String -> Component[]
@@ -144,7 +159,7 @@ async function generateCode(projectPath: string): Promise<void> {
   const outputDir = path.join(projectPath, 'src', 'autogen', 'main');
   const generator = new HoneyGuiCCodeGenerator(components, {
       outputDir: outputDir,
-      hmlFileName: 'main',
+      hmlFileName: C_FILE_NAME,
       enableProtectedAreas: false
   });
 
@@ -152,10 +167,10 @@ async function generateCode(projectPath: string): Promise<void> {
 
   if (result.success) {
       log.info(`生成了 ${result.files.length} 个文件: ${result.files.map(f => path.basename(f)).join(', ')}`);
-      // 读取生成的 main.c 并打印出来以供检查
-      const sourceFile = path.join(outputDir, 'main.c');
+      // 读取生成的 C 文件并打印出来以供检查
+      const sourceFile = path.join(outputDir, `${C_FILE_NAME}.c`);
       if (fs.existsSync(sourceFile)) {
-          log.info('\n生成的 main.c:');
+          log.info(`\n生成的 ${C_FILE_NAME}.c:`);
           console.log(fs.readFileSync(sourceFile, 'utf-8'));
       }
   } else {
@@ -448,14 +463,13 @@ async function main(): Promise<void> {
   console.log('  HoneyGUI Design 端到端测试');
   console.log('='.repeat(50));
   
-  const projectName = 'e2e_test_project';
-  const projectPath = path.join(process.cwd(), projectName);
+  const projectPath = path.join(process.cwd(), `${CONFIG.projectName.toLowerCase()}_test_project`);
   
   let success = false;
   
   try {
     checkEnvironment();
-    createProject(projectPath, projectName);
+    createProject(projectPath);
     generateHml(projectPath);
     await generateCode(projectPath);
     const exePath = await compile(projectPath);
