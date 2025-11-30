@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { spawn, ChildProcess } from 'child_process';
+import { spawn, exec, ChildProcess } from 'child_process';
 import { RunnerStatus, RunnerListener } from '../common/RunnerStatus';
 import { EnvironmentChecker } from './EnvironmentChecker';
 import { BuildManager } from './BuildManager';
@@ -70,27 +70,57 @@ export class SimulationRunner {
      * 停止仿真
      */
     async stop(): Promise<void> {
-        if (this.currentProcess) {
+        if (this.currentProcess && this.currentProcess.pid) {
             this.log('正在停止仿真器...');
             
-            // 尝试优雅关闭
-            this.currentProcess.kill('SIGTERM');
-            
-            // 等待 2 秒，如果还没退出则强制杀死
-            await new Promise<void>((resolve) => {
-                const timeout = setTimeout(() => {
-                    if (this.currentProcess && !this.currentProcess.killed) {
-                        this.log('强制终止仿真器进程');
-                        this.currentProcess.kill('SIGKILL');
+            try {
+                if (process.platform === 'win32') {
+                    // Windows: 使用 taskkill 杀死进程树
+                    exec(`taskkill /F /T /PID ${this.currentProcess.pid}`, (error) => {
+                        if (error) {
+                            this.log(`taskkill 错误: ${error.message}`);
+                        }
+                    });
+                } else {
+                    // Linux/macOS: 杀死整个进程组
+                    try {
+                        process.kill(-this.currentProcess.pid, 'SIGTERM');
+                    } catch (err) {
+                        // 如果进程组不存在，尝试杀死单个进程
+                        this.currentProcess.kill('SIGTERM');
                     }
-                    resolve();
-                }, 2000);
+                }
                 
-                this.currentProcess?.once('exit', () => {
-                    clearTimeout(timeout);
-                    resolve();
+                // 等待 2 秒，如果还没退出则强制杀死
+                await new Promise<void>((resolve) => {
+                    const timeout = setTimeout(() => {
+                        if (this.currentProcess && this.currentProcess.pid) {
+                            try {
+                                this.log('强制终止仿真器进程');
+                                if (process.platform === 'win32') {
+                                    exec(`taskkill /F /T /PID ${this.currentProcess.pid}`);
+                                } else {
+                                    try {
+                                        process.kill(-this.currentProcess.pid, 'SIGKILL');
+                                    } catch {
+                                        this.currentProcess?.kill('SIGKILL');
+                                    }
+                                }
+                            } catch (err) {
+                                // 进程可能已经退出
+                            }
+                        }
+                        resolve();
+                    }, 2000);
+                    
+                    this.currentProcess?.once('exit', () => {
+                        clearTimeout(timeout);
+                        resolve();
+                    });
                 });
-            });
+            } catch (err) {
+                this.log(`停止进程时出错: ${err}`);
+            }
             
             this.currentProcess = null;
             this.log('仿真器已停止');
@@ -210,10 +240,13 @@ export class SimulationRunner {
             stdio: ['ignore', 'pipe', 'pipe'],
             env: { 
                 ...process.env,
-                SDL_STDIO_REDIRECT: '0',  // SDL 不重定向输出
-                TERM: 'xterm'  // 确保终端类型
+                SDL_STDIO_REDIRECT: '0',
+                TERM: 'xterm'
             },
-            shell: false
+            shell: false,
+            // Linux: 创建新进程组以便杀死所有子进程
+            // Windows: 不使用 detached，使用 taskkill 杀死进程树
+            detached: process.platform !== 'win32'
         });
 
         // 实时输出 stdout

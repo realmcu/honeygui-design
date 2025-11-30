@@ -14,7 +14,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { spawn, execSync } from 'child_process';
+import { spawn, execSync, ChildProcess } from 'child_process';
 import { HoneyGuiCCodeGenerator } from '../src/codegen/honeygui/HoneyGuiCCodeGenerator';
 import { HmlSerializer } from '../src/hml/HmlSerializer';
 import { HmlParser } from '../src/hml/HmlParser';
@@ -26,7 +26,7 @@ const CONFIG = {
   sdkPath: path.join(os.homedir(), '.HoneyGUI-SDK'),
   resolution: { width: 480, height: 272 },
   timeout: 120000,
-  runDuration: 5000,
+  runDuration: 3000,  // 3 秒足够测试启动和停止
 };
 
 // 颜色输出
@@ -198,7 +198,7 @@ async function compile(projectPath: string): Promise<string> {
 }
 
 async function runSimulation(exePath: string): Promise<void> {
-  log.step(6, '运行仿真...');
+  log.step(6, '运行仿真并测试停止功能...');
   
   if (!fs.existsSync(exePath)) {
     throw new Error(`可执行文件不存在: ${exePath}`);
@@ -214,45 +214,175 @@ async function runSimulation(exePath: string): Promise<void> {
   
   return new Promise((resolve, reject) => {
     log.info(`启动: ${exePath}`);
-    log.info(`仿真将运行 ${CONFIG.runDuration / 1000} 秒...`);
+    log.info(`仿真将运行 ${CONFIG.runDuration / 1000} 秒后停止...`);
     
-    const proc = spawn(exePath, [], {
+    // 使用 stdbuf 启动（Linux）或直接启动（Windows）
+    let command: string;
+    let args: string[];
+    
+    if (process.platform === 'win32') {
+      command = exePath;
+      args = [];
+    } else {
+      command = 'stdbuf';
+      args = ['-o0', '-e0', exePath];
+    }
+    
+    const proc = spawn(command, args, {
       cwd: path.dirname(exePath),
-      stdio: ['pipe', 'pipe', 'pipe'],
-      env: { ...process.env, DISPLAY: process.env.DISPLAY || ':0' },
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: { 
+        ...process.env, 
+        DISPLAY: process.env.DISPLAY || ':0',
+        SDL_STDIO_REDIRECT: '0'
+      },
+      detached: process.platform !== 'win32'
     });
     
+    const pid = proc.pid;
+    log.info(`进程 PID: ${pid}`);
+    
+    let outputReceived = false;
+    
     proc.stdout?.on('data', (data) => {
-      log.info(`[仿真] ${data.toString().trim()}`);
+      const output = data.toString().trim();
+      if (output) {
+        log.info(`[仿真] ${output}`);
+        outputReceived = true;
+      }
     });
     
     proc.stderr?.on('data', (data) => {
       const msg = data.toString().trim();
-      // SDL 初始化失败通常是因为没有图形环境
       if (msg.includes('No available video device') || msg.includes("Couldn't initialize SDL")) {
         log.warn('无图形环境，仿真无法启动（编译已成功）');
-        proc.kill();
+        killProcessTree(proc);
         return;
       }
-      log.warn(`[仿真] ${msg}`);
+      if (msg) {
+        log.warn(`[仿真错误] ${msg}`);
+      }
     });
     
-    const timeout = setTimeout(() => {
-      log.info('正在关闭仿真程序...');
-      proc.kill('SIGTERM');
+    // 检查进程是否存在
+    setTimeout(() => {
+      if (pid && isProcessRunning(pid)) {
+        log.success('✓ 进程启动成功');
+      } else {
+        log.error('✗ 进程未正常启动');
+      }
+    }, 1000);
+    
+    const timeout = setTimeout(async () => {
+      log.info('测试停止功能...');
+      
+      // 记录停止前的进程状态
+      if (!pid) {
+        resolve();
+        return;
+      }
+      
+      const childProcesses = getChildProcesses(pid);
+      log.info(`停止前进程树: 主进程 ${pid}, 子进程: ${childProcesses.join(', ')}`);
+      
+      // 停止进程
+      await killProcessTree(proc);
+      
+      // 等待 1 秒后检查进程是否真的被杀死
+      setTimeout(() => {
+        if (!pid) {
+          resolve();
+          return;
+        }
+        
+        const stillRunning = [pid, ...childProcesses].filter(p => isProcessRunning(p));
+        
+        if (stillRunning.length === 0) {
+          log.success('✓ 所有进程已正确清理');
+        } else {
+          log.error(`✗ 仍有进程未清理: ${stillRunning.join(', ')}`);
+          // 强制清理
+          stillRunning.forEach(p => {
+            try {
+              process.kill(p, 'SIGKILL');
+            } catch {}
+          });
+        }
+        
+        if (outputReceived) {
+          log.success('✓ 接收到仿真输出');
+        } else {
+          log.warn('⚠ 未接收到仿真输出（可能是正常的）');
+        }
+        
+        resolve();
+      }, 1000);
     }, CONFIG.runDuration);
     
     proc.on('close', (code) => {
       clearTimeout(timeout);
-      log.success(`仿真程序退出，退出码: ${code}`);
-      resolve();
+      log.info(`仿真程序退出，退出码: ${code}`);
     });
     
-    proc.on('error', (err) => {
+    proc.on('error', (error) => {
       clearTimeout(timeout);
-      reject(err);
+      reject(error);
     });
   });
+}
+
+/**
+ * 检查进程是否在运行
+ */
+function isProcessRunning(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 获取子进程列表
+ */
+function getChildProcesses(parentPid: number): number[] {
+  try {
+    const result = execSync(`pgrep -P ${parentPid}`, { encoding: 'utf-8' });
+    return result.trim().split('\n').map(p => parseInt(p)).filter(p => !isNaN(p));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * 杀死进程树
+ */
+async function killProcessTree(proc: ChildProcess): Promise<void> {
+  if (!proc.pid) return;
+  
+  try {
+    if (process.platform === 'win32') {
+      execSync(`taskkill /F /T /PID ${proc.pid}`, { stdio: 'ignore' });
+    } else {
+      try {
+        process.kill(-proc.pid, 'SIGTERM');
+      } catch {
+        proc.kill('SIGTERM');
+      }
+      
+      // 等待 1 秒后强制杀死
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      try {
+        process.kill(-proc.pid, 'SIGKILL');
+      } catch {
+        proc.kill('SIGKILL');
+      }
+    }
+  } catch (err) {
+    log.warn(`杀死进程时出错: ${err}`);
+  }
 }
 
 function cleanup(projectPath: string): void {
