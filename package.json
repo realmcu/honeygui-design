@@ -346,6 +346,7 @@
     }
   },
   "scripts": {
+    "test": "echo 'Unit tests not yet configured. Use npm run test:e2e for E2E tests or F5 for manual testing.'",
     "test:e2e": "npx ts-node scripts/e2e-test.ts",
     "vscode:prepublish": "npm run compile && npm run build:webview",
     "compile": "tsc -p ./",
