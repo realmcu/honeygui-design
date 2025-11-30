@@ -2,11 +2,9 @@
 <hml>
     <meta>
         <project name="E2ETest" appId="com.test.e2etest" resolution="480X272" minSdk="API 2: HoneyGUI V1.1.0" pixelMode="ARGB8888" />
-        <author name="E2E Test" />
+        <author name="Anonymous" />
     </meta>
     <view>
-        <hg_view id="mainView" x="0" y="0" width="480" height="272" backgroundColor="#000000" name="mainView">
-            <hg_image id="testImage" x="100" y="50" width="280" height="172" src="assets/test.png" name="testImage" />
-        </hg_view>
+        <hg_view id="mainView" x="0" y="0" width="480" height="272" name="mainView" backgroundColor="#000000" />
     </view>
 </hml>
