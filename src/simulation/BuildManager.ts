@@ -24,11 +24,13 @@ class VSCodeLogger implements Logger {
  */
 export class BuildManager extends BuildCore {
     private outputChannel: vscode.OutputChannel;
+    private ownsOutputChannel: boolean;
 
-    constructor(projectRoot: string, sdkPath: string) {
-        const outputChannel = vscode.window.createOutputChannel('HoneyGUI Simulation');
-        super(projectRoot, sdkPath, new VSCodeLogger(outputChannel));
-        this.outputChannel = outputChannel;
+    constructor(projectRoot: string, sdkPath: string, outputChannel?: vscode.OutputChannel) {
+        const channel = outputChannel || vscode.window.createOutputChannel('HoneyGUI Simulation');
+        super(projectRoot, sdkPath, new VSCodeLogger(channel));
+        this.outputChannel = channel;
+        this.ownsOutputChannel = !outputChannel; // 只有自己创建的才负责关闭
     }
 
     async compile(): Promise<void> {
@@ -52,6 +54,9 @@ export class BuildManager extends BuildCore {
     }
 
     dispose(): void {
-        this.outputChannel.dispose();
+        // 只关闭自己创建的 OutputChannel
+        if (this.ownsOutputChannel) {
+            this.outputChannel.dispose();
+        }
     }
 }

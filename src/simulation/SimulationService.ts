@@ -82,7 +82,7 @@ export class SimulationService {
             }
 
             // 创建新的运行器
-            this.runner = new SimulationRunner(projectRoot, sdkPath);
+            this.runner = new SimulationRunner(projectRoot, sdkPath, this.outputChannel);
             this.setupRunnerListeners();
 
             // 启动仿真

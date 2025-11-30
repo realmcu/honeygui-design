@@ -15,15 +15,17 @@ import { ProjectUtils } from '../utils/ProjectUtils';
 export class SimulationRunner {
     private projectRoot: string;
     private sdkPath: string;
+    private outputChannel: vscode.OutputChannel;
     private currentProcess: ChildProcess | null = null;
     private isRunning: boolean = false;
     private currentFile: string | null = null;
     private listener?: RunnerListener;
     private buildManager: BuildManager | null = null;
 
-    constructor(projectRoot: string, sdkPath: string) {
+    constructor(projectRoot: string, sdkPath: string, outputChannel: vscode.OutputChannel) {
         this.projectRoot = projectRoot;
         this.sdkPath = sdkPath;
+        this.outputChannel = outputChannel;
     }
 
     /**
@@ -136,7 +138,7 @@ export class SimulationRunner {
     private async setupBuildEnvironment(): Promise<void> {
         this.log('准备编译环境...');
 
-        this.buildManager = new BuildManager(this.projectRoot, this.sdkPath);
+        this.buildManager = new BuildManager(this.projectRoot, this.sdkPath, this.outputChannel);
 
         await this.buildManager.setupBuildDir();
         await this.buildManager.copyGeneratedCode();
@@ -164,19 +166,65 @@ export class SimulationRunner {
         }
 
         const exePath = this.buildManager.getExecutablePath();
+        const buildDir = this.buildManager.getBuildDir();
+        
         this.log(`启动仿真器: ${exePath}`);
+        this.log(`工作目录: ${buildDir}`);
 
-        this.currentProcess = spawn(exePath, [], {
-            cwd: this.projectRoot,
-            stdio: ['pipe', 'pipe', 'pipe']
+        // 使用 stdbuf 强制无缓冲输出（Linux）或直接运行（Windows）
+        let command: string;
+        let args: string[];
+        
+        if (process.platform === 'win32') {
+            command = exePath;
+            args = [];
+        } else {
+            // Linux: 使用 stdbuf -o0 -e0 强制标准输出和错误输出无缓冲
+            command = 'stdbuf';
+            args = ['-o0', '-e0', exePath];
+        }
+
+        this.currentProcess = spawn(command, args, {
+            cwd: buildDir,
+            stdio: ['ignore', 'pipe', 'pipe'],
+            env: { 
+                ...process.env,
+                SDL_STDIO_REDIRECT: '0',  // SDL 不重定向输出
+                TERM: 'xterm'  // 确保终端类型
+            },
+            shell: false
         });
 
-        this.currentProcess.stdout?.on('data', (data) => {
-            this.log(data.toString());
-        });
+        // 实时输出 stdout
+        if (this.currentProcess.stdout) {
+            this.currentProcess.stdout.setEncoding('utf8');
+            this.currentProcess.stdout.on('data', (data) => {
+                const lines = data.toString().split('\n');
+                lines.forEach((line: string) => {
+                    const trimmed = line.trim();
+                    if (trimmed) {
+                        this.log(`[仿真] ${trimmed}`);
+                    }
+                });
+            });
+        }
 
-        this.currentProcess.stderr?.on('data', (data) => {
-            this.log(`[错误] ${data.toString()}`);
+        // 实时输出 stderr
+        if (this.currentProcess.stderr) {
+            this.currentProcess.stderr.setEncoding('utf8');
+            this.currentProcess.stderr.on('data', (data) => {
+                const lines = data.toString().split('\n');
+                lines.forEach((line: string) => {
+                    const trimmed = line.trim();
+                    if (trimmed) {
+                        this.log(`[仿真错误] ${trimmed}`);
+                    }
+                });
+            });
+        }
+
+        this.currentProcess.on('spawn', () => {
+            this.log('仿真器进程已启动 (PID: ' + this.currentProcess?.pid + ')');
         });
 
         this.currentProcess.on('exit', (code) => {
@@ -190,6 +238,9 @@ export class SimulationRunner {
             this.listener?.onError?.(error);
             this.log(`[错误] 仿真器进程错误: ${error.message}`);
         });
+        
+        this.log('仿真器已启动，等待输出...');
+        this.log('注意: HoneyGUI 的日志可能直接显示在图形窗口中');
     }
 
     /**
