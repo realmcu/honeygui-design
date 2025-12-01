@@ -5,7 +5,7 @@ import { useCanvasZoom } from '../hooks/useCanvasZoom';
 import { useCanvasDrag } from '../hooks/useCanvasDrag';
 import { useContextMenu } from '../hooks/useContextMenu';
 import { calculateComponentStyle, createComponentHandlers } from '../utils/componentRenderer';
-import { componentRenderers } from './ComponentRenderers';
+import { widgetRegistry } from './widgets';
 import { ContextMenu } from './ContextMenu';
 import { executeMenuAction, MenuActionHelpers } from '../services/contextMenuActions';
 import './DesignerCanvas.css';
@@ -229,10 +229,10 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
       handleComponentContextMenu
     );
 
-    // 使用渲染器映射
-    const Renderer = componentRenderers[component.type];
+    // 使用控件注册表
+    const Widget = widgetRegistry[component.type];
     
-    if (!Renderer) {
+    if (!Widget) {
       // 未知组件类型，显示占位符
       return (
         <div key={component.id} style={style} {...handlers}>
@@ -250,10 +250,10 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
         return child ? renderComponent(child, componentList) : null;
       });
 
-      return <Renderer component={component} style={style} handlers={handlers}>{children}</Renderer>;
+      return <Widget component={component} style={style} handlers={handlers}>{children}</Widget>;
     }
 
-    return <Renderer component={component} style={style} handlers={handlers} />;
+    return <Widget component={component} style={style} handlers={handlers} />;
   };
 
   // Render grid - Clean and minimal style
