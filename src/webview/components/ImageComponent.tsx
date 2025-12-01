@@ -8,6 +8,7 @@ interface ImageComponentProps {
   onMouseDown: (e: React.MouseEvent) => void;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
+  onContextMenu?: (e: React.MouseEvent) => void;
 }
 
 /**
@@ -18,7 +19,8 @@ export const ImageComponent: React.FC<ImageComponentProps> = ({
   style,
   onMouseDown,
   onMouseEnter,
-  onMouseLeave
+  onMouseLeave,
+  onContextMenu
 }) => {
   const webviewUri = useWebviewUri(component.data?.src);
 
@@ -33,6 +35,7 @@ export const ImageComponent: React.FC<ImageComponentProps> = ({
       onMouseDown={onMouseDown}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
+      onContextMenu={onContextMenu}
     >
       {!webviewUri && '🖼️'}
     </div>

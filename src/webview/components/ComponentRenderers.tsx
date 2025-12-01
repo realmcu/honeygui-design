@@ -128,6 +128,7 @@ export const ImageRenderer: React.FC<ComponentRendererProps> = ({ component, sty
     onMouseDown={handlers.onMouseDown}
     onMouseEnter={handlers.onMouseEnter}
     onMouseLeave={handlers.onMouseLeave}
+    onContextMenu={handlers.onContextMenu}
   />
 );
 
