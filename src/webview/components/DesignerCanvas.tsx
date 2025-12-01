@@ -1,10 +1,13 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useDesignerStore } from '../store';
 import { Component, ComponentType } from '../types';
 import { useCanvasZoom } from '../hooks/useCanvasZoom';
 import { useCanvasDrag } from '../hooks/useCanvasDrag';
+import { useContextMenu } from '../hooks/useContextMenu';
 import { calculateComponentStyle, createComponentHandlers } from '../utils/componentRenderer';
 import { componentRenderers } from './ComponentRenderers';
+import { ContextMenu } from './ContextMenu';
+import { executeMenuAction, MenuActionHelpers } from '../services/contextMenuActions';
 import './DesignerCanvas.css';
 
 interface DesignerCanvasProps {
@@ -17,13 +20,6 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
   const [pendingDragComponent, setPendingDragComponent] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 }); // 组件拖拽起始位置
-  const [contextMenu, setContextMenu] = useState<{
-    visible: boolean;
-    x: number;
-    y: number;
-    componentId: string;
-    componentType: string;
-  } | null>(null);
 
   const {
     components,
@@ -59,6 +55,31 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     handleCanvasMouseMove,
     handleCanvasMouseUp
   } = useCanvasDrag(canvasOffset, setCanvasOffset);
+  
+  // 使用右键菜单 Hook
+  const { menuState, showMenu, hideMenu } = useContextMenu();
+  
+  // 菜单动作辅助函数
+  const menuActionHelpers: MenuActionHelpers = {
+    updateComponent,
+    removeComponent,
+    selectComponent: onComponentSelect,
+    postMessage: (msg) => window.vscodeAPI?.postMessage(msg),
+  };
+  
+  // 处理菜单动作
+  const handleMenuAction = useCallback((actionId: string, component: Component) => {
+    executeMenuAction(actionId, component, menuActionHelpers);
+    hideMenu();
+  }, [hideMenu, updateComponent, removeComponent, onComponentSelect]);
+  
+  // 处理组件右键菜单
+  const handleComponentContextMenu = useCallback((e: React.MouseEvent, componentId: string) => {
+    const component = components.find(c => c.id === componentId);
+    if (component) {
+      showMenu(e, component);
+    }
+  }, [components, showMenu]);
   
   // 当store中的画布背景色变化时更新本地状态
   useEffect(() => {
@@ -142,71 +163,6 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     setPendingDragComponent(null);
     setDraggedComponent(null);
   };
-
-  // 处理组件右键菜单
-  const handleComponentContextMenu = (e: React.MouseEvent, componentId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    const component = components.find(c => c.id === componentId);
-    if (!component) return;
-    
-    // 只对图片控件显示右键菜单
-    if (component.type === 'hg_image') {
-      setContextMenu({
-        visible: true,
-        x: e.clientX,
-        y: e.clientY,
-        componentId: component.id,
-        componentType: component.type
-      });
-    }
-  };
-
-  // 关闭右键菜单
-  const closeContextMenu = () => {
-    setContextMenu(null);
-  };
-
-  // 处理右键菜单项点击
-  const handleContextMenuAction = (action: string) => {
-    if (!contextMenu) return;
-    
-    const component = components.find(c => c.id === contextMenu.componentId);
-    if (!component) return;
-    
-    switch (action) {
-      case 'gotoSlot':
-        // 发送消息到扩展端，跳转到槽函数
-        window.vscodeAPI?.postMessage({
-          command: 'gotoSlot',
-          componentId: component.id,
-          componentType: component.type,
-          componentName: component.name || component.id
-        });
-        break;
-      case 'delete':
-        removeComponent(component.id);
-        onComponentSelect(null);
-        break;
-      case 'duplicate':
-        // TODO: 实现复制功能
-        break;
-      case 'lock':
-        updateComponent(component.id, { locked: !component.locked });
-        break;
-    }
-    
-    closeContextMenu();
-  };
-
-  // 点击其他地方关闭菜单
-  useEffect(() => {
-    if (!contextMenu) return;
-    const handleClick = () => closeContextMenu();
-    window.addEventListener('click', handleClick);
-    return () => window.removeEventListener('click', handleClick);
-  }, [contextMenu]);
 
   // 处理键盘事件，特别是delete键删除选中组件
   useEffect(() => {
@@ -453,64 +409,13 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
       </div>
 
       {/* 右键菜单 */}
-      {contextMenu && contextMenu.visible && (
-        <div
-          style={{
-            position: 'fixed',
-            left: contextMenu.x,
-            top: contextMenu.y,
-            backgroundColor: '#fff',
-            border: '1px solid #ccc',
-            borderRadius: '4px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-            zIndex: 10000,
-            minWidth: '160px',
-            padding: '4px 0'
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div
-            style={{
-              padding: '8px 16px',
-              cursor: 'pointer',
-              fontSize: '13px',
-              color: '#333'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f0f0f0'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            onClick={() => handleContextMenuAction('gotoSlot')}
-          >
-            跳转到槽函数
-          </div>
-          <div style={{ height: '1px', backgroundColor: '#e0e0e0', margin: '4px 0' }} />
-          <div
-            style={{
-              padding: '8px 16px',
-              cursor: 'pointer',
-              fontSize: '13px',
-              color: '#333'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f0f0f0'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            onClick={() => handleContextMenuAction('lock')}
-          >
-            {components.find(c => c.id === contextMenu.componentId)?.locked ? '解锁' : '锁定'}
-          </div>
-          <div
-            style={{
-              padding: '8px 16px',
-              cursor: 'pointer',
-              fontSize: '13px',
-              color: '#d32f2f'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f0f0f0'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            onClick={() => handleContextMenuAction('delete')}
-          >
-            删除
-          </div>
-        </div>
-      )}
+      <ContextMenu
+        visible={menuState.visible}
+        x={menuState.x}
+        y={menuState.y}
+        component={menuState.component}
+        onAction={handleMenuAction}
+      />
     </div>
   );
 };
