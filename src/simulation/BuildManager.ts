@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { BuildCore, Logger } from './BuildCore';
+import { ProjectUtils } from '../utils/ProjectUtils';
 
 /**
  * VSCode 日志适配器
@@ -28,7 +29,8 @@ export class BuildManager extends BuildCore {
 
     constructor(projectRoot: string, sdkPath: string, outputChannel?: vscode.OutputChannel) {
         const channel = outputChannel || vscode.window.createOutputChannel('HoneyGUI Simulation');
-        super(projectRoot, sdkPath, new VSCodeLogger(channel));
+        const projectConfig = ProjectUtils.loadProjectConfig(projectRoot);
+        super(projectRoot, sdkPath, projectConfig, new VSCodeLogger(channel));
         this.outputChannel = channel;
         this.ownsOutputChannel = !outputChannel; // 只有自己创建的才负责关闭
     }

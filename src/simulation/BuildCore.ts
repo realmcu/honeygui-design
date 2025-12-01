@@ -2,6 +2,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { spawn } from 'child_process';
 import { ImageConverterService } from '../services/ImageConverterService';
+import { ProjectConfig } from '../common/ProjectConfig';
 
 /**
  * 日志接口
@@ -18,10 +19,12 @@ export class BuildCore {
     protected projectRoot: string;
     protected sdkPath: string;
     protected logger: Logger;
+    protected projectConfig: ProjectConfig;
 
-    constructor(projectRoot: string, sdkPath: string, logger: Logger) {
+    constructor(projectRoot: string, sdkPath: string, projectConfig: ProjectConfig, logger: Logger) {
         this.projectRoot = projectRoot;
         this.sdkPath = sdkPath;
+        this.projectConfig = projectConfig;
         this.buildDir = path.join(projectRoot, 'build');
         this.logger = logger;
     }
@@ -151,6 +154,17 @@ export class BuildCore {
             `PROJECT_ROOT = '${sdkPathNormalized}'`
         );
 
+        // 从projectConfig获取分辨率
+        const { width, height } = this.parseResolution(this.projectConfig.resolution);
+
+        // 添加LCD宏定义到CFLAGS
+        if (!content.includes('DRV_LCD_WIDTH')) {
+            content = content.replace(
+                /(env_params\s*=\s*{[^}]*'CFLAGS':\s*menu_config\.CFLAGS)/,
+                `$1 + ' -DDRV_LCD_WIDTH=${width} -DDRV_LCD_HEIGHT=${height}'`
+            );
+        }
+
         // 在 DoBuilding 之前添加项目 autogen 代码的编译（仅当不存在时）
         if (!content.includes('PROJECT_AUTOGEN')) {
             const autogenInclude = `
@@ -166,6 +180,27 @@ if os.path.exists(os.path.join(PROJECT_AUTOGEN, 'SConscript')):
         }
         
         fs.writeFileSync(sconstructPath, content);
+    }
+
+    /**
+     * 解析分辨率字符串（如 "480X272"）
+     */
+    private parseResolution(resolution?: string): { width: number; height: number } {
+        const defaultResolution = { width: 480, height: 272 };
+        
+        if (!resolution) {
+            return defaultResolution;
+        }
+
+        const match = resolution.match(/(\d+)X(\d+)/i);
+        if (match) {
+            return {
+                width: parseInt(match[1]),
+                height: parseInt(match[2])
+            };
+        }
+
+        return defaultResolution;
     }
 
     protected copyDirectory(src: string, dest: string): void {

@@ -95,10 +95,11 @@ Ctrl+Shift+P → HoneyGUI: Compile & Simulate
 
 自动执行：
 1. 环境检查（SDK、SCons、GCC）
-2. 生成C代码
-3. 准备编译环境（`.honeygui-build/`）
-4. 执行SCons编译
-5. 启动SDL2仿真窗口
+2. 转换图片资源（.png/.jpg → .bin）
+3. 生成C代码
+4. 准备编译环境（拷贝SDK的`win32_sim/`到`build/`，修改`build/SConstruct`）
+5. 执行SCons编译
+6. 启动SDL2仿真窗口
 
 ## 代码生成策略
 

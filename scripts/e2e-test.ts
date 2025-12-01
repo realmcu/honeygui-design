@@ -206,6 +206,10 @@ async function generateCode(projectPath: string): Promise<void> {
 async function compile(projectPath: string): Promise<string> {
   log.step(4, '准备编译环境...');
   
+  // 加载项目配置
+  const projectJsonPath = path.join(projectPath, 'project.json');
+  const projectConfig = JSON.parse(fs.readFileSync(projectJsonPath, 'utf-8'));
+  
   // 使用 BuildCore（与 BuildManager 共享核心逻辑）
   const logger: Logger = {
     log: (msg: string, isError?: boolean) => {
@@ -217,7 +221,7 @@ async function compile(projectPath: string): Promise<string> {
     }
   };
   
-  const buildCore = new BuildCore(projectPath, CONFIG.sdkPath, logger);
+  const buildCore = new BuildCore(projectPath, CONFIG.sdkPath, projectConfig, logger);
   
   // 清理旧的编译目录
   const buildDir = buildCore.getBuildDir();
