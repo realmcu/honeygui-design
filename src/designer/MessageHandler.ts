@@ -17,6 +17,7 @@ export class MessageHandler {
     private readonly _fileManager: FileManager;
     private readonly _hmlController: HmlController;
     private readonly _collaborationService: CollaborationService;
+    private _autoCodeGenTimer: NodeJS.Timeout | null = null;
 
     constructor(
         assetManager: AssetManager,
@@ -83,6 +84,9 @@ export class MessageHandler {
                 const serializedContent = this._hmlController.serializeDocument();
                 logger.debug(`[MessageHandler] 序列化完成，内容长度: ${serializedContent.length}`);
                 await this._fileManager.saveHml(message.content?.raw ?? serializedContent);
+                
+                // 触发自动代码生成（带防抖）
+                this._scheduleAutoCodeGeneration();
                 break;
 
             case 'selectImagePath':
@@ -220,5 +224,24 @@ export class MessageHandler {
                 }
             }
         );
+    }
+
+    /**
+     * 调度自动代码生成（带防抖）
+     * 保存HML后2秒自动生成代码，如果2秒内再次保存则重置计时器
+     */
+    private _scheduleAutoCodeGeneration(): void {
+        // 清除之前的计时器
+        if (this._autoCodeGenTimer) {
+            clearTimeout(this._autoCodeGenTimer);
+        }
+
+        // 设置新的计时器
+        this._autoCodeGenTimer = setTimeout(() => {
+            logger.info('[MessageHandler] 自动触发代码生成');
+            this.handleGenerateCode().catch(err => {
+                logger.error(`[MessageHandler] 自动代码生成失败: ${err}`);
+            });
+        }, 2000); // 2秒延迟
     }
 }
