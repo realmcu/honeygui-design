@@ -12,6 +12,11 @@ export class EntryFileGenerator {
      * @param projectName 项目名称
      */
     static generate(autogenDir: string, projectName: string): string {
+        // 确保目录存在
+        if (!fs.existsSync(autogenDir)) {
+            fs.mkdirSync(autogenDir, { recursive: true });
+        }
+
         const entryFile = path.join(autogenDir, `${projectName}Entry.c`);
         
         // 只在首次生成时创建
