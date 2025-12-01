@@ -43,7 +43,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
   } = useDesignerStore();
   
   // 使用画布缩放 Hook
-  const { handleWheel, showZoomHint } = useCanvasZoom(zoom, setZoom);
+  const { handleWheel, showZoomHint } = useCanvasZoom(zoom, setZoom, canvasOffset, setCanvasOffset);
   
   // 使用画布拖拽 Hook
   const {
