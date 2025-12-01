@@ -1,6 +1,7 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import { spawn } from 'child_process';
+import { ImageConverterService } from '../services/ImageConverterService';
 
 /**
  * 日志接口
@@ -77,6 +78,26 @@ export class BuildCore {
         this.logger.log('代码检查完成');
     }
 
+    async convertAssets(): Promise<void> {
+        this.logger.log('转换图片资源...');
+
+        const assetsDir = path.join(this.projectRoot, 'assets');
+        const outputDir = path.join(this.buildDir, 'assets');
+
+        const converter = new ImageConverterService(this.sdkPath);
+        const results = await converter.convertAssetsDir(assetsDir, outputDir);
+
+        const failed = results.filter(r => !r.success);
+        if (failed.length > 0) {
+            for (const f of failed) {
+                this.logger.log(`转换失败: ${f.inputPath} - ${f.error}`, true);
+            }
+            throw new Error(`${failed.length} 个图片转换失败`);
+        }
+
+        this.logger.log(`转换完成: ${results.length} 个图片`);
+    }
+
     async compile(): Promise<void> {
         this.logger.log('开始编译...');
 
@@ -130,17 +151,19 @@ export class BuildCore {
             `PROJECT_ROOT = '${sdkPathNormalized}'`
         );
 
-        // 在 DoBuilding 之前添加项目 autogen 代码的编译
-        const autogenInclude = `
+        // 在 DoBuilding 之前添加项目 autogen 代码的编译（仅当不存在时）
+        if (!content.includes('PROJECT_AUTOGEN')) {
+            const autogenInclude = `
 # Include project autogen code
 PROJECT_AUTOGEN = '${projectRootNormalized}/src/autogen'
 if os.path.exists(os.path.join(PROJECT_AUTOGEN, 'SConscript')):
     objs.extend(SConscript(os.path.join(PROJECT_AUTOGEN, 'SConscript')))
 `;
-        content = content.replace(
-            /# Build\s*\nDoBuilding\(TARGET, objs\)/,
-            `${autogenInclude}\n# Build\nDoBuilding(TARGET, objs)`
-        );
+            content = content.replace(
+                /# Build\s*\nDoBuilding\(TARGET, objs\)/,
+                `${autogenInclude}\n# Build\nDoBuilding(TARGET, objs)`
+            );
+        }
         
         fs.writeFileSync(sconstructPath, content);
     }

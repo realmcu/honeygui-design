@@ -324,9 +324,13 @@ void ${baseName}_update_user(void) {
     let parentRef = 'NULL';
     if (component.parent) {
       const parentComp = this.componentMap.get(component.parent);
-      // 如果父组件是 hg_view，使用 NULL（因为 view 没有句柄）
-      if (parentComp && parentComp.type !== 'hg_view') {
-        parentRef = component.parent;
+      if (parentComp) {
+        if (parentComp.type === 'hg_view') {
+          // 父组件是 view，使用 switch_in 函数的 view 参数
+          parentRef = '(gui_obj_t *)view';
+        } else {
+          parentRef = component.parent;
+        }
       }
     }
 
@@ -335,8 +339,10 @@ void ${baseName}_update_user(void) {
     // 特殊处理图片组件，直接在创建时传入路径
     if (component.type === 'hg_image') {
         const src = component.data?.src || '';
-        // gui_img_create_from_fs(parent, name, file, x, y, w, h)
-        return `${indentStr}${component.id} = gui_img_create_from_fs(${parentRef}, "${component.name}", "${src}", ${x}, ${y}, ${width}, ${height});\n`;
+        // 将 .png/.jpg/.jpeg 替换为 .bin
+        const binSrc = src.replace(/\.(png|jpe?g)$/i, '.bin');
+        // gui_img_create_from_fs 返回 gui_img_t*，需要强制转换
+        return `${indentStr}${component.id} = (gui_obj_t *)gui_img_create_from_fs(${parentRef}, "${component.name}", "${binSrc}", ${x}, ${y}, ${width}, ${height});\n`;
     }
 
     return `${indentStr}${component.id} = ${mapping.createFunction}(${parentRef}, "${component.name}", ${x}, ${y}, ${width}, ${height});\n`;

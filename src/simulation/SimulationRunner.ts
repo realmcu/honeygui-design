@@ -185,6 +185,7 @@ export class SimulationRunner {
         this.buildManager = new BuildManager(this.projectRoot, this.sdkPath, this.outputChannel);
 
         await this.buildManager.setupBuildDir();
+        await this.buildManager.convertAssets();
         await this.buildManager.copyGeneratedCode();
 
         this.log('编译环境准备完成');
