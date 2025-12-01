@@ -12,6 +12,7 @@ interface ComponentRendererProps {
     onMouseDown: (e: React.MouseEvent) => void;
     onMouseEnter: () => void;
     onMouseLeave: () => void;
+    onContextMenu?: (e: React.MouseEvent) => void;
   };
   children?: React.ReactNode;
 }

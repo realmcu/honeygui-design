@@ -202,11 +202,10 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
 
   // 点击其他地方关闭菜单
   useEffect(() => {
-    if (contextMenu) {
-      const handleClick = () => closeContextMenu();
-      window.addEventListener('click', handleClick);
-      return () => window.removeEventListener('click', handleClick);
-    }
+    if (!contextMenu) return;
+    const handleClick = () => closeContextMenu();
+    window.addEventListener('click', handleClick);
+    return () => window.removeEventListener('click', handleClick);
   }, [contextMenu]);
 
   // 处理键盘事件，特别是delete键删除选中组件
