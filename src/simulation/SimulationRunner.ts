@@ -4,7 +4,7 @@ import { spawn, exec, ChildProcess } from 'child_process';
 import { RunnerStatus, RunnerListener } from '../common/RunnerStatus';
 import { EnvironmentChecker } from './EnvironmentChecker';
 import { BuildManager } from './BuildManager';
-import { generateHoneyGuiCode } from '../codegen/honeygui';
+import { CodeGenerator } from '../services/CodeGenerator';
 import { HmlController } from '../hml/HmlController';
 import { ProjectUtils } from '../utils/ProjectUtils';
 
@@ -159,28 +159,21 @@ export class SimulationRunner {
     /**
      * 生成代码
      */
+    /**
+     * 生成代码
+     */
     private async generateCode(hmlFile: string): Promise<void> {
         this.log('生成 C 代码...');
 
-        const hmlController = new HmlController();
-        await hmlController.loadFile(hmlFile);
-
-        const designName = path.basename(path.dirname(hmlFile));
-        const hmlFileName = path.basename(hmlFile, '.hml');
-        const outputDir = path.join(this.projectRoot, 'src', 'autogen', designName);
-
-        const components = hmlController.currentDocument?.view.components || [];
-        const result = await generateHoneyGuiCode(components as any, {
-            outputDir,
-            hmlFileName,
-            enableProtectedAreas: true
-        });
+        // 使用统一的代码生成器
+        const codeGenerator = new CodeGenerator();
+        const result = await codeGenerator.generate(this.projectRoot);
 
         if (!result.success) {
-            throw new Error(result.errors?.[0] || '代码生成失败');
+            throw new Error(result.errors?.[0]?.error || '代码生成失败');
         }
 
-        this.log(`代码生成完成: ${result.files.length} 个文件`);
+        this.log(`代码生成完成: ${result.totalFiles} 个文件`);
     }
 
     /**
