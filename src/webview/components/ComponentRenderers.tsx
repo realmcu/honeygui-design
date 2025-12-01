@@ -123,14 +123,7 @@ export const ContainerRenderer: React.FC<ComponentRendererProps> = ({ component,
  * 图片组件渲染器
  */
 export const ImageRenderer: React.FC<ComponentRendererProps> = ({ component, style, handlers }) => (
-  <ImageComponent
-    component={component}
-    style={style}
-    onMouseDown={handlers.onMouseDown}
-    onMouseEnter={handlers.onMouseEnter}
-    onMouseLeave={handlers.onMouseLeave}
-    onContextMenu={handlers.onContextMenu}
-  />
+  <ImageComponent component={component} style={style} {...handlers} />
 );
 
 /**

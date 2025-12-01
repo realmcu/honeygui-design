@@ -17,10 +17,7 @@ interface ImageComponentProps {
 export const ImageComponent: React.FC<ImageComponentProps> = ({
   component,
   style,
-  onMouseDown,
-  onMouseEnter,
-  onMouseLeave,
-  onContextMenu
+  ...handlers
 }) => {
   const webviewUri = useWebviewUri(component.data?.src);
 
@@ -32,10 +29,7 @@ export const ImageComponent: React.FC<ImageComponentProps> = ({
         backgroundSize: 'contain',
         backgroundRepeat: 'no-repeat',
       }}
-      onMouseDown={onMouseDown}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
-      onContextMenu={onContextMenu}
+      {...handlers}
     >
       {!webviewUri && '🖼️'}
     </div>
