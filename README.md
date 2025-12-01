@@ -69,12 +69,23 @@ my-project/
 
 点击工具栏"生成代码"按钮，自动生成：
 ```
-src/autogen/main/
-├── main.h                # 组件声明
-├── main.c                # 初始化和更新逻辑
-├── main_callbacks.h      # 事件回调声明
-└── main_callbacks.c      # 事件回调实现（含保护区）
+src/
+├── autogen/main/           # 自动生成目录
+│   ├── main_ui.h           # UI声明（每次覆盖）
+│   ├── main_ui.c           # UI实现（每次覆盖）
+│   ├── main_callbacks.h    # 回调声明（只生成一次）
+│   └── main_callbacks.c    # 回调实现（保护区机制）
+└── user/main/              # 用户代码目录
+    ├── main.h              # 用户头文件（只生成一次）
+    └── main.c              # 用户逻辑（只生成一次）
 ```
+
+**文件覆盖策略**：
+| 文件 | 策略 | 说明 |
+|------|------|------|
+| `*_ui.h/c` | 每次覆盖 | 纯UI代码，由设计器完全控制 |
+| `*_callbacks.c` | 保护区 | 新回调自动添加，已有代码保留 |
+| `user/*.c` | 只生成一次 | 用户完全控制，永不覆盖 |
 
 ### 4. 编译仿真
 
@@ -89,21 +100,47 @@ Ctrl+Shift+P → HoneyGUI: Compile & Simulate
 4. 执行SCons编译
 5. 启动SDL2仿真窗口
 
-## 代码保护区
+## 代码生成策略
 
-在生成的回调文件中，保护区内的代码不会被覆盖：
+采用 **Qt模式 + 保护区** 组合策略，确保用户代码不被覆盖：
 
+### 1. UI代码分离（每次覆盖）
+```c
+// main_ui.h - 自动生成，请勿手动修改
+extern gui_obj_t *button1;
+extern gui_obj_t *label1;
+
+// main_ui.c - 自动生成，请勿手动修改
+gui_obj_t *button1 = NULL;
+// ... 组件创建代码
+```
+
+### 2. 回调保护区（保留用户代码）
 ```c
 // main_callbacks.c
-#include "main_callbacks.h"
-
-// HONEYGUI PROTECTED START [on_button_click]
+/* @protected start on_button_click */
 void on_button_click(gui_obj_t *obj) {
     // 用户自定义逻辑，重新生成时保留
     printf("Button clicked!\n");
     update_ui_state();
 }
-// HONEYGUI PROTECTED END [on_button_click]
+/* @protected end on_button_click */
+```
+
+### 3. 用户代码目录（完全控制）
+```c
+// src/user/main/main.c - 只生成一次，后续不覆盖
+#include "main.h"
+
+void main_init_user(void) {
+    // 在此添加初始化逻辑
+}
+
+void main_update_user(void) {
+    // 在此添加更新逻辑
+}
+
+// 添加任意自定义函数...
 ```
 
 ## 协同开发

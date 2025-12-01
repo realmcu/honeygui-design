@@ -1,6 +1,11 @@
 /**
  * HoneyGUI C代码生成器
  * 从组件树生成调用HoneyGUI API的C代码
+ * 
+ * 文件生成策略（Qt模式 + 保护区）：
+ * - *_ui.h/c: 自动生成，每次覆盖（纯UI代码）
+ * - *_callbacks.h/c: 只生成一次 + 保护区（事件回调）
+ * - 用户代码目录: 只生成一次，用户完全控制
  */
 
 import * as fs from 'fs';
@@ -12,10 +17,13 @@ import { SConscriptGenerator } from '../../simulation/SConscriptGenerator';
 // Re-export for backward compatibility
 export { Component } from '../../hml/types';
 
+export type OverwritePolicy = 'always' | 'once' | 'protected';
+
 export interface CodeGenOptions {
   outputDir: string;
   hmlFileName: string;  // HML文件名（不含扩展名）
   enableProtectedAreas?: boolean;
+  userCodeDir?: string; // 用户代码目录（可选）
 }
 
 export interface CodeGenResult {
@@ -50,34 +58,42 @@ export class HoneyGuiCCodeGenerator {
         fs.mkdirSync(this.options.outputDir, { recursive: true });
       }
 
-      // 生成头文件
-      const headerFile = path.join(this.options.outputDir, `${baseName}.h`);
-      fs.writeFileSync(headerFile, this.generateHeader(baseName));
-      files.push(headerFile);
+      // === 自动生成文件（每次覆盖）===
+      // UI头文件
+      const uiHeaderFile = path.join(this.options.outputDir, `${baseName}_ui.h`);
+      fs.writeFileSync(uiHeaderFile, this.generateUiHeader(baseName));
+      files.push(uiHeaderFile);
 
-      // 生成实现文件
-      const implFile = path.join(this.options.outputDir, `${baseName}.c`);
-      fs.writeFileSync(implFile, this.generateImplementation(baseName));
-      files.push(implFile);
+      // UI实现文件
+      const uiImplFile = path.join(this.options.outputDir, `${baseName}_ui.c`);
+      fs.writeFileSync(uiImplFile, this.generateUiImplementation(baseName));
+      files.push(uiImplFile);
 
-      // 生成回调文件
+      // === 回调文件（只生成一次 + 保护区）===
       const callbackHeaderFile = path.join(this.options.outputDir, `${baseName}_callbacks.h`);
       const callbackImplFile = path.join(this.options.outputDir, `${baseName}_callbacks.c`);
       
+      // 回调头文件：只生成一次
       if (!fs.existsSync(callbackHeaderFile)) {
         fs.writeFileSync(callbackHeaderFile, this.generateCallbackHeader(baseName));
         files.push(callbackHeaderFile);
       }
       
+      // 回调实现文件：保护区合并
       if (!fs.existsSync(callbackImplFile)) {
         fs.writeFileSync(callbackImplFile, this.generateCallbackImplementation(baseName));
         files.push(callbackImplFile);
       } else if (this.options.enableProtectedAreas) {
-        // 合并保护区
         const existing = fs.readFileSync(callbackImplFile, 'utf-8');
         const merged = this.mergeProtectedAreas(existing, this.generateCallbackImplementation(baseName));
         fs.writeFileSync(callbackImplFile, merged);
         files.push(callbackImplFile);
+      }
+
+      // === 用户代码文件（只生成一次）===
+      if (this.options.userCodeDir) {
+        const userFiles = this.generateUserCodeFiles(baseName);
+        files.push(...userFiles);
       }
 
       // 生成 SConscript
@@ -96,40 +112,117 @@ export class HoneyGuiCCodeGenerator {
   }
 
   /**
-   * 生成头文件
+   * 生成用户代码文件（只生成一次，不覆盖）
    */
-  private generateHeader(baseName: string): string {
-    const guardName = `${baseName.toUpperCase()}_H`;
+  private generateUserCodeFiles(baseName: string): string[] {
+    const files: string[] = [];
+    const userDir = this.options.userCodeDir!;
+
+    if (!fs.existsSync(userDir)) {
+      fs.mkdirSync(userDir, { recursive: true });
+    }
+
+    // 用户头文件
+    const userHeaderFile = path.join(userDir, `${baseName}.h`);
+    if (!fs.existsSync(userHeaderFile)) {
+      fs.writeFileSync(userHeaderFile, this.generateUserHeader(baseName));
+      files.push(userHeaderFile);
+    }
+
+    // 用户实现文件
+    const userImplFile = path.join(userDir, `${baseName}.c`);
+    if (!fs.existsSync(userImplFile)) {
+      fs.writeFileSync(userImplFile, this.generateUserImplementation(baseName));
+      files.push(userImplFile);
+    }
+
+    return files;
+  }
+
+  /**
+   * 生成用户头文件模板
+   */
+  private generateUserHeader(baseName: string): string {
+    const guardName = `${baseName.toUpperCase()}_USER_H`;
+    return `#ifndef ${guardName}
+#define ${guardName}
+
+/**
+ * ${baseName} 用户代码
+ * 此文件只生成一次，后续不会被覆盖
+ * 可以在此添加自定义逻辑、状态管理等
+ */
+
+#include "${baseName}_ui.h"
+
+// 用户自定义函数声明
+void ${baseName}_init_user(void);
+void ${baseName}_update_user(void);
+
+#endif // ${guardName}
+`;
+  }
+
+  /**
+   * 生成用户实现文件模板
+   */
+  private generateUserImplementation(baseName: string): string {
+    return `#include "${baseName}.h"
+#include <stdio.h>
+
+/**
+ * ${baseName} 用户代码实现
+ * 此文件只生成一次，后续不会被覆盖
+ */
+
+// 用户初始化（在UI创建后调用）
+void ${baseName}_init_user(void) {
+    // TODO: 添加初始化逻辑
+}
+
+// 用户更新（可用于周期性更新UI）
+void ${baseName}_update_user(void) {
+    // TODO: 添加更新逻辑
+}
+
+// 在下方添加更多自定义函数...
+`;
+  }
+
+  /**
+   * 生成UI头文件（每次覆盖）
+   */
+  private generateUiHeader(baseName: string): string {
+    const guardName = `${baseName.toUpperCase()}_UI_H`;
     const componentTypes = [...new Set(this.components.map(c => c.type))];
     const headers = this.apiMapper.getRequiredHeaders(componentTypes);
     const hasView = componentTypes.includes('hg_view');
 
-    let code = `#ifndef ${guardName}
+    let code = `/**
+ * ${baseName} UI定义（自动生成，请勿手动修改）
+ * 生成时间: ${new Date().toISOString()}
+ */
+#ifndef ${guardName}
 #define ${guardName}
 
 #include "guidef.h"
 #include "gui_obj.h"
 `;
 
-    // hg_view 需要额外的头文件
     if (hasView) {
       code += `#include "gui_components_init.h"\n`;
       code += `#include "gui_view.h"\n`;
       code += `#include "gui_view_instance.h"\n`;
     }
 
-    // 包含其他组件的头文件
     headers.forEach(header => {
-      if (header !== 'gui_view.h') {  // gui_view.h 已经包含
+      if (header !== 'gui_view.h') {
         code += `#include "${header}"\n`;
       }
     });
 
-    code += `
-// 组件句柄声明
-`;
+    code += `\n// 组件句柄声明\n`;
 
-    // 声明所有非 view 组件的句柄
     this.components.forEach(comp => {
       if (comp.type !== 'hg_view') {
         code += `extern gui_obj_t *${comp.id};\n`;
@@ -144,17 +237,20 @@ export class HoneyGuiCCodeGenerator {
   }
 
   /**
-   * 生成实现文件
+   * 生成UI实现文件（每次覆盖）
    */
-  private generateImplementation(baseName: string): string {
-    let code = `#include "${baseName}.h"
+  private generateUiImplementation(baseName: string): string {
+    let code = `/**
+ * ${baseName} UI实现（自动生成，请勿手动修改）
+ * 生成时间: ${new Date().toISOString()}
+ */
+#include "${baseName}_ui.h"
 #include "${baseName}_callbacks.h"
 #include <stddef.h>
 
 // 组件句柄定义
 `;
 
-    // 定义所有非 view 组件的句柄
     this.components.forEach(comp => {
       if (comp.type !== 'hg_view') {
         code += `gui_obj_t *${comp.id} = NULL;\n`;
@@ -163,7 +259,6 @@ export class HoneyGuiCCodeGenerator {
 
     code += `\n`;
 
-    // 生成组件创建代码（按层级顺序，直接在全局作用域）
     const rootComponents = this.components.filter(c => c.parent === null);
     rootComponents.forEach(comp => {
       code += this.generateComponentTree(comp, 0);

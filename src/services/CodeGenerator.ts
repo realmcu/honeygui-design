@@ -37,7 +37,6 @@ export class CodeGenerator {
 
         for (const designName of designDirs) {
             const designDir = path.join(uiDir, designName);
-            // 查找目录下所有 .hml 文件
             const files = fs.readdirSync(designDir);
             for (const file of files) {
                 if (file.endsWith('.hml')) {
@@ -70,6 +69,7 @@ export class CodeGenerator {
         const config = ProjectUtils.loadProjectConfig(projectRoot);
         const srcDir = ProjectUtils.getSrcDir(projectRoot);
         const autogenDir = path.join(srcDir, 'autogen');
+        const userDir = path.join(srcDir, 'user'); // 用户代码目录
 
         // 生成项目入口文件（只生成一次）
         try {
@@ -94,7 +94,7 @@ export class CodeGenerator {
             });
 
             try {
-                const result = await this.generateSingle(hmlFile, srcDir, designName);
+                const result = await this.generateSingle(hmlFile, srcDir, designName, userDir);
                 successCount++;
                 totalFiles += result.fileCount;
             } catch (error) {
@@ -121,17 +121,21 @@ export class CodeGenerator {
     private async generateSingle(
         hmlFile: string,
         srcDir: string,
-        designName: string
+        designName: string,
+        userDir: string
     ): Promise<{ fileCount: number }> {
         const hmlController = new HmlController();
         await hmlController.loadFile(hmlFile);
 
         const outputDir = path.join(srcDir, 'autogen', designName);
-        const hmlFileName = path.basename(hmlFile, '.hml'); // 使用实际的文件名
+        const userCodeDir = path.join(userDir, designName);
+        const hmlFileName = path.basename(hmlFile, '.hml');
+        
         const generatorOptions: CodeGenOptions = {
             outputDir,
             hmlFileName,
-            enableProtectedAreas: true
+            enableProtectedAreas: true,
+            userCodeDir  // 启用用户代码目录
         };
 
         const components = hmlController.currentDocument?.view.components || [];
