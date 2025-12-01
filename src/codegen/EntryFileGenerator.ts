@@ -25,6 +25,8 @@ export class EntryFileGenerator {
         }
 
         const content = `#include "gui_api.h"
+#include "gui_view.h"
+#include "gui_components_init.h"
 
 static int app_init(void)
 {
