@@ -101,6 +101,10 @@ export class MessageHandler {
                 this.handleGenerateCode();
                 break;
 
+            case 'gotoSlot':
+                this._handleGotoSlot(message.componentId, message.componentName);
+                break;
+
             case 'loadAssets':
                 this._assetManager.handleLoadAssets(this._fileManager.currentFilePath);
                 break;
@@ -243,5 +247,73 @@ export class MessageHandler {
                 logger.error(`[MessageHandler] 自动代码生成失败: ${err}`);
             });
         }, 2000); // 2秒延迟
+    }
+
+    /**
+     * 处理跳转到槽函数
+     */
+    private async _handleGotoSlot(componentId: string, componentName: string): Promise<void> {
+        try {
+            const currentFile = this._fileManager.currentFilePath;
+            if (!currentFile) {
+                vscode.window.showErrorMessage('未找到当前HML文件');
+                return;
+            }
+
+            // 获取项目根目录
+            const path = require('path');
+            const ProjectUtils = require('../utils/ProjectUtils').ProjectUtils;
+            const projectRoot = ProjectUtils.findProjectRoot(currentFile);
+            if (!projectRoot) {
+                vscode.window.showErrorMessage('未找到项目根目录');
+                return;
+            }
+
+            // 获取设计稿名称（从HML文件路径提取）
+            const hmlDir = path.dirname(currentFile);
+            const designName = path.basename(hmlDir);
+
+            // 构建回调文件路径
+            const callbackFile = path.join(projectRoot, 'src', 'autogen', designName, `${designName}_callbacks.c`);
+            
+            // 检查文件是否存在，如果不存在则先生成代码
+            const fs = require('fs');
+            if (!fs.existsSync(callbackFile)) {
+                const result = await vscode.window.showInformationMessage(
+                    '回调文件不存在，是否先生成代码？',
+                    '生成', '取消'
+                );
+                
+                if (result === '生成') {
+                    await this.handleGenerateCode();
+                    // 等待一下确保文件生成完成
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                } else {
+                    return;
+                }
+            }
+
+            // 打开文件
+            const document = await vscode.workspace.openTextDocument(callbackFile);
+            const editor = await vscode.window.showTextDocument(document);
+
+            // 查找槽函数位置
+            const text = document.getText();
+            const functionName = `on_${componentName}_click`;
+            const regex = new RegExp(`void\\s+${functionName}\\s*\\(`, 'i');
+            const match = regex.exec(text);
+
+            if (match) {
+                const position = document.positionAt(match.index);
+                editor.selection = new vscode.Selection(position, position);
+                editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenter);
+            } else {
+                vscode.window.showWarningMessage(`未找到函数 ${functionName}，请检查代码生成是否正确`);
+            }
+
+        } catch (error) {
+            logger.error(`[MessageHandler] 跳转到槽函数失败: ${error}`);
+            vscode.window.showErrorMessage(`跳转失败: ${error}`);
+        }
     }
 }

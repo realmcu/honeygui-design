@@ -40,9 +40,11 @@ export const createComponentHandlers = (
   componentId: string,
   onMouseDown: (e: React.MouseEvent, id: string) => void,
   onMouseEnter: () => void,
-  onMouseLeave: () => void
+  onMouseLeave: () => void,
+  onContextMenu?: (e: React.MouseEvent, id: string) => void
 ) => ({
   onMouseDown: (e: React.MouseEvent) => onMouseDown(e, componentId),
   onMouseEnter,
   onMouseLeave,
+  onContextMenu: onContextMenu ? (e: React.MouseEvent) => onContextMenu(e, componentId) : undefined,
 });
