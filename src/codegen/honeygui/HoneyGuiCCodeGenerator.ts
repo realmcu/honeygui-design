@@ -7,6 +7,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { HoneyGuiApiMapper } from './HoneyGuiApiMapper';
 import { Component } from '../../hml/types';
+import { SConscriptGenerator } from '../../simulation/SConscriptGenerator';
 
 // Re-export for backward compatibility
 export { Component } from '../../hml/types';
@@ -78,6 +79,11 @@ export class HoneyGuiCCodeGenerator {
         fs.writeFileSync(callbackImplFile, merged);
         files.push(callbackImplFile);
       }
+
+      // 生成 SConscript
+      const autogenDir = path.dirname(this.options.outputDir);
+      SConscriptGenerator.generate(autogenDir);
+      files.push(path.join(autogenDir, 'SConscript'));
 
       return { success: true, files };
     } catch (error) {

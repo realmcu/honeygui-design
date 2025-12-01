@@ -21,7 +21,7 @@ export class BuildCore {
     constructor(projectRoot: string, sdkPath: string, logger: Logger) {
         this.projectRoot = projectRoot;
         this.sdkPath = sdkPath;
-        this.buildDir = path.join(projectRoot, '.honeygui-build', 'win32_sim');
+        this.buildDir = path.join(projectRoot, 'build');
         this.logger = logger;
     }
 
@@ -62,21 +62,19 @@ export class BuildCore {
     }
 
     async copyGeneratedCode(): Promise<void> {
-        this.logger.log('拷贝生成的代码...');
+        this.logger.log('检查生成的代码...');
 
         const srcAutogen = path.join(this.projectRoot, 'src', 'autogen');
-        const destAutogen = path.join(this.buildDir, 'autogen');
-
-        if (fs.existsSync(srcAutogen)) {
-            if (fs.existsSync(destAutogen)) {
-                fs.rmSync(destAutogen, { recursive: true, force: true });
-            }
-            this.copyDirectory(srcAutogen, destAutogen);
-            this.generateAutogenSConscript(destAutogen);
-            this.logger.log('代码拷贝完成');
-        } else {
+        if (!fs.existsSync(srcAutogen)) {
             throw new Error(`生成的代码目录不存在: ${srcAutogen}`);
         }
+
+        const sconscript = path.join(srcAutogen, 'SConscript');
+        if (!fs.existsSync(sconscript)) {
+            throw new Error(`SConscript 文件不存在: ${sconscript}，请先生成代码`);
+        }
+
+        this.logger.log('代码检查完成');
     }
 
     async compile(): Promise<void> {
@@ -114,28 +112,6 @@ export class BuildCore {
         return path.join(this.buildDir, exeName);
     }
 
-    private generateAutogenSConscript(autogenDir: string): void {
-        const sconscript = `from building import *
-import os
-
-cwd = GetCurrentDir()
-src = []
-for root, dirs, files in os.walk(cwd):
-    for f in files:
-        if f.endswith('.c'):
-            src.append(os.path.join(root, f))
-
-CPPPATH = [cwd]
-for root, dirs, files in os.walk(cwd):
-    CPPPATH.append(root)
-
-group = DefineGroup('autogen', src, depend=[''], CPPPATH=CPPPATH)
-Return('group')
-`;
-        fs.writeFileSync(path.join(autogenDir, 'SConscript'), sconscript);
-        this.logger.log('SConscript 生成完成');
-    }
-
     private generateConfig(): void {
         const configContent = 'CONFIG_REALTEK_HONEYGUI=y\n';
         fs.writeFileSync(path.join(this.buildDir, '.config'), configContent);
@@ -147,10 +123,25 @@ Return('group')
 
         let content = fs.readFileSync(sconstructPath, 'utf-8');
         const sdkPathNormalized = this.sdkPath.replace(/\\/g, '/');
+        const projectRootNormalized = this.projectRoot.replace(/\\/g, '/');
+        
         content = content.replace(
             /PROJECT_ROOT\s*=\s*os\.path\.dirname\(os\.getcwd\(\)\)/,
             `PROJECT_ROOT = '${sdkPathNormalized}'`
         );
+
+        // 在 DoBuilding 之前添加项目 autogen 代码的编译
+        const autogenInclude = `
+# Include project autogen code
+PROJECT_AUTOGEN = '${projectRootNormalized}/src/autogen'
+if os.path.exists(os.path.join(PROJECT_AUTOGEN, 'SConscript')):
+    objs.extend(SConscript(os.path.join(PROJECT_AUTOGEN, 'SConscript')))
+`;
+        content = content.replace(
+            /# Build\s*\nDoBuilding\(TARGET, objs\)/,
+            `${autogenInclude}\n# Build\nDoBuilding(TARGET, objs)`
+        );
+        
         fs.writeFileSync(sconstructPath, content);
     }
 
