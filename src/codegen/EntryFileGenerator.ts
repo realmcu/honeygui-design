@@ -1,0 +1,36 @@
+import * as fs from 'fs';
+import * as path from 'path';
+
+/**
+ * 入口文件生成器
+ * 生成项目级别的入口文件 {ProjectName}Entry.c
+ */
+export class EntryFileGenerator {
+    /**
+     * 生成入口文件
+     * @param autogenDir src/autogen 目录路径
+     * @param projectName 项目名称
+     */
+    static generate(autogenDir: string, projectName: string): string {
+        const entryFile = path.join(autogenDir, `${projectName}Entry.c`);
+        
+        // 只在首次生成时创建
+        if (fs.existsSync(entryFile)) {
+            return entryFile;
+        }
+
+        const content = `#include "gui_api.h"
+
+static int app_init(void)
+{
+    gui_view_create(gui_obj_get_root(), gui_view_descriptor_get("mainView"), 0, 0, 0, 0);
+    return 0;
+}
+
+GUI_INIT_APP_EXPORT(app_init);
+`;
+        
+        fs.writeFileSync(entryFile, content);
+        return entryFile;
+    }
+}

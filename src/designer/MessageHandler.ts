@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { logger } from '../utils/Logger';
 import { AssetManager } from './AssetManager';
-import { CodeGenManager } from './CodeGenManager';
+import { CodeGenerator } from '../services/CodeGenerator';
 import { ComponentManager } from './ComponentManager';
 import { FileManager } from './FileManager';
 import { HmlController } from '../hml/HmlController';
@@ -12,7 +12,7 @@ import { CollaborationService } from '../core/CollaborationService';
  */
 export class MessageHandler {
     private readonly _assetManager: AssetManager;
-    private readonly _codeGenManager: CodeGenManager;
+    private readonly _codeGenerator: CodeGenerator;
     private readonly _componentManager: ComponentManager;
     private readonly _fileManager: FileManager;
     private readonly _hmlController: HmlController;
@@ -20,13 +20,13 @@ export class MessageHandler {
 
     constructor(
         assetManager: AssetManager,
-        codeGenManager: CodeGenManager,
+        codeGenerator: CodeGenerator,
         componentManager: ComponentManager,
         fileManager: FileManager,
         hmlController: HmlController
     ) {
         this._assetManager = assetManager;
-        this._codeGenManager = codeGenManager;
+        this._codeGenerator = codeGenerator;
         this._componentManager = componentManager;
         this._fileManager = fileManager;
         this._hmlController = hmlController;
@@ -93,22 +93,8 @@ export class MessageHandler {
                 this._handlePreview(message.content);
                 break;
 
-            case 'codegen':
-                this._codeGenManager.generateCode(
-                    message.language || 'cpp',
-                    message.options,
-                    message.content,
-                    this._fileManager.currentFilePath,
-                    async () => {
-                        // 保存回调
-                        const content = this._hmlController.serializeDocument();
-                        return await this._fileManager.saveHml(content);
-                    }
-                );
-                break;
-
-            case 'generateAllCode':
-                this._codeGenManager.generateAllCode(this._fileManager.currentFilePath);
+            case 'generateCode':
+                this.handleGenerateCode();
                 break;
 
             case 'loadAssets':
@@ -187,5 +173,52 @@ export class MessageHandler {
             logger.error(`预览失败: ${error}`);
             vscode.window.showErrorMessage(`预览失败: ${error instanceof Error ? error.message : '未知错误'}`);
         }
+    }
+
+    /**
+     * 生成代码
+     */
+    private async handleGenerateCode(): Promise<void> {
+        const ProjectUtils = require('../utils/ProjectUtils').ProjectUtils;
+        const projectRoot = this._fileManager.currentFilePath 
+            ? ProjectUtils.findProjectRoot(this._fileManager.currentFilePath)
+            : undefined;
+        
+        if (!projectRoot) {
+            vscode.window.showErrorMessage('未找到项目根目录');
+            return;
+        }
+
+        await vscode.window.withProgress(
+            {
+                location: vscode.ProgressLocation.Notification,
+                title: '正在生成代码...',
+                cancellable: false
+            },
+            async (progress) => {
+                const result = await this._codeGenerator.generate(projectRoot, (prog) => {
+                    progress.report({
+                        increment: 100 / prog.total,
+                        message: `正在生成 ${prog.designName} (${prog.current}/${prog.total})...`
+                    });
+                });
+
+                if (result.success) {
+                    vscode.window.showInformationMessage(
+                        `成功生成 ${result.successCount} 个设计稿的代码，共 ${result.totalFiles} 个文件`
+                    );
+                } else {
+                    const errorMsg = result.errors.map(e => `${e.designName}: ${e.error}`).join('\n');
+                    vscode.window.showWarningMessage(
+                        `生成完成，成功 ${result.successCount} 个，失败 ${result.errors.length} 个`,
+                        '查看详情'
+                    ).then(selection => {
+                        if (selection === '查看详情') {
+                            vscode.window.showErrorMessage(errorMsg, { modal: true });
+                        }
+                    });
+                }
+            }
+        );
     }
 }

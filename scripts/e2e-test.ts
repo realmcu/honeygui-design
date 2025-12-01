@@ -16,6 +16,7 @@ import * as path from 'path';
 import * as os from 'os';
 import { spawn, execSync, ChildProcess } from 'child_process';
 import { HoneyGuiCCodeGenerator } from '../src/codegen/honeygui/HoneyGuiCCodeGenerator';
+import { EntryFileGenerator } from '../src/codegen/EntryFileGenerator';
 import { HmlSerializer } from '../src/hml/HmlSerializer';
 import { HmlParser } from '../src/hml/HmlParser';
 import { Document as HmlDocument, Component } from '../src/hml/types';
@@ -177,11 +178,25 @@ async function generateCode(projectPath: string): Promise<void> {
 
   if (result.success) {
       log.info(`生成了 ${result.files.length} 个文件: ${result.files.map(f => path.basename(f)).join(', ')}`);
-      // 读取生成的 C 文件并打印出来以供检查
+      
+      // 生成入口文件
+      const autogenDir = path.join(projectPath, 'src', 'autogen');
+      const entryFile = EntryFileGenerator.generate(autogenDir, CONFIG.projectName);
+      log.success(`✓ 入口文件已生成: ${path.basename(entryFile)}`);
+      
+      // 验证关键文件是否生成
       const sourceFile = path.join(outputDir, `${C_FILE_NAME}.c`);
+      const sconscriptFile = path.join(autogenDir, 'SConscript');
+      
       if (fs.existsSync(sourceFile)) {
           log.info(`\n生成的 ${C_FILE_NAME}.c:`);
           console.log(fs.readFileSync(sourceFile, 'utf-8'));
+      }
+      
+      if (fs.existsSync(sconscriptFile)) {
+          log.success('✓ SConscript 已生成');
+      } else {
+          log.error('✗ SConscript 未生成');
       }
   } else {
       throw new Error(`代码生成失败: ${result.errors?.join(', ')}`);

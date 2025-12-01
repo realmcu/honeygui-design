@@ -3,22 +3,23 @@ import * as fs from 'fs';
 import { ProjectUtils } from '../utils/ProjectUtils';
 import { HmlController } from '../hml/HmlController';
 import { generateHoneyGuiCode, CodeGenOptions } from '../codegen/honeygui';
+import { EntryFileGenerator } from '../codegen/EntryFileGenerator';
 import { logger } from '../utils/Logger';
 
-export interface BatchGenerationResult {
+export interface GenerationResult {
     success: boolean;
     successCount: number;
     totalFiles: number;
     errors: Array<{ designName: string; error: string }>;
 }
 
-export interface BatchGenerationProgress {
+export interface GenerationProgress {
     current: number;
     total: number;
     designName: string;
 }
 
-export class BatchCodeGenerator {
+export class CodeGenerator {
     /**
      * 扫描项目中的所有 HML 文件
      */
@@ -49,12 +50,12 @@ export class BatchCodeGenerator {
     }
 
     /**
-     * 批量生成代码
+     * 生成代码
      */
-    public async generateAll(
+    public async generate(
         projectRoot: string,
-        onProgress?: (progress: BatchGenerationProgress) => void
-    ): Promise<BatchGenerationResult> {
+        onProgress?: (progress: GenerationProgress) => void
+    ): Promise<GenerationResult> {
         const hmlFiles = await this.scanHmlFiles(projectRoot);
         
         if (hmlFiles.length === 0) {
@@ -66,7 +67,17 @@ export class BatchCodeGenerator {
             };
         }
 
+        const config = ProjectUtils.loadProjectConfig(projectRoot);
         const srcDir = ProjectUtils.getSrcDir(projectRoot);
+        const autogenDir = path.join(srcDir, 'autogen');
+
+        // 生成项目入口文件（只生成一次）
+        try {
+            const entryFile = EntryFileGenerator.generate(autogenDir, config.name || 'HoneyGUI');
+            logger.info(`入口文件: ${path.basename(entryFile)}`);
+        } catch (error) {
+            logger.error(`生成入口文件失败: ${error}`);
+        }
 
         let successCount = 0;
         let totalFiles = 0;

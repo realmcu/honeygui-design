@@ -11,7 +11,6 @@ const Toolbar: React.FC = () => {
     editingMode,
     snapToGrid,
     setSnapToGrid,
-    generateCode,
   } = useDesignerStore();
 
   const handleZoomIn = () => {
@@ -41,13 +40,9 @@ const Toolbar: React.FC = () => {
     });
   };
 
-  const handleGenerateCode = () => {
-    generateCode('cpp');
-  };
-
   const handleGenerateAllCode = () => {
     window.vscodeAPI?.postMessage({
-      command: 'generateAllCode',
+      command: 'generateCode',
       content: {},
     });
   };
@@ -150,19 +145,11 @@ const Toolbar: React.FC = () => {
       <div className="toolbar-section">
         <button
           className="toolbar-button primary"
-          onClick={handleGenerateCode}
-          title="生成当前设计稿的代码"
-        >
-          <Code size={16} />
-          <span>生成当前</span>
-        </button>
-        <button
-          className="toolbar-button primary"
           onClick={handleGenerateAllCode}
-          title="生成所有设计稿的代码"
+          title="生成代码"
         >
           <Code size={16} />
-          <span>生成全部</span>
+          <span>生成代码</span>
         </button>
         <button
           className="toolbar-button primary"

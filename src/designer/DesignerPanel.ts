@@ -3,7 +3,7 @@ import { logger } from '../utils/Logger';
 import { HmlController } from '../hml/HmlController';
 import { SaveManager } from './SaveManager';
 import { AssetManager } from './AssetManager';
-import { CodeGenManager } from './CodeGenManager';
+import { CodeGenerator } from '../services/CodeGenerator';
 import { ComponentManager } from './ComponentManager';
 import { FileManager } from './FileManager';
 import { MessageHandler } from './MessageHandler';
@@ -31,7 +31,7 @@ export class DesignerPanel {
     private readonly _hmlController: HmlController;
     private readonly _saveManager: SaveManager;
     private readonly _assetManager: AssetManager;
-    private readonly _codeGenManager: CodeGenManager;
+    private readonly _codeGenerator: CodeGenerator;
     private readonly _componentManager: ComponentManager;
     private readonly _fileManager: FileManager;
     private readonly _messageHandler: MessageHandler;
@@ -91,14 +91,14 @@ export class DesignerPanel {
         
         // Initialize Managers
         this._assetManager = new AssetManager(panel);
-        this._codeGenManager = new CodeGenManager(this._hmlController);
+        this._codeGenerator = new CodeGenerator();
         this._componentManager = new ComponentManager(panel, this._hmlController);
         this._fileManager = new FileManager(panel, this._hmlController, this._saveManager);
         
         // Initialize Message Handler
         this._messageHandler = new MessageHandler(
             this._assetManager,
-            this._codeGenManager,
+            this._codeGenerator,
             this._componentManager,
             this._fileManager,
             this._hmlController
@@ -197,24 +197,47 @@ export class DesignerPanel {
     /**
      * 生成代码
      */
-    public async generateCode(language: 'cpp' | 'c' = 'cpp', options?: Partial<CodeGenOptions>, content?: string): Promise<void> {
-        await this._codeGenManager.generateCode(
-            language,
-            options,
-            content,
-            this._fileManager.currentFilePath,
-            async () => {
-                const docContent = this._hmlController.serializeDocument();
-                return await this._fileManager.saveHml(docContent);
+    public async generateCode(): Promise<void> {
+        const projectRoot = this._fileManager.currentFilePath 
+            ? require('../utils/ProjectUtils').ProjectUtils.findProjectRoot(this._fileManager.currentFilePath)
+            : undefined;
+        
+        if (!projectRoot) {
+            vscode.window.showErrorMessage('未找到项目根目录');
+            return;
+        }
+
+        await vscode.window.withProgress(
+            {
+                location: vscode.ProgressLocation.Notification,
+                title: '正在生成代码...',
+                cancellable: false
+            },
+            async (progress) => {
+                const result = await this._codeGenerator.generate(projectRoot, (prog) => {
+                    progress.report({
+                        increment: 100 / prog.total,
+                        message: `正在生成 ${prog.designName} (${prog.current}/${prog.total})...`
+                    });
+                });
+
+                if (result.success) {
+                    vscode.window.showInformationMessage(
+                        `成功生成 ${result.successCount} 个设计稿的代码，共 ${result.totalFiles} 个文件`
+                    );
+                } else {
+                    const errorMsg = result.errors.map(e => `${e.designName}: ${e.error}`).join('\n');
+                    vscode.window.showWarningMessage(
+                        `生成完成，成功 ${result.successCount} 个，失败 ${result.errors.length} 个`,
+                        '查看详情'
+                    ).then(selection => {
+                        if (selection === '查看详情') {
+                            vscode.window.showErrorMessage(errorMsg, { modal: true });
+                        }
+                    });
+                }
             }
         );
-    }
-
-    /**
-     * 生成所有设计稿的代码
-     */
-    public async generateAllCode(): Promise<void> {
-        await this._codeGenManager.generateAllCode(this._fileManager.currentFilePath);
     }
 
     /**

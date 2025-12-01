@@ -46,7 +46,6 @@ export interface DesignerStore extends DesignerState {
   vscodeAPI: VSCodeAPI | null;
   setVSCodeAPI: (api: VSCodeAPI) => void;
   saveToFile: () => void;
-  generateCode: (language: 'cpp' | 'c') => void;
 
   // Component management
   duplicateComponent: (id: string) => void;
@@ -287,21 +286,6 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       content: {
         components: state.components,
       },
-    });
-  },
-
-  generateCode: (language) => {
-    const state = get();
-    if (!vscodeAPI) return;
-
-    // 先保存当前设计
-    get().saveToFile();
-
-    // 不传content，让后端从文件加载完整的HML
-    vscodeAPI.postMessage({
-      command: 'codegen',
-      language,
-      content: undefined,  // 不传content
     });
   },
 
