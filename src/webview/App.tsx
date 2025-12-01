@@ -367,7 +367,7 @@ const App: React.FC = () => {
     let parent: string | null = null;
 
     // 判断是否为容器组件
-    const isContainer = ['hg_view', 'hg_panel', 'hg_window'].includes(componentType);
+    const isContainer = ['hg_view', 'hg_window'].includes(componentType);
 
     if (isContainer) {
       // 容器组件：作为顶级组件

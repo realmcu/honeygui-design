@@ -70,17 +70,6 @@ const componentDefinitions: ComponentDefinition[] = [
   },
 
   {
-    type: 'hg_panel',
-    name: '面板',
-    icon: '🪟',
-    defaultSize: { width: 400, height: 300 },
-    properties: [
-      { name: 'backgroundColor', label: '背景色', type: 'color', defaultValue: '#ffffff', group: 'style' },
-      { name: 'border', label: '边框', type: 'string', defaultValue: '1px solid #ccc', group: 'style' },
-      { name: 'borderRadius', label: '圆角', type: 'number', defaultValue: 4, group: 'style' },
-    ],
-  },
-  {
     type: 'hg_view',
     name: '视图',
     icon: '👁️',

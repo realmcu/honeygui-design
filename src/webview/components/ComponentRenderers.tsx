@@ -144,7 +144,6 @@ export const componentRenderers: Record<string, React.FC<ComponentRendererProps>
   hg_progressbar: ProgressBarRenderer,
   hg_slider: SliderRenderer,
   hg_view: ContainerRenderer,
-  hg_panel: ContainerRenderer,
   hg_window: ContainerRenderer,
   hg_screen: ContainerRenderer,
   hg_image: ImageRenderer,

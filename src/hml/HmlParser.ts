@@ -13,7 +13,7 @@ import { logger } from '../utils/Logger';
 class ComponentRegistry {
   private static readonly VALID_COMPONENTS = new Set([
     // HoneyGUI标准组件 (hg_前缀)
-    'hg_button', 'hg_panel', 'hg_text', 'hg_image', 'hg_input',
+    'hg_button', 'hg_text', 'hg_image', 'hg_input',
     'hg_checkbox', 'hg_radio', 'hg_progressbar', 'hg_slider',
     'hg_switch', 'hg_canvas', 'hg_list', 'hg_grid', 'hg_tab',
     'hg_label',
@@ -221,7 +221,7 @@ export class HmlParser {
         return; // 跳过元属性
       }
 
-      // 跳过组件类型属性（如 hg_button, hg_panel 等），这些是冗余数据
+      // 跳过组件类型属性（如 hg_button, hg_view 等），这些是冗余数据
       if (ComponentRegistry.isValidComponent(key)) {
         return;
       }
