@@ -9,7 +9,8 @@ export const createImageComponentAtPosition = (
   dropPosition: { x: number; y: number },
   targetContainerId: string,
   components: Component[],
-  addComponent: (component: Component) => void
+  addComponent: (component: Component) => void,
+  imageSize?: { width: number; height: number }
 ): void => {
   const targetContainer = components.find(c => c.id === targetContainerId);
   if (!targetContainer) return;
@@ -18,11 +19,14 @@ export const createImageComponentAtPosition = (
   const relativeX = Math.max(0, dropPosition.x - targetAbsPos.x);
   const relativeY = Math.max(0, dropPosition.y - targetAbsPos.y);
 
+  const width = imageSize?.width || 100;
+  const height = imageSize?.height || 100;
+
   const imageComponent: Component = {
     id: `hg_image_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
     type: 'hg_image',
     name: `image_${Date.now().toString().substr(-4)}`,
-    position: { x: relativeX, y: relativeY, width: 100, height: 100 },
+    position: { x: relativeX, y: relativeY, width, height },
     visible: true,
     enabled: true,
     locked: false,
@@ -34,7 +38,6 @@ export const createImageComponentAtPosition = (
   };
 
   addComponent(imageComponent);
-  console.log('[创建组件] 图片组件:', imageComponent.id, imagePath);
 };
 
 /**
@@ -79,7 +82,8 @@ export const handleBackendMessage = (
           message.dropPosition,
           message.targetContainerId,
           components,
-          addComponent
+          addComponent,
+          message.imageSize
         );
       }
       break;

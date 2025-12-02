@@ -255,11 +255,14 @@ export class AssetManager {
 
             // 如果提供了位置和容器ID，则创建图片控件
             if (dropPosition && targetContainerId) {
+                const imageSize = this.getImageSize(filePath);
+                
                 this._panel.webview.postMessage({
                     command: 'createImageComponent',
                     imagePath: hmlRelativePath,
                     dropPosition,
-                    targetContainerId
+                    targetContainerId,
+                    imageSize
                 });
             }
 
@@ -324,6 +327,76 @@ export class AssetManager {
         } catch (error) {
             logger.error(`[DesignerPanel] 选择图片路径失败: ${error}`);
             vscode.window.showErrorMessage('选择图片失败');
+        }
+    }
+
+    /**
+     * 处理获取图片尺寸请求
+     */
+    public handleGetImageSize(
+        imagePath: string,
+        dropPosition: { x: number; y: number },
+        targetContainerId: string,
+        currentFilePath: string | undefined
+    ): void {
+        try {
+            if (!currentFilePath) {
+                return;
+            }
+
+            const projectRoot = ProjectUtils.findProjectRoot(currentFilePath);
+            if (!projectRoot) {
+                return;
+            }
+
+            const absolutePath = path.join(projectRoot, imagePath);
+            const imageSize = this.getImageSize(absolutePath);
+
+            this._panel.webview.postMessage({
+                command: 'createImageComponent',
+                imagePath,
+                dropPosition,
+                targetContainerId,
+                imageSize
+            });
+        } catch (error) {
+            logger.error(`[AssetManager] 获取图片尺寸失败: ${error}`);
+        }
+    }
+
+    /**
+     * 获取图片尺寸
+     */
+    private getImageSize(filePath: string): { width: number; height: number } {
+        try {
+            const buffer = fs.readFileSync(filePath);
+            
+            // PNG
+            if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) {
+                const width = buffer.readUInt32BE(16);
+                const height = buffer.readUInt32BE(20);
+                return { width, height };
+            }
+            
+            // JPEG
+            if (buffer[0] === 0xFF && buffer[1] === 0xD8) {
+                let offset = 2;
+                while (offset < buffer.length) {
+                    if (buffer[offset] !== 0xFF) break;
+                    const marker = buffer[offset + 1];
+                    if (marker === 0xC0 || marker === 0xC2) {
+                        const height = buffer.readUInt16BE(offset + 5);
+                        const width = buffer.readUInt16BE(offset + 7);
+                        return { width, height };
+                    }
+                    offset += 2 + buffer.readUInt16BE(offset + 2);
+                }
+            }
+            
+            return { width: 100, height: 100 };
+        } catch (error) {
+            logger.error(`[AssetManager] 读取图片尺寸失败: ${error}`);
+            return { width: 100, height: 100 };
         }
     }
 

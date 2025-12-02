@@ -142,6 +142,15 @@ export class MessageHandler {
                 this._assetManager.handleConvertPathToWebviewUri(message.path, message.requestId, this._fileManager.currentFilePath);
                 break;
 
+            case 'getImageSize':
+                this._assetManager.handleGetImageSize(
+                    message.imagePath,
+                    message.dropPosition,
+                    message.targetContainerId,
+                    this._fileManager.currentFilePath
+                );
+                break;
+
             case 'notify':
                 vscode.window.showInformationMessage(message.text);
                 break;

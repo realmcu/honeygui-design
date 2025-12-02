@@ -146,7 +146,8 @@ const App: React.FC = () => {
               message.dropPosition,
               message.targetContainerId,
               store.components,
-              store.addComponent
+              store.addComponent,
+              message.imageSize
             );
           }
           break;
@@ -294,14 +295,15 @@ const App: React.FC = () => {
       const x = (e.clientX - canvasRect.left) / useDesignerStore.getState().zoom;
       const y = (e.clientY - canvasRect.top) / useDesignerStore.getState().zoom;
 
-      const store = useDesignerStore.getState();
-      createImageComponentAtPosition(
-        `assets/${assetPath}`,
-        { x, y },
-        targetContainer.id,
-        store.components,
-        store.addComponent
-      );
+      const api = useDesignerStore.getState().vscodeAPI;
+      if (api) {
+        api.postMessage({
+          command: 'getImageSize',
+          imagePath: `assets/${assetPath}`,
+          dropPosition: { x, y },
+          targetContainerId: targetContainer.id
+        });
+      }
       return;
     }
     
