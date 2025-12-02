@@ -28,6 +28,10 @@ export interface DesignerStore extends DesignerState {
   setSnapToGrid: (snap: boolean) => void;
   setEditingMode: (mode: 'select' | 'move' | 'resize') => void;
   setCanvasBackgroundColor: (color: string) => void;
+  
+  // View connections
+  showViewConnections: boolean;
+  setShowViewConnections: (show: boolean) => void;
 
   // Drag and drop
   startDrag: (componentId: string, mousePos: { x: number; y: number }) => void;
@@ -115,6 +119,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   canvasSize: { width: 800, height: 480 }, // 默认画布尺寸
   canvasBackgroundColor: '#f0f0f0', // 默认画布背景色为灰色
   editingMode: 'select',
+  showViewConnections: true, // 默认显示视图连接
   undoStack: [],
   redoStack: [],
   vscodeAPI: null,
@@ -219,6 +224,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   setSnapToGrid: (snap) => set({ snapToGrid: snap }),
   setEditingMode: (mode) => set({ editingMode: mode }),
   setCanvasBackgroundColor: (color) => set({ canvasBackgroundColor: color }),
+  setShowViewConnections: (show) => set({ showViewConnections: show }),
 
   // Drag and drop
   startDrag: (componentId, mousePos) => {

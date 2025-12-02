@@ -8,6 +8,7 @@ import { calculateComponentStyle, createComponentHandlers } from '../utils/compo
 import { widgetRegistry } from './widgets';
 import { ContextMenu } from './ContextMenu';
 import { executeMenuAction, MenuActionHelpers } from '../services/contextMenuActions';
+import { ViewConnectionLayer } from './ViewConnectionLayer';
 import './DesignerCanvas.css';
 
 interface DesignerCanvasProps {
@@ -43,6 +44,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     canvasBackgroundColor,
     addToSelection,
     setSelectedComponents,
+    showViewConnections,
   } = useDesignerStore();
   
   // 使用画布缩放 Hook
@@ -400,6 +402,13 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
           {components
             .filter((c) => c.parent === null)
             .map((component) => renderComponent(component))}
+          
+          {/* 视图连接层 */}
+          <ViewConnectionLayer
+            components={components}
+            zoom={zoom}
+            visible={showViewConnections}
+          />
         </div>
 
         {/* Zoom indicator */}

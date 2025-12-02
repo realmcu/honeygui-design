@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useDesignerStore } from '../store';
-import { Save, Code, Play, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, Grid3x3, MousePointer } from 'lucide-react';
+import { Save, Code, Play, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, Grid3x3, MousePointer, GitBranch } from 'lucide-react';
 import './Toolbar.css';
 
 const Toolbar: React.FC = () => {
@@ -11,6 +11,8 @@ const Toolbar: React.FC = () => {
     editingMode,
     snapToGrid,
     setSnapToGrid,
+    showViewConnections,
+    setShowViewConnections,
   } = useDesignerStore();
 
   const handleZoomIn = () => {
@@ -31,6 +33,10 @@ const Toolbar: React.FC = () => {
 
   const handleToggleGrid = () => {
     setSnapToGrid(!snapToGrid);
+  };
+
+  const handleToggleViewConnections = () => {
+    setShowViewConnections(!showViewConnections);
   };
 
   const handleSave = () => {
@@ -110,6 +116,14 @@ const Toolbar: React.FC = () => {
         >
           <Grid3x3 size={16} />
           <span>网格</span>
+        </button>
+        <button
+          className={`toolbar-button ${showViewConnections ? 'active' : ''}`}
+          onClick={handleToggleViewConnections}
+          title="显示/隐藏视图连接"
+        >
+          <GitBranch size={16} />
+          <span>连接</span>
         </button>
       </div>
 
