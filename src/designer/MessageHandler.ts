@@ -97,6 +97,12 @@ export class MessageHandler {
                 this._handlePreview(message.content);
                 break;
 
+            case 'executeCommand':
+                if (message.commandId) {
+                    vscode.commands.executeCommand(message.commandId);
+                }
+                break;
+
             case 'generateCode':
                 this.handleGenerateCode();
                 break;

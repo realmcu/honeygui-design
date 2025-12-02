@@ -49,8 +49,8 @@ const Toolbar: React.FC = () => {
 
   const handlePreview = () => {
     window.vscodeAPI?.postMessage({
-      command: 'preview',
-      content: {},
+      command: 'executeCommand',
+      commandId: 'honeygui.preview',
     });
   };
 
