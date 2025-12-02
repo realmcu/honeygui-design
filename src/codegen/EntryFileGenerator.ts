@@ -30,7 +30,7 @@ export class EntryFileGenerator {
 
 static int app_init(void)
 {
-    gui_view_create(gui_obj_get_root(), gui_view_descriptor_get("mainView"), 0, 0, 0, 0);
+    gui_view_create(gui_obj_get_root(), "mainView", 0, 0, 0, 0);
     return 0;
 }
 

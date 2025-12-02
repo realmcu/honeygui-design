@@ -371,7 +371,7 @@ void ${baseName}_update_user(void) {
       component.view_switch.forEach(switchEvent => {
         const targetComponent = this.componentMap.get(switchEvent.target);
         const targetName = targetComponent?.name || switchEvent.target;
-        code += `${indentStr}    gui_view_switch_on_event(view, gui_view_descriptor_get("${targetName}"), ${switchEvent.switch_out_style}, ${switchEvent.switch_in_style}, ${switchEvent.event});\n`;
+        code += `${indentStr}    gui_view_switch_on_event(view, "${targetName}", ${switchEvent.switch_out_style}, ${switchEvent.switch_in_style}, ${switchEvent.event});\n`;
       });
     } else {
       code += `${indentStr}    GUI_UNUSED(view);\n`;
