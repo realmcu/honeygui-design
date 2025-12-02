@@ -15,11 +15,13 @@ export class Logger {
     private outputChannel: any;
     private logLevel: 'debug' | 'info' | 'warn' | 'error' = 'info';
     private cachedLogs: string[] = [];
+    private enableConsole: boolean = false; // 是否同时输出到 console
 
     // 日志缓存最大条目数，防止内存泄漏
     private readonly MAX_LOG_ENTRIES = 5000;
 
-    constructor(name: string = 'HoneyGUI') {
+    constructor(name: string = 'HoneyGUI', enableConsole: boolean = false) {
+        this.enableConsole = enableConsole;
         if (vscode && vscode.window) {
             this.outputChannel = vscode.window.createOutputChannel(name, { log: true });
         } else {
@@ -49,6 +51,14 @@ export class Logger {
 
         // 缓存使用格式化版本（包含时间戳）
         this.cachedLogs.push(formatted);
+        
+        // 同时输出到 console（用于调试）
+        if (this.enableConsole) {
+            const consoleMethod = level === 'error' ? console.error : 
+                                 level === 'warn' ? console.warn : 
+                                 level === 'debug' ? console.debug : console.log;
+            consoleMethod(`[${level.toUpperCase()}]`, message);
+        }
         
         if (vscode) {
             // 输出到VSCode使用原始消息（VSCode LogOutputChannel会自动添加时间戳）
@@ -124,6 +134,13 @@ export class Logger {
         this.logLevel = level;
     }
 
+    /**
+     * 启用/禁用 console 输出（用于开发调试）
+     */
+    setConsoleOutput(enable: boolean): void {
+        this.enableConsole = enable;
+    }
+
     getCachedLogs(): string[] {
         return [...this.cachedLogs];
     }
@@ -139,3 +156,8 @@ export class Logger {
 
 // 全局日志实例
 export const logger = new Logger();
+
+// 开发模式下启用 console 输出
+if (process.env.NODE_ENV === 'development') {
+    logger.setConsoleOutput(true);
+}
