@@ -279,21 +279,17 @@ void ${baseName}_update_user(void) {
     // 添加注释
     code += `\n${indentStr}// 创建${component.name} (${component.type})\n`;
 
-    // 生成创建代码
-    code += this.generateComponentCreation(component, indent);
-
-    // hg_view 的子组件已在 switch_in 中处理，不在这里递归
+    // hg_view 使用 GUI_VIEW_INSTANCE 宏，子组件在 switch_in 中创建
     if (component.type === 'hg_view') {
+      code += this.generateViewInstance(component, indent);
       return code;
     }
 
+    // 普通组件：生成创建代码
+    code += this.generateComponentCreation(component, indent);
+
     // 生成属性设置代码
     code += this.generatePropertySetters(component, indent);
-
-    // 生成视图切换绑定代码（仅 hg_view）
-    if (component.type === 'hg_view') {
-      code += this.generateViewSwitchBindings(component, indent);
-    }
 
     // 递归生成子组件
     if (component.children && component.children.length > 0) {
@@ -309,7 +305,7 @@ void ${baseName}_update_user(void) {
   }
 
   /**
-   * 生成组件创建代码
+   * 生成组件创建代码（不包括 hg_view）
    */
   private generateComponentCreation(component: Component, indent: number): string {
     const indentStr = '    '.repeat(indent);
@@ -317,11 +313,6 @@ void ${baseName}_update_user(void) {
 
     if (!mapping) {
       return `${indentStr}// 警告: 未找到${component.type}的API映射\n`;
-    }
-
-    // hg_view 使用特殊的生成规则
-    if (component.type === 'hg_view') {
-      return this.generateViewInstance(component, indent);
     }
 
     // 确定父组件引用
@@ -354,20 +345,28 @@ void ${baseName}_update_user(void) {
 
   /**
    * 生成 hg_view 的 GUI_VIEW_INSTANCE 代码
+   * 包括：
+   * 1. switch_out 回调（空实现）
+   * 2. switch_in 回调（注册视图切换事件 + 创建子组件）
+   * 3. GUI_VIEW_INSTANCE 宏调用
    */
   private generateViewInstance(component: Component, indent: number): string {
     const indentStr = '    '.repeat(indent);
     const name = component.name;
 
     let code = '';
+    
+    // 生成 switch_out 回调
     code += `${indentStr}static void ${name}_switch_out(gui_view_t *view)\n`;
     code += `${indentStr}{\n`;
     code += `${indentStr}    GUI_UNUSED(view);\n`;
     code += `${indentStr}}\n\n`;
+    
+    // 生成 switch_in 回调
     code += `${indentStr}static void ${name}_switch_in(gui_view_t *view)\n`;
     code += `${indentStr}{\n`;
     
-    // 生成视图切换事件注册
+    // 1. 注册视图切换事件
     if (component.view_switch && component.view_switch.length > 0) {
       component.view_switch.forEach(switchEvent => {
         const targetComponent = this.componentMap.get(switchEvent.target);
@@ -378,7 +377,7 @@ void ${baseName}_update_user(void) {
       code += `${indentStr}    GUI_UNUSED(view);\n`;
     }
     
-    // 在 switch_in 中创建子组件
+    // 2. 创建子组件
     if (component.children && component.children.length > 0) {
       code += `\n`;
       component.children.forEach(childId => {
@@ -390,6 +389,8 @@ void ${baseName}_update_user(void) {
     }
     
     code += `${indentStr}}\n`;
+    
+    // 3. GUI_VIEW_INSTANCE 宏调用
     code += `${indentStr}GUI_VIEW_INSTANCE("${name}", false, ${name}_switch_in, ${name}_switch_out);\n`;
 
     return code;
@@ -431,15 +432,6 @@ void ${baseName}_update_user(void) {
     }
 
     return code;
-  }
-
-  /**
-   * 生成视图切换绑定代码（仅用于 hg_view）
-   * 不再在组件创建时调用，而是在 on_switch_in 回调中调用
-   */
-  private generateViewSwitchBindings(component: Component, indent: number): string {
-    // 视图切换逻辑移到 on_switch_in 回调中，这里不生成
-    return '';
   }
 
   /**
