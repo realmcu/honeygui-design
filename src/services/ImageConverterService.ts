@@ -21,6 +21,14 @@ export class ImageConverterService {
     }
 
     /**
+     * Get Python command based on platform
+     */
+    private getPythonCommand(): string {
+        // Windows 通常使用 'python'，Linux/macOS 使用 'python3'
+        return process.platform === 'win32' ? 'python' : 'python3';
+    }
+
+    /**
      * Convert a single image to bin format
      */
     async convert(inputPath: string, outputPath: string, format: string = 'auto'): Promise<ConvertResult> {
@@ -31,7 +39,8 @@ export class ImageConverterService {
         }
 
         return new Promise((resolve) => {
-            const proc = spawn('python3', [script, '-i', inputPath, '-o', outputPath, '-f', format]);
+            const pythonCmd = this.getPythonCommand();
+            const proc = spawn(pythonCmd, [script, '-i', inputPath, '-o', outputPath, '-f', format]);
             
             let stderr = '';
             proc.stderr.on('data', (data) => { stderr += data.toString(); });
