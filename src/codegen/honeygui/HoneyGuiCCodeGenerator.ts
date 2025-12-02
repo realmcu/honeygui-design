@@ -259,6 +259,8 @@ void ${baseName}_update_user(void) {
 
     code += `\n`;
 
+    // 不再生成独立的 on_switch_in 回调函数，直接在 GUI_VIEW_INSTANCE 的 switch_in 中处理
+
     const rootComponents = this.components.filter(c => c.parent === null);
     rootComponents.forEach(comp => {
       code += this.generateComponentTree(comp, 0);
@@ -288,8 +290,10 @@ void ${baseName}_update_user(void) {
     // 生成属性设置代码
     code += this.generatePropertySetters(component, indent);
 
-    // 生成事件绑定代码
-    code += this.generateEventBindings(component, indent);
+    // 生成视图切换绑定代码（仅 hg_view）
+    if (component.type === 'hg_view') {
+      code += this.generateViewSwitchBindings(component, indent);
+    }
 
     // 递归生成子组件
     if (component.children && component.children.length > 0) {
@@ -362,7 +366,17 @@ void ${baseName}_update_user(void) {
     code += `${indentStr}}\n\n`;
     code += `${indentStr}static void ${name}_switch_in(gui_view_t *view)\n`;
     code += `${indentStr}{\n`;
-    code += `${indentStr}    GUI_UNUSED(view);\n`;
+    
+    // 生成视图切换事件注册
+    if (component.view_switch && component.view_switch.length > 0) {
+      component.view_switch.forEach(switchEvent => {
+        const targetComponent = this.componentMap.get(switchEvent.target);
+        const targetName = targetComponent?.name || switchEvent.target;
+        code += `${indentStr}    gui_view_switch_on_event(view, gui_view_descriptor_get("${targetName}"), ${switchEvent.switch_out_style}, ${switchEvent.switch_in_style}, ${switchEvent.event});\n`;
+      });
+    } else {
+      code += `${indentStr}    GUI_UNUSED(view);\n`;
+    }
     
     // 在 switch_in 中创建子组件
     if (component.children && component.children.length > 0) {
@@ -420,7 +434,16 @@ void ${baseName}_update_user(void) {
   }
 
   /**
-   * 生成事件绑定代码
+   * 生成视图切换绑定代码（仅用于 hg_view）
+   * 不再在组件创建时调用，而是在 on_switch_in 回调中调用
+   */
+  private generateViewSwitchBindings(component: Component, indent: number): string {
+    // 视图切换逻辑移到 on_switch_in 回调中，这里不生成
+    return '';
+  }
+
+  /**
+   * 生成事件绑定代码（保留用于向后兼容）
    */
   private generateEventBindings(component: Component, indent: number): string {
     let code = '';
@@ -452,14 +475,7 @@ void ${baseName}_update_user(void) {
 // 事件回调函数声明
 `;
 
-    // 收集所有事件回调
-    this.components.forEach(comp => {
-      if (comp.events) {
-        Object.entries(comp.events).forEach(([event, callback]) => {
-          code += `void ${callback}(gui_obj_t *obj);\n`;
-        });
-      }
-    });
+    // 不再生成回调函数声明（视图切换由 SDK 自动处理）
 
     code += `
 #endif // ${guardName}
@@ -479,21 +495,7 @@ void ${baseName}_update_user(void) {
 
 `;
 
-    // 为每个事件生成回调函数模板
-    this.components.forEach(comp => {
-      if (comp.events) {
-        Object.entries(comp.events).forEach(([event, callback]) => {
-          code += `/* @protected start ${callback} */
-void ${callback}(gui_obj_t *obj) {
-    printf("${comp.name} ${event} triggered\\n");
-    // TODO: 实现事件处理逻辑
-}
-/* @protected end ${callback} */
-
-`;
-        });
-      }
-    });
+    // 不再生成回调函数模板（视图切换由 SDK 自动处理）
 
     code += `/* @protected start custom_functions */
 // 自定义函数

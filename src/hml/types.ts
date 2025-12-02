@@ -52,6 +52,31 @@ export interface ComponentEvents {
 }
 
 /**
+ * 视图切换事件类型（仅用于 hg_view）
+ * 对应 HoneyGUI SDK 的 gui_event_t 枚举
+ */
+export type ViewSwitchEventType = 
+  | 'GUI_EVENT_TOUCH_MOVE_LEFT'
+  | 'GUI_EVENT_TOUCH_MOVE_RIGHT'
+  | 'GUI_EVENT_TOUCH_MOVE_UP'
+  | 'GUI_EVENT_TOUCH_MOVE_DOWN';
+
+/**
+ * 视图切换样式（对应 HoneyGUI 的 VIEW_SWITCH_STYLE 枚举）
+ */
+export type ViewSwitchStyle = string; // 使用字符串类型，值为枚举名称
+
+/**
+ * 视图切换配置（用于 hg_view 的 view_switch）
+ */
+export interface ViewSwitchEvent {
+  event: ViewSwitchEventType;
+  target: string; // 目标 view 的 id
+  switch_out_style: ViewSwitchStyle;
+  switch_in_style: ViewSwitchStyle;
+}
+
+/**
  * 组件类型 - 统一格式（与前端一致）
  */
 export interface Component {
@@ -62,6 +87,7 @@ export interface Component {
   style?: ComponentStyle;
   data?: ComponentData;
   events?: ComponentEvents;
+  view_switch?: ViewSwitchEvent[]; // 新增：视图切换配置（仅 hg_view）
   children?: string[];  // ID引用，避免循环引用
   parent?: string | null;
   visible: boolean;

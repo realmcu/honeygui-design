@@ -199,9 +199,13 @@ export class HmlSerializer {
             });
         }
 
-        // 序列化数据属性（data对象）
+        // 序列化数据属性（data对象），排除 interactions 和 view_switch
         if (component.data) {
             Object.keys(component.data).forEach(propName => {
+                // 跳过 interactions 和 view_switch，它们会作为子元素单独处理
+                if (propName === 'interactions' || propName === 'view_switch') {
+                    return;
+                }
                 const value = component.data![propName];
                 if (value !== undefined && value !== null && value !== '') {
                     attributesStr += ' ' + propName + '="' + this._escapeXmlValue(this._convertToString(value)) + '"';
@@ -234,22 +238,40 @@ export class HmlSerializer {
             });
         }
 
-        // 检查是否有子组件
-        if (component.children && component.children.length > 0) {
-            // 有子组件，使用开始和结束标签
+        // 检查是否有子组件或视图切换配置
+        const hasChildren = component.children && component.children.length > 0;
+        const hasViewSwitch = component.type === 'hg_view' && component.view_switch && component.view_switch.length > 0;
+
+        if (hasChildren || hasViewSwitch) {
             componentContent += indent + '<' + component.type + attributesStr + '>' + '\n';
 
-            // 递归序列化子组件 - 根据ID从componentMap中查找组件对象
-            component.children.forEach(childId => {
-                const childComponent = this.componentMap.get(childId);
-                if (childComponent) {
-                    componentContent += this._serializeComponent(childComponent, indentLevel + 1);
-                }
-            });
+            // 序列化视图切换配置（仅 hg_view）
+            if (hasViewSwitch) {
+                componentContent += indent + '    <view_switch>' + '\n';
+                component.view_switch!.forEach(switchEvent => {
+                    const switchIndent = indent + '        ';
+                    componentContent += switchIndent + '<switch_event\n';
+                    componentContent += switchIndent + '    event="' + switchEvent.event + '"\n';
+                    componentContent += switchIndent + '    target="' + switchEvent.target + '"\n';
+                    componentContent += switchIndent + '    switch_out_style="' + switchEvent.switch_out_style + '"\n';
+                    componentContent += switchIndent + '    switch_in_style="' + switchEvent.switch_in_style + '"\n';
+                    componentContent += switchIndent + '/>\n';
+                });
+                componentContent += indent + '    </view_switch>' + '\n';
+            }
+
+            // 递归序列化子组件
+            if (hasChildren) {
+                component.children!.forEach(childId => {
+                    const child = this.componentMap.get(childId);
+                    if (child) {
+                        componentContent += this._serializeComponent(child, indentLevel + 1);
+                    }
+                });
+            }
 
             componentContent += indent + '</' + component.type + '>' + '\n';
         } else {
-            // 没有子组件，使用自闭合标签
             componentContent += indent + '<' + component.type + attributesStr + ' />' + '\n';
         }
 

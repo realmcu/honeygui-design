@@ -5,6 +5,7 @@
 
 import { XMLParser } from 'fast-xml-parser';
 import { Component, Meta, View, Document, ComponentPosition } from './types';
+import type { ViewSwitchEvent, ViewSwitchEventType } from './types';
 import { logger } from '../utils/Logger';
 
 /**
@@ -162,6 +163,9 @@ export class HmlParser {
     // 分离属性
     const { style, data, events } = this._categorizeAttributes(attributes);
 
+    // 解析视图切换配置（仅 hg_view）
+    const view_switch = tagName === 'hg_view' ? this._parseViewSwitch(element) : undefined;
+
     // 创建组件
     const component: Component = {
       id: componentId,
@@ -171,6 +175,7 @@ export class HmlParser {
       style,
       data,
       events,
+      view_switch,
       children: [],
       parent: parentId || null,
       visible: attributes.visible !== false,
@@ -251,7 +256,7 @@ export class HmlParser {
     parentComponent: Component
   ): void {
     Object.keys(element).forEach(key => {
-      if (key === '_attributes' || key === '_text') {
+      if (key === '_attributes' || key === '_text' || key === 'view_switch') {
         return;
       }
 
@@ -268,6 +273,36 @@ export class HmlParser {
         });
       }
     });
+  }
+
+  /**
+   * 解析视图切换配置（仅用于 hg_view）
+   */
+  private _parseViewSwitch(element: any): ViewSwitchEvent[] | undefined {
+    if (!element.view_switch?.switch_event) {
+      return undefined;
+    }
+
+    const switchEventElements = Array.isArray(element.view_switch.switch_event)
+      ? element.view_switch.switch_event
+      : [element.view_switch.switch_event];
+
+    const viewSwitches: ViewSwitchEvent[] = [];
+
+    switchEventElements.forEach((switchEl: any) => {
+      const attrs = switchEl._attributes || switchEl;
+      
+      if (attrs.event && attrs.target && attrs.switch_out_style && attrs.switch_in_style) {
+        viewSwitches.push({
+          event: attrs.event as ViewSwitchEventType,
+          target: attrs.target,
+          switch_out_style: attrs.switch_out_style,
+          switch_in_style: attrs.switch_in_style,
+        });
+      }
+    });
+
+    return viewSwitches.length > 0 ? viewSwitches : undefined;
   }
 
   /**
