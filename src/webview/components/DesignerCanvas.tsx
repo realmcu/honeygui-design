@@ -402,14 +402,15 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
           {components
             .filter((c) => c.parent === null)
             .map((component) => renderComponent(component))}
-          
-          {/* 视图连接层 */}
-          <ViewConnectionLayer
-            components={components}
-            zoom={zoom}
-            visible={showViewConnections}
-          />
         </div>
+
+        {/* 视图连接层 - 独立于组件层 */}
+        <ViewConnectionLayer
+          components={components}
+          zoom={zoom}
+          offset={canvasOffset}
+          visible={showViewConnections}
+        />
 
         {/* Zoom indicator */}
         <div className="zoom-indicator">
