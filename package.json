@@ -365,7 +365,7 @@
     "watch:webview": "webpack --mode development --watch",
     "serve:webview": "webpack serve --mode development",
     "clean": "node scripts/clear-cache.js",
-    "clean:src": "find src -name '*.js' -type f -delete 2>/dev/null || true",
+    "clean:src": "node scripts/clean-js.js",
     "clean:all": "npm run clean && rimraf node_modules && npm install",
     "rebuild": "npm run clean && npm run compile && npm run build:webview"
   },
