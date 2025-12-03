@@ -334,8 +334,8 @@ void ${baseName}_update_user(void) {
     // 特殊处理图片组件，直接在创建时传入路径
     if (component.type === 'hg_image') {
         const src = component.data?.src || '';
-        // 将 .png/.jpg/.jpeg 替换为 .bin
-        const binSrc = src.replace(/\.(png|jpe?g)$/i, '.bin');
+        // 将图片扩展名替换为 .bin
+        const binSrc = src.replace(/\.(png|jpe?g|bmp|gif|tiff?|webp)$/i, '.bin');
         // gui_img_create_from_fs 返回 gui_img_t*，需要强制转换
         return `${indentStr}${component.id} = (gui_obj_t *)gui_img_create_from_fs(${parentRef}, "${component.name}", "${binSrc}", ${x}, ${y}, ${width}, ${height});\n`;
     }
