@@ -74,7 +74,7 @@ export class ImageConverterService {
             return [];
         }
 
-        const imageExts = ['.png', '.jpg', '.jpeg'];
+        const imageExts = ['.png', '.jpg', '.jpeg', '.bmp', '.gif', '.tiff', '.tif', '.webp'];
         const items: Array<{ input: string; output: string }> = [];
 
         const scanDir = (dir: string) => {
@@ -84,7 +84,7 @@ export class ImageConverterService {
                     scanDir(fullPath);
                 } else if (imageExts.includes(path.extname(entry.name).toLowerCase())) {
                     const relativePath = path.relative(assetsDir, fullPath);
-                    const outputPath = path.join(outputDir, relativePath.replace(/\.(png|jpe?g)$/i, '.bin'));
+                    const outputPath = path.join(outputDir, relativePath.replace(/\.(png|jpe?g|bmp|gif|tiff?|webp)$/i, '.bin'));
                     items.push({ input: fullPath, output: outputPath });
                 }
             }
