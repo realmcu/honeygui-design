@@ -117,7 +117,12 @@ const AssetsPanel: React.FC = () => {
       );
     }
 
-    // 图片文件 - 网格项
+    // 文件 - 网格项
+    const ext = asset.name.split('.').pop()?.toLowerCase() || '';
+    const isImage = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'webp'].includes(ext);
+    const isVideo = ['mp4', 'avi', 'mov', 'mkv', 'webm'].includes(ext);
+    const isModel = ['gltf', 'glb', 'obj', 'fbx', 'stl'].includes(ext);
+    
     return (
       <div 
         key={asset.path} 
@@ -129,14 +134,25 @@ const AssetsPanel: React.FC = () => {
         }}
       >
         <div className="asset-preview">
-          <img
-            src={asset.path}
-            alt={asset.name}
-            onError={(e) => {
-              const img = e.target as HTMLImageElement;
-              img.style.display = 'none';
-            }}
-          />
+          {isImage && (
+            <img
+              src={asset.path}
+              alt={asset.name}
+              onError={(e) => {
+                const img = e.target as HTMLImageElement;
+                img.style.display = 'none';
+              }}
+            />
+          )}
+          {isVideo && (
+            <div className="file-icon" style={{ fontSize: '48px' }}>🎬</div>
+          )}
+          {isModel && (
+            <div className="file-icon" style={{ fontSize: '48px' }}>🧊</div>
+          )}
+          {!isImage && !isVideo && !isModel && (
+            <div className="file-icon" style={{ fontSize: '48px' }}>📄</div>
+          )}
         </div>
         <div className="asset-info">
           {editingAsset === asset.path ? (
@@ -250,9 +266,11 @@ const AssetsPanel: React.FC = () => {
 
   const processFile = (file: File, relativePath: string) => {
     const imageExts = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'webp'];
+    const videoExts = ['mp4', 'avi', 'mov', 'mkv', 'webm'];
+    const modelExts = ['gltf', 'glb', 'obj', 'fbx', 'stl'];
     const ext = file.name.split('.').pop()?.toLowerCase();
     
-    if (ext && imageExts.includes(ext)) {
+    if (ext && (imageExts.includes(ext) || videoExts.includes(ext) || modelExts.includes(ext))) {
       const reader = new FileReader();
       reader.onload = (event) => {
         const arrayBuffer = event.target?.result as ArrayBuffer;

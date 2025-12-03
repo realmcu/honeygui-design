@@ -41,7 +41,7 @@ export const ListWidget: React.FC<WidgetProps> = ({ component, style, handlers, 
           },
           visible: true,
           enabled: true,
-          locked: false,
+          locked: true,  // 锁定列表项，禁止单独拖拽
           zIndex: 1,
           children: [],
           parent: component.id,
@@ -50,14 +50,15 @@ export const ListWidget: React.FC<WidgetProps> = ({ component, style, handlers, 
         };
         addComponent(newItem);
       } else {
-        // 更新现有列表项的位置
+        // 更新现有列表项的位置和锁定状态
         updateComponent(itemId, {
           position: {
             x: isVertical ? 0 : offset,
             y: isVertical ? offset : 0,
             width: isVertical ? component.position.width : noteLength,
             height: isVertical ? noteLength : component.position.height,
-          }
+          },
+          locked: true  // 确保列表项始终锁定
         });
       }
     }

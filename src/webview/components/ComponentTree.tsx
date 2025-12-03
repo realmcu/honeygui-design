@@ -6,9 +6,10 @@ import './ComponentTree.css';
 interface ComponentTreeNodeProps {
   componentId: string;
   level: number;
+  onContextMenu?: (e: React.MouseEvent, componentId: string) => void;
 }
 
-const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, level }) => {
+const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, level, onContextMenu }) => {
   const {
     components,
     selectedComponent,
@@ -49,6 +50,14 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
     updateComponent(componentId, { locked: !component.locked });
   };
 
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onContextMenu) {
+      onContextMenu(e, componentId);
+    }
+  };
+
   const handleToggleExpand = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (hasChildren) {
@@ -64,6 +73,7 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
         className="tree-node-content"
         style={{ paddingLeft: `${level * 16 + 8}px` }}
         onClick={handleSelect}
+        onContextMenu={handleContextMenu}
       >
         {hasChildren && (
           <div className="tree-expand-icon" onClick={handleToggleExpand}>
@@ -101,6 +111,7 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
               key={child.id}
               componentId={child.id}
               level={level + 1}
+              onContextMenu={onContextMenu}
             />
           ))}
         </div>
@@ -109,7 +120,7 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
   );
 };
 
-const ComponentTree: React.FC = () => {
+const ComponentTree: React.FC<{ onContextMenu?: (e: React.MouseEvent, componentId: string) => void }> = ({ onContextMenu }) => {
   const { components } = useDesignerStore();
 
   const rootComponents = components.filter(c => c.parent === null);
@@ -130,6 +141,7 @@ const ComponentTree: React.FC = () => {
               key={component.id}
               componentId={component.id}
               level={0}
+              onContextMenu={onContextMenu}
             />
           ))
         )}

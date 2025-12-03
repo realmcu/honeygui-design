@@ -83,6 +83,28 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     }
   }, [components, showMenu]);
   
+  // 监听来自ComponentTree的右键菜单事件
+  useEffect(() => {
+    const handleCustomContextMenu = (event: any) => {
+      const { mouseEvent, componentId } = event.detail;
+      const component = components.find(c => c.id === componentId);
+      if (component) {
+        // 创建一个模拟的MouseEvent用于showMenu
+        const syntheticEvent = {
+          ...mouseEvent,
+          clientX: mouseEvent.clientX,
+          clientY: mouseEvent.clientY,
+          preventDefault: () => {},
+          stopPropagation: () => {},
+        } as React.MouseEvent;
+        showMenu(syntheticEvent, component);
+      }
+    };
+    
+    window.addEventListener('component-context-menu', handleCustomContextMenu);
+    return () => window.removeEventListener('component-context-menu', handleCustomContextMenu);
+  }, [components, showMenu]);
+  
   // 当store中的画布背景色变化时更新本地状态
   useEffect(() => {
     if (canvasBackgroundColor && canvasBackgroundColor !== canvasBackground) {
@@ -202,13 +224,18 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     const isMultiSelected = selectedComponents?.includes(component.id);
     const isHovered = !draggedComponent && useDesignerStore.getState().hoveredComponent === component.id;
 
+    // 检查是否为列表项
+    const parentComponent = component.parent ? componentList.find(c => c.id === component.parent) : null;
+    const isListItem = parentComponent?.type === 'hg_list';
+
     const style = calculateComponentStyle(
       component,
       zoom,
       isSelected,
       isMultiSelected,
       isHovered,
-      editingMode
+      editingMode,
+      isListItem
     );
 
     const handleMouseEnter = () => {

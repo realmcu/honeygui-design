@@ -9,8 +9,19 @@ export const calculateComponentStyle = (
   isSelected: boolean,
   isMultiSelected: boolean,
   isHovered: boolean,
-  editingMode: 'select' | 'move' | 'resize'
+  editingMode: 'select' | 'move' | 'resize',
+  isListItem: boolean = false
 ): React.CSSProperties => {
+  // 列表项的默认边框
+  let border = '1px solid transparent';
+  if (isListItem && !isSelected && !isMultiSelected) {
+    border = '1px dashed rgba(150, 150, 150, 0.5)';
+  } else if (isSelected || isMultiSelected) {
+    border = '2px solid #007ACC';
+  } else if (isHovered) {
+    border = '1px dashed #007ACC';
+  }
+  
   return {
     position: 'absolute',
     left: component.position.x * zoom,
@@ -20,11 +31,7 @@ export const calculateComponentStyle = (
     display: component.visible ? 'flex' : 'none',
     opacity: component.enabled ? 1 : 0.6,
     cursor: editingMode === 'move' ? 'move' : 'pointer',
-    border: isSelected || isMultiSelected 
-      ? '2px solid #007ACC' 
-      : isHovered 
-        ? '1px dashed #007ACC' 
-        : '1px solid transparent',
+    border,
     background: component.style?.backgroundColor || 'transparent',
     color: component.style?.color || 'inherit',
     fontSize: component.style?.fontSize ? `${component.style.fontSize}px` : undefined,

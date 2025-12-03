@@ -500,6 +500,16 @@ const App: React.FC = () => {
     selectComponent(id);
   };
 
+  // 统一的右键菜单处理（传递给Canvas和Tree）
+  const handleComponentContextMenu = (e: React.MouseEvent, componentId: string) => {
+    // 转发给 DesignerCanvas 处理
+    // 这里通过自定义事件实现
+    const event = new CustomEvent('component-context-menu', {
+      detail: { mouseEvent: e, componentId }
+    });
+    window.dispatchEvent(event);
+  };
+
   return (
     <div className="app">
       {/* Toolbar */}
@@ -535,7 +545,7 @@ const App: React.FC = () => {
           <div className="tab-content">
             {activeTab === 'components' && <ComponentLibrary onComponentDragStart={() => {}} />}
             {activeTab === 'assets' && <AssetsPanel />}
-            {activeTab === 'tree' && <ComponentTree />}
+            {activeTab === 'tree' && <ComponentTree onContextMenu={handleComponentContextMenu} />}
           </div>
         </div>
 
