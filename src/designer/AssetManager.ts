@@ -393,6 +393,20 @@ export class AssetManager {
                 }
             }
             
+            // BMP
+            if (buffer[0] === 0x42 && buffer[1] === 0x4D) {
+                const width = buffer.readInt32LE(18);
+                const height = Math.abs(buffer.readInt32LE(22)); // 高度可能为负（表示自上而下）
+                return { width, height };
+            }
+            
+            // GIF
+            if (buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46) {
+                const width = buffer.readUInt16LE(6);
+                const height = buffer.readUInt16LE(8);
+                return { width, height };
+            }
+            
             return { width: 100, height: 100 };
         } catch (error) {
             logger.error(`[AssetManager] 读取图片尺寸失败: ${error}`);
