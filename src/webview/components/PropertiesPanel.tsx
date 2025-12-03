@@ -314,18 +314,58 @@ const PropertiesPanel: React.FC = () => {
                   </div>
                   <div>
                     <label style={{ fontSize: '12px' }}>宽度</label>
-                    {renderPropertyEditor(
-                      { type: 'number' },
-                      selected.position.width,
-                      (value) => handlePositionChange('width', value)
+                    {selected.type === 'hg_view' ? (
+                      <input
+                        type="number"
+                        value={selected.position.width}
+                        disabled
+                        style={{
+                          width: '100%',
+                          padding: '4px 6px',
+                          marginTop: '4px',
+                          backgroundColor: 'var(--vscode-input-background)',
+                          color: 'var(--vscode-input-foreground)',
+                          border: '1px solid var(--vscode-input-border)',
+                          borderRadius: '2px',
+                          opacity: 0.6,
+                          cursor: 'not-allowed'
+                        }}
+                        title="hg_view 的宽度由项目分辨率决定，不可修改"
+                      />
+                    ) : (
+                      renderPropertyEditor(
+                        { type: 'number' },
+                        selected.position.width,
+                        (value) => handlePositionChange('width', value)
+                      )
                     )}
                   </div>
                   <div>
                     <label style={{ fontSize: '12px' }}>高度</label>
-                    {renderPropertyEditor(
-                      { type: 'number' },
-                      selected.position.height,
-                      (value) => handlePositionChange('height', value)
+                    {selected.type === 'hg_view' ? (
+                      <input
+                        type="number"
+                        value={selected.position.height}
+                        disabled
+                        style={{
+                          width: '100%',
+                          padding: '4px 6px',
+                          marginTop: '4px',
+                          backgroundColor: 'var(--vscode-input-background)',
+                          color: 'var(--vscode-input-foreground)',
+                          border: '1px solid var(--vscode-input-border)',
+                          borderRadius: '2px',
+                          opacity: 0.6,
+                          cursor: 'not-allowed'
+                        }}
+                        title="hg_view 的高度由项目分辨率决定，不可修改"
+                      />
+                    ) : (
+                      renderPropertyEditor(
+                        { type: 'number' },
+                        selected.position.height,
+                        (value) => handlePositionChange('height', value)
+                      )
                     )}
                   </div>
                 </div>
