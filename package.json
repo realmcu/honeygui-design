@@ -400,9 +400,11 @@
     "webpack-dev-server": "^5.2.2"
   },
   "dependencies": {
+    "@types/three": "^0.181.0",
     "chokidar": "^3.6.0",
     "fast-xml-parser": "^4.3.2",
     "lucide-react": "^0.553.0",
+    "three": "^0.181.2",
     "ws": "^8.18.3",
     "xml-js": "^1.6.11",
     "zustand": "^5.0.8"

@@ -11,6 +11,8 @@ import { SliderWidget } from './SliderWidget';
 import { ContainerWidget } from './ContainerWidget';
 import { ImageWidget } from './ImageWidget';
 import { ListWidget } from './ListWidget';
+import { VideoWidget } from './VideoWidget';
+import { Model3DWidget } from './Model3DWidget';
 
 export { WidgetProps } from './types';
 
@@ -32,8 +34,8 @@ export const widgetRegistry: Record<string, React.FC<WidgetProps>> = {
   hg_image: ImageWidget,
   hg_canvas: ContainerWidget,
   hg_list: ListWidget,
-  hg_video: ContainerWidget,
-  hg_3d: ContainerWidget,
+  hg_video: VideoWidget,
+  hg_3d: Model3DWidget,
   hg_arc: ContainerWidget,
   hg_rect: ContainerWidget,
   hg_circle: ContainerWidget,
