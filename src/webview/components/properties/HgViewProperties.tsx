@@ -1,20 +1,12 @@
 import React, { useState } from 'react';
 import { PropertyPanelProps } from './types';
 import { PropertyEditor } from './PropertyEditor';
+import { BaseProperties } from './BaseProperties';
 import { useDesignerStore } from '../../store';
 import type { ViewSwitchEvent, ViewSwitchEventType } from '../../../hml/types';
 
 export const HgViewProperties: React.FC<PropertyPanelProps> = ({ component, onUpdate }) => {
   const [activeTab, setActiveTab] = useState<'properties' | 'view_switch'>('properties');
-
-  const handlePositionChange = (field: 'x' | 'y' | 'width' | 'height', value: number) => {
-    onUpdate({
-      position: {
-        ...component.position,
-        [field]: value,
-      },
-    });
-  };
 
   const handleStyleChange = (property: string, value: any) => {
     onUpdate({
@@ -82,108 +74,12 @@ export const HgViewProperties: React.FC<PropertyPanelProps> = ({ component, onUp
       <div className="properties-content">
         {activeTab === 'properties' && (
           <>
-            {/* Name and ID */}
-            <div className="property-group">
-              <div className="property-item">
-                <label>名称</label>
-                <PropertyEditor
-                  type="string"
-                  value={component.name}
-                  onChange={(value) => onUpdate({ name: value })}
-                />
-              </div>
-
-              <div className="property-item">
-                <label>ID</label>
-                <PropertyEditor
-                  type="string"
-                  value={component.id}
-                  onChange={() => {}}
-                  disabled
-                />
-              </div>
-            </div>
-
-            {/* Position and Size */}
-            <div className="property-group">
-              <div className="property-item">
-                <label>位置与大小</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '8px' }}>
-                  <div>
-                    <label style={{ fontSize: '12px' }}>X</label>
-                    <PropertyEditor
-                      type="number"
-                      value={component.position.x}
-                      onChange={(value) => handlePositionChange('x', value)}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: '12px' }}>Y</label>
-                    <PropertyEditor
-                      type="number"
-                      value={component.position.y}
-                      onChange={(value) => handlePositionChange('y', value)}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: '12px' }}>宽度</label>
-                    <PropertyEditor
-                      type="number"
-                      value={component.position.width}
-                      onChange={(value) => handlePositionChange('width', value)}
-                      disabled
-                      title="hg_view 的宽度由项目分辨率决定，不可修改"
-                    />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: '12px' }}>高度</label>
-                    <PropertyEditor
-                      type="number"
-                      value={component.position.height}
-                      onChange={(value) => handlePositionChange('height', value)}
-                      disabled
-                      title="hg_view 的高度由项目分辨率决定，不可修改"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Visibility and State */}
-            <div className="property-group">
-              <div className="property-item">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <label>可见</label>
-                  <PropertyEditor
-                    type="boolean"
-                    value={component.visible}
-                    onChange={(value) => onUpdate({ visible: value })}
-                  />
-                </div>
-              </div>
-
-              <div className="property-item">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <label>启用</label>
-                  <PropertyEditor
-                    type="boolean"
-                    value={component.enabled}
-                    onChange={(value) => onUpdate({ enabled: value })}
-                  />
-                </div>
-              </div>
-
-              <div className="property-item">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <label>锁定</label>
-                  <PropertyEditor
-                    type="boolean"
-                    value={component.locked}
-                    onChange={(value) => onUpdate({ locked: value })}
-                  />
-                </div>
-              </div>
-            </div>
+            <BaseProperties 
+              component={component} 
+              onUpdate={onUpdate}
+              disableSize={true}
+              sizeTooltip="hg_view 的宽高由项目分辨率决定，不可修改"
+            />
 
             {/* Style Properties */}
             <div className="property-group">
@@ -273,34 +169,101 @@ export const HgViewProperties: React.FC<PropertyPanelProps> = ({ component, onUp
 
                       <div style={{ marginBottom: '10px' }}>
                         <label style={{ fontSize: '11px', display: 'block', marginBottom: '4px' }}>退出动画</label>
-                        <PropertyEditor
-                          type="select"
+                        <select
                           value={switchEvent.switch_out_style}
-                          onChange={(value) => handleViewSwitchUpdate(index, { switch_out_style: value })}
-                          options={[
-                            'SWITCH_OUT_TO_LEFT_USE_TRANSLATION',
-                            'SWITCH_OUT_TO_RIGHT_USE_TRANSLATION',
-                            'SWITCH_OUT_TO_TOP_USE_TRANSLATION',
-                            'SWITCH_OUT_TO_BOTTOM_USE_TRANSLATION',
-                            'SWITCH_OUT_NONE_ANIMATION'
-                          ]}
-                        />
+                          onChange={(e) => handleViewSwitchUpdate(index, { switch_out_style: e.target.value })}
+                          style={{
+                            width: '100%',
+                            padding: '4px',
+                            marginTop: '4px',
+                            backgroundColor: 'var(--vscode-input-background)',
+                            color: 'var(--vscode-input-foreground)',
+                            border: '1px solid var(--vscode-input-border)',
+                            borderRadius: '2px',
+                            fontSize: '11px'
+                          }}
+                        >
+                          <optgroup label="平移">
+                            <option value="SWITCH_OUT_TO_LEFT_USE_TRANSLATION">向左平移</option>
+                            <option value="SWITCH_OUT_TO_RIGHT_USE_TRANSLATION">向右平移</option>
+                            <option value="SWITCH_OUT_TO_TOP_USE_TRANSLATION">向上平移</option>
+                            <option value="SWITCH_OUT_TO_BOTTOM_USE_TRANSLATION">向下平移</option>
+                          </optgroup>
+                          <optgroup label="立方体">
+                            <option value="SWITCH_OUT_TO_LEFT_USE_CUBE">向左立方体</option>
+                            <option value="SWITCH_OUT_TO_RIGHT_USE_CUBE">向右立方体</option>
+                            <option value="SWITCH_OUT_TO_TOP_USE_CUBE">向上立方体</option>
+                            <option value="SWITCH_OUT_TO_BOTTOM_USE_CUBE">向下立方体</option>
+                          </optgroup>
+                          <optgroup label="旋转">
+                            <option value="SWITCH_OUT_TO_LEFT_USE_ROTATE">向左旋转</option>
+                            <option value="SWITCH_OUT_TO_RIGHT_USE_ROTATE">向右旋转</option>
+                            <option value="SWITCH_OUT_TO_TOP_USE_ROTATE">向上旋转</option>
+                            <option value="SWITCH_OUT_TO_BOTTOM_USE_ROTATE">向下旋转</option>
+                          </optgroup>
+                          <optgroup label="缩放">
+                            <option value="SWITCH_OUT_TO_LEFT_USE_REDUCTION">向左缩放</option>
+                            <option value="SWITCH_OUT_TO_RIGHT_USE_REDUCTION">向右缩放</option>
+                            <option value="SWITCH_OUT_TO_TOP_USE_REDUCTION">向上缩放</option>
+                            <option value="SWITCH_OUT_TO_BOTTOM_USE_REDUCTION">向下缩放</option>
+                          </optgroup>
+                          <optgroup label="其他">
+                            <option value="SWITCH_OUT_NONE_ANIMATION">无动画</option>
+                            <option value="SWITCH_OUT_ANIMATION_FADE">淡出</option>
+                            <option value="SWITCH_OUT_ANIMATION_ZOOM">缩放</option>
+                            <option value="SWITCH_OUT_STILL_USE_BLUR">模糊</option>
+                          </optgroup>
+                        </select>
                       </div>
 
                       <div>
                         <label style={{ fontSize: '11px', display: 'block', marginBottom: '4px' }}>进入动画</label>
-                        <PropertyEditor
-                          type="select"
+                        <select
                           value={switchEvent.switch_in_style}
-                          onChange={(value) => handleViewSwitchUpdate(index, { switch_in_style: value })}
-                          options={[
-                            'SWITCH_IN_FROM_LEFT_USE_TRANSLATION',
-                            'SWITCH_IN_FROM_RIGHT_USE_TRANSLATION',
-                            'SWITCH_IN_FROM_TOP_USE_TRANSLATION',
-                            'SWITCH_IN_FROM_BOTTOM_USE_TRANSLATION',
-                            'SWITCH_IN_NONE_ANIMATION'
-                          ]}
-                        />
+                          onChange={(e) => handleViewSwitchUpdate(index, { switch_in_style: e.target.value })}
+                          style={{
+                            width: '100%',
+                            padding: '4px',
+                            marginTop: '4px',
+                            backgroundColor: 'var(--vscode-input-background)',
+                            color: 'var(--vscode-input-foreground)',
+                            border: '1px solid var(--vscode-input-border)',
+                            borderRadius: '2px',
+                            fontSize: '11px'
+                          }}
+                        >
+                          <optgroup label="平移">
+                            <option value="SWITCH_IN_FROM_LEFT_USE_TRANSLATION">从左平移</option>
+                            <option value="SWITCH_IN_FROM_RIGHT_USE_TRANSLATION">从右平移</option>
+                            <option value="SWITCH_IN_FROM_TOP_USE_TRANSLATION">从上平移</option>
+                            <option value="SWITCH_IN_FROM_BOTTOM_USE_TRANSLATION">从下平移</option>
+                          </optgroup>
+                          <optgroup label="立方体">
+                            <option value="SWITCH_IN_FROM_LEFT_USE_CUBE">从左立方体</option>
+                            <option value="SWITCH_IN_FROM_RIGHT_USE_CUBE">从右立方体</option>
+                            <option value="SWITCH_IN_FROM_TOP_USE_CUBE">从上立方体</option>
+                            <option value="SWITCH_IN_FROM_BOTTOM_USE_CUBE">从下立方体</option>
+                          </optgroup>
+                          <optgroup label="旋转">
+                            <option value="SWITCH_IN_FROM_LEFT_USE_ROTATE">从左旋转</option>
+                            <option value="SWITCH_IN_FROM_RIGHT_USE_ROTATE">从右旋转</option>
+                            <option value="SWITCH_IN_FROM_TOP_USE_ROTATE">从上旋转</option>
+                            <option value="SWITCH_IN_FROM_BOTTOM_USE_ROTATE">从下旋转</option>
+                          </optgroup>
+                          <optgroup label="缩放">
+                            <option value="SWITCH_IN_FROM_LEFT_USE_REDUCTION">从左缩放</option>
+                            <option value="SWITCH_IN_FROM_RIGHT_USE_REDUCTION">从右缩放</option>
+                            <option value="SWITCH_IN_FROM_TOP_USE_REDUCTION">从上缩放</option>
+                            <option value="SWITCH_IN_FROM_BOTTOM_USE_REDUCTION">从下缩放</option>
+                          </optgroup>
+                          <optgroup label="其他">
+                            <option value="SWITCH_IN_NONE_ANIMATION">无动画</option>
+                            <option value="SWITCH_IN_ANIMATION_FADE">淡入</option>
+                            <option value="SWITCH_IN_ANIMATION_ZOOM">缩放</option>
+                            <option value="SWITCH_IN_STILL_USE_BLUR">模糊</option>
+                            <option value="SWITCH_IN_CENTER_ZOOM_FADE">中心缩放淡入</option>
+                          </optgroup>
+                        </select>
                       </div>
                     </div>
                   ))}

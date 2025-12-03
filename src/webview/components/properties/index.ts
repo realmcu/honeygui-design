@@ -1,8 +1,9 @@
 import { ComponentType } from '../../types';
 import { HgViewProperties } from './HgViewProperties';
 import { DefaultProperties } from './DefaultProperties';
+import { PropertyPanelProps } from './types';
 
-export const propertyPanelRegistry: Record<ComponentType, React.FC<any>> = {
+export const propertyPanelRegistry: Record<ComponentType, React.FC<PropertyPanelProps>> = {
   hg_view: HgViewProperties,
   hg_button: DefaultProperties,
   hg_label: DefaultProperties,
@@ -21,5 +22,6 @@ export const propertyPanelRegistry: Record<ComponentType, React.FC<any>> = {
 
 export { HgViewProperties } from './HgViewProperties';
 export { DefaultProperties } from './DefaultProperties';
+export { BaseProperties } from './BaseProperties';
 export { PropertyEditor } from './PropertyEditor';
 export type { PropertyPanelProps, PropertyEditorProps } from './types';
