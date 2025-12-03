@@ -24,6 +24,45 @@
   background-color: #f8f9fa;
 }
 
+/* Tab Headers */
+.tab-headers {
+  display: flex;
+  background: var(--vscode-sideBarSectionHeader-background);
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.tab-header {
+  flex: 1;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  color: var(--vscode-foreground);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-bottom: 2px solid transparent;
+  opacity: 0.7;
+}
+
+.tab-header:hover {
+  background: var(--vscode-list-hoverBackground);
+  opacity: 1;
+}
+
+.tab-header.active {
+  opacity: 1;
+  border-bottom-color: var(--vscode-focusBorder);
+  font-weight: 600;
+}
+
+/* Tab Content */
+.tab-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
 /* Panels */
 /* 移除面板通用样式，统一在 global.css 定义 */
 

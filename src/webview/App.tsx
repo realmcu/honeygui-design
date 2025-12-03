@@ -30,6 +30,9 @@ const App: React.FC = () => {
     setCanvasBackgroundColor,
   } = useDesignerStore();
 
+  // Tab 切换状态
+  const [activeTab, setActiveTab] = React.useState<'components' | 'assets' | 'tree'>('components');
+
   // Initialize keyboard shortcuts
   useKeyboardShortcuts();
 
@@ -504,13 +507,36 @@ const App: React.FC = () => {
 
       {/* Main Content */}
       <div className="main-content">
-        {/* Left Panel - Component Library and Tree */}
+        {/* Left Panel - Tabbed */}
         <div className="left-panel">
-          <ComponentLibrary onComponentDragStart={() => {}} />
-          <div className="panel-divider" />
-          <AssetsPanel />
-          <div className="panel-divider" />
-          <ComponentTree />
+          {/* Tab Headers */}
+          <div className="tab-headers">
+            <button 
+              className={`tab-header ${activeTab === 'components' ? 'active' : ''}`}
+              onClick={() => setActiveTab('components')}
+            >
+              组件库
+            </button>
+            <button 
+              className={`tab-header ${activeTab === 'assets' ? 'active' : ''}`}
+              onClick={() => setActiveTab('assets')}
+            >
+              资源
+            </button>
+            <button 
+              className={`tab-header ${activeTab === 'tree' ? 'active' : ''}`}
+              onClick={() => setActiveTab('tree')}
+            >
+              组件树
+            </button>
+          </div>
+
+          {/* Tab Content */}
+          <div className="tab-content">
+            {activeTab === 'components' && <ComponentLibrary onComponentDragStart={() => {}} />}
+            {activeTab === 'assets' && <AssetsPanel />}
+            {activeTab === 'tree' && <ComponentTree />}
+          </div>
         </div>
 
         {/* Center - Canvas */}

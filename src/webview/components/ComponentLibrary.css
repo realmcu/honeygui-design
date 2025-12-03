@@ -8,6 +8,7 @@
   background-color: var(--vscode-sideBar-background);
   flex: 1;
   min-height: 0;
+  height: 100%;
 }
 
 .component-library.collapsed {
