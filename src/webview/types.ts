@@ -30,7 +30,13 @@ export type ComponentType =
   | 'hg_view'
   | 'hg_window'
   | 'hg_screen'
-  | 'hg_canvas';
+  | 'hg_canvas'
+  | 'hg_list'
+  | 'hg_video'
+  | 'hg_3d'
+  | 'hg_arc'
+  | 'hg_rect'
+  | 'hg_circle';
 
 export interface ComponentDefinition {
   type: ComponentType;

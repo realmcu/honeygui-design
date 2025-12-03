@@ -18,6 +18,12 @@ export const propertyPanelRegistry: Record<ComponentType, React.FC<PropertyPanel
   hg_window: DefaultProperties,
   hg_screen: DefaultProperties,
   hg_canvas: DefaultProperties,
+  hg_list: DefaultProperties,
+  hg_video: DefaultProperties,
+  hg_3d: DefaultProperties,
+  hg_arc: DefaultProperties,
+  hg_rect: DefaultProperties,
+  hg_circle: DefaultProperties,
 };
 
 export { HgViewProperties } from './HgViewProperties';

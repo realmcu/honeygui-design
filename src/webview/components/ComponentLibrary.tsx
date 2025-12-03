@@ -106,13 +106,85 @@ const componentDefinitions: ComponentDefinition[] = [
       { name: 'overflow', label: '溢出处理', type: 'select', defaultValue: 'hidden', options: ['hidden', 'auto', 'scroll', 'visible'], group: 'style' },
     ],
   },
+  {
+    type: 'hg_list',
+    name: '列表',
+    icon: '📋',
+    defaultSize: { width: 300, height: 400 },
+    properties: [
+      { name: 'backgroundColor', label: '背景色', type: 'color', defaultValue: '#ffffff', group: 'style' },
+      { name: 'itemHeight', label: '项高度', type: 'number', defaultValue: 40, group: 'style' },
+      { name: 'scrollable', label: '可滚动', type: 'boolean', defaultValue: true, group: 'general' },
+    ],
+  },
+  {
+    type: 'hg_video',
+    name: '视频',
+    icon: '🎬',
+    defaultSize: { width: 320, height: 240 },
+    properties: [
+      { name: 'src', label: '视频路径', type: 'string', group: 'data' },
+      { name: 'autoplay', label: '自动播放', type: 'boolean', defaultValue: false, group: 'general' },
+      { name: 'loop', label: '循环播放', type: 'boolean', defaultValue: false, group: 'general' },
+      { name: 'controls', label: '显示控制条', type: 'boolean', defaultValue: true, group: 'general' },
+    ],
+  },
+  {
+    type: 'hg_3d',
+    name: '3D模型',
+    icon: '🧊',
+    defaultSize: { width: 300, height: 300 },
+    properties: [
+      { name: 'modelPath', label: '模型路径', type: 'string', group: 'data' },
+      { name: 'rotationX', label: 'X轴旋转', type: 'number', defaultValue: 0, group: 'style' },
+      { name: 'rotationY', label: 'Y轴旋转', type: 'number', defaultValue: 0, group: 'style' },
+      { name: 'rotationZ', label: 'Z轴旋转', type: 'number', defaultValue: 0, group: 'style' },
+      { name: 'scale', label: '缩放', type: 'number', defaultValue: 1, group: 'style' },
+    ],
+  },
+  {
+    type: 'hg_arc',
+    name: '弧形',
+    icon: '🌙',
+    defaultSize: { width: 100, height: 100 },
+    properties: [
+      { name: 'startAngle', label: '起始角度', type: 'number', defaultValue: 0, group: 'style' },
+      { name: 'endAngle', label: '结束角度', type: 'number', defaultValue: 90, group: 'style' },
+      { name: 'strokeWidth', label: '线宽', type: 'number', defaultValue: 2, group: 'style' },
+      { name: 'strokeColor', label: '线条颜色', type: 'color', defaultValue: '#000000', group: 'style' },
+      { name: 'fillColor', label: '填充颜色', type: 'color', defaultValue: 'transparent', group: 'style' },
+    ],
+  },
+  {
+    type: 'hg_rect',
+    name: '矩形',
+    icon: '▭',
+    defaultSize: { width: 120, height: 80 },
+    properties: [
+      { name: 'borderRadius', label: '圆角', type: 'number', defaultValue: 0, group: 'style' },
+      { name: 'strokeWidth', label: '边框宽度', type: 'number', defaultValue: 1, group: 'style' },
+      { name: 'strokeColor', label: '边框颜色', type: 'color', defaultValue: '#000000', group: 'style' },
+      { name: 'fillColor', label: '填充颜色', type: 'color', defaultValue: '#ffffff', group: 'style' },
+    ],
+  },
+  {
+    type: 'hg_circle',
+    name: '圆形',
+    icon: '⭕',
+    defaultSize: { width: 100, height: 100 },
+    properties: [
+      { name: 'strokeWidth', label: '边框宽度', type: 'number', defaultValue: 1, group: 'style' },
+      { name: 'strokeColor', label: '边框颜色', type: 'color', defaultValue: '#000000', group: 'style' },
+      { name: 'fillColor', label: '填充颜色', type: 'color', defaultValue: '#ffffff', group: 'style' },
+    ],
+  },
 ];
 
 // 组件分类
 const componentCategories = [
   {
     name: '容器',
-    types: ['hg_view', 'hg_window', 'hg_canvas']
+    types: ['hg_view', 'hg_window', 'hg_canvas', 'hg_list']
   },
   {
     name: '基础控件',
@@ -121,6 +193,14 @@ const componentCategories = [
   {
     name: '输入控件',
     types: ['hg_input', 'hg_checkbox', 'hg_radio']
+  },
+  {
+    name: '图形',
+    types: ['hg_arc', 'hg_rect', 'hg_circle']
+  },
+  {
+    name: '多媒体',
+    types: ['hg_video', 'hg_3d']
   }
 ];
 
