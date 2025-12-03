@@ -1,17 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Image, Trash2, Edit2, FolderOpen, ChevronRight, ChevronDown, Folder } from 'lucide-react';
+import { Trash2, Edit2, ChevronRight, ChevronDown, Folder } from 'lucide-react';
 import { AssetFile } from '../types';
 import './AssetsPanel.css';
 
 const AssetsPanel: React.FC = () => {
   const [assets, setAssets] = useState<AssetFile[]>([]);
-  const [isExpanded, setIsExpanded] = useState(true);
   const [editingAsset, setEditingAsset] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
-
-  console.log('[AssetsPanel] Render - isExpanded:', isExpanded, 'assets:', assets.length);
 
   // 排序和分类：文件夹在前，文件在后，相同类型按字母顺序
   const sortedAssets = React.useMemo(() => {
@@ -66,12 +63,6 @@ const AssetsPanel: React.FC = () => {
       });
     }
     setEditingAsset(null);
-  };
-
-  const handleOpenFolder = () => {
-    window.vscodeAPI?.postMessage({
-      command: 'openAssetsFolder',
-    });
   };
 
   const toggleFolder = (folderPath: string) => {
@@ -282,46 +273,24 @@ const AssetsPanel: React.FC = () => {
   };
 
   return (
-    <div
-      className={`assets-panel ${!isExpanded ? 'collapsed' : ''}`}
-      style={{ flex: isExpanded ? '1' : '0 0 auto' }}
-    >
-      <div className="panel-header" onClick={() => setIsExpanded(!isExpanded)}>
-        <span className={`expand-icon ${isExpanded ? 'expanded' : ''}`}>▶</span>
-        <Image size={16} />
-        <span>资源预览</span>
-        <button
-          className="open-folder-btn"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleOpenFolder();
-          }}
-          title="打开资源文件夹"
-        >
-          <FolderOpen size={14} />
-        </button>
+    <div className="assets-panel">
+      <div 
+        className={`assets-content ${isDragOver ? 'drag-over' : ''}`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        {sortedAssets.length === 0 ? (
+          <div className="empty-state">
+            <p>暂无资源文件</p>
+            <p className="hint">拖拽图片或文件夹到此处</p>
+          </div>
+        ) : (
+          <div className="assets-container">
+            {renderAssetList(sortedAssets)}
+          </div>
+        )}
       </div>
-
-      {isExpanded && (
-        <div 
-          className={`assets-content ${isDragOver ? 'drag-over' : ''}`}
-          style={{ minHeight: Math.min(240, Math.max(160, assets.length > 0 ? 160 : 160)) }}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-        >
-          {sortedAssets.length === 0 ? (
-            <div className="empty-state">
-              <p>暂无资源文件</p>
-              <p className="hint">拖拽图片或文件夹到此处</p>
-            </div>
-          ) : (
-            <div className="assets-container">
-              {renderAssetList(sortedAssets)}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 };

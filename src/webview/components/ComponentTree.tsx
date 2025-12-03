@@ -111,41 +111,29 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
 
 const ComponentTree: React.FC = () => {
   const { components } = useDesignerStore();
-  const [isExpanded, setIsExpanded] = useState(true);
-
-  console.log('[ComponentTree] Render - isExpanded:', isExpanded, 'components:', components.length, 'className:', `component-tree ${!isExpanded ? 'collapsed' : ''}`);
 
   const rootComponents = components.filter(c => c.parent === null);
 
   return (
-    <div
-      className={`component-tree ${!isExpanded ? 'collapsed' : ''}`}
-      style={{ flex: isExpanded ? '1' : '0 0 auto' }}
-    >
-      <div className="tree-header" onClick={() => setIsExpanded(!isExpanded)}>
-        <span className={`expand-icon ${isExpanded ? 'expanded' : ''}`}>▶</span>
-        <h3>控件树</h3>
-      </div>
-      {isExpanded && (
-        <div className="tree-content" style={{ minHeight: 160 }}>
-          {rootComponents.length === 0 ? (
-            <div className="tree-empty">
-              暂无组件
-              <div className="tree-empty-tip">
-                从左侧组件库拖拽添加组件
-              </div>
+    <div className="component-tree">
+      <div className="tree-content">
+        {rootComponents.length === 0 ? (
+          <div className="tree-empty">
+            暂无组件
+            <div className="tree-empty-tip">
+              从组件库拖拽添加组件
             </div>
-          ) : (
-            rootComponents.map(component => (
-              <ComponentTreeNode
-                key={component.id}
-                componentId={component.id}
-                level={0}
-              />
-            ))
-          )}
-        </div>
-      )}
+          </div>
+        ) : (
+          rootComponents.map(component => (
+            <ComponentTreeNode
+              key={component.id}
+              componentId={component.id}
+              level={0}
+            />
+          ))
+        )}
+      </div>
     </div>
   );
 };

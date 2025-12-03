@@ -11,175 +11,89 @@
   height: 100%;
 }
 
-.component-library.collapsed {
-  flex: 0 0 auto;
-  height: var(--panel-header-height);
-  overflow: hidden;
+.library-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
 }
 
-.library-header {
-  height: var(--panel-header-height);
+/* Component categories */
+.component-category {
+  margin-bottom: 8px;
+}
+
+.category-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 16px;
-  background-color: var(--vscode-sideBarSectionHeader-background);
-  border-bottom: 1px solid var(--vscode-panel-border);
+  padding: 6px 8px;
+  background: var(--vscode-sideBarSectionHeader-background);
+  border: 1px solid var(--vscode-sideBarSectionHeader-border);
   cursor: pointer;
   user-select: none;
 }
 
-.library-header:hover {
+.category-header:hover {
   background: var(--vscode-list-hoverBackground);
 }
 
-.library-header .expand-icon {
-  transition: transform 0.2s;
-  font-size: 10px;
+.category-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--vscode-sideBarTitle-foreground);
 }
 
-.library-header .expand-icon.expanded {
+.expand-icon {
+  display: inline-block;
+  margin-right: 6px;
+  font-size: 10px;
+  transition: transform 0.2s;
+  color: var(--vscode-icon-foreground);
+}
+
+.expand-icon.expanded {
   transform: rotate(90deg);
 }
 
-.library-header h3 {
-  margin: 0;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  color: var(--vscode-sideBarSectionHeader-foreground);
-}
-
-.library-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 12px;
+.category-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+  gap: 8px;
+  padding: 8px;
+  background: var(--vscode-sideBar-background);
 }
 
 /* Component items */
 .component-item {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  padding: 8px 12px;
-  margin-bottom: 4px;
+  padding: 8px;
+  border: 1px solid var(--vscode-panel-border);
   border-radius: 4px;
   cursor: grab;
-  transition: background-color 0.2s ease;
-  user-select: none;
+  background: var(--vscode-editor-background);
+  transition: all 0.2s;
 }
 
 .component-item:hover {
-  background-color: var(--vscode-list-hoverBackground);
+  background: var(--vscode-list-hoverBackground);
+  border-color: var(--vscode-focusBorder);
+  transform: translateY(-2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .component-item:active {
   cursor: grabbing;
 }
 
-.component-item.dragging {
-  opacity: 0.5;
-}
-
 .component-icon {
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 12px;
-  font-size: 18px;
+  font-size: 24px;
+  margin-bottom: 4px;
 }
 
 .component-name {
-  font-size: 13px;
-  color: var(--vscode-foreground);
-  font-weight: 400;
-}
-
-/* Component categories */
-.component-category {
-  margin-bottom: 16px;
-}
-
-.category-title {
   font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  color: var(--vscode-descriptionForeground);
-  margin-bottom: 8px;
-  padding: 0 8px;
-}
-
-/* Empty state */
-.library-empty {
-  padding: 24px 16px;
   text-align: center;
-  color: var(--vscode-descriptionForeground);
-  font-size: 12px;
-}
-
-/* Search */
-.library-search {
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--vscode-panel-border);
-}
-
-.library-search input {
-  width: 100%;
-  padding: 6px 8px;
-  border: 1px solid var(--vscode-input-border);
-  border-radius: 2px;
-  background-color: var(--vscode-input-background);
-  color: var(--vscode-input-foreground);
-  font-size: 13px;
-}
-
-.library-search input:focus {
-  outline: 1px solid var(--vscode-focusBorder);
-  outline-offset: -1px;
-}
-
-/* Drag preview */
-.drag-preview {
-  position: fixed;
-  pointer-events: none;
-  z-index: 1000;
-  opacity: 0.8;
-  background-color: var(--vscode-editor-background);
-  border: 1px solid var(--vscode-focusBorder);
-  border-radius: 4px;
-  padding: 8px 16px;
-  display: flex;
-  align-items: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.drag-preview .component-icon {
-  margin-right: 8px;
-}
-
-/* Import button */
-.library-import {
-  padding: 12px;
-  border-top: 1px solid var(--vscode-panel-border);
-}
-
-.import-button {
-  width: 100%;
-  padding: 6px 12px;
-  background-color: var(--vscode-button-background);
-  color: var(--vscode-button-foreground);
-  border: none;
-  border-radius: 2px;
-  font-size: 13px;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-.import-button:hover {
-  background-color: var(--vscode-button-hoverBackground);
-}
-
-.import-button:active {
-  transform: scale(0.98);
+  color: var(--vscode-foreground);
+  word-break: break-word;
 }

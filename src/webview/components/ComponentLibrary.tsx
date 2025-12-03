@@ -108,41 +108,80 @@ const componentDefinitions: ComponentDefinition[] = [
   },
 ];
 
-const ComponentLibrary: React.FC<ComponentLibraryProps> = ({ onComponentDragStart }) => {
-  const [isExpanded, setIsExpanded] = useState(true);
+// 组件分类
+const componentCategories = [
+  {
+    name: '容器',
+    types: ['hg_view', 'hg_window', 'hg_canvas']
+  },
+  {
+    name: '基础控件',
+    types: ['hg_button', 'hg_label', 'hg_image']
+  },
+  {
+    name: '输入控件',
+    types: ['hg_input', 'hg_checkbox', 'hg_radio']
+  }
+];
 
-  console.log('[ComponentLibrary] Render - isExpanded:', isExpanded, 'className:', `component-library ${!isExpanded ? 'collapsed' : ''}`);
+const ComponentLibrary: React.FC<ComponentLibraryProps> = ({ onComponentDragStart }) => {
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
+    new Set(componentCategories.map(c => c.name))
+  );
 
   const handleDragStart = (e: React.DragEvent, type: ComponentType) => {
     e.dataTransfer.setData('component-type', type);
     onComponentDragStart(type);
   };
 
+  const toggleCategory = (categoryName: string) => {
+    setExpandedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(categoryName)) {
+        next.delete(categoryName);
+      } else {
+        next.add(categoryName);
+      }
+      return next;
+    });
+  };
+
   return (
-    <div
-      className={`component-library ${!isExpanded ? 'collapsed' : ''}`}
-      style={{ flex: isExpanded ? '1' : '0 0 auto' }}
-    >
-      <div className="library-header" onClick={() => setIsExpanded(!isExpanded)}>
-        <span className={`expand-icon ${isExpanded ? 'expanded' : ''}`}>▶</span>
-        <h3>组件库</h3>
-      </div>
-      {isExpanded && (
-        <div className="library-content" style={{ minHeight: 160 }}>
-          {componentDefinitions.map((component) => (
-            <div
-              key={component.type}
-              className="component-item"
-              draggable
-              onDragStart={(e) => handleDragStart(e, component.type)}
-              title={component.name}
-            >
-              <div className="component-icon">{component.icon}</div>
-              <div className="component-name">{component.name}</div>
+    <div className="component-library">
+      <div className="library-content">
+        {componentCategories.map((category) => {
+          const isExpanded = expandedCategories.has(category.name);
+          const components = componentDefinitions.filter(c => category.types.includes(c.type));
+          
+          return (
+            <div key={category.name} className="component-category">
+              <div 
+                className="category-header" 
+                onClick={() => toggleCategory(category.name)}
+              >
+                <span className={`expand-icon ${isExpanded ? 'expanded' : ''}`}>▶</span>
+                <span className="category-name">{category.name}</span>
+              </div>
+              {isExpanded && (
+                <div className="category-content">
+                  {components.map((component) => (
+                    <div
+                      key={component.type}
+                      className="component-item"
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, component.type)}
+                      title={component.name}
+                    >
+                      <div className="component-icon">{component.icon}</div>
+                      <div className="component-name">{component.name}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          ))}
-        </div>
-      )}
+          );
+        })}
+      </div>
     </div>
   );
 };
