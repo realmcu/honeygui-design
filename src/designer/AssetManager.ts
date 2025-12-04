@@ -78,15 +78,26 @@ export class AssetManager {
             } else if (stats.isFile()) {
                 const ext = path.extname(file).toLowerCase();
                 const imageExts = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg', '.webp'];
+                const videoExts = ['.mp4', '.avi', '.mov', '.mkv', '.webm'];
+                const modelExts = ['.gltf', '.glb', '.obj', '.fbx', '.stl'];
                 
+                let assetType: string | null = null;
                 if (imageExts.includes(ext)) {
+                    assetType = 'image';
+                } else if (videoExts.includes(ext)) {
+                    assetType = 'video';
+                } else if (modelExts.includes(ext)) {
+                    assetType = 'model';
+                }
+                
+                if (assetType) {
                     const webviewUri = this._panel.webview.asWebviewUri(vscode.Uri.file(filePath));
                     const relativePath = path.relative(rootPath, filePath).replace(/\\/g, '/');
                     assets.push({
                         name: file,
                         path: webviewUri.toString(),
                         relativePath: relativePath,
-                        type: 'image',
+                        type: assetType,
                         size: stats.size
                     });
                 }
