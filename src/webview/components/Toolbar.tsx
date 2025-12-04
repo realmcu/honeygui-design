@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useDesignerStore } from '../store';
-import { Save, Code, Play, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, Grid3x3, MousePointer, GitBranch } from 'lucide-react';
+import { Save, Code, Play, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, Grid3x3, MousePointer, GitBranch, Palette } from 'lucide-react';
 import './Toolbar.css';
 
 const Toolbar: React.FC = () => {
@@ -13,7 +13,26 @@ const Toolbar: React.FC = () => {
     setSnapToGrid,
     showViewConnections,
     setShowViewConnections,
+    canvasBackgroundColor,
+    setCanvasBackgroundColor,
   } = useDesignerStore();
+
+  const [showColorPicker, setShowColorPicker] = useState(false);
+
+  // 点击外部关闭颜色选择器
+  React.useEffect(() => {
+    if (!showColorPicker) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.background-color-picker')) {
+        setShowColorPicker(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showColorPicker]);
 
   const handleZoomIn = () => {
     setZoom(Math.min(zoom * 1.2, 8));
@@ -37,6 +56,11 @@ const Toolbar: React.FC = () => {
 
   const handleToggleViewConnections = () => {
     setShowViewConnections(!showViewConnections);
+  };
+
+  const handleBackgroundColorChange = (color: string) => {
+    setCanvasBackgroundColor(color);
+    setShowColorPicker(false);
   };
 
   const handleSave = () => {
@@ -125,6 +149,44 @@ const Toolbar: React.FC = () => {
           <GitBranch size={16} />
           <span>连接</span>
         </button>
+        <div className="background-color-picker">
+          <button
+            className="toolbar-button"
+            onClick={() => setShowColorPicker(!showColorPicker)}
+            title="画布背景色"
+          >
+            <Palette size={16} />
+            <span>背景</span>
+          </button>
+          {showColorPicker && (
+            <div className="color-picker-dropdown">
+              <button
+                className={`color-option ${canvasBackgroundColor === '#ffffff' ? 'active' : ''}`}
+                onClick={() => handleBackgroundColorChange('#ffffff')}
+                title="白色"
+              >
+                <div className="color-preview" style={{ backgroundColor: '#ffffff', border: '1px solid #ccc' }} />
+                <span>白色</span>
+              </button>
+              <button
+                className={`color-option ${canvasBackgroundColor === '#000000' ? 'active' : ''}`}
+                onClick={() => handleBackgroundColorChange('#000000')}
+                title="黑色"
+              >
+                <div className="color-preview" style={{ backgroundColor: '#000000' }} />
+                <span>黑色</span>
+              </button>
+              <button
+                className={`color-option ${canvasBackgroundColor === '#2c2c2c' ? 'active' : ''}`}
+                onClick={() => handleBackgroundColorChange('#2c2c2c')}
+                title="深灰 (RGB 44,44,44)"
+              >
+                <div className="color-preview" style={{ backgroundColor: '#2c2c2c' }} />
+                <span>深灰</span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="toolbar-divider" />

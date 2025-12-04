@@ -122,3 +122,53 @@
   align-items: center;
   justify-content: center;
 }
+
+/* Background color picker */
+.background-color-picker {
+  position: relative;
+}
+
+.color-picker-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  background-color: var(--vscode-dropdown-background);
+  border: 1px solid var(--vscode-dropdown-border);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  min-width: 140px;
+  padding: 4px;
+}
+
+.color-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  background-color: transparent;
+  border: none;
+  border-radius: 2px;
+  color: var(--vscode-foreground);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  text-align: left;
+}
+
+.color-option:hover {
+  background-color: var(--vscode-list-hoverBackground);
+}
+
+.color-option.active {
+  background-color: var(--vscode-list-activeSelectionBackground);
+  color: var(--vscode-list-activeSelectionForeground);
+}
+
+.color-preview {
+  width: 20px;
+  height: 20px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}

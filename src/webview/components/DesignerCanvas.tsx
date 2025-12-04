@@ -291,10 +291,10 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     if (!snapToGrid || gridSize <= 0) return null;
 
     const gridElements = [];
-    const gridSizePx = gridSize * zoom;
+    const gridSizePx = gridSize; // 不需要乘以 zoom，因为网格在缩放容器内
     const primaryGridInterval = 5;
-    const width = canvasSize.width * zoom;
-    const height = canvasSize.height * zoom;
+    const width = canvasSize.width;
+    const height = canvasSize.height;
     
     const secondaryGridStyle = {
       position: 'absolute' as const,
@@ -309,7 +309,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     };
 
     // 垂直线
-    for (let x = 0; x < width; x += gridSizePx) {
+    for (let x = 0; x <= width; x += gridSizePx) {
       const isPrimaryLine = x % (gridSizePx * primaryGridInterval) === 0;
       const lineStyle = isPrimaryLine ? primaryGridStyle : secondaryGridStyle;
       
@@ -321,14 +321,14 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
             left: x,
             top: 0,
             width: 1,
-            height: '100%',
+            height: height,
           }}
         />
       );
     }
 
     // 水平线
-    for (let y = 0; y < height; y += gridSizePx) {
+    for (let y = 0; y <= height; y += gridSizePx) {
       const isPrimaryLine = y % (gridSizePx * primaryGridInterval) === 0;
       const lineStyle = isPrimaryLine ? primaryGridStyle : secondaryGridStyle;
       
@@ -339,7 +339,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
             ...lineStyle,
             left: 0,
             top: y,
-            width: '100%',
+            width: width,
             height: 1,
           }}
         />
@@ -411,10 +411,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
             </div>
           )}
           
-          {/* Grid */}
-        {renderGrid()}
-
-        {/* Components */}
+        {/* Components and Grid Container - 统一的坐标系统 */}
         <div
           style={{
             position: 'absolute',
@@ -422,10 +419,13 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
             top: canvasOffset.y,
             transform: `scale(${zoom})`,
             transformOrigin: '0 0',
-            width: '100%',
-            height: '100%',
+            width: canvasSize.width,
+            height: canvasSize.height,
           }}
         >
+          {/* Grid - 在组件容器内渲染，共享相同的坐标系统 */}
+          {renderGrid()}
+
           {/* 渲染所有顶级组件，并递归渲染其子组件 */}
           {components
             .filter((c) => c.parent === null)
