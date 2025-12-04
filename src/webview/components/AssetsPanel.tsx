@@ -109,7 +109,7 @@ const AssetsPanel: React.FC = () => {
             </div>
           </div>
           {isExpanded && asset.children && (
-            <div className="folder-children" style={{ paddingLeft: `${indent + 16}px` }}>
+            <div className="folder-children">
               {renderAssetList(asset.children, level + 1)}
             </div>
           )}
