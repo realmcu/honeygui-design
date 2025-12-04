@@ -66,6 +66,33 @@
 /* Panels */
 /* 移除面板通用样式，统一在 global.css 定义 */
 
+/* Panel Resizer */
+.panel-resizer {
+  width: 4px;
+  background: transparent;
+  cursor: col-resize;
+  position: relative;
+  flex-shrink: 0;
+  transition: background-color 0.2s;
+}
+
+.panel-resizer:hover {
+  background: var(--vscode-focusBorder);
+}
+
+.panel-resizer.resizing {
+  background: var(--vscode-focusBorder);
+}
+
+.panel-resizer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -2px;
+  right: -2px;
+}
+
 /* Responsive design */
 @media (max-width: 1280px) {
   :root {

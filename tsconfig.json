@@ -23,6 +23,7 @@
   "exclude": [
     "node_modules",
     ".vscode-test",
-    "src/webview"
+    "src/webview",
+    "src/HoneyGUI/tool/D2XML"
   ]
 }

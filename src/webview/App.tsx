@@ -33,6 +33,18 @@ const App: React.FC = () => {
   // Tab 切换状态
   const [activeTab, setActiveTab] = React.useState<'components' | 'assets' | 'tree'>('components');
 
+  // 左侧面板宽度调整
+  const [leftPanelWidth, setLeftPanelWidth] = React.useState(280);
+  const [isResizingLeft, setIsResizingLeft] = React.useState(false);
+  const minLeftPanelWidth = 200;
+  const maxLeftPanelWidth = 500;
+
+  // 右侧面板宽度调整
+  const [rightPanelWidth, setRightPanelWidth] = React.useState(300);
+  const [isResizingRight, setIsResizingRight] = React.useState(false);
+  const minRightPanelWidth = 250;
+  const maxRightPanelWidth = 500;
+
   // Initialize keyboard shortcuts
   useKeyboardShortcuts();
 
@@ -510,6 +522,53 @@ const App: React.FC = () => {
     window.dispatchEvent(event);
   };
 
+  // 处理左侧面板宽度调整
+  const handleLeftMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizingLeft(true);
+  };
+
+  // 处理右侧面板宽度调整
+  const handleRightMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizingRight(true);
+  };
+
+  React.useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isResizingLeft) {
+        const newWidth = e.clientX;
+        if (newWidth >= minLeftPanelWidth && newWidth <= maxLeftPanelWidth) {
+          setLeftPanelWidth(newWidth);
+        }
+      } else if (isResizingRight) {
+        const newWidth = window.innerWidth - e.clientX;
+        if (newWidth >= minRightPanelWidth && newWidth <= maxRightPanelWidth) {
+          setRightPanelWidth(newWidth);
+        }
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingLeft(false);
+      setIsResizingRight(false);
+    };
+
+    if (isResizingLeft || isResizingRight) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isResizingLeft, isResizingRight]);
+
   return (
     <div className="app">
       {/* Toolbar */}
@@ -518,7 +577,7 @@ const App: React.FC = () => {
       {/* Main Content */}
       <div className="main-content">
         {/* Left Panel - Tabbed */}
-        <div className="left-panel">
+        <div className="left-panel" style={{ width: `${leftPanelWidth}px` }}>
           {/* Tab Headers */}
           <div className="tab-headers">
             <button 
@@ -549,6 +608,12 @@ const App: React.FC = () => {
           </div>
         </div>
 
+        {/* Resizer for left panel */}
+        <div 
+          className={`panel-resizer ${isResizingLeft ? 'resizing' : ''}`}
+          onMouseDown={handleLeftMouseDown}
+        />
+
         {/* Center - Canvas */}
         <div
           className="canvas-container"
@@ -559,8 +624,14 @@ const App: React.FC = () => {
           <DesignerCanvas onComponentSelect={handleComponentSelect} />
         </div>
 
+        {/* Resizer for right panel */}
+        <div 
+          className={`panel-resizer ${isResizingRight ? 'resizing' : ''}`}
+          onMouseDown={handleRightMouseDown}
+        />
+
         {/* Right Panel - Properties */}
-        <div className="right-panel">
+        <div className="right-panel" style={{ width: `${rightPanelWidth}px` }}>
           <PropertiesPanel />
         </div>
       </div>
