@@ -31,8 +31,6 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     setDraggedComponent,
     zoom,
     setZoom,
-    gridSize,
-    snapToGrid,
     canvasOffset,
     setCanvasOffset,
     setComponents,
@@ -165,18 +163,13 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
       const x = mouseX - dragOffset.x;
       const y = mouseY - dragOffset.y;
 
-      const snapToGridValue = (value: number) => {
-        if (!snapToGrid) return value;
-        return Math.round(value / gridSize) * gridSize;
-      };
-
       const component = components.find(c => c.id === draggedComponent);
       if (component) {
         updateComponent(component.id, {
           position: {
             ...component.position,
-            x: snapToGridValue(x),
-            y: snapToGridValue(y),
+            x: x,
+            y: y,
           },
         });
       }
@@ -286,69 +279,6 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     return <Widget component={component} style={style} handlers={handlers} />;
   };
 
-  // Render grid - Clean and minimal style
-  const renderGrid = () => {
-    if (!snapToGrid || gridSize <= 0) return null;
-
-    const gridElements = [];
-    const gridSizePx = gridSize; // 不需要乘以 zoom，因为网格在缩放容器内
-    const primaryGridInterval = 5;
-    const width = canvasSize.width;
-    const height = canvasSize.height;
-    
-    const secondaryGridStyle = {
-      position: 'absolute' as const,
-      background: 'rgba(255, 255, 255, 0.15)',
-      pointerEvents: 'none' as const,
-    };
-    
-    const primaryGridStyle = {
-      position: 'absolute' as const,
-      background: 'rgba(255, 255, 255, 0.25)',
-      pointerEvents: 'none' as const,
-    };
-
-    // 垂直线
-    for (let x = 0; x <= width; x += gridSizePx) {
-      const isPrimaryLine = x % (gridSizePx * primaryGridInterval) === 0;
-      const lineStyle = isPrimaryLine ? primaryGridStyle : secondaryGridStyle;
-      
-      gridElements.push(
-        <div
-          key={`v-${x}`}
-          style={{
-            ...lineStyle,
-            left: x,
-            top: 0,
-            width: 1,
-            height: height,
-          }}
-        />
-      );
-    }
-
-    // 水平线
-    for (let y = 0; y <= height; y += gridSizePx) {
-      const isPrimaryLine = y % (gridSizePx * primaryGridInterval) === 0;
-      const lineStyle = isPrimaryLine ? primaryGridStyle : secondaryGridStyle;
-      
-      gridElements.push(
-        <div
-          key={`h-${y}`}
-          style={{
-            ...lineStyle,
-            left: 0,
-            top: y,
-            width: width,
-            height: 1,
-          }}
-        />
-      );
-    }
-
-    return gridElements;
-  };
-
   // 扩展画布区域，使其成为可滚动的大型画布
   return (
     <div className="designer-canvas-container">
@@ -423,9 +353,6 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
             height: canvasSize.height,
           }}
         >
-          {/* Grid - 在组件容器内渲染，共享相同的坐标系统 */}
-          {renderGrid()}
-
           {/* 渲染所有顶级组件，并递归渲染其子组件 */}
           {components
             .filter((c) => c.parent === null)

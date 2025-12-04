@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useDesignerStore } from '../store';
-import { Save, Code, Play, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, Grid3x3, MousePointer, GitBranch, Palette } from 'lucide-react';
+import { Save, Code, Play, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, GitBranch, Palette } from 'lucide-react';
 import './Toolbar.css';
 
 const Toolbar: React.FC = () => {
@@ -9,8 +9,6 @@ const Toolbar: React.FC = () => {
     zoom,
     setEditingMode,
     editingMode,
-    snapToGrid,
-    setSnapToGrid,
     showViewConnections,
     setShowViewConnections,
     canvasBackgroundColor,
@@ -48,10 +46,6 @@ const Toolbar: React.FC = () => {
 
   const handleSelectMode = () => {
     setEditingMode('select');
-  };
-
-  const handleToggleGrid = () => {
-    setSnapToGrid(!snapToGrid);
   };
 
   const handleToggleViewConnections = () => {
@@ -133,14 +127,6 @@ const Toolbar: React.FC = () => {
       <div className="toolbar-divider" />
 
       <div className="toolbar-section">
-        <button
-          className={`toolbar-button ${snapToGrid ? 'active' : ''}`}
-          onClick={handleToggleGrid}
-          title="切换网格"
-        >
-          <Grid3x3 size={16} />
-          <span>网格</span>
-        </button>
         <button
           className={`toolbar-button ${showViewConnections ? 'active' : ''}`}
           onClick={handleToggleViewConnections}

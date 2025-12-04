@@ -24,8 +24,6 @@ export interface DesignerStore extends DesignerState {
   // Canvas operations
   setZoom: (zoom: number) => void;
   setCanvasOffset: (offset: { x: number; y: number }) => void;
-  setGridSize: (size: number) => void;
-  setSnapToGrid: (snap: boolean) => void;
   setEditingMode: (mode: 'select' | 'move' | 'resize') => void;
   setCanvasBackgroundColor: (color: string) => void;
   
@@ -113,8 +111,6 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   hoveredComponent: null,
   draggedComponent: null,
   zoom: 1,
-  gridSize: 8,
-  snapToGrid: true,
   canvasOffset: { x: 0, y: 0 },
   canvasSize: { width: 800, height: 480 }, // 默认画布尺寸
   canvasBackgroundColor: '#f0f0f0', // 默认画布背景色为灰色
@@ -220,8 +216,6 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   // Canvas operations
   setZoom: (zoom) => set({ zoom }),
   setCanvasOffset: (offset) => set({ canvasOffset: offset }),
-  setGridSize: (size) => set({ gridSize: size }),
-  setSnapToGrid: (snap) => set({ snapToGrid: snap }),
   setEditingMode: (mode) => set({ editingMode: mode }),
   setCanvasBackgroundColor: (color) => set({ canvasBackgroundColor: color }),
   setShowViewConnections: (show) => set({ showViewConnections: show }),
@@ -238,13 +232,8 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     const component = state.components.find((c) => c.id === state.draggedComponent);
     if (!component) return;
 
-    const x = state.snapToGrid
-      ? Math.round((mousePos.x - state.canvasOffset.x) / state.gridSize) * state.gridSize
-      : mousePos.x - state.canvasOffset.x;
-
-    const y = state.snapToGrid
-      ? Math.round((mousePos.y - state.canvasOffset.y) / state.gridSize) * state.gridSize
-      : mousePos.y - state.canvasOffset.y;
+    const x = mousePos.x - state.canvasOffset.x;
+    const y = mousePos.y - state.canvasOffset.y;
 
     get().updateComponent(component.id, {
       position: { ...component.position, x, y },
@@ -382,8 +371,6 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       hoveredComponent: null,
       draggedComponent: null,
       zoom: 1,
-      gridSize: 8,
-      snapToGrid: true,
       canvasOffset: { x: 0, y: 0 },
       canvasSize: parseResolutionStr(config?.resolution),
       canvasBackgroundColor: '#f0f0f0',
@@ -391,11 +378,6 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     });
   },
 }));
-
-// Helper function to snap to grid
-export const snapToGrid = (value: number, gridSize: number): number => {
-  return Math.round(value / gridSize) * gridSize;
-};
 
 // Helper function to generate unique ID
 export const generateId = (): string => {

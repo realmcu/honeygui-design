@@ -62,8 +62,6 @@ export interface DesignerState {
   hoveredComponent: string | null;
   draggedComponent: string | null;
   zoom: number;
-  gridSize: number;
-  snapToGrid: boolean;
   canvasOffset: { x: number; y: number };
   canvasSize: { width: number; height: number };
   canvasBackgroundColor: string;
