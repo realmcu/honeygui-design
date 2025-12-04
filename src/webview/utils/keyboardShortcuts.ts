@@ -70,9 +70,8 @@ export const useKeyboardShortcuts = () => {
         //   }
         //   break;
 
-        // Delete (Delete or Backspace)
+        // Delete (Delete key only, Backspace is reserved for text input)
         case 'Delete':
-        case 'Backspace':
           if (selectedComponent) {
             e.preventDefault();
             console.log('[键盘快捷键] 删除组件:', selectedComponent);
