@@ -7,12 +7,6 @@ import { useEffect } from 'react';
 import { useDesignerStore } from '../store';
 
 export const useKeyboardShortcuts = () => {
-  const {
-    selectedComponent,
-    removeComponent,
-    duplicateComponent,
-  } = useDesignerStore();
-
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // 如果焦点在输入框、文本域或可编辑元素中，不处理快捷键
@@ -24,6 +18,9 @@ export const useKeyboardShortcuts = () => {
       ) {
         return;
       }
+
+      // 直接从 store 获取最新状态，避免闭包问题
+      const { selectedComponent, removeComponent, duplicateComponent } = useDesignerStore.getState();
 
       const isModKey = e.ctrlKey || e.metaKey; // Ctrl on Windows/Linux, Command on Mac
       const isShift = e.shiftKey;
@@ -78,6 +75,7 @@ export const useKeyboardShortcuts = () => {
         case 'Backspace':
           if (selectedComponent) {
             e.preventDefault();
+            console.log('[键盘快捷键] 删除组件:', selectedComponent);
             removeComponent(selectedComponent);
           }
           break;
@@ -121,7 +119,7 @@ export const useKeyboardShortcuts = () => {
           if (selectedComponent) {
             e.preventDefault();
             const nudgeDistance = isShift ? 10 : 1; // Shift+Arrow for 10px, Arrow for 1px
-            nudgeComponent(e.key, nudgeDistance);
+            nudgeComponent(e.key, nudgeDistance, selectedComponent);
           }
           break;
 
@@ -150,7 +148,7 @@ export const useKeyboardShortcuts = () => {
         // Escape (Deselect)
         case 'Escape':
           e.preventDefault();
-          // TODO: Deselect component
+          useDesignerStore.getState().selectComponent(null);
           break;
 
         default:
@@ -163,11 +161,9 @@ export const useKeyboardShortcuts = () => {
       }
     };
 
-    const nudgeComponent = (key: string, distance: number) => {
-      if (!selectedComponent) return;
-
+    const nudgeComponent = (key: string, distance: number, componentId: string) => {
       const { components, updateComponent } = useDesignerStore.getState();
-      const component = components.find(c => c.id === selectedComponent);
+      const component = components.find(c => c.id === componentId);
       if (!component) return;
 
       let deltaX = 0;
@@ -188,7 +184,7 @@ export const useKeyboardShortcuts = () => {
           break;
       }
 
-      updateComponent(selectedComponent, {
+      updateComponent(componentId, {
         position: {
           ...component.position,
           x: Math.max(0, component.position.x + deltaX),
@@ -202,7 +198,7 @@ export const useKeyboardShortcuts = () => {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [selectedComponent, removeComponent, duplicateComponent]);
+  }, []); // 空依赖数组，只注册一次事件监听器
 };
 
 export default useKeyboardShortcuts;
