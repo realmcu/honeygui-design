@@ -10,6 +10,7 @@ export interface ProjectConfig {
         email?: string;
     };
     resolution?: string;
+    targetEngine?: 'honeygui' | 'lvgl';  // 目标GUI引擎，默认honeygui
     assetsDir?: string;      // 资源目录，默认 "assets"
     uiDir?: string;          // UI目录，默认 "ui"
     srcDir?: string;         // 源码目录，默认 "src"
@@ -34,6 +35,7 @@ export interface ProjectConfig {
  * 项目配置默认值
  */
 export const DEFAULT_PROJECT_CONFIG: Partial<ProjectConfig> = {
+    targetEngine: 'honeygui',
     assetsDir: 'assets',
     uiDir: 'ui',
     srcDir: 'src'

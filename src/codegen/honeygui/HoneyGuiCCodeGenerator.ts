@@ -13,26 +13,13 @@ import * as path from 'path';
 import { HoneyGuiApiMapper } from './HoneyGuiApiMapper';
 import { Component } from '../../hml/types';
 import { SConscriptGenerator } from '../../simulation/SConscriptGenerator';
+import { ICodeGenerator, CodeGenOptions, CodeGenResult } from '../ICodeGenerator';
 
 // Re-export for backward compatibility
 export { Component } from '../../hml/types';
+export { CodeGenOptions, CodeGenResult } from '../ICodeGenerator';
 
-export type OverwritePolicy = 'always' | 'once' | 'protected';
-
-export interface CodeGenOptions {
-  outputDir: string;
-  hmlFileName: string;  // HML文件名（不含扩展名）
-  enableProtectedAreas?: boolean;
-  userCodeDir?: string; // 用户代码目录（可选）
-}
-
-export interface CodeGenResult {
-  success: boolean;
-  files: string[];
-  errors?: string[];
-}
-
-export class HoneyGuiCCodeGenerator {
+export class HoneyGuiCCodeGenerator implements ICodeGenerator {
   private apiMapper: HoneyGuiApiMapper;
   private components: Component[];
   private options: CodeGenOptions;

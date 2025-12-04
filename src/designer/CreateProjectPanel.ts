@@ -190,10 +190,10 @@ export class CreateProjectPanel {
      */
     private async _createProject(config: any): Promise<void> {
         try {
-            const { projectName, saveLocation, appId, resolution, minSdk, pixelMode, honeyguiSdkPath } = config;
+            const { projectName, saveLocation, appId, resolution, targetEngine, minSdk, pixelMode, honeyguiSdkPath } = config;
 
             // 记录日志用于调试
-            logger.info(`[CreateProjectPanel] Creating project: projectName=${projectName}, saveLocation=${saveLocation}, appId=${appId}, sdkPath=${honeyguiSdkPath}`);
+            logger.info(`[CreateProjectPanel] Creating project: projectName=${projectName}, saveLocation=${saveLocation}, appId=${appId}, targetEngine=${targetEngine}, sdkPath=${honeyguiSdkPath}`);
 
             // 设置默认 SDK 路径
             const sdkPath = honeyguiSdkPath || path.join(require('os').homedir(), '.HoneyGUI-SDK');
@@ -256,7 +256,7 @@ export class CreateProjectPanel {
             vscode.window.showInformationMessage(`Creating project: ${projectName}...`);
             
             // 创建项目结构
-            await this._createProjectStructure(projectPath, projectName, appId, resolution, minSdk, pixelMode, honeyguiSdkPath);
+            await this._createProjectStructure(projectPath, projectName, appId, resolution, targetEngine || 'honeygui', minSdk, pixelMode, honeyguiSdkPath);
             
             // 显示成功消息
             this._panel.webview.postMessage({
@@ -300,6 +300,7 @@ export class CreateProjectPanel {
         projectName: string,
         appId: string,
         resolution: string,
+        targetEngine: string,
         minSdk: string,
         pixelMode: string,
         honeyguiSdkPath?: string
@@ -337,6 +338,7 @@ export class CreateProjectPanel {
             appId: appId,
             version: '1.0.0',
             resolution: resolution,
+            targetEngine: targetEngine,  // 添加目标引擎配置
             minSdk: minSdk,
             pixelMode: pixelMode,
             mainHmlFile: `ui/main/${hmlFileName}`, // 使用新的文件名
@@ -351,7 +353,7 @@ export class CreateProjectPanel {
         );
 
         // SDK 路径已保存到 project.json，项目将直接引用 SDK 而不拷贝文件
-        logger.info(`[CreateProjectPanel] Project created, SDK path: ${projectConfig.honeyguiSdkPath || 'default'}`);
+        logger.info(`[CreateProjectPanel] Project created with target engine: ${targetEngine}, SDK path: ${projectConfig.honeyguiSdkPath || 'default'}`);
     }
 
     /**

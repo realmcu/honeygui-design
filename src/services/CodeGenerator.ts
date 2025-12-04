@@ -2,7 +2,8 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { ProjectUtils } from '../utils/ProjectUtils';
 import { HmlController } from '../hml/HmlController';
-import { generateHoneyGuiCode, CodeGenOptions } from '../codegen/honeygui';
+import { CodeGenOptions } from '../codegen/ICodeGenerator';
+import { CodeGeneratorFactory, TargetEngine } from '../codegen/CodeGeneratorFactory';
 import { EntryFileGenerator } from '../codegen/EntryFileGenerator';
 import { logger } from '../utils/Logger';
 
@@ -138,13 +139,20 @@ export class CodeGenerator {
             userCodeDir  // 启用用户代码目录
         };
 
-        const components = hmlController.currentDocument?.view.components || [];
-        const result = await generateHoneyGuiCode(components as any, generatorOptions);
+        // 获取项目配置中的目标引擎
+        const projectRoot = ProjectUtils.findProjectRoot(path.dirname(hmlFile));
+        const config = projectRoot ? ProjectUtils.loadProjectConfig(projectRoot) : {};
+        const targetEngine: TargetEngine = config.targetEngine || 'honeygui';
 
-        if (!(result as any).success) {
-            throw new Error((result as any).errors?.[0] || '生成失败');
+        // 使用工厂创建代码生成器
+        const components = hmlController.currentDocument?.view.components || [];
+        const generator = CodeGeneratorFactory.create(targetEngine, components as any, generatorOptions);
+        const result = await generator.generate();
+
+        if (!result.success) {
+            throw new Error(result.errors?.[0] || '生成失败');
         }
 
-        return { fileCount: (result as any).files?.length || 0 };
+        return { fileCount: result.files?.length || 0 };
     }
 }
