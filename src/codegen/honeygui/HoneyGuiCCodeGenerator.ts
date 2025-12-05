@@ -322,7 +322,11 @@ void ${baseName}_update_user(void) {
     if (component.type === 'hg_image') {
         const src = component.data?.src || '';
         // 将图片扩展名替换为 .bin
-        const binSrc = src.replace(/\.(png|jpe?g|bmp|gif|tiff?|webp)$/i, '.bin');
+        let binSrc = src.replace(/\.(png|jpe?g|bmp|gif|tiff?|webp)$/i, '.bin');
+        // 确保路径以 / 开头（VFS 绝对路径）
+        if (!binSrc.startsWith('/')) {
+            binSrc = '/' + binSrc;
+        }
         // gui_img_create_from_fs 返回 gui_img_t*，需要强制转换
         return `${indentStr}${component.id} = (gui_obj_t *)gui_img_create_from_fs(${parentRef}, "${component.name}", "${binSrc}", ${x}, ${y}, ${width}, ${height});\n`;
     }

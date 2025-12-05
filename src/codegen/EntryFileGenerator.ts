@@ -27,9 +27,16 @@ export class EntryFileGenerator {
         const content = `#include "gui_api.h"
 #include "gui_view.h"
 #include "gui_components_init.h"
+#include "gui_vfs.h"
+
+extern const uint8_t root_fs_data[];
+extern const uint32_t root_fs_size;
 
 static int app_init(void)
 {
+    // Mount romfs from embedded data
+    gui_vfs_mount_romfs("/assets/", root_fs_data, 0);
+
     gui_view_create(gui_obj_get_root(), "mainView", 0, 0, 0, 0);
     return 0;
 }
