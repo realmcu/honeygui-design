@@ -112,4 +112,44 @@ export class ComponentManager {
             });
         }
     }
+
+    /**
+     * 更新组件的单个属性
+     */
+    public updateComponentProperty(componentId: string, propertyName: string, value: any): void {
+        try {
+            // 构建更新对象
+            const updates: any = {
+                data: {}
+            };
+            updates.data[propertyName] = value;
+
+            const updatedComponent = this._hmlController.updateComponent(componentId, updates);
+            
+            if (updatedComponent) {
+                // 通知Webview组件属性已更新
+                this._panel.webview.postMessage({
+                    command: 'componentPropertyUpdated',
+                    componentId,
+                    propertyName,
+                    value,
+                    component: updatedComponent,
+                    success: true
+                });
+            } else {
+                this._panel.webview.postMessage({
+                    command: 'componentPropertyUpdated',
+                    success: false,
+                    error: '未找到组件'
+                });
+            }
+        } catch (error) {
+            logger.error(`更新组件属性失败: ${error}`);
+            this._panel.webview.postMessage({
+                command: 'componentPropertyUpdated',
+                success: false,
+                error: error instanceof Error ? error.message : '未知错误'
+            });
+        }
+    }
 }

@@ -176,9 +176,61 @@ export class MessageHandler {
                     this._fileManager.loadFile(message.filePath);
                 }
                 break;
+
+            case 'browseFile':
+                this._handleBrowseFile(message.componentId, message.propertyName, message.filters);
+                break;
                 
             default:
                 logger.warn(`[MessageHandler] 未知消息命令: ${message.command}`);
+        }
+    }
+
+    /**
+     * 处理文件浏览
+     */
+    private async _handleBrowseFile(componentId: string, propertyName: string, filters: any): Promise<void> {
+        try {
+            const ProjectUtils = require('../utils/ProjectUtils').ProjectUtils;
+            const projectRoot = this._fileManager.currentFilePath 
+                ? ProjectUtils.findProjectRoot(this._fileManager.currentFilePath)
+                : undefined;
+            
+            if (!projectRoot) {
+                vscode.window.showErrorMessage('未找到项目根目录');
+                return;
+            }
+
+            // 构建文件过滤器
+            const fileFilters: { [name: string]: string[] } = {};
+            if (filters) {
+                Object.keys(filters).forEach(key => {
+                    fileFilters[key] = filters[key];
+                });
+            }
+
+            // 打开文件选择对话框
+            const uris = await vscode.window.showOpenDialog({
+                canSelectMany: false,
+                openLabel: '选择文件',
+                filters: fileFilters,
+                defaultUri: vscode.Uri.file(projectRoot)
+            });
+
+            if (uris && uris.length > 0) {
+                const selectedPath = uris[0].fsPath;
+                // 转换为相对于项目根目录的路径
+                const path = require('path');
+                let relativePath = path.relative(projectRoot, selectedPath);
+                // 统一使用正斜杠
+                relativePath = relativePath.replace(/\\/g, '/');
+
+                // 发送更新消息给 webview
+                this._componentManager.updateComponentProperty(componentId, propertyName, relativePath);
+            }
+        } catch (error) {
+            logger.error(`[MessageHandler] 文件浏览失败: ${error}`);
+            vscode.window.showErrorMessage(`文件浏览失败: ${error instanceof Error ? error.message : '未知错误'}`);
         }
     }
 

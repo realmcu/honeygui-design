@@ -80,6 +80,7 @@ export interface VSCodeAPI {
 declare global {
   interface Window {
     acquireVsCodeApi(): VSCodeAPI;
+    vscodeAPI?: VSCodeAPI;
   }
 }
 

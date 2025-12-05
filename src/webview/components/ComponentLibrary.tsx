@@ -139,7 +139,7 @@ const componentDefinitions: ComponentDefinition[] = [
     type: 'hg_3d',
     name: '3D模型',
     icon: '🧊',
-    defaultSize: { width: 300, height: 300 },
+    defaultSize: { width: 200, height: 200 },
     properties: [
       { name: 'modelPath', label: '模型路径', type: 'string', group: 'data' },
       { name: 'rotationX', label: 'X轴旋转', type: 'number', defaultValue: 0, group: 'style' },

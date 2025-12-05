@@ -1,5 +1,6 @@
 import { ComponentType } from '../../types';
 import { HgViewProperties } from './HgViewProperties';
+import { Hg3DProperties } from './Hg3DProperties';
 import { DefaultProperties } from './DefaultProperties';
 import { PropertyPanelProps } from './types';
 
@@ -20,13 +21,14 @@ export const propertyPanelRegistry: Record<ComponentType, React.FC<PropertyPanel
   hg_canvas: DefaultProperties,
   hg_list: DefaultProperties,
   hg_video: DefaultProperties,
-  hg_3d: DefaultProperties,
+  hg_3d: Hg3DProperties,
   hg_arc: DefaultProperties,
   hg_rect: DefaultProperties,
   hg_circle: DefaultProperties,
 };
 
 export { HgViewProperties } from './HgViewProperties';
+export { Hg3DProperties } from './Hg3DProperties';
 export { DefaultProperties } from './DefaultProperties';
 export { BaseProperties } from './BaseProperties';
 export { PropertyEditor } from './PropertyEditor';

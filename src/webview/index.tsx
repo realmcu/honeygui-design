@@ -9,13 +9,6 @@ import './global.css';
 // 从types.ts导入已有的Window接口扩展
 import './types';
 
-// 扩展Window接口，添加vscodeAPI属性
-declare global {
-  interface Window {
-    vscodeAPI?: any;
-  }
-}
-
 // 安全初始化VSCode API，确保只获取一次
 if (!window.vscodeAPI) {
   try {

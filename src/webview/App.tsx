@@ -179,6 +179,23 @@ const App: React.FC = () => {
             }
           }
           break;
+
+        case 'componentPropertyUpdated':
+          // 更新组件属性（来自文件浏览器）
+          if (message.success && message.componentId && message.propertyName) {
+            const store = useDesignerStore.getState();
+            const component = store.components.find(c => c.id === message.componentId);
+            if (component) {
+              store.updateComponent(message.componentId, {
+                data: {
+                  ...component.data,
+                  [message.propertyName]: message.value
+                }
+              });
+              console.log(`[Webview App] 更新组件属性: ${message.propertyName} = ${message.value}`);
+            }
+          }
+          break;
       }
     });
 
