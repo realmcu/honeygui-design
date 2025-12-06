@@ -132,6 +132,7 @@ const { components, addComponent } = useDesignerStore();
    - Review 是否存在冗余代码
 6. **执行环境**：只在 CMD 环境下执行命令，不要在 PowerShell 环境下执行
 7. **代码提交**：除非用户特别说明，不要自动 commit 和 push 代码
+8. **SDK 依赖**：此项目依赖 HoneyGUI-SDK，源码位置在 `~/.HoneyGUI-SDK`
 
 ### 不要做的事
 - ❌ 不要修改单元测试（除非用户明确要求）

@@ -108,7 +108,7 @@ export class BuildCore {
         this.logger.log('打包 romfs...');
 
         const assetsDir = path.join(this.buildDir, 'assets');
-        const romfsOutput = path.join(this.buildDir, 'root.bin');
+        const romfsOutput = path.join(this.buildDir, 'romfs_data.c');
         const mkromfsScript = path.join(this.sdkPath, 'tool', 'mkromfs', 'mkromfs_for_honeygui.py');
 
         if (!fs.existsSync(mkromfsScript)) {
@@ -116,7 +116,7 @@ export class BuildCore {
         }
 
         return new Promise((resolve, reject) => {
-            const proc = spawn('python3', [mkromfsScript, assetsDir, romfsOutput, '--binary'], {
+            const proc = spawn('python3', [mkromfsScript, assetsDir, romfsOutput], {
                 cwd: this.buildDir,
                 shell: true
             });
@@ -131,36 +131,13 @@ export class BuildCore {
 
             proc.on('close', (code) => {
                 if (code === 0) {
-                    this.logger.log('romfs 打包完成');
-                    // 转换为 C 数组
-                    this.convertBinToC(romfsOutput);
+                    this.logger.log('romfs C 文件生成完成');
                     resolve();
                 } else {
                     reject(new Error(`romfs 打包失败，退出码: ${code}`));
                 }
             });
         });
-    }
-
-    private convertBinToC(binFile: string): void {
-        const data = fs.readFileSync(binFile);
-        const cFile = path.join(this.buildDir, 'root_fs.c');
-        
-        let content = '#include <stdint.h>\n\n';
-        content += `const uint32_t root_fs_size = ${data.length};\n\n`;
-        content += 'const uint8_t root_fs_data[] = {\n';
-        
-        for (let i = 0; i < data.length; i += 16) {
-            content += '    ';
-            for (let j = 0; j < 16 && i + j < data.length; j++) {
-                content += `0x${data[i + j].toString(16).padStart(2, '0')},`;
-            }
-            content += '\n';
-        }
-        
-        content += '};\n';
-        fs.writeFileSync(cFile, content);
-        this.logger.log('生成 root_fs.c');
     }
 
     async compile(): Promise<void> {
