@@ -143,11 +143,6 @@ const { components, addComponent } = useDesignerStore();
 - ❌ 不要添加网络依赖功能
 - ❌ 不要随意创建文档
 
-### 安全考虑
-- 图片路径使用相对路径 (`assets/xxx.png`)
-- 用户输入需要验证（组件 ID、文件名等）
-- 执行外部命令前检查路径合法性
-
 ## 测试
 
 ### E2E 测试
