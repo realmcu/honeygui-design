@@ -54,7 +54,15 @@ src/webview/
 
 ### 组件类型
 - **容器**: `hg_view`, `hg_window` (可包含子组件)
-- **UI 组件**: `hg_button`, `hg_text`, `hg_image` (必须在容器内)
+- **基础控件**: `hg_button`, `hg_text`, `hg_image` (必须在容器内)
+- **输入控件**: `hg_input`, `hg_checkbox`, `hg_radio` (必须在容器内)
+- **图形控件**: `hg_canvas`, `hg_progressbar`, `hg_slider` (必须在容器内)
+- **多媒体控件**: `hg_video`, `hg_audio` (必须在容器内)
+
+**组件层级规则**：
+- 只有容器控件（`hg_view`, `hg_window`）下面才可以添加其他控件
+- 基础控件、输入控件、图形控件、多媒体控件必须作为容器的子组件
+- 非容器控件不能包含子组件
 
 ### 代码生成策略
 - **UI 代码** (`*_ui.c/h`): 每次覆盖
