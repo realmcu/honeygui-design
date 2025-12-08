@@ -11,6 +11,7 @@ import useKeyboardShortcuts from './utils/keyboardShortcuts';
 import { getAbsolutePosition, findComponentAtPosition } from './utils/componentUtils';
 import { createImageComponentAtPosition, create3DComponentAtPosition } from './services/messageHandler';
 import { processImageFiles } from './utils/fileUtils';
+import { parseObjDependencies, parseMtlDependencies, findDependencyFiles } from './utils/objDependencyParser';
 import './App.css';
 
 // 从types.ts导入已有的Window接口扩展
@@ -322,30 +323,116 @@ const App: React.FC = () => {
 
     // 处理 3D 模型文件
     const modelExts = ['obj', 'gltf', 'glb'];
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const ext = file.name.split('.').pop()?.toLowerCase();
+    const fileArray = Array.from(files);
+    const objFiles = fileArray.filter(f => f.name.toLowerCase().endsWith('.obj'));
+    
+    let offset = 0;
+    
+    // 处理 OBJ 文件及其依赖
+    for (const objFile of objFiles) {
+      const deps = await parseObjDependencies(objFile);
+      const depFiles = findDependencyFiles(objFile.name, deps, files);
       
-      if (ext && modelExts.includes(ext)) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const arrayBuffer = event.target?.result as ArrayBuffer;
-          const uint8Array = new Uint8Array(arrayBuffer);
-          
-          const api = useDesignerStore.getState().vscodeAPI;
-          if (api) {
-            api.postMessage({
-              command: 'saveModelToAssets',
-              fileName: file.name,
-              fileData: Array.from(uint8Array),
-              dropPosition: { x: x + i * 20, y: y + i * 20 },
-              targetContainerId: targetContainer.id
-            });
-          }
-        };
-        reader.readAsArrayBuffer(file);
+      // 如果找到 MTL，解析其贴图依赖
+      if (depFiles.mtl) {
+        const mtlDeps = await parseMtlDependencies(depFiles.mtl, deps);
+        deps.textures = mtlDeps.textures;
+        depFiles.textures = fileArray.filter(f => deps.textures.includes(f.name));
       }
+      
+      // 上传所有文件
+      const filesToUpload = [objFile];
+      if (depFiles.mtl) filesToUpload.push(depFiles.mtl);
+      filesToUpload.push(...depFiles.textures);
+      
+      for (const file of filesToUpload) {
+        await uploadFileToAssets(file);
+      }
+      
+      // 检查缺失的依赖并提示
+      const missingFiles: string[] = [];
+      if (deps.mtlFile && !depFiles.mtl) {
+        missingFiles.push(deps.mtlFile);
+      }
+      const missingTextures = deps.textures.filter(t => 
+        !depFiles.textures.some(f => f.name === t)
+      );
+      missingFiles.push(...missingTextures);
+      
+      if (missingFiles.length > 0) {
+        const api = useDesignerStore.getState().vscodeAPI;
+        if (api) {
+          api.postMessage({
+            command: 'notify',
+            text: `${objFile.name} 缺少依赖文件: ${missingFiles.join(', ')}。请同时选中这些文件一起拖拽。`
+          });
+        }
+      }
+      
+      // 创建 3D 组件（只为 OBJ 文件创建）
+      const api = useDesignerStore.getState().vscodeAPI;
+      if (api) {
+        api.postMessage({
+          command: 'create3DComponent',
+          modelPath: `assets/${objFile.name}`,
+          dropPosition: { x: x + offset, y: y + offset },
+          targetContainerId: targetContainer.id
+        });
+      }
+      
+      offset += 20;
+      
+      console.log(`[OBJ依赖] ${objFile.name} 已导入到画布，包含:`, {
+        mtl: depFiles.mtl?.name,
+        textures: depFiles.textures.map(f => f.name),
+        missing: missingFiles
+      });
     }
+    
+    // 处理其他 3D 模型文件（gltf, glb）
+    const otherModels = fileArray.filter(f => {
+      const ext = f.name.split('.').pop()?.toLowerCase();
+      return ext && modelExts.includes(ext) && ext !== 'obj';
+    });
+    
+    for (const file of otherModels) {
+      await uploadFileToAssets(file);
+      
+      const api = useDesignerStore.getState().vscodeAPI;
+      if (api) {
+        api.postMessage({
+          command: 'create3DComponent',
+          modelPath: `assets/${file.name}`,
+          dropPosition: { x: x + offset, y: y + offset },
+          targetContainerId: targetContainer.id
+        });
+      }
+      offset += 20;
+    }
+  };
+
+  const uploadFileToAssets = (file: File): Promise<void> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const arrayBuffer = event.target?.result as ArrayBuffer;
+        const uint8Array = new Uint8Array(arrayBuffer);
+        
+        const api = useDesignerStore.getState().vscodeAPI;
+        if (api) {
+          api.postMessage({
+            command: 'saveImageToAssets',
+            fileName: file.name,
+            fileData: Array.from(uint8Array),
+            relativePath: '',
+            dropPosition: undefined,
+            targetContainerId: undefined
+          });
+        }
+        resolve();
+      };
+      reader.readAsArrayBuffer(file);
+    });
   };
 
 
@@ -430,15 +517,15 @@ const App: React.FC = () => {
         return ext && modelExts.includes(ext);
       });
       
-      if (hasImage) {
-        // 处理图片文件拖拽（支持多文件）
-        handleImageFileDrop(e, files, true);
+      if (hasModel) {
+        // 优先处理 3D 模型文件拖拽（包含依赖的贴图）
+        handleModelFileDrop(e, files);
         return;
       }
       
-      if (hasModel) {
-        // 处理 3D 模型文件拖拽
-        handleModelFileDrop(e, files);
+      if (hasImage) {
+        // 处理图片文件拖拽（支持多文件）
+        handleImageFileDrop(e, files, true);
         return;
       }
     }

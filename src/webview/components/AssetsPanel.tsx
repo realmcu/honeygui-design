@@ -5,6 +5,9 @@ import './AssetsPanel.css';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
+import { parseObjDependencies, parseMtlDependencies, findDependencyFiles } from '../utils/objDependencyParser';
+
+import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js';
 
 // 3D 模型预览组件
 const Model3DPreview: React.FC<{ modelPath: string }> = ({ modelPath }) => {
@@ -31,10 +34,9 @@ const Model3DPreview: React.FC<{ modelPath: string }> = ({ modelPath }) => {
     scene.add(directionalLight);
 
     const ext = modelPath.split('.').pop()?.toLowerCase();
-    let loader: GLTFLoader | OBJLoader;
 
     if (ext === 'gltf' || ext === 'glb') {
-      loader = new GLTFLoader();
+      const loader = new GLTFLoader();
       loader.load(
         modelPath,
         (gltf) => {
@@ -48,23 +50,52 @@ const Model3DPreview: React.FC<{ modelPath: string }> = ({ modelPath }) => {
         () => setError(true)
       );
     } else if (ext === 'obj') {
-      loader = new OBJLoader();
-      loader.load(
-        modelPath,
-        (obj) => {
-          obj.scale.set(1, -1, -1);
-          obj.rotation.y = Math.PI;
-          scene.add(obj);
-          renderer.render(scene, camera);
+      // 尝试加载同名 MTL 文件
+      const mtlPath = modelPath.replace(/\.obj$/i, '.mtl');
+      const mtlLoader = new MTLLoader();
+      
+      mtlLoader.load(
+        mtlPath,
+        (materials) => {
+          materials.preload();
+          const objLoader = new OBJLoader();
+          objLoader.setMaterials(materials);
+          objLoader.load(
+            modelPath,
+            (obj) => {
+              obj.scale.set(1, -1, -1);
+              obj.rotation.y = Math.PI;
+              scene.add(obj);
+              renderer.render(scene, camera);
+            },
+            undefined,
+            () => setError(true)
+          );
         },
         undefined,
-        () => setError(true)
+        () => {
+          // MTL 加载失败，直接加载 OBJ
+          const objLoader = new OBJLoader();
+          objLoader.load(
+            modelPath,
+            (obj) => {
+              obj.scale.set(1, -1, -1);
+              obj.rotation.y = Math.PI;
+              scene.add(obj);
+              renderer.render(scene, camera);
+            },
+            undefined,
+            () => setError(true)
+          );
+        }
       );
     }
 
     return () => {
       renderer.dispose();
-      containerRef.current?.removeChild(renderer.domElement);
+      if (containerRef.current && renderer.domElement.parentNode === containerRef.current) {
+        containerRef.current.removeChild(renderer.domElement);
+      }
     };
   }, [modelPath]);
 
@@ -303,6 +334,42 @@ const AssetsPanel: React.FC = () => {
     e.stopPropagation();
     setIsDragOver(false);
 
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const files = Array.from(e.dataTransfer.files);
+      
+      // 检查是否有 OBJ 文件
+      const objFiles = files.filter(f => f.name.toLowerCase().endsWith('.obj'));
+      
+      if (objFiles.length > 0) {
+        // 处理 OBJ 文件及其依赖
+        for (const objFile of objFiles) {
+          await processObjWithDependencies(objFile, e.dataTransfer.files, '');
+        }
+        
+        // 处理其他非依赖文件
+        const processedNames = new Set<string>();
+        for (const objFile of objFiles) {
+          const deps = await parseObjDependencies(objFile);
+          processedNames.add(objFile.name);
+          if (deps.mtlFile) processedNames.add(deps.mtlFile);
+          
+          const depFiles = findDependencyFiles(objFile.name, deps, e.dataTransfer.files);
+          if (depFiles.mtl) {
+            const mtlDeps = await parseMtlDependencies(depFiles.mtl, deps);
+            mtlDeps.textures.forEach(t => processedNames.add(t));
+          }
+        }
+        
+        // 处理剩余文件
+        files.forEach(file => {
+          if (!processedNames.has(file.name)) {
+            processFile(file, '');
+          }
+        });
+        return;
+      }
+    }
+
     if (e.dataTransfer.items) {
       // 使用 DataTransferItemList 支持文件夹
       const items = Array.from(e.dataTransfer.items);
@@ -318,6 +385,82 @@ const AssetsPanel: React.FC = () => {
       const files = Array.from(e.dataTransfer.files);
       files.forEach(file => processFile(file, ''));
     }
+  };
+
+  const processObjWithDependencies = async (objFile: File, fileList: FileList, relativePath: string) => {
+    // 1. 解析 OBJ 依赖
+    const deps = await parseObjDependencies(objFile);
+    
+    // 2. 查找依赖文件
+    const depFiles = findDependencyFiles(objFile.name, deps, fileList);
+    
+    // 3. 如果找到 MTL，解析其贴图依赖
+    if (depFiles.mtl) {
+      const mtlDeps = await parseMtlDependencies(depFiles.mtl, deps);
+      deps.textures = mtlDeps.textures;
+      
+      // 重新查找贴图文件
+      depFiles.textures = Array.from(fileList).filter(f => 
+        deps.textures.includes(f.name)
+      );
+    }
+    
+    // 4. 上传 OBJ 文件
+    await uploadFile(objFile, relativePath);
+    
+    // 5. 上传 MTL 文件
+    if (depFiles.mtl) {
+      await uploadFile(depFiles.mtl, relativePath);
+    }
+    
+    // 6. 上传贴图文件
+    for (const textureFile of depFiles.textures) {
+      await uploadFile(textureFile, relativePath);
+    }
+    
+    // 7. 检查缺失的依赖并提示
+    const missingFiles: string[] = [];
+    if (deps.mtlFile && !depFiles.mtl) {
+      missingFiles.push(deps.mtlFile);
+    }
+    const missingTextures = deps.textures.filter(t => 
+      !depFiles.textures.some(f => f.name === t)
+    );
+    missingFiles.push(...missingTextures);
+    
+    if (missingFiles.length > 0) {
+      window.vscodeAPI?.postMessage({
+        command: 'notify',
+        text: `${objFile.name} 缺少依赖文件: ${missingFiles.join(', ')}。请同时选中这些文件一起拖拽。`
+      });
+    }
+    
+    console.log(`[OBJ依赖] ${objFile.name} 已导入，包含:`, {
+      mtl: depFiles.mtl?.name,
+      textures: depFiles.textures.map(f => f.name),
+      missing: missingFiles
+    });
+  };
+
+  const uploadFile = (file: File, relativePath: string): Promise<void> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const arrayBuffer = event.target?.result as ArrayBuffer;
+        const uint8Array = new Uint8Array(arrayBuffer);
+        
+        window.vscodeAPI?.postMessage({
+          command: 'saveImageToAssets',
+          fileName: file.name,
+          fileData: Array.from(uint8Array),
+          relativePath: relativePath,
+          dropPosition: undefined,
+          targetContainerId: undefined
+        });
+        resolve();
+      };
+      reader.readAsArrayBuffer(file);
+    });
   };
 
   const processEntry = async (entry: any, relativePath: string): Promise<void> => {
