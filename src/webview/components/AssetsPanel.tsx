@@ -1,7 +1,79 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Trash2, Edit2, ChevronRight, ChevronDown, Folder } from 'lucide-react';
 import { AssetFile } from '../types';
 import './AssetsPanel.css';
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
+
+// 3D 模型预览组件
+const Model3DPreview: React.FC<{ modelPath: string }> = ({ modelPath }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    if (!containerRef.current || !modelPath) return;
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
+    camera.position.set(0, 0, -3);
+    camera.lookAt(0, 0, 0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(100, 100);
+    renderer.setClearColor(0x000000, 0);
+    containerRef.current.appendChild(renderer.domElement);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    directionalLight.position.set(5, -5, -5);
+    scene.add(directionalLight);
+
+    const ext = modelPath.split('.').pop()?.toLowerCase();
+    let loader: GLTFLoader | OBJLoader;
+
+    if (ext === 'gltf' || ext === 'glb') {
+      loader = new GLTFLoader();
+      loader.load(
+        modelPath,
+        (gltf) => {
+          const model = gltf.scene;
+          model.scale.set(1, -1, -1);
+          model.rotation.y = Math.PI;
+          scene.add(model);
+          renderer.render(scene, camera);
+        },
+        undefined,
+        () => setError(true)
+      );
+    } else if (ext === 'obj') {
+      loader = new OBJLoader();
+      loader.load(
+        modelPath,
+        (obj) => {
+          obj.scale.set(1, -1, -1);
+          obj.rotation.y = Math.PI;
+          scene.add(obj);
+          renderer.render(scene, camera);
+        },
+        undefined,
+        () => setError(true)
+      );
+    }
+
+    return () => {
+      renderer.dispose();
+      containerRef.current?.removeChild(renderer.domElement);
+    };
+  }, [modelPath]);
+
+  if (error) {
+    return <div className="file-icon" style={{ fontSize: '48px' }}>🧊</div>;
+  }
+
+  return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />;
+};
 
 const AssetsPanel: React.FC = () => {
   const [assets, setAssets] = useState<AssetFile[]>([]);
@@ -144,11 +216,11 @@ const AssetsPanel: React.FC = () => {
               }}
             />
           )}
+          {isModel && (
+            <Model3DPreview modelPath={asset.path} />
+          )}
           {isVideo && (
             <div className="file-icon" style={{ fontSize: '48px' }}>🎬</div>
-          )}
-          {isModel && (
-            <div className="file-icon" style={{ fontSize: '48px' }}>🧊</div>
           )}
           {!isImage && !isVideo && !isModel && (
             <div className="file-icon" style={{ fontSize: '48px' }}>📄</div>

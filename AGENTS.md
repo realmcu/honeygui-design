@@ -31,7 +31,7 @@ src/webview/
 ├── components/               # UI 组件
 │   ├── DesignerCanvas.tsx    # 画布
 │   ├── ComponentLibrary.tsx  # 组件库（Tab 1）
-│   ├── AssetsPanel.tsx       # 资源预览（Tab 2）
+│   ├── AssetsPanel.tsx       # 资源（Tab 2）
 │   ├── ComponentTree.tsx     # 组件树（Tab 3）
 │   └── PropertiesPanel.tsx   # 属性面板
 └── utils/                    # 工具函数
@@ -72,7 +72,7 @@ src/webview/
 ### Tab 切换布局
 左侧面板使用 Tab 切换：
 - Tab 1: 组件库
-- Tab 2: 资源预览
+- Tab 2: 资源
 - Tab 3: 组件树
 
 ## 开发规范
