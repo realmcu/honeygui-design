@@ -151,6 +151,15 @@ export class MessageHandler {
                 );
                 break;
 
+            case 'create3DComponent':
+                this._assetManager.handleCreate3DComponent(
+                    message.modelPath,
+                    message.dropPosition,
+                    message.targetContainerId,
+                    this._fileManager.currentFilePath
+                );
+                break;
+
             case 'notify':
                 vscode.window.showInformationMessage(message.text);
                 break;

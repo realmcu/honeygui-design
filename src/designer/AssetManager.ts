@@ -376,6 +376,31 @@ export class AssetManager {
     }
 
     /**
+     * 处理创建3D组件请求
+     */
+    public handleCreate3DComponent(
+        modelPath: string,
+        dropPosition: { x: number; y: number },
+        targetContainerId: string,
+        currentFilePath: string | undefined
+    ): void {
+        try {
+            if (!currentFilePath) {
+                return;
+            }
+
+            this._panel.webview.postMessage({
+                command: 'create3DComponent',
+                modelPath,
+                dropPosition,
+                targetContainerId
+            });
+        } catch (error) {
+            logger.error(`[AssetManager] 创建3D组件失败: ${error}`);
+        }
+    }
+
+    /**
      * 获取图片尺寸
      */
     private getImageSize(filePath: string): { width: number; height: number } {

@@ -41,6 +41,41 @@ export const createImageComponentAtPosition = (
 };
 
 /**
+ * 创建3D组件的统一函数
+ */
+export const create3DComponentAtPosition = (
+  modelPath: string,
+  dropPosition: { x: number; y: number },
+  targetContainerId: string,
+  components: Component[],
+  addComponent: (component: Component) => void
+): void => {
+  const targetContainer = components.find(c => c.id === targetContainerId);
+  if (!targetContainer) return;
+
+  const targetAbsPos = getAbsolutePosition(targetContainer, components);
+  const relativeX = Math.max(0, dropPosition.x - targetAbsPos.x);
+  const relativeY = Math.max(0, dropPosition.y - targetAbsPos.y);
+
+  const component3D: Component = {
+    id: `hg_3d_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+    type: 'hg_3d',
+    name: `model_${Date.now().toString().substr(-4)}`,
+    position: { x: relativeX, y: relativeY, width: 200, height: 200 },
+    visible: true,
+    enabled: true,
+    locked: false,
+    zIndex: 1,
+    children: [],
+    parent: targetContainerId,
+    style: {},
+    data: { modelPath },
+  };
+
+  addComponent(component3D);
+};
+
+/**
  * 处理从后端接收的消息
  */
 export const handleBackendMessage = (

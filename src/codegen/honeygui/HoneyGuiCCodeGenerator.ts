@@ -333,6 +333,30 @@ void ${baseName}_update_user(void) {
         return `${indentStr}${component.id} = (gui_obj_t *)gui_img_create_from_fs(${parentRef}, "${component.name}", "${binSrc}", ${x}, ${y}, ${width}, ${height});\n`;
     }
 
+    // 特殊处理3D模型组件
+    if (component.type === 'hg_3d') {
+        const modelPath = component.data?.modelPath || '';
+        const ext = modelPath.split('.').pop()?.toLowerCase();
+        
+        // 去掉 assets/ 前缀
+        let vfsPath = modelPath.replace(/^assets\//, '');
+        // 确保路径以 / 开头（VFS 绝对路径）
+        if (!vfsPath.startsWith('/')) {
+            vfsPath = '/' + vfsPath;
+        }
+
+        let createFunc = '';
+        if (ext === 'obj') {
+            createFunc = 'l3_create_obj_model';
+        } else if (ext === 'gltf' || ext === 'glb') {
+            createFunc = 'l3_create_gltf_model';
+        } else {
+            return `${indentStr}// 警告: 不支持的3D模型格式: ${ext}\n`;
+        }
+
+        return `${indentStr}${component.id} = (gui_obj_t *)gui_3d_create(${parentRef}, "${component.name}", ${createFunc}("${vfsPath}"), ${x}, ${y}, ${width}, ${height});\n`;
+    }
+
     return `${indentStr}${component.id} = ${mapping.createFunction}(${parentRef}, "${component.name}", ${x}, ${y}, ${width}, ${height});\n`;
   }
 

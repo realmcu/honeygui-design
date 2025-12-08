@@ -120,6 +120,15 @@ export class HoneyGuiApiMapper {
       ],
       includeHeader: 'gui_seekbar.h'
     });
+
+    // 3D模型
+    this.mappings.set('hg_3d', {
+      componentType: 'hg_3d',
+      createFunction: 'gui_3d_create',  // 需要根据文件类型选择l3_create_obj_model或l3_create_gltf_model
+      propertySetters: [],
+      eventHandlers: [],
+      includeHeader: 'gui_lite3d.h'
+    });
   }
 
   /**

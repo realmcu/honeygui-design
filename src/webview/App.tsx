@@ -9,7 +9,7 @@ import Toolbar from './components/Toolbar';
 import { Component, ComponentType } from './types';
 import useKeyboardShortcuts from './utils/keyboardShortcuts';
 import { getAbsolutePosition, findComponentAtPosition } from './utils/componentUtils';
-import { createImageComponentAtPosition } from './services/messageHandler';
+import { createImageComponentAtPosition, create3DComponentAtPosition } from './services/messageHandler';
 import { processImageFiles } from './utils/fileUtils';
 import './App.css';
 
@@ -163,6 +163,19 @@ const App: React.FC = () => {
               store.components,
               store.addComponent,
               message.imageSize
+            );
+          }
+          break;
+
+        case 'create3DComponent':
+          if (message.modelPath && message.targetContainerId && message.dropPosition) {
+            const store = useDesignerStore.getState();
+            create3DComponentAtPosition(
+              message.modelPath,
+              message.dropPosition,
+              message.targetContainerId,
+              store.components,
+              store.addComponent
             );
           }
           break;
