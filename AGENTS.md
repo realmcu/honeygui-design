@@ -120,7 +120,7 @@ src/webview/
    - Review 是否存在冗余代码
 6. **执行环境**：只在 CMD 环境下执行命令，不要在 PowerShell 环境下执行
 7. **代码提交**：除非用户特别说明，不要自动 commit 和 push 代码
-8. **SDK 依赖**：此项目依赖 HoneyGUI-SDK，源码位置在 `~/.HoneyGUI-SDK`
+8. **SDK 目录**：`/home/howie_wang/.HoneyGUI-SDK` 为 SDK 目录
 9. **实验工程**：测试用的实验工程位于 `/home/howie_wang/NewProject` 目录
 
 ### 不要做的事
