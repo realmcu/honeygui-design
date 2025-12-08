@@ -6,6 +6,66 @@
 import { create } from 'zustand';
 import { Component, ComponentType, DesignerState, VSCodeAPI } from './types';
 
+// ============ 层级调整辅助函数 ============
+
+type LayerDirection = 'up' | 'down' | 'top' | 'bottom';
+
+/**
+ * 计算组件在同级中的新索引
+ */
+function calculateNewIndex(currentIndex: number, direction: LayerDirection, maxIndex: number): number {
+  switch (direction) {
+    case 'up':    return Math.min(currentIndex + 1, maxIndex);
+    case 'down':  return Math.max(currentIndex - 1, 0);
+    case 'top':   return maxIndex;
+    case 'bottom': return 0;
+  }
+}
+
+/**
+ * 重新排列数组中的元素
+ */
+function reorderArray<T>(arr: T[], fromIndex: number, toIndex: number): T[] {
+  const result = [...arr];
+  const [moved] = result.splice(fromIndex, 1);
+  result.splice(toIndex, 0, moved);
+  return result;
+}
+
+/**
+ * 重建 components 数组，应用新的同级组件顺序
+ */
+function rebuildComponentsArray(
+  components: Component[],
+  reorderedSiblings: Component[],
+  parentId: string | null | undefined
+): Component[] {
+  const siblingIds = new Set(reorderedSiblings.map(s => s.id));
+  const newChildrenOrder = reorderedSiblings.map(s => s.id);
+  const result: Component[] = [];
+  let siblingsInserted = false;
+
+  for (const comp of components) {
+    if (siblingIds.has(comp.id)) {
+      // 遇到第一个同级组件时，插入所有重排后的同级组件
+      if (!siblingsInserted) {
+        result.push(...reorderedSiblings);
+        siblingsInserted = true;
+      }
+      // 跳过原来的同级组件（已在上面插入）
+    } else if (parentId && comp.id === parentId) {
+      // 更新父组件的 children 数组顺序
+      result.push({ ...comp, children: newChildrenOrder });
+    } else {
+      result.push(comp);
+    }
+  }
+
+  return result;
+}
+
+// ============ Store 定义 ============
+
 export interface DesignerStore extends DesignerState {
   // Actions
   setComponents: (components: Component[]) => void;
@@ -53,6 +113,7 @@ export interface DesignerStore extends DesignerState {
   duplicateComponent: (id: string) => void;
   moveComponent: (id: string, newParent: string | null) => void;
   reorderComponent: (id: string, newIndex: number) => void;
+  moveComponentLayer: (id: string, direction: 'up' | 'down' | 'top' | 'bottom') => void;
 
   // Selection
   getSelectedComponent: () => Component | undefined;
@@ -352,6 +413,31 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
 
   getComponentById: (id) => {
     return get().components.find((c) => c.id === id);
+  },
+
+  // 调整组件层级
+  moveComponentLayer: (componentId: string, direction: LayerDirection) => {
+    set((state) => {
+      const comp = state.components.find(c => c.id === componentId);
+      if (!comp) return state;
+
+      // 找到同级组件
+      const siblings = state.components.filter(c => c.parent === comp.parent);
+      if (siblings.length <= 1) return state;
+
+      const currentIndex = siblings.findIndex(c => c.id === componentId);
+      const newIndex = calculateNewIndex(currentIndex, direction, siblings.length - 1);
+      if (newIndex === currentIndex) return state;
+
+      // 重新排列同级组件并重建数组
+      const reorderedSiblings = reorderArray(siblings, currentIndex, newIndex);
+      const newComponents = rebuildComponentsArray(state.components, reorderedSiblings, comp.parent);
+
+      // 保存到后端
+      state.vscodeAPI?.postMessage({ command: 'save', components: newComponents });
+
+      return { components: newComponents };
+    });
   },
 
   // Project configuration

@@ -15,6 +15,7 @@ export interface MenuActionHelpers {
   updateComponent: (id: string, updates: Partial<Component>) => void;
   removeComponent: (id: string) => void;
   selectComponent: (id: string | null) => void;
+  moveComponentLayer: (id: string, direction: 'up' | 'down' | 'top' | 'bottom') => void;
   postMessage: (message: any) => void;
 }
 
@@ -38,6 +39,22 @@ const actionHandlers: Record<string, MenuActionHandler> = {
 
   lock: (component, { updateComponent }) => {
     updateComponent(component.id, { locked: !component.locked });
+  },
+
+  bringToFront: (component, { moveComponentLayer }) => {
+    moveComponentLayer(component.id, 'top');
+  },
+
+  sendToBack: (component, { moveComponentLayer }) => {
+    moveComponentLayer(component.id, 'bottom');
+  },
+
+  bringForward: (component, { moveComponentLayer }) => {
+    moveComponentLayer(component.id, 'up');
+  },
+
+  sendBackward: (component, { moveComponentLayer }) => {
+    moveComponentLayer(component.id, 'down');
   },
 
   duplicate: (component, helpers) => {

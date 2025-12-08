@@ -64,6 +64,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     updateComponent,
     removeComponent,
     selectComponent: onComponentSelect,
+    moveComponentLayer: useDesignerStore.getState().moveComponentLayer,
     postMessage: (msg) => window.vscodeAPI?.postMessage(msg),
   };
   

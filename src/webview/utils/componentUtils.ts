@@ -1,4 +1,12 @@
-import { Component } from '../types';
+import { Component, ComponentType } from '../types';
+
+/**
+ * 判断组件类型是否为容器
+ * 只有 hg_view 和 hg_window 可以包含子组件
+ */
+export function isContainerType(type: ComponentType): boolean {
+  return type === 'hg_view' || type === 'hg_window';
+}
 
 /**
  * 获取组件的绝对位置（相对于画布）
@@ -26,7 +34,8 @@ export const getAbsolutePosition = (
 
 /**
  * 查找指定位置的目标容器组件
- * 返回最小的包含该位置的组件
+ * 只返回容器类型（hg_view 或 hg_window）
+ * 返回最小的包含该位置的容器
  */
 export const findComponentAtPosition = (
   x: number,
@@ -36,6 +45,11 @@ export const findComponentAtPosition = (
   let targetContainer: Component | null = null;
   
   for (const comp of components) {
+    // 只查找容器类型
+    if (!isContainerType(comp.type)) {
+      continue;
+    }
+    
     const absPos = getAbsolutePosition(comp, components);
     const { width: cw, height: ch } = comp.position;
     

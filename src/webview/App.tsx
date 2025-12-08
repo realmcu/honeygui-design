@@ -400,15 +400,15 @@ const App: React.FC = () => {
     
     let parent: string | null = null;
 
-    // 判断是否为容器组件
-    const isContainer = ['hg_view', 'hg_window', 'hg_canvas', 'hg_list'].includes(componentType);
+    // 判断是否为容器组件（只有 hg_view 和 hg_window 可以包含子组件）
+    const isContainer = componentType === 'hg_view' || componentType === 'hg_window';
 
     if (isContainer) {
       // 容器组件：作为顶级组件
       parent = null;
       if (DEBUG_DROP) console.info(`[拖放] 容器组件 ${componentType} 作为顶级组件`);
     } else {
-      // UI组件：必须放在某个组件内
+      // UI组件：必须放在某个容器内
       // 根据鼠标位置查找目标容器
       let targetContainer: Component | null = null;
       
@@ -420,7 +420,12 @@ const App: React.FC = () => {
       
       // 遍历所有组件，找到鼠标位置下的最内层容器
       for (const comp of components) {
-        if (DEBUG_DROP) console.log(`[拖放] 检查组件: ${comp.type}(${comp.id})`);
+        // 只有容器类型才能作为目标
+        if (comp.type !== 'hg_view' && comp.type !== 'hg_window') {
+          continue;
+        }
+        
+        if (DEBUG_DROP) console.log(`[拖放] 检查容器: ${comp.type}(${comp.id})`);
         const absPos = getAbsolutePosition(comp, components);
         const { width: cw, height: ch } = comp.position;
         

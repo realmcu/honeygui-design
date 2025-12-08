@@ -16,6 +16,10 @@ export interface MenuItem {
  */
 const commonMenuItems: MenuItem[] = [
   { id: 'gotoSlot', label: '跳转到槽函数', dividerAfter: true },
+  { id: 'bringToFront', label: '置于顶层' },
+  { id: 'sendToBack', label: '置于底层' },
+  { id: 'bringForward', label: '上移一层' },
+  { id: 'sendBackward', label: '下移一层', dividerAfter: true },
   { id: 'lock', label: (c) => c.locked ? '解锁' : '锁定' },
   { id: 'delete', label: '删除', danger: true },
 ];
