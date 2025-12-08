@@ -1,13 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trash2, Edit2, ChevronRight, ChevronDown, Folder } from 'lucide-react';
+import { Trash2, Edit2 } from 'lucide-react';
 import { AssetFile } from '../types';
 import './AssetsPanel.css';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
+import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js';
 import { parseObjDependencies, parseMtlDependencies, findDependencyFiles } from '../utils/objDependencyParser';
 
-import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js';
+// 文件类型分类
+const IMAGE_EXTS = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'webp'];
+const VIDEO_EXTS = ['mp4', 'avi', 'mov', 'mkv', 'webm'];
+const MODEL_EXTS = ['gltf', 'glb', 'obj'];
+const MODEL_DEP_EXTS = ['mtl'];  // 3D 模型依赖文件
+
+type AssetCategory = 'images' | 'videos' | 'models';
 
 // 3D 模型预览组件
 const Model3DPreview: React.FC<{ modelPath: string }> = ({ modelPath }) => {
@@ -50,7 +57,6 @@ const Model3DPreview: React.FC<{ modelPath: string }> = ({ modelPath }) => {
         () => setError(true)
       );
     } else if (ext === 'obj') {
-      // 尝试加载同名 MTL 文件
       const mtlPath = modelPath.replace(/\.obj$/i, '.mtl');
       const mtlLoader = new MTLLoader();
       
@@ -74,7 +80,6 @@ const Model3DPreview: React.FC<{ modelPath: string }> = ({ modelPath }) => {
         },
         undefined,
         () => {
-          // MTL 加载失败，直接加载 OBJ
           const objLoader = new OBJLoader();
           objLoader.load(
             modelPath,
@@ -106,31 +111,72 @@ const Model3DPreview: React.FC<{ modelPath: string }> = ({ modelPath }) => {
   return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />;
 };
 
+// 获取文件扩展名
+const getFileExt = (name: string): string => {
+  return name.split('.').pop()?.toLowerCase() || '';
+};
+
+// 判断文件类型
+const getAssetCategory = (name: string): AssetCategory | null => {
+  const ext = getFileExt(name);
+  if (IMAGE_EXTS.includes(ext)) return 'images';
+  if (VIDEO_EXTS.includes(ext)) return 'videos';
+  if (MODEL_EXTS.includes(ext)) return 'models';
+  return null;
+};
+
+// 判断是否是 3D 模型依赖文件
+const isModelDependency = (name: string): boolean => {
+  const ext = getFileExt(name);
+  return MODEL_DEP_EXTS.includes(ext);
+};
+
 const AssetsPanel: React.FC = () => {
   const [assets, setAssets] = useState<AssetFile[]>([]);
+  const [activeCategory, setActiveCategory] = useState<AssetCategory>('images');
   const [editingAsset, setEditingAsset] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
 
-  // 排序和分类：文件夹在前，文件在后，相同类型按字母顺序
-  const sortedAssets = React.useMemo(() => {
-    return [...assets].sort((a, b) => {
-      // 文件夹优先
-      if (a.type === 'folder' && b.type !== 'folder') return -1;
-      if (a.type !== 'folder' && b.type === 'folder') return 1;
-      // 相同类型按名称排序
-      return a.name.localeCompare(b.name);
-    });
+  // 按类型分类资源（递归处理）
+  const categorizedAssets = React.useMemo(() => {
+    const result: Record<AssetCategory, AssetFile[]> = {
+      images: [],
+      videos: [],
+      models: []
+    };
+    
+    const processAssets = (assetList: AssetFile[]) => {
+      for (const asset of assetList) {
+        if (asset.type === 'folder' && asset.children) {
+          processAssets(asset.children);
+        } else {
+          const category = getAssetCategory(asset.name);
+          if (category) {
+            result[category].push(asset);
+          }
+          // 将 mtl 文件也归类到 models（作为依赖显示）
+          if (isModelDependency(asset.name)) {
+            result.models.push(asset);
+          }
+        }
+      }
+    };
+    
+    processAssets(assets);
+    return result;
   }, [assets]);
 
-  useEffect(() => {
-    // 请求加载资源列表
-    window.vscodeAPI?.postMessage({
-      command: 'loadAssets',
-    });
+  // 获取各类型数量
+  const counts = React.useMemo(() => ({
+    images: categorizedAssets.images.length,
+    videos: categorizedAssets.videos.length,
+    models: categorizedAssets.models.length
+  }), [categorizedAssets]);
 
-    // 监听资源列表更新
+  useEffect(() => {
+    window.vscodeAPI?.postMessage({ command: 'loadAssets' });
+
     const handleMessage = (event: MessageEvent) => {
       const message = event.data;
       if (message.command === 'assetsLoaded') {
@@ -143,9 +189,7 @@ const AssetsPanel: React.FC = () => {
   }, []);
 
   const handleDelete = (assetPath: string) => {
-    // 只传递文件名，不传递完整的 webview URI
     const fileName = assetPath.split('/').pop() || assetPath;
-    console.log('[AssetsPanel] 删除资源:', fileName);
     window.vscodeAPI?.postMessage({
       command: 'deleteAsset',
       fileName: fileName,
@@ -168,63 +212,12 @@ const AssetsPanel: React.FC = () => {
     setEditingAsset(null);
   };
 
-  const toggleFolder = (folderPath: string) => {
-    setExpandedFolders(prev => {
-      const next = new Set(prev);
-      if (next.has(folderPath)) {
-        next.delete(folderPath);
-      } else {
-        next.add(folderPath);
-      }
-      return next;
-    });
-  };
-
-  const renderAssetItem = (asset: AssetFile, level: number = 0): React.ReactNode => {
-    const isFolder = asset.type === 'folder';
-    const isExpanded = expandedFolders.has(asset.path);
-    const indent = level * 16;
-
-    if (isFolder) {
-      return (
-        <div key={asset.path} className="folder-container">
-          <div 
-            className="folder-item"
-            style={{ paddingLeft: `${indent}px` }}
-            onClick={() => toggleFolder(asset.path)}
-          >
-            <div className="folder-header">
-              {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-              <Folder size={16} />
-              <span className="asset-name">{asset.name}</span>
-              <div className="asset-actions">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(asset.path);
-                  }}
-                  title="删除文件夹"
-                  className="action-btn delete"
-                >
-                  <Trash2 size={12} />
-                </button>
-              </div>
-            </div>
-          </div>
-          {isExpanded && asset.children && (
-            <div className="folder-children">
-              {renderAssetList(asset.children, level + 1)}
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    // 文件 - 网格项
-    const ext = asset.name.split('.').pop()?.toLowerCase() || '';
-    const isImage = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'webp'].includes(ext);
-    const isVideo = ['mp4', 'avi', 'mov', 'mkv', 'webm'].includes(ext);
-    const isModel = ['gltf', 'glb', 'obj', 'fbx', 'stl'].includes(ext);
+  const renderAssetItem = (asset: AssetFile) => {
+    const ext = getFileExt(asset.name);
+    const isImage = IMAGE_EXTS.includes(ext);
+    const isVideo = VIDEO_EXTS.includes(ext);
+    const isModel = MODEL_EXTS.includes(ext);
+    const isMtl = MODEL_DEP_EXTS.includes(ext);
     
     return (
       <div 
@@ -242,20 +235,13 @@ const AssetsPanel: React.FC = () => {
               src={asset.path}
               alt={asset.name}
               onError={(e) => {
-                const img = e.target as HTMLImageElement;
-                img.style.display = 'none';
+                (e.target as HTMLImageElement).style.display = 'none';
               }}
             />
           )}
-          {isModel && (
-            <Model3DPreview modelPath={asset.path} />
-          )}
-          {isVideo && (
-            <div className="file-icon" style={{ fontSize: '48px' }}>🎬</div>
-          )}
-          {!isImage && !isVideo && !isModel && (
-            <div className="file-icon" style={{ fontSize: '48px' }}>📄</div>
-          )}
+          {isModel && <Model3DPreview modelPath={asset.path} />}
+          {isVideo && <div className="file-icon" style={{ fontSize: '48px' }}>🎬</div>}
+          {isMtl && <div className="file-icon" style={{ fontSize: '48px' }}>📄</div>}
         </div>
         <div className="asset-info">
           {editingAsset === asset.path ? (
@@ -272,48 +258,18 @@ const AssetsPanel: React.FC = () => {
               className="rename-input"
             />
           ) : (
-            <span className="asset-name" title={asset.name}>
-              {asset.name}
-            </span>
+            <span className="asset-name" title={asset.name}>{asset.name}</span>
           )}
           <div className="asset-actions">
-            <button
-              onClick={() => handleRename(asset.path)}
-              title="重命名"
-              className="action-btn"
-            >
+            <button onClick={() => handleRename(asset.path)} title="重命名" className="action-btn">
               <Edit2 size={12} />
             </button>
-            <button
-              onClick={() => handleDelete(asset.path)}
-              title="删除"
-              className="action-btn delete"
-            >
+            <button onClick={() => handleDelete(asset.path)} title="删除" className="action-btn delete">
               <Trash2 size={12} />
             </button>
           </div>
         </div>
       </div>
-    );
-  };
-
-  const renderAssetList = (assetList: AssetFile[], level: number = 0) => {
-    // 分离文件夹和文件
-    const folders = assetList.filter(a => a.type === 'folder');
-    const files = assetList.filter(a => a.type !== 'folder');
-
-    return (
-      <>
-        {/* 文件夹：列表布局 */}
-        {folders.map(folder => renderAssetItem(folder, level))}
-        
-        {/* 文件：网格布局 */}
-        {files.length > 0 && (
-          <div className="assets-grid">
-            {files.map(file => renderAssetItem(file, level))}
-          </div>
-        )}
-      </>
     );
   };
 
@@ -336,17 +292,13 @@ const AssetsPanel: React.FC = () => {
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const files = Array.from(e.dataTransfer.files);
-      
-      // 检查是否有 OBJ 文件
       const objFiles = files.filter(f => f.name.toLowerCase().endsWith('.obj'));
       
       if (objFiles.length > 0) {
-        // 处理 OBJ 文件及其依赖
         for (const objFile of objFiles) {
           await processObjWithDependencies(objFile, e.dataTransfer.files, '');
         }
         
-        // 处理其他非依赖文件
         const processedNames = new Set<string>();
         for (const objFile of objFiles) {
           const deps = await parseObjDependencies(objFile);
@@ -360,7 +312,6 @@ const AssetsPanel: React.FC = () => {
           }
         }
         
-        // 处理剩余文件
         files.forEach(file => {
           if (!processedNames.has(file.name)) {
             processFile(file, '');
@@ -371,9 +322,7 @@ const AssetsPanel: React.FC = () => {
     }
 
     if (e.dataTransfer.items) {
-      // 使用 DataTransferItemList 支持文件夹
       const items = Array.from(e.dataTransfer.items);
-      
       for (const item of items) {
         const entry = item.webkitGetAsEntry?.();
         if (entry) {
@@ -381,51 +330,29 @@ const AssetsPanel: React.FC = () => {
         }
       }
     } else if (e.dataTransfer.files) {
-      // 降级处理：只处理文件
-      const files = Array.from(e.dataTransfer.files);
-      files.forEach(file => processFile(file, ''));
+      Array.from(e.dataTransfer.files).forEach(file => processFile(file, ''));
     }
   };
 
   const processObjWithDependencies = async (objFile: File, fileList: FileList, relativePath: string) => {
-    // 1. 解析 OBJ 依赖
     const deps = await parseObjDependencies(objFile);
-    
-    // 2. 查找依赖文件
     const depFiles = findDependencyFiles(objFile.name, deps, fileList);
     
-    // 3. 如果找到 MTL，解析其贴图依赖
     if (depFiles.mtl) {
       const mtlDeps = await parseMtlDependencies(depFiles.mtl, deps);
       deps.textures = mtlDeps.textures;
-      
-      // 重新查找贴图文件
-      depFiles.textures = Array.from(fileList).filter(f => 
-        deps.textures.includes(f.name)
-      );
+      depFiles.textures = Array.from(fileList).filter(f => deps.textures.includes(f.name));
     }
     
-    // 4. 上传 OBJ 文件
     await uploadFile(objFile, relativePath);
-    
-    // 5. 上传 MTL 文件
-    if (depFiles.mtl) {
-      await uploadFile(depFiles.mtl, relativePath);
-    }
-    
-    // 6. 上传贴图文件
+    if (depFiles.mtl) await uploadFile(depFiles.mtl, relativePath);
     for (const textureFile of depFiles.textures) {
       await uploadFile(textureFile, relativePath);
     }
     
-    // 7. 检查缺失的依赖并提示
     const missingFiles: string[] = [];
-    if (deps.mtlFile && !depFiles.mtl) {
-      missingFiles.push(deps.mtlFile);
-    }
-    const missingTextures = deps.textures.filter(t => 
-      !depFiles.textures.some(f => f.name === t)
-    );
+    if (deps.mtlFile && !depFiles.mtl) missingFiles.push(deps.mtlFile);
+    const missingTextures = deps.textures.filter(t => !depFiles.textures.some(f => f.name === t));
     missingFiles.push(...missingTextures);
     
     if (missingFiles.length > 0) {
@@ -434,12 +361,6 @@ const AssetsPanel: React.FC = () => {
         text: `${objFile.name} 缺少依赖文件: ${missingFiles.join(', ')}。请同时选中这些文件一起拖拽。`
       });
     }
-    
-    console.log(`[OBJ依赖] ${objFile.name} 已导入，包含:`, {
-      mtl: depFiles.mtl?.name,
-      textures: depFiles.textures.map(f => f.name),
-      missing: missingFiles
-    });
   };
 
   const uploadFile = (file: File, relativePath: string): Promise<void> => {
@@ -448,7 +369,6 @@ const AssetsPanel: React.FC = () => {
       reader.onload = (event) => {
         const arrayBuffer = event.target?.result as ArrayBuffer;
         const uint8Array = new Uint8Array(arrayBuffer);
-        
         window.vscodeAPI?.postMessage({
           command: 'saveImageToAssets',
           fileName: file.name,
@@ -465,9 +385,7 @@ const AssetsPanel: React.FC = () => {
 
   const processEntry = async (entry: any, relativePath: string): Promise<void> => {
     if (entry.isFile) {
-      entry.file((file: File) => {
-        processFile(file, relativePath);
-      });
+      entry.file((file: File) => processFile(file, relativePath));
     } else if (entry.isDirectory) {
       const reader = entry.createReader();
       reader.readEntries((entries: any[]) => {
@@ -480,23 +398,19 @@ const AssetsPanel: React.FC = () => {
   };
 
   const processFile = (file: File, relativePath: string) => {
-    const imageExts = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'webp'];
-    const videoExts = ['mp4', 'avi', 'mov', 'mkv', 'webm'];
-    const modelExts = ['gltf', 'glb', 'obj', 'fbx', 'stl'];
-    const ext = file.name.split('.').pop()?.toLowerCase();
+    const ext = getFileExt(file.name);
+    const validExts = [...IMAGE_EXTS, ...VIDEO_EXTS, ...MODEL_EXTS, ...MODEL_DEP_EXTS];
     
-    if (ext && (imageExts.includes(ext) || videoExts.includes(ext) || modelExts.includes(ext))) {
+    if (validExts.includes(ext)) {
       const reader = new FileReader();
       reader.onload = (event) => {
         const arrayBuffer = event.target?.result as ArrayBuffer;
         const uint8Array = new Uint8Array(arrayBuffer);
-        
-        // 发送文件到后端保存
         window.vscodeAPI?.postMessage({
           command: 'saveImageToAssets',
           fileName: file.name,
           fileData: Array.from(uint8Array),
-          relativePath: relativePath, // 保持文件夹结构
+          relativePath: relativePath,
           dropPosition: undefined,
           targetContainerId: undefined
         });
@@ -505,22 +419,49 @@ const AssetsPanel: React.FC = () => {
     }
   };
 
+  const currentAssets = categorizedAssets[activeCategory];
+  const emptyMessages: Record<AssetCategory, string> = {
+    images: '暂无图片资源',
+    videos: '暂无视频资源',
+    models: '暂无3D模型资源'
+  };
+
   return (
     <div className="assets-panel">
+      <div className="assets-tabs">
+        <button 
+          className={`assets-tab ${activeCategory === 'images' ? 'active' : ''}`}
+          onClick={() => setActiveCategory('images')}
+        >
+          图片 ({counts.images})
+        </button>
+        <button 
+          className={`assets-tab ${activeCategory === 'videos' ? 'active' : ''}`}
+          onClick={() => setActiveCategory('videos')}
+        >
+          视频 ({counts.videos})
+        </button>
+        <button 
+          className={`assets-tab ${activeCategory === 'models' ? 'active' : ''}`}
+          onClick={() => setActiveCategory('models')}
+        >
+          3D ({counts.models})
+        </button>
+      </div>
       <div 
         className={`assets-content ${isDragOver ? 'drag-over' : ''}`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
-        {sortedAssets.length === 0 ? (
+        {currentAssets.length === 0 ? (
           <div className="empty-state">
-            <p>暂无资源文件</p>
-            <p className="hint">拖拽图片或文件夹到此处</p>
+            <p>{emptyMessages[activeCategory]}</p>
+            <p className="hint">拖拽文件到此处</p>
           </div>
         ) : (
-          <div className="assets-container">
-            {renderAssetList(sortedAssets)}
+          <div className="assets-grid">
+            {currentAssets.map(asset => renderAssetItem(asset))}
           </div>
         )}
       </div>

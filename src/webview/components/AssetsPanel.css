@@ -5,6 +5,37 @@
   height: 100%;
 }
 
+.assets-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--vscode-panel-border);
+  background: var(--vscode-sideBar-background);
+  flex-shrink: 0;
+}
+
+.assets-tab {
+  flex: 1;
+  padding: 6px 8px;
+  border: none;
+  background: transparent;
+  color: var(--vscode-foreground);
+  font-size: 11px;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: all 0.2s;
+  border-bottom: 2px solid transparent;
+}
+
+.assets-tab:hover {
+  opacity: 1;
+  background: var(--vscode-list-hoverBackground);
+}
+
+.assets-tab.active {
+  opacity: 1;
+  border-bottom-color: var(--vscode-focusBorder);
+  background: var(--vscode-list-activeSelectionBackground);
+}
+
 .assets-content {
   flex: 1;
   overflow-y: auto;
