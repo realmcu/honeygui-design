@@ -323,6 +323,8 @@ void ${baseName}_update_user(void) {
         const src = component.data?.src || '';
         // 将图片扩展名替换为 .bin
         let binSrc = src.replace(/\.(png|jpe?g|bmp|gif|tiff?|webp)$/i, '.bin');
+        // 去掉 assets/ 前缀（因为 mkromfs 打包的是 assets 目录本身）
+        binSrc = binSrc.replace(/^assets\//, '');
         // 确保路径以 / 开头（VFS 绝对路径）
         if (!binSrc.startsWith('/')) {
             binSrc = '/' + binSrc;

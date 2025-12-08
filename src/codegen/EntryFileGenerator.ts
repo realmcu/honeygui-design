@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { RomfsConfig } from '../common/RomfsConfig';
 
 /**
  * 入口文件生成器
@@ -24,18 +25,19 @@ export class EntryFileGenerator {
             return entryFile;
         }
 
+        const romfsRootName = RomfsConfig.getRootName();
         const content = `#include "gui_api.h"
 #include "gui_view.h"
 #include "gui_components_init.h"
 #include "gui_vfs.h"
 #include "hg_romfs.h"
 
-extern const struct romfs_dirent hg_romfs_root;
+extern const struct romfs_dirent ${romfsRootName};
 
 static int app_init(void)
 {
     // Mount romfs from embedded data
-    gui_vfs_mount_romfs("/", &hg_romfs_root, 0);
+    gui_vfs_mount_romfs("/", &${romfsRootName}, 0);
 
     gui_view_create(gui_obj_get_root(), "mainView", 0, 0, 0, 0);
     return 0;

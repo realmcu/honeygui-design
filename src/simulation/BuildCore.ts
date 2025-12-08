@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import { spawn } from 'child_process';
 import { ImageConverterService } from '../services/ImageConverterService';
 import { ProjectConfig } from '../common/ProjectConfig';
+import { RomfsConfig } from '../common/RomfsConfig';
 
 /**
  * 日志接口
@@ -108,7 +109,7 @@ export class BuildCore {
         this.logger.log('打包 romfs...');
 
         const assetsDir = path.join(this.buildDir, 'assets');
-        const romfsOutput = path.join(this.buildDir, 'romfs_data.c');
+        const romfsOutput = path.join(this.buildDir, RomfsConfig.getFileName());
         const mkromfsScript = path.join(this.sdkPath, 'tool', 'mkromfs', 'mkromfs_for_honeygui.py');
 
         if (!fs.existsSync(mkromfsScript)) {
@@ -116,7 +117,7 @@ export class BuildCore {
         }
 
         return new Promise((resolve, reject) => {
-            const proc = spawn('python3', [mkromfsScript, assetsDir, romfsOutput], {
+            const proc = spawn('python3', [mkromfsScript, '-i', assetsDir, '-o', romfsOutput], {
                 cwd: this.buildDir,
                 shell: true
             });
