@@ -290,6 +290,52 @@ const App: React.FC = () => {
     });
   };
 
+  const handleModelFileDrop = async (e: React.DragEvent, files: FileList) => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const x = Math.max(0, Math.round(e.clientX - rect.left));
+    const y = Math.max(0, Math.round(e.clientY - rect.top));
+
+    const targetContainer = findDropTarget(e);
+    if (!targetContainer) {
+      const api = useDesignerStore.getState().vscodeAPI;
+      if (api) {
+        api.postMessage({
+          command: 'error',
+          text: '请将 3D 模型拖放到容器内（View/Window）'
+        });
+      }
+      return;
+    }
+
+    // 处理 3D 模型文件
+    const modelExts = ['obj', 'gltf', 'glb'];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const ext = file.name.split('.').pop()?.toLowerCase();
+      
+      if (ext && modelExts.includes(ext)) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const arrayBuffer = event.target?.result as ArrayBuffer;
+          const uint8Array = new Uint8Array(arrayBuffer);
+          
+          const api = useDesignerStore.getState().vscodeAPI;
+          if (api) {
+            api.postMessage({
+              command: 'saveModelToAssets',
+              fileName: file.name,
+              fileData: Array.from(uint8Array),
+              dropPosition: { x: x + i * 20, y: y + i * 20 },
+              targetContainerId: targetContainer.id
+            });
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      }
+    }
+  };
+
+
   const handleCanvasDrop = (e: React.DragEvent) => {
     e.preventDefault();
 
@@ -305,7 +351,7 @@ const App: React.FC = () => {
     const assetPath = e.dataTransfer.getData('asset-path');
     console.log('[拖放] asset-path 数据:', assetPath);
     if (assetPath) {
-      // 从资源面板拖拽图片到画布
+      // 从资源面板拖拽资源到画布
       const targetContainer = findDropTarget(e);
       console.log('[拖放] 找到的目标容器:', targetContainer);
       if (!targetContainer) {
@@ -314,7 +360,7 @@ const App: React.FC = () => {
         if (api) {
           api.postMessage({
             command: 'error',
-            text: '请将图片拖放到容器内（View/Panel/Window）'
+            text: '请将资源拖放到容器内（View/Window）'
           });
         }
         return;
@@ -329,12 +375,27 @@ const App: React.FC = () => {
 
       const api = useDesignerStore.getState().vscodeAPI;
       if (api) {
-        api.postMessage({
-          command: 'getImageSize',
-          imagePath: `assets/${assetPath}`,
-          dropPosition: { x, y },
-          targetContainerId: targetContainer.id
-        });
+        // 判断文件类型
+        const ext = assetPath.split('.').pop()?.toLowerCase();
+        const is3DModel = ext && ['obj', 'gltf', 'glb'].includes(ext);
+        
+        if (is3DModel) {
+          // 3D 模型：直接创建组件
+          api.postMessage({
+            command: 'create3DComponent',
+            modelPath: `assets/${assetPath}`,
+            dropPosition: { x, y },
+            targetContainerId: targetContainer.id
+          });
+        } else {
+          // 图片：获取尺寸后创建
+          api.postMessage({
+            command: 'getImageSize',
+            imagePath: `assets/${assetPath}`,
+            dropPosition: { x, y },
+            targetContainerId: targetContainer.id
+          });
+        }
       }
       return;
     }
@@ -343,16 +404,28 @@ const App: React.FC = () => {
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const files = e.dataTransfer.files;
       const imageExts = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'webp'];
+      const modelExts = ['obj', 'gltf', 'glb'];
       
-      // 检查是否有图片文件
+      // 检查是否有图片或 3D 文件
       const hasImage = Array.from(files).some(file => {
         const ext = file.name.split('.').pop()?.toLowerCase();
         return ext && imageExts.includes(ext);
       });
       
+      const hasModel = Array.from(files).some(file => {
+        const ext = file.name.split('.').pop()?.toLowerCase();
+        return ext && modelExts.includes(ext);
+      });
+      
       if (hasImage) {
         // 处理图片文件拖拽（支持多文件）
         handleImageFileDrop(e, files, true);
+        return;
+      }
+      
+      if (hasModel) {
+        // 处理 3D 模型文件拖拽
+        handleModelFileDrop(e, files);
         return;
       }
     }

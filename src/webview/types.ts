@@ -91,7 +91,7 @@ export interface AssetFile {
   name: string;
   path: string;
   relativePath?: string; // 相对于 assets 目录的路径
-  type: 'image' | 'font' | 'folder';
+  type: 'image' | 'font' | 'model3d' | 'folder';
   size: number;
   children?: AssetFile[]; // 文件夹的子项
 }

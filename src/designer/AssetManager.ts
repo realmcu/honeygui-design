@@ -79,7 +79,7 @@ export class AssetManager {
                 const ext = path.extname(file).toLowerCase();
                 const imageExts = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg', '.webp'];
                 const videoExts = ['.mp4', '.avi', '.mov', '.mkv', '.webm'];
-                const modelExts = ['.gltf', '.glb', '.obj', '.fbx', '.stl'];
+                const modelExts = ['.gltf', '.glb', '.obj'];
                 
                 let assetType: string | null = null;
                 if (imageExts.includes(ext)) {
@@ -87,7 +87,7 @@ export class AssetManager {
                 } else if (videoExts.includes(ext)) {
                     assetType = 'video';
                 } else if (modelExts.includes(ext)) {
-                    assetType = 'model';
+                    assetType = 'model3d';
                 }
                 
                 if (assetType) {
