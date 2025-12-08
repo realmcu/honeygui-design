@@ -89,15 +89,7 @@ src/webview/
 - CSS 类: kebab-case (`.designer-canvas`)
 - 函数: camelCase (`handleDrop`)
 
-### 状态管理
-使用 Zustand，避免 prop drilling：
-```typescript
-const { components, addComponent } = useDesignerStore();
-```
 
-### 调试
-- Extension: F5 启动调试
-- Webview: 右键画布 → 检查元素 → 打开 Webview DevTools
 
 ## 常见任务
 
@@ -111,18 +103,6 @@ const { components, addComponent } = useDesignerStore();
 - 面板样式: `src/webview/components/*.css`
 - 全局样式: `src/webview/global.css`
 
-### 添加新消息类型
-1. Extension 端: `DesignerPanel.ts` 的 `_handleWebviewMessage()`
-2. Webview 端: `App.tsx` 的 `window.addEventListener('message')`
-3. 更新类型定义
-
-### 编译仿真流程
-```
-用户点击编译 → SimulationService
-  → EnvironmentChecker (检查 SDK/SCons/GCC)
-  → BuildCore (准备环境、转换资源、编译)
-  → 启动 SDL2 仿真窗口
-```
 
 ## 重要约束
 
@@ -141,6 +121,7 @@ const { components, addComponent } = useDesignerStore();
 6. **执行环境**：只在 CMD 环境下执行命令，不要在 PowerShell 环境下执行
 7. **代码提交**：除非用户特别说明，不要自动 commit 和 push 代码
 8. **SDK 依赖**：此项目依赖 HoneyGUI-SDK，源码位置在 `~/.HoneyGUI-SDK`
+9. **实验工程**：测试用的实验工程位于 `/home/howie_wang/NewProject` 目录
 
 ### 不要做的事
 - ❌ 不要修改单元测试（除非用户明确要求）
@@ -151,34 +132,8 @@ const { components, addComponent } = useDesignerStore();
 - ❌ 不要添加网络依赖功能
 - ❌ 不要随意创建文档
 
-## 测试
 
-### E2E 测试
-```bash
-npm run test:e2e
-```
-需要 HoneyGUI SDK 在 `~/.HoneyGUI-SDK`
 
-### 单元测试
-```bash
-npm test
-```
-
-## 构建发布
-
-```bash
-npm run vscode:prepublish  # 生产构建
-vsce package               # 打包 VSIX
-```
-
-## 文档位置
-
-- **架构设计**: `docs/架构设计.md`
-- **代码生成**: `docs/代码生成.md`
-- **编译仿真**: `docs/预览和编译架构.md`
-- **协同开发**: `docs/协同开发功能说明.md`
-- **Tab 切换**: `docs/Tab切换功能.md`
-- **开发指南**: `docs/开发指南.md`
 
 ## AI 助手协作建议
 
@@ -191,7 +146,6 @@ vsce package               # 打包 VSIX
 - 最小化改动，只修改必要部分
 - 保持现有代码风格一致
 - 添加必要的注释
-- 考虑向后兼容性
 
 ### 提交规范
 - 使用约定式提交: `feat:`, `fix:`, `refactor:`, `docs:`
@@ -210,8 +164,4 @@ vsce package               # 打包 VSIX
 - **活跃开发**: 是
 - **主要贡献者**: howie_wang
 
-## 相关链接
 
-- **项目主页**: https://gitee.com/realmcu/honeygui-design
-- **HoneyGUI SDK**: https://gitee.com/realmcu/HoneyGUI
-- **问题反馈**: https://gitee.com/realmcu/honeygui-design/issues
