@@ -3,6 +3,7 @@ import { Component } from '../../types';
 export interface PropertyPanelProps {
   component: Component;
   onUpdate: (updates: Partial<Component>) => void;
+  components?: Component[];  // 所有组件列表，用于父对象选择
 }
 
 export interface PropertyEditorProps {

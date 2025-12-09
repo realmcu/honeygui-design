@@ -3,7 +3,7 @@ import { PropertyPanelProps } from './types';
 import { BaseProperties } from './BaseProperties';
 import { PropertyEditor } from './PropertyEditor';
 
-export const Hg3DProperties: React.FC<PropertyPanelProps> = ({ component, onUpdate }) => {
+export const Hg3DProperties: React.FC<PropertyPanelProps> = ({ component, onUpdate, components }) => {
   const handleBrowseModel = () => {
     window.vscodeAPI?.postMessage({
       command: 'browseFile',
@@ -19,7 +19,7 @@ export const Hg3DProperties: React.FC<PropertyPanelProps> = ({ component, onUpda
 
   return (
     <div className="properties-content">
-      <BaseProperties component={component} onUpdate={onUpdate} />
+      <BaseProperties component={component} onUpdate={onUpdate} components={components} />
 
       <div className="property-section">
         <h4>模型设置</h4>

@@ -174,7 +174,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   zoom: 1,
   canvasOffset: { x: 0, y: 0 },
   canvasSize: { width: 800, height: 480 }, // 默认画布尺寸
-  canvasBackgroundColor: '#f0f0f0', // 默认画布背景色为灰色
+  canvasBackgroundColor: '#3c3c3c', // 默认画布背景色为深灰色
   editingMode: 'select',
   showViewConnections: true, // 默认显示视图连接
   undoStack: [],
@@ -459,7 +459,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       zoom: 1,
       canvasOffset: { x: 0, y: 0 },
       canvasSize: parseResolutionStr(config?.resolution),
-      canvasBackgroundColor: '#f0f0f0',
+      canvasBackgroundColor: '#3c3c3c',
       editingMode: 'select',
     });
   },

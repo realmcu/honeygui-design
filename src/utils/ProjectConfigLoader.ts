@@ -205,7 +205,7 @@ export class ProjectConfigLoader {
     static getDesignerConfig(config: ProjectConfig | null): Partial<ProjectConfig['designer']> {
         if (!config) {
             return {
-                canvasBackgroundColor: '#f0f0f0',
+                canvasBackgroundColor: '#3c3c3c',
                 gridSize: 10,
                 showGrid: true,
                 snapToGrid: true
@@ -213,7 +213,7 @@ export class ProjectConfigLoader {
         }
 
         return {
-            canvasBackgroundColor: config.designer?.canvasBackgroundColor || '#f0f0f0',
+            canvasBackgroundColor: config.designer?.canvasBackgroundColor || '#3c3c3c',
             gridSize: config.designer?.gridSize || 10,
             showGrid: config.designer?.showGrid !== false,
             snapToGrid: config.designer?.snapToGrid !== false,

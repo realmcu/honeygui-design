@@ -12,9 +12,11 @@ export const calculateComponentStyle = (
   editingMode: 'select' | 'move' | 'resize',
   isListItem: boolean = false
 ): React.CSSProperties => {
-  // 列表项的默认边框
+  // List 容器不显示边框
   let border = '1px solid transparent';
-  if (isListItem && !isSelected && !isMultiSelected) {
+  if (component.type === 'hg_list') {
+    border = 'none';
+  } else if (isListItem && !isSelected && !isMultiSelected) {
     border = '1px dashed rgba(150, 150, 150, 0.5)';
   } else if (isSelected || isMultiSelected) {
     border = '2px solid #007ACC';

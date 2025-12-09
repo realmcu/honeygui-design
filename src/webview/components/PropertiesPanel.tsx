@@ -4,7 +4,7 @@ import { propertyPanelRegistry } from './properties';
 import './PropertiesPanel.css';
 
 const PropertiesPanel: React.FC = () => {
-  const { selectedComponent, updateComponent } = useDesignerStore();
+  const { selectedComponent, updateComponent, components } = useDesignerStore();
   const selected = useDesignerStore.getState().getSelectedComponent();
 
   if (!selected) {
@@ -34,7 +34,7 @@ const PropertiesPanel: React.FC = () => {
       </div>
 
       {PropertyPanel ? (
-        <PropertyPanel component={selected} onUpdate={handleUpdate} />
+        <PropertyPanel component={selected} onUpdate={handleUpdate} components={components} />
       ) : (
         <div className="properties-content">
           <div className="no-selection">未知组件类型: {selected.type}</div>

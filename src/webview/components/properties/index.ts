@@ -1,6 +1,7 @@
 import { ComponentType } from '../../types';
 import { HgViewProperties } from './HgViewProperties';
 import { Hg3DProperties } from './Hg3DProperties';
+import { ListItemProperties } from './ListItemProperties';
 import { DefaultProperties } from './DefaultProperties';
 import { PropertyPanelProps } from './types';
 
@@ -20,6 +21,7 @@ export const propertyPanelRegistry: Record<ComponentType, React.FC<PropertyPanel
   hg_screen: DefaultProperties,
   hg_canvas: DefaultProperties,
   hg_list: DefaultProperties,
+  hg_list_item: ListItemProperties,
   hg_video: DefaultProperties,
   hg_3d: Hg3DProperties,
   hg_arc: DefaultProperties,
@@ -29,6 +31,7 @@ export const propertyPanelRegistry: Record<ComponentType, React.FC<PropertyPanel
 
 export { HgViewProperties } from './HgViewProperties';
 export { Hg3DProperties } from './Hg3DProperties';
+export { ListItemProperties } from './ListItemProperties';
 export { DefaultProperties } from './DefaultProperties';
 export { BaseProperties } from './BaseProperties';
 export { PropertyEditor } from './PropertyEditor';

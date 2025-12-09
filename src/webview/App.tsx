@@ -616,7 +616,7 @@ const App: React.FC = () => {
       // 遍历所有组件，找到鼠标位置下的最内层容器
       for (const comp of components) {
         // 只有容器类型才能作为目标
-        if (comp.type !== 'hg_view' && comp.type !== 'hg_window') {
+        if (comp.type !== 'hg_view' && comp.type !== 'hg_window' && comp.type !== 'hg_list_item') {
           continue;
         }
         

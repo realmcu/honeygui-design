@@ -32,6 +32,7 @@ export type ComponentType =
   | 'hg_screen'
   | 'hg_canvas'
   | 'hg_list'
+  | 'hg_list_item'
   | 'hg_video'
   | 'hg_3d'
   | 'hg_arc'
