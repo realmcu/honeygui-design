@@ -37,7 +37,8 @@ export type ComponentType =
   | 'hg_3d'
   | 'hg_arc'
   | 'hg_rect'
-  | 'hg_circle';
+  | 'hg_svg'
+  | 'hg_lottie';
 
 export interface ComponentDefinition {
   type: ComponentType;

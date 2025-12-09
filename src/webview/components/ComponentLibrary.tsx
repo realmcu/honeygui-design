@@ -154,11 +154,12 @@ const componentDefinitions: ComponentDefinition[] = [
     icon: '🌙',
     defaultSize: { width: 100, height: 100 },
     properties: [
+      { name: 'radius', label: '半径', type: 'number', defaultValue: 40, group: 'style' },
       { name: 'startAngle', label: '起始角度', type: 'number', defaultValue: 0, group: 'style' },
-      { name: 'endAngle', label: '结束角度', type: 'number', defaultValue: 90, group: 'style' },
-      { name: 'strokeWidth', label: '线宽', type: 'number', defaultValue: 2, group: 'style' },
-      { name: 'strokeColor', label: '线条颜色', type: 'color', defaultValue: '#000000', group: 'style' },
-      { name: 'fillColor', label: '填充颜色', type: 'color', defaultValue: 'transparent', group: 'style' },
+      { name: 'endAngle', label: '结束角度', type: 'number', defaultValue: 270, group: 'style' },
+      { name: 'strokeWidth', label: '线宽', type: 'number', defaultValue: 8, group: 'style' },
+      { name: 'color', label: '颜色', type: 'color', defaultValue: '#007acc', group: 'style' },
+      { name: 'cap', label: '端点样式', type: 'select', defaultValue: 'BUTT', options: ['BUTT', 'ROUND', 'SQUARE'], group: 'style' },
     ],
   },
   {
@@ -168,20 +169,28 @@ const componentDefinitions: ComponentDefinition[] = [
     defaultSize: { width: 120, height: 80 },
     properties: [
       { name: 'borderRadius', label: '圆角', type: 'number', defaultValue: 0, group: 'style' },
-      { name: 'strokeWidth', label: '边框宽度', type: 'number', defaultValue: 1, group: 'style' },
-      { name: 'strokeColor', label: '边框颜色', type: 'color', defaultValue: '#000000', group: 'style' },
-      { name: 'fillColor', label: '填充颜色', type: 'color', defaultValue: '#ffffff', group: 'style' },
+      { name: 'fillColor', label: '填充颜色', type: 'color', defaultValue: '#007acc', group: 'style' },
+      { name: 'opacity', label: '透明度', type: 'number', defaultValue: 255, group: 'style' },
     ],
   },
   {
-    type: 'hg_circle',
-    name: '圆形',
-    icon: '⭕',
+    type: 'hg_svg',
+    name: 'SVG',
+    icon: '🎨',
     defaultSize: { width: 100, height: 100 },
     properties: [
-      { name: 'strokeWidth', label: '边框宽度', type: 'number', defaultValue: 1, group: 'style' },
-      { name: 'strokeColor', label: '边框颜色', type: 'color', defaultValue: '#000000', group: 'style' },
-      { name: 'fillColor', label: '填充颜色', type: 'color', defaultValue: '#ffffff', group: 'style' },
+      { name: 'src', label: 'SVG路径', type: 'string', group: 'data' },
+    ],
+  },
+  {
+    type: 'hg_lottie',
+    name: 'Lottie动画',
+    icon: '🎬',
+    defaultSize: { width: 150, height: 150 },
+    properties: [
+      { name: 'src', label: '动画路径', type: 'string', group: 'data' },
+      { name: 'autoplay', label: '自动播放', type: 'boolean', defaultValue: true, group: 'general' },
+      { name: 'loop', label: '循环播放', type: 'boolean', defaultValue: true, group: 'general' },
     ],
   },
 ];
@@ -202,11 +211,11 @@ const componentCategories = [
   },
   {
     name: '图形',
-    types: ['hg_arc', 'hg_rect', 'hg_circle']
+    types: ['hg_arc', 'hg_rect', 'hg_svg']
   },
   {
     name: '多媒体',
-    types: ['hg_video', 'hg_3d']
+    types: ['hg_video', 'hg_3d', 'hg_lottie']
   }
 ];
 
