@@ -120,8 +120,9 @@ export const Model3DWidget: React.FC<WidgetProps> = ({ component, style, handler
     };
     
     const onLoadError = (error: any) => {
-      console.error('[3D模型] 加载失败:', error);
-      setLoadError(`加载失败: ${error.message || '未知错误'}`);
+      // 只在控制台打印，不显示错误状态（因为MTL失败后还会尝试加载OBJ）
+      console.warn('[3D模型] 加载警告:', error?.message || error);
+      setLoadError(`加载失败: ${error?.message || '未知错误'}`);
       setIsLoading(false);
     };
     
@@ -156,7 +157,7 @@ export const Model3DWidget: React.FC<WidgetProps> = ({ component, style, handler
       console.log('[3D模型] mtlUri:', mtlUri);
       
       // 尝试加载同名MTL文件
-      if (mtlUri && mtlUri.startsWith('http')) {
+      if (mtlUri && (mtlUri.startsWith('http') || mtlUri.startsWith('vscode-webview'))) {
         console.log('[3D模型] 加载MTL材质');
         console.log('[3D模型] mtlUri:', mtlUri);
         
@@ -311,8 +312,8 @@ export const Model3DWidget: React.FC<WidgetProps> = ({ component, style, handler
             console.log('[3D模型] MTL 加载中...');
           },
           (error: any) => {
-            console.warn('[3D模型] MTL 加载失败，使用默认材质:', error);
-            // MTL 加载失败，使用默认材质加载 OBJ
+            // MTL 加载失败是正常情况（可能没有MTL文件），静默处理
+            // 使用默认材质加载 OBJ
             const objLoader = new OBJLoader();
             const objPath = modelUri.substring(0, modelUri.lastIndexOf('/') + 1);
             const objFileName = modelUri.substring(modelUri.lastIndexOf('/') + 1);

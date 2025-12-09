@@ -401,6 +401,31 @@ export class AssetManager {
     }
 
     /**
+     * 处理创建视频组件请求
+     */
+    public handleCreateVideoComponent(
+        videoPath: string,
+        dropPosition: { x: number; y: number },
+        targetContainerId: string,
+        currentFilePath: string | undefined
+    ): void {
+        try {
+            if (!currentFilePath) {
+                return;
+            }
+
+            this._panel.webview.postMessage({
+                command: 'createVideoComponent',
+                videoPath,
+                dropPosition,
+                targetContainerId
+            });
+        } catch (error) {
+            logger.error(`[AssetManager] 创建视频组件失败: ${error}`);
+        }
+    }
+
+    /**
      * 获取图片尺寸
      */
     private getImageSize(filePath: string): { width: number; height: number } {

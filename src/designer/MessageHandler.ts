@@ -160,6 +160,15 @@ export class MessageHandler {
                 );
                 break;
 
+            case 'createVideoComponent':
+                this._assetManager.handleCreateVideoComponent(
+                    message.videoPath,
+                    message.dropPosition,
+                    message.targetContainerId,
+                    this._fileManager.currentFilePath
+                );
+                break;
+
             case 'notify':
                 vscode.window.showInformationMessage(message.text);
                 break;
