@@ -117,7 +117,19 @@ export class BuildCore {
         }
 
         return new Promise((resolve, reject) => {
-            const proc = spawn('python3', [mkromfsScript, '-i', assetsDir, '-o', romfsOutput], {
+            // 尝试多个 Python 命令
+            const pythonCandidates = process.platform === 'win32' 
+                ? ['python', 'python3', 'py'] 
+                : ['python3', 'python'];
+            
+            let pythonCmd = pythonCandidates[0];
+            
+            // 在 Windows 上，优先尝试 py launcher
+            if (process.platform === 'win32') {
+                pythonCmd = 'py';
+            }
+
+            const proc = spawn(pythonCmd, [mkromfsScript, '-i', assetsDir, '-o', romfsOutput], {
                 cwd: this.buildDir,
                 shell: true
             });
@@ -136,6 +148,15 @@ export class BuildCore {
                     resolve();
                 } else {
                     reject(new Error(`romfs 打包失败，退出码: ${code}`));
+                }
+            });
+
+            proc.on('error', (err) => {
+                // 如果命令未找到，提供更友好的错误信息
+                if ((err as any).code === 'ENOENT') {
+                    reject(new Error(`Python 未找到。请确保已安装 Python 并添加到系统 PATH 环境变量中。\n尝试的命令: ${pythonCmd}`));
+                } else {
+                    reject(err);
                 }
             });
         });
