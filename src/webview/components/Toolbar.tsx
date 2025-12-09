@@ -163,11 +163,11 @@ const Toolbar: React.FC = () => {
                 <span>黑色</span>
               </button>
               <button
-                className={`color-option ${canvasBackgroundColor === '#2c2c2c' ? 'active' : ''}`}
-                onClick={() => handleBackgroundColorChange('#2c2c2c')}
-                title="深灰 (RGB 44,44,44)"
+                className={`color-option ${canvasBackgroundColor === '#3c3c3c' ? 'active' : ''}`}
+                onClick={() => handleBackgroundColorChange('#3c3c3c')}
+                title="深灰 (RGB 60,60,60)"
               >
-                <div className="color-preview" style={{ backgroundColor: '#2c2c2c' }} />
+                <div className="color-preview" style={{ backgroundColor: '#3c3c3c' }} />
                 <span>深灰</span>
               </button>
             </div>

@@ -1,17 +1,23 @@
 import React from 'react';
 import { PropertyPanelProps } from './types';
 import { PropertyEditor } from './PropertyEditor';
+import { isContainerType } from '../../utils/componentUtils';
 
 interface BasePropertiesProps extends PropertyPanelProps {
   disableSize?: boolean;
   sizeTooltip?: string;
+  hideParent?: boolean;  // 是否隐藏父对象选择（用于 hg_view 等顶级容器）
+  disableParent?: boolean;  // 是否禁用父对象选择（用于 hg_list_item）
 }
 
 export const BaseProperties: React.FC<BasePropertiesProps> = ({ 
   component, 
   onUpdate,
+  components = [],
   disableSize = false,
-  sizeTooltip
+  sizeTooltip,
+  hideParent = false,
+  disableParent = false,
 }) => {
   const handlePositionChange = (field: 'x' | 'y' | 'width' | 'height', value: number) => {
     onUpdate({
@@ -21,6 +27,29 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
       },
     });
   };
+
+  // 获取可选的父容器列表（排除自己和自己的子孙）
+  const getAvailableParents = () => {
+    const descendants = new Set<string>();
+    const findDescendants = (id: string) => {
+      components.forEach(c => {
+        if (c.parent === id) {
+          descendants.add(c.id);
+          findDescendants(c.id);
+        }
+      });
+    };
+    findDescendants(component.id);
+
+    return components.filter(c => 
+      c.id !== component.id && 
+      !descendants.has(c.id) &&
+      isContainerType(c.type)
+    );
+  };
+
+  const availableParents = getAvailableParents();
+  const currentParent = components.find(c => c.id === component.parent);
 
   return (
     <>
@@ -44,6 +73,33 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
             disabled
           />
         </div>
+
+        {/* 父对象选择 */}
+        {!hideParent && (
+          <div className="property-item">
+            <label>父对象</label>
+            <select
+              value={component.parent || ''}
+              onChange={(e) => onUpdate({ parent: e.target.value || null })}
+              disabled={disableParent}
+              style={{
+                width: '100%',
+                padding: '4px 8px',
+                backgroundColor: 'var(--vscode-input-background)',
+                color: 'var(--vscode-input-foreground)',
+                border: '1px solid var(--vscode-input-border)',
+                borderRadius: '2px',
+              }}
+            >
+              <option value="">无</option>
+              {availableParents.map(p => (
+                <option key={p.id} value={p.id}>
+                  {p.name} ({p.type})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Position and Size */}

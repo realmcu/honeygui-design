@@ -17,7 +17,6 @@ interface DesignerCanvasProps {
 
 const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) => {
   const canvasRef = useRef<HTMLDivElement>(null);
-  const [canvasBackground, setCanvasBackground] = useState<string>('#f0f0f0');
   const [pendingDragComponent, setPendingDragComponent] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 }); // 组件拖拽起始位置
@@ -103,17 +102,14 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     window.addEventListener('component-context-menu', handleCustomContextMenu);
     return () => window.removeEventListener('component-context-menu', handleCustomContextMenu);
   }, [components, showMenu]);
-  
-  // 当store中的画布背景色变化时更新本地状态
-  useEffect(() => {
-    if (canvasBackgroundColor && canvasBackgroundColor !== canvasBackground) {
-      setCanvasBackground(canvasBackgroundColor);
-    }
-  }, [canvasBackgroundColor, canvasBackground]);
 
   const handleComponentMouseDown = (e: React.MouseEvent, componentId: string) => {
     e.stopPropagation();
     
+    const component = components.find(c => c.id === componentId);
+    if (!component) return;
+    
+    // 选中当前组件（允许选中 locked 组件）
     const multi = e.ctrlKey || e.metaKey || e.shiftKey;
     if (multi) {
       addToSelection(componentId);
@@ -121,21 +117,31 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
       onComponentSelect(componentId);
     }
 
-    // 计算鼠标相对于组件的偏移量
-    const component = components.find(c => c.id === componentId);
-    if (component && canvasRef.current) {
+    // 查找可拖拽的组件（如果当前组件被锁定，向上查找父组件）
+    let draggableComponent: Component | undefined = component;
+    while (draggableComponent && draggableComponent.locked && draggableComponent.parent) {
+      draggableComponent = components.find(c => c.id === draggableComponent!.parent);
+    }
+    
+    // 如果没有可拖拽的组件，则不记录拖拽信息
+    if (!draggableComponent || draggableComponent.locked) {
+      return;
+    }
+
+    // 计算鼠标相对于可拖拽组件的偏移量
+    if (canvasRef.current) {
       const rect = canvasRef.current.getBoundingClientRect();
       const mouseX = (e.clientX - rect.left - canvasOffset.x) / zoom;
       const mouseY = (e.clientY - rect.top - canvasOffset.y) / zoom;
       
       setDragOffset({
-        x: mouseX - component.position.x,
-        y: mouseY - component.position.y,
+        x: mouseX - draggableComponent.position.x,
+        y: mouseY - draggableComponent.position.y,
       });
     }
 
-    // 记录待拖动的组件和鼠标位置，但不立即开始拖动
-    setPendingDragComponent(componentId);
+    // 记录待拖动的组件（是可拖拽的父组件，不是选中的组件）
+    setPendingDragComponent(draggableComponent.id);
     setDragStart({ x: e.clientX, y: e.clientY });
   };
 
@@ -219,8 +225,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     const isHovered = !draggedComponent && useDesignerStore.getState().hoveredComponent === component.id;
 
     // 检查是否为列表项
-    const parentComponent = component.parent ? componentList.find(c => c.id === component.parent) : null;
-    const isListItem = parentComponent?.type === 'hg_list';
+    const isListItem = component.type === 'hg_list_item';
 
     const style = calculateComponentStyle(
       component,
@@ -265,7 +270,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     }
 
     // 容器组件需要渲染子组件
-    const isContainer = ['hg_view', 'hg_window', 'hg_screen', 'hg_canvas', 'hg_list'].includes(component.type);
+    const isContainer = ['hg_view', 'hg_window', 'hg_screen', 'hg_canvas', 'hg_list', 'hg_list_item'].includes(component.type);
     
     if (isContainer) {
       // 正常渲染所有子组件
@@ -288,7 +293,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
         ref={canvasRef}
         className="designer-canvas"
         style={{
-            backgroundColor: canvasBackground,
+            backgroundColor: canvasBackgroundColor,
             position: 'relative',
             minWidth: '100%',
             minHeight: '100%',
