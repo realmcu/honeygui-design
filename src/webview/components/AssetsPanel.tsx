@@ -14,7 +14,44 @@ const VIDEO_EXTS = ['mp4', 'avi', 'mov', 'mkv', 'webm'];
 const MODEL_EXTS = ['gltf', 'glb', 'obj'];
 const MODEL_DEP_EXTS = ['mtl'];  // 3D 模型依赖文件
 
-type AssetCategory = 'images' | 'videos' | 'models';
+type AssetCategory = 'all' | 'images' | 'videos' | 'models';
+
+// 视频预览组件
+const VideoPreview: React.FC<{ videoPath: string }> = ({ videoPath }) => {
+  const [error, setError] = useState(false);
+  
+  if (error) {
+    const fileName = videoPath.split('/').pop() || '';
+    return (
+      <div style={{ 
+        width: '100%', 
+        height: '100%', 
+        display: 'flex', 
+        flexDirection: 'column',
+        alignItems: 'center', 
+        justifyContent: 'center',
+        background: '#1a1a2e',
+        color: '#fff'
+      }}>
+        <div style={{ fontSize: '32px' }}>▶️</div>
+        <div style={{ fontSize: '10px', marginTop: '4px' }}>{fileName}</div>
+      </div>
+    );
+  }
+
+  return (
+    <video 
+      src={videoPath}
+      muted
+      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+      onLoadedData={(e) => {
+        // 跳到第一帧
+        (e.target as HTMLVideoElement).currentTime = 0.1;
+      }}
+      onError={() => setError(true)}
+    />
+  );
+};
 
 // 3D 模型预览组件
 const Model3DPreview: React.FC<{ modelPath: string }> = ({ modelPath }) => {
@@ -133,7 +170,7 @@ const isModelDependency = (name: string): boolean => {
 
 const AssetsPanel: React.FC = () => {
   const [assets, setAssets] = useState<AssetFile[]>([]);
-  const [activeCategory, setActiveCategory] = useState<AssetCategory>('images');
+  const [activeCategory, setActiveCategory] = useState<AssetCategory>('all');
   const [editingAsset, setEditingAsset] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
@@ -141,6 +178,7 @@ const AssetsPanel: React.FC = () => {
   // 按类型分类资源（递归处理）
   const categorizedAssets = React.useMemo(() => {
     const result: Record<AssetCategory, AssetFile[]> = {
+      all: [],
       images: [],
       videos: [],
       models: []
@@ -154,10 +192,12 @@ const AssetsPanel: React.FC = () => {
           const category = getAssetCategory(asset.name);
           if (category) {
             result[category].push(asset);
+            result.all.push(asset);
           }
           // 将 mtl 文件也归类到 models（作为依赖显示）
           if (isModelDependency(asset.name)) {
             result.models.push(asset);
+            result.all.push(asset);
           }
         }
       }
@@ -169,6 +209,7 @@ const AssetsPanel: React.FC = () => {
 
   // 获取各类型数量
   const counts = React.useMemo(() => ({
+    all: categorizedAssets.all.length,
     images: categorizedAssets.images.length,
     videos: categorizedAssets.videos.length,
     models: categorizedAssets.models.length
@@ -240,7 +281,7 @@ const AssetsPanel: React.FC = () => {
             />
           )}
           {isModel && <Model3DPreview modelPath={asset.path} />}
-          {isVideo && <div className="file-icon" style={{ fontSize: '48px' }}>🎬</div>}
+          {isVideo && <VideoPreview videoPath={asset.path} />}
           {isMtl && <div className="file-icon" style={{ fontSize: '48px' }}>📄</div>}
         </div>
         <div className="asset-info">
@@ -420,29 +461,33 @@ const AssetsPanel: React.FC = () => {
   };
 
   const currentAssets = categorizedAssets[activeCategory];
-  const emptyMessages: Record<AssetCategory, string> = {
-    images: '暂无图片资源',
-    videos: '暂无视频资源',
-    models: '暂无3D模型资源'
-  };
+  const emptyMessage = activeCategory === 'all' ? '暂无资源' : 
+    activeCategory === 'images' ? '暂无图片资源' :
+    activeCategory === 'videos' ? '暂无视频资源' : '暂无3D模型资源';
 
   return (
     <div className="assets-panel">
-      <div className="assets-tabs">
+      <div className="assets-filter">
         <button 
-          className={`assets-tab ${activeCategory === 'images' ? 'active' : ''}`}
+          className={`filter-btn ${activeCategory === 'all' ? 'active' : ''}`}
+          onClick={() => setActiveCategory('all')}
+        >
+          全部 ({counts.all})
+        </button>
+        <button 
+          className={`filter-btn ${activeCategory === 'images' ? 'active' : ''}`}
           onClick={() => setActiveCategory('images')}
         >
           图片 ({counts.images})
         </button>
         <button 
-          className={`assets-tab ${activeCategory === 'videos' ? 'active' : ''}`}
+          className={`filter-btn ${activeCategory === 'videos' ? 'active' : ''}`}
           onClick={() => setActiveCategory('videos')}
         >
           视频 ({counts.videos})
         </button>
         <button 
-          className={`assets-tab ${activeCategory === 'models' ? 'active' : ''}`}
+          className={`filter-btn ${activeCategory === 'models' ? 'active' : ''}`}
           onClick={() => setActiveCategory('models')}
         >
           3D ({counts.models})
@@ -456,7 +501,7 @@ const AssetsPanel: React.FC = () => {
       >
         {currentAssets.length === 0 ? (
           <div className="empty-state">
-            <p>{emptyMessages[activeCategory]}</p>
+            <p>{emptyMessage}</p>
             <p className="hint">拖拽文件到此处</p>
           </div>
         ) : (

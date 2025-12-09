@@ -7,7 +7,18 @@ const uriCache = new Map<string, string>();
  * 将相对路径转换为 webview URI
  */
 export function useWebviewUri(relativePath: string | undefined): string | undefined {
-  const [webviewUri, setWebviewUri] = useState<string | undefined>(relativePath);
+  const [webviewUri, setWebviewUri] = useState<string | undefined>(() => {
+    // 初始化时检查是否已经是完整URL或在缓存中
+    if (!relativePath) return undefined;
+    if (relativePath.startsWith('http') || relativePath.startsWith('vscode-resource') || relativePath.startsWith('data:')) {
+      return relativePath;
+    }
+    if (uriCache.has(relativePath)) {
+      return uriCache.get(relativePath);
+    }
+    // 需要转换，先返回undefined
+    return undefined;
+  });
 
   useEffect(() => {
     if (!relativePath) {
@@ -38,7 +49,7 @@ export function useWebviewUri(relativePath: string | undefined): string | undefi
           setWebviewUri(message.uri);
         } else {
           console.error('[useWebviewUri] 转换失败:', message.error);
-          setWebviewUri(relativePath); // 降级使用原路径
+          // 转换失败时保持undefined，不使用原路径
         }
         window.removeEventListener('message', handleMessage);
       }

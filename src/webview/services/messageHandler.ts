@@ -76,6 +76,41 @@ export const create3DComponentAtPosition = (
 };
 
 /**
+ * 创建视频组件的统一函数
+ */
+export const createVideoComponentAtPosition = (
+  videoPath: string,
+  dropPosition: { x: number; y: number },
+  targetContainerId: string,
+  components: Component[],
+  addComponent: (component: Component) => void
+): void => {
+  const targetContainer = components.find(c => c.id === targetContainerId);
+  if (!targetContainer) return;
+
+  const targetAbsPos = getAbsolutePosition(targetContainer, components);
+  const relativeX = Math.max(0, dropPosition.x - targetAbsPos.x);
+  const relativeY = Math.max(0, dropPosition.y - targetAbsPos.y);
+
+  const videoComponent: Component = {
+    id: `hg_video_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+    type: 'hg_video',
+    name: `video_${Date.now().toString().substr(-4)}`,
+    position: { x: relativeX, y: relativeY, width: 320, height: 180 },
+    visible: true,
+    enabled: true,
+    locked: false,
+    zIndex: 1,
+    children: [],
+    parent: targetContainerId,
+    style: {},
+    data: { src: videoPath },
+  };
+
+  addComponent(videoComponent);
+};
+
+/**
  * 处理从后端接收的消息
  */
 export const handleBackendMessage = (

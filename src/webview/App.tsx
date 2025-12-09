@@ -9,7 +9,7 @@ import Toolbar from './components/Toolbar';
 import { Component, ComponentType } from './types';
 import useKeyboardShortcuts from './utils/keyboardShortcuts';
 import { getAbsolutePosition, findComponentAtPosition } from './utils/componentUtils';
-import { createImageComponentAtPosition, create3DComponentAtPosition } from './services/messageHandler';
+import { createImageComponentAtPosition, create3DComponentAtPosition, createVideoComponentAtPosition } from './services/messageHandler';
 import { processImageFiles } from './utils/fileUtils';
 import { parseObjDependencies, parseMtlDependencies, findDependencyFiles } from './utils/objDependencyParser';
 import './App.css';
@@ -173,6 +173,19 @@ const App: React.FC = () => {
             const store = useDesignerStore.getState();
             create3DComponentAtPosition(
               message.modelPath,
+              message.dropPosition,
+              message.targetContainerId,
+              store.components,
+              store.addComponent
+            );
+          }
+          break;
+
+        case 'createVideoComponent':
+          if (message.videoPath && message.targetContainerId && message.dropPosition) {
+            const store = useDesignerStore.getState();
+            createVideoComponentAtPosition(
+              message.videoPath,
               message.dropPosition,
               message.targetContainerId,
               store.components,
@@ -478,12 +491,21 @@ const App: React.FC = () => {
         // 判断文件类型
         const ext = assetPath.split('.').pop()?.toLowerCase();
         const is3DModel = ext && ['obj', 'gltf', 'glb'].includes(ext);
+        const isVideo = ext && ['mp4', 'avi', 'mov', 'mkv', 'webm'].includes(ext);
         
         if (is3DModel) {
           // 3D 模型：直接创建组件
           api.postMessage({
             command: 'create3DComponent',
             modelPath: `assets/${assetPath}`,
+            dropPosition: { x, y },
+            targetContainerId: targetContainer.id
+          });
+        } else if (isVideo) {
+          // 视频：创建视频组件
+          api.postMessage({
+            command: 'createVideoComponent',
+            videoPath: `assets/${assetPath}`,
             dropPosition: { x, y },
             targetContainerId: targetContainer.id
           });

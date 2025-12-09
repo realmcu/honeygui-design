@@ -5,35 +5,40 @@
   height: 100%;
 }
 
-.assets-tabs {
+.assets-filter {
   display: flex;
+  gap: 4px;
+  padding: 8px;
   border-bottom: 1px solid var(--vscode-panel-border);
   background: var(--vscode-sideBar-background);
   flex-shrink: 0;
 }
 
-.assets-tab {
-  flex: 1;
-  padding: 6px 8px;
-  border: none;
-  background: transparent;
+.filter-btn {
+  padding: 4px 10px;
+  border: 1px solid var(--vscode-input-border);
+  border-radius: 3px;
+  background: var(--vscode-input-background);
   color: var(--vscode-foreground);
   font-size: 11px;
   cursor: pointer;
-  opacity: 0.7;
+  opacity: 0.8;
   transition: all 0.2s;
-  border-bottom: 2px solid transparent;
+  white-space: nowrap;
 }
 
-.assets-tab:hover {
+.filter-btn:hover {
   opacity: 1;
   background: var(--vscode-list-hoverBackground);
+  border-color: var(--vscode-focusBorder);
 }
 
-.assets-tab.active {
+.filter-btn.active {
   opacity: 1;
-  border-bottom-color: var(--vscode-focusBorder);
-  background: var(--vscode-list-activeSelectionBackground);
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border-color: var(--vscode-button-background);
+  font-weight: 500;
 }
 
 .assets-content {
