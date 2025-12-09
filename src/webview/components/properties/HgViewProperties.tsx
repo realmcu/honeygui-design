@@ -5,7 +5,7 @@ import { BaseProperties } from './BaseProperties';
 import { useDesignerStore } from '../../store';
 import type { ViewSwitchEvent, ViewSwitchEventType } from '../../../hml/types';
 
-export const HgViewProperties: React.FC<PropertyPanelProps> = ({ component, onUpdate }) => {
+export const HgViewProperties: React.FC<PropertyPanelProps> = ({ component, onUpdate, components }) => {
   const [activeTab, setActiveTab] = useState<'properties' | 'view_switch'>('properties');
 
   const handleStyleChange = (property: string, value: any) => {
@@ -77,8 +77,10 @@ export const HgViewProperties: React.FC<PropertyPanelProps> = ({ component, onUp
             <BaseProperties 
               component={component} 
               onUpdate={onUpdate}
+              components={components}
               disableSize={true}
               sizeTooltip="hg_view 的宽高由项目分辨率决定，不可修改"
+              hideParent={true}
             />
 
             {/* Style Properties */}

@@ -306,7 +306,7 @@ export class FileManager {
             },
             components: frontendComponents,
             projectConfig: projectConfig,
-            designerConfig: designerConfig || { canvasBackgroundColor: '#f0f0f0' },
+            designerConfig: designerConfig || { canvasBackgroundColor: '#3c3c3c' },
             projectRoot: projectRoot // 发送项目根目录给前端
         });
     }

@@ -4,7 +4,7 @@ import { PropertyEditor } from './PropertyEditor';
 import { BaseProperties } from './BaseProperties';
 import { componentDefinitions } from '../ComponentLibrary';
 
-export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onUpdate }) => {
+export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onUpdate, components }) => {
   const definition = componentDefinitions.find((d) => d.type === component.type);
 
   const handleStyleChange = (property: string, value: any) => {
@@ -70,7 +70,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
 
   return (
     <div className="properties-content">
-      <BaseProperties component={component} onUpdate={onUpdate} />
+      <BaseProperties component={component} onUpdate={onUpdate} components={components} />
 
       {/* Style Properties */}
       {definition && definition.properties.filter(p => p.group === 'style').length > 0 && (

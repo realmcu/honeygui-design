@@ -2,10 +2,10 @@ import { Component, ComponentType } from '../types';
 
 /**
  * 判断组件类型是否为容器
- * 只有 hg_view 和 hg_window 可以包含子组件
+ * hg_view, hg_window, hg_list_item 可以包含子组件
  */
 export function isContainerType(type: ComponentType): boolean {
-  return type === 'hg_view' || type === 'hg_window';
+  return type === 'hg_view' || type === 'hg_window' || type === 'hg_list_item';
 }
 
 /**
