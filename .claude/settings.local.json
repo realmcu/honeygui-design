@@ -9,7 +9,11 @@
       "Bash(cat:*)",
       "Bash(git checkout:*)",
       "Bash(__NEW_LINE__ echo \"Fixed remaining logger errors\")",
-      "Bash(npm run build:webview:*)"
+      "Bash(npm run build:webview:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git pull:*)"
     ],
     "deny": [],
     "ask": []
