@@ -15,6 +15,12 @@ export interface ProjectConfig {
     uiDir?: string;          // UI目录，默认 "ui"
     srcDir?: string;         // 源码目录，默认 "src"
     honeyguiSdkPath?: string; // HoneyGUI SDK 路径（用于编译仿真）
+    
+    // 视频转换配置
+    videoFormat?: 'mjpeg' | 'avi' | 'h264';  // 默认视频输出格式
+    videoQuality?: number;    // 视频质量 (0-100)，默认 85
+    videoFrameRate?: number;  // 视频帧率，默认 30
+    
     designer?: {
         canvasBackgroundColor?: string;
         gridSize?: number;

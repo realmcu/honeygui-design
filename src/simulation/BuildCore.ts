@@ -2,6 +2,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { spawn } from 'child_process';
 import { ImageConverterService } from '../services/ImageConverterService';
+import { VideoConverterService } from '../services/VideoConverterService';
 import { ProjectConfig } from '../common/ProjectConfig';
 import { RomfsConfig } from '../common/RomfsConfig';
 
@@ -83,23 +84,50 @@ export class BuildCore {
     }
 
     async convertAssets(): Promise<void> {
-        this.logger.log('转换图片资源...');
-
         const assetsDir = path.join(this.projectRoot, 'assets');
         const outputDir = path.join(this.buildDir, 'assets');
 
-        const converter = new ImageConverterService(this.sdkPath);
-        const results = await converter.convertAssetsDir(assetsDir, outputDir);
+        // 转换图片资源
+        this.logger.log('转换图片资源...');
+        const imageConverter = new ImageConverterService(this.sdkPath);
+        const imageResults = await imageConverter.convertAssetsDir(assetsDir, outputDir);
 
-        const failed = results.filter(r => !r.success);
-        if (failed.length > 0) {
-            for (const f of failed) {
-                this.logger.log(`转换失败: ${f.inputPath} - ${f.error}`, true);
+        const imageFailed = imageResults.filter(r => !r.success);
+        if (imageFailed.length > 0) {
+            for (const f of imageFailed) {
+                this.logger.log(`图片转换失败: ${f.inputPath} - ${f.error}`, true);
             }
-            throw new Error(`${failed.length} 个图片转换失败`);
+            throw new Error(`${imageFailed.length} 个图片转换失败`);
         }
 
-        this.logger.log(`转换完成: ${results.length} 个图片`);
+        this.logger.log(`图片转换完成: ${imageResults.length} 个`);
+
+        // 转换视频资源
+        this.logger.log('转换视频资源...');
+        const videoConverter = new VideoConverterService(this.sdkPath);
+        
+        // 从项目配置获取默认视频转换选项
+        const defaultVideoOptions = {
+            format: (this.projectConfig.videoFormat as 'mjpeg' | 'avi' | 'h264') || 'mjpeg',
+            quality: this.projectConfig.videoQuality || 85,
+            frameRate: this.projectConfig.videoFrameRate || 30
+        };
+
+        const videoResults = await videoConverter.convertAssetsDir(
+            assetsDir,
+            outputDir,
+            defaultVideoOptions
+        );
+
+        const videoFailed = videoResults.filter(r => !r.success);
+        if (videoFailed.length > 0) {
+            for (const f of videoFailed) {
+                this.logger.log(`视频转换失败: ${f.inputPath} - ${f.error}`, true);
+            }
+            throw new Error(`${videoFailed.length} 个视频转换失败`);
+        }
+
+        this.logger.log(`视频转换完成: ${videoResults.length} 个`);
 
         // 打包 romfs
         await this.packRomfs();

@@ -129,6 +129,18 @@ export class HoneyGuiApiMapper {
       eventHandlers: [],
       includeHeader: 'gui_lite3d.h'
     });
+
+    // 视频
+    this.mappings.set('hg_video', {
+      componentType: 'hg_video',
+      createFunction: 'gui_video_create_from_fs',  // 使用支持文件系统的创建函数
+      propertySetters: [
+        { property: 'frameRate', apiFunction: 'gui_video_set_frame_rate' },
+        { property: 'autoPlay', apiFunction: 'gui_video_set_state' }
+      ],
+      eventHandlers: [],
+      includeHeader: 'gui_video.h'
+    });
   }
 
   /**

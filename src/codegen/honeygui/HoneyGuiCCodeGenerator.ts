@@ -333,6 +333,46 @@ void ${baseName}_update_user(void) {
         return `${indentStr}${component.id} = (gui_obj_t *)gui_img_create_from_fs(${parentRef}, "${component.name}", "${binSrc}", ${x}, ${y}, ${width}, ${height});\n`;
     }
 
+    // 特殊处理视频组件
+    if (component.type === 'hg_video') {
+        const src = component.data?.src || '';
+        const frameRate = component.data?.frameRate || 30;
+        const autoPlay = component.data?.autoPlay !== false; // 默认自动播放
+        
+        // 将视频扩展名替换为转换后的格式
+        let videoSrc = src;
+        const format = component.data?.format || 'mjpeg';
+        
+        // 根据格式替换扩展名
+        if (format === 'mjpeg') {
+            videoSrc = src.replace(/\.(mp4|avi|mov|mkv|webm|flv|wmv)$/i, '.mjpeg');
+        } else if (format === 'avi') {
+            videoSrc = src.replace(/\.(mp4|avi|mov|mkv|webm|flv|wmv)$/i, '.avi');
+        } else if (format === 'h264') {
+            videoSrc = src.replace(/\.(mp4|avi|mov|mkv|webm|flv|wmv)$/i, '.h264');
+        }
+        
+        // 去掉 assets/ 前缀（因为 mkromfs 打包的是 assets 目录本身）
+        videoSrc = videoSrc.replace(/^assets\//, '');
+        // 确保路径以 / 开头（VFS 绝对路径）
+        if (!videoSrc.startsWith('/')) {
+            videoSrc = '/' + videoSrc;
+        }
+        
+        // 生成视频组件创建代码
+        let code = `${indentStr}${component.id} = (gui_obj_t *)gui_video_create_from_fs(${parentRef}, "${component.name}", "${videoSrc}", ${x}, ${y}, ${width}, ${height});\n`;
+        
+        // 设置帧率
+        code += `${indentStr}gui_video_set_frame_rate((gui_video_t *)${component.id}, ${frameRate}.f);\n`;
+        
+        // 设置播放状态
+        if (autoPlay) {
+            code += `${indentStr}gui_video_set_state((gui_video_t *)${component.id}, GUI_VIDEO_STATE_PLAYING);\n`;
+        }
+        
+        return code;
+    }
+
     // 特殊处理3D模型组件
     if (component.type === 'hg_3d') {
         const modelPath = component.data?.modelPath || '';
