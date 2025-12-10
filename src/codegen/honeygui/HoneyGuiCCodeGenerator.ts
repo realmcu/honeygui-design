@@ -345,11 +345,11 @@ void ${baseName}_update_user(void) {
         
         // 根据格式替换扩展名
         if (format === 'mjpeg') {
-            videoSrc = src.replace(/\.(mp4|avi|mov|mkv|webm|flv|wmv)$/i, '.mjpeg');
+            videoSrc = src.replace(/\.[^.]+$/i, '.mjpeg');
         } else if (format === 'avi') {
-            videoSrc = src.replace(/\.(mp4|avi|mov|mkv|webm|flv|wmv)$/i, '.avi');
+            videoSrc = src.replace(/\.[^.]+$/i, '.avi');
         } else if (format === 'h264') {
-            videoSrc = src.replace(/\.(mp4|avi|mov|mkv|webm|flv|wmv)$/i, '.h264');
+            videoSrc = src.replace(/\.[^.]+$/i, '.h264');  // H.264 原始流格式
         }
         
         // 去掉 assets/ 前缀（因为 mkromfs 打包的是 assets 目录本身）

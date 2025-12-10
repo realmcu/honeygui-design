@@ -104,30 +104,39 @@ export class BuildCore {
 
         // 转换视频资源
         this.logger.log('转换视频资源...');
-        const videoConverter = new VideoConverterService(this.sdkPath);
+        const videoConverter = new VideoConverterService();
         
-        // 从项目配置获取默认视频转换选项
-        const defaultVideoOptions = {
-            format: (this.projectConfig.videoFormat as 'mjpeg' | 'avi' | 'h264') || 'mjpeg',
-            quality: this.projectConfig.videoQuality || 85,
-            frameRate: this.projectConfig.videoFrameRate || 30
-        };
+        // 检查 FFmpeg 是否可用
+        const ffmpegAvailable = await videoConverter.checkFFmpegAvailable();
+        if (!ffmpegAvailable) {
+            this.logger.log('FFmpeg 未找到，跳过视频转换。请安装 FFmpeg 并添加到系统 PATH。', true);
+            this.logger.log('视频转换跳过: 0 个');
+        } else {
+            // 从项目配置获取默认视频转换选项
+            const defaultVideoOptions = {
+                format: (this.projectConfig.videoFormat as 'mjpeg' | 'avi' | 'h264') || 'mjpeg',
+                quality: this.projectConfig.videoQuality || 85,
+                frameRate: this.projectConfig.videoFrameRate || 30
+            };
 
-        const videoResults = await videoConverter.convertAssetsDir(
-            assetsDir,
-            outputDir,
-            defaultVideoOptions
-        );
+            const videoResults = await videoConverter.convertAssetsDir(
+                assetsDir,
+                outputDir,
+                defaultVideoOptions
+            );
 
-        const videoFailed = videoResults.filter(r => !r.success);
-        if (videoFailed.length > 0) {
-            for (const f of videoFailed) {
-                this.logger.log(`视频转换失败: ${f.inputPath} - ${f.error}`, true);
+            const videoFailed = videoResults.filter(r => !r.success);
+            if (videoFailed.length > 0) {
+                for (const f of videoFailed) {
+                    this.logger.log(`视频转换失败: ${f.inputPath} - ${f.error}`, true);
+                }
+                throw new Error(`${videoFailed.length} 个视频转换失败`);
             }
-            throw new Error(`${videoFailed.length} 个视频转换失败`);
+
+            this.logger.log(`视频转换完成: ${videoResults.length} 个`);
         }
 
-        this.logger.log(`视频转换完成: ${videoResults.length} 个`);
+
 
         // 打包 romfs
         await this.packRomfs();

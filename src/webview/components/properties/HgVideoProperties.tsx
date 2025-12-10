@@ -45,7 +45,7 @@ export const HgVideoProperties: React.FC<PropertyPanelProps> = ({ component, onU
   const autoPlay = videoData.autoPlay !== false;
 
   return (
-    <div style={{ padding: '12px' }}>
+    <div className="properties-content">
       <h3 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 600 }}>视频属性</h3>
       
       {/* 基础属性 */}
