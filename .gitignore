@@ -98,3 +98,8 @@ src/**/*.js.map
 # E2E 测试生成的临时项目
 e2etest_test_project/
 *_test_project/
+# Template projects - 跟踪模板项目，但忽略生成的文件
+template-projects/*/src/autogen/
+template-projects/*/src/user/
+template-projects/*/build/
+template-projects/*/.vscode/

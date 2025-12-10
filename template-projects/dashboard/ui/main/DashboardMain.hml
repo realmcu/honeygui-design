@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hml>
+    <meta>
+        <project name="{{PROJECT_NAME}}" appId="{{APP_ID}}" resolution="800X480" minSdk="API 2: HoneyGUI V1.1.0" pixelMode="ARGB8888" />
+        <author name="HoneyGUI Design" />
+    </meta>
+    <view>
+        <hg_view id="dashboardView" x="0" y="0" width="800" height="480" name="dashboardView" backgroundColor="#000000">
+            <!-- Title -->
+            <hg_text id="title" x="20" y="20" width="760" height="40" name="title"
+                     text="Dashboard" fontSize="24" color="#FFFFFF" />
+            
+            <!-- CPU Usage Card -->
+            <hg_view id="cpuCard" x="20" y="80" width="370" height="120" name="cpuCard" backgroundColor="#1a1a1a">
+                <hg_text id="cpuLabel" x="10" y="10" width="150" height="30" name="cpuLabel"
+                         text="CPU Usage" fontSize="16" color="#AAAAAA" />
+                <hg_text id="cpuValue" x="10" y="45" width="100" height="40" name="cpuValue"
+                         text="45%" fontSize="32" color="#00FF00" />
+                <hg_progressbar id="cpuBar" x="10" y="90" width="350" height="15" name="cpuBar"
+                                value="45" max="100" color="#00FF00" />
+            </hg_view>
+            
+            <!-- Memory Usage Card -->
+            <hg_view id="memCard" x="410" y="80" width="370" height="120" name="memCard" backgroundColor="#1a1a1a">
+                <hg_text id="memLabel" x="10" y="10" width="150" height="30" name="memLabel"
+                         text="Memory" fontSize="16" color="#AAAAAA" />
+                <hg_text id="memValue" x="10" y="45" width="100" height="40" name="memValue"
+                         text="2.1GB" fontSize="32" color="#FF9900" />
+                <hg_progressbar id="memBar" x="10" y="90" width="350" height="15" name="memBar"
+                                value="65" max="100" color="#FF9900" />
+            </hg_view>
+            
+            <!-- Status Text -->
+            <hg_text id="statusText" x="20" y="220" width="760" height="30" name="statusText"
+                     text="System running normally" fontSize="14" color="#00FF00" align="center" />
+        </hg_view>
+    </view>
+</hml>

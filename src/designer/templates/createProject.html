@@ -60,6 +60,27 @@
             white-space: pre-line; font-size: 14px; line-height: 1.4;
         }
         .error-message.hidden { display: none; }
+        .template-list {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px; margin-bottom: 20px;
+        }
+        .template-card {
+            background-color: #2d2d30; border: 2px solid #3e3e42;
+            border-radius: 6px; padding: 15px; cursor: pointer;
+            transition: all 0.2s; position: relative;
+        }
+        .template-card:hover { border-color: #007acc; background-color: #333337; }
+        .template-card.selected { border-color: #007acc; background-color: #1e3a5f; }
+        .template-card h3 {
+            margin: 0 0 8px 0; font-size: 16px; color: #ffffff;
+        }
+        .template-card p {
+            margin: 0 0 8px 0; font-size: 13px; color: #969696; line-height: 1.4;
+        }
+        .template-card .badge {
+            display: inline-block; background-color: #0e639c; color: #ffffff;
+            padding: 2px 8px; border-radius: 3px; font-size: 11px;
+        }
     </style>
 </head>
 <body>
@@ -94,6 +115,7 @@
                 <div class="form-group">
                     <label for="resolution">Resolution</label>
                     <select id="resolution" class="form-control">
+                        <option value="410X502">410X502</option>
                         <option value="480X272">480X272</option>
                         <option value="800X480">800X480</option>
                         <option value="1024X600">1024X600</option>
@@ -147,12 +169,77 @@
     
     <div id="template-tab" class="tab-content" style="display: none;">
         <div class="form-container">
-            <p>Template project feature coming soon.</p>
+            <div class="form-group">
+                <label>Select Template</label>
+                <div id="templateList" class="template-list"></div>
+            </div>
+            
+            <div class="form-group">
+                <label for="templateProjectName">Project name</label>
+                <input type="text" id="templateProjectName" class="form-control" value="NewProject" />
+            </div>
+            
+            <div class="form-group">
+                <label for="templateSaveLocation">Save location</label>
+                <div class="input-group">
+                    <input type="text" id="templateSaveLocation" class="form-control" value="{{homeDir}}" />
+                    <button class="btn-icon" id="selectTemplateFolderButton">📁</button>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="templateAppId">APP ID</label>
+                    <input type="text" id="templateAppId" class="form-control" value="com.example.NewProject" />
+                </div>
+                <div class="form-group">
+                    <label for="templateResolution">Resolution</label>
+                    <select id="templateResolution" class="form-control">
+                        <option value="410X502">410X502</option>
+                        <option value="480X272">480X272</option>
+                        <option value="800X480">800X480</option>
+                        <option value="1024X600">1024X600</option>
+                        <option value="1280X720">1280X720</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="templateMinSdk">Minimum SDK</label>
+                    <select id="templateMinSdk" class="form-control">
+                        <option value="API 2: HoneyGUI V1.1.0">API 2: HoneyGUI V1.1.0</option>
+                        <option value="API 3: HoneyGUI V1.2.0">API 3: HoneyGUI V1.2.0</option>
+                        <option value="API 4: HoneyGUI V2.0.0">API 4: HoneyGUI V2.0.0</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="templatePixelMode">Pixel Mode</label>
+                    <select id="templatePixelMode" class="form-control">
+                        <option value="ARGB8888">ARGB8888</option>
+                        <option value="RGB565">RGB565</option>
+                        <option value="ARGB4444">ARGB4444</option>
+                        <option value="L8">L8</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="templateSdkPath">HoneyGUI SDK Path</label>
+                <div class="input-group">
+                    <input type="text" id="templateSdkPath" class="form-control" placeholder="Default: ~/.HoneyGUI-SDK" />
+                    <button class="btn-icon" id="selectTemplateSdkButton">📁</button>
+                </div>
+            </div>
+            
+            <button id="createTemplateButton" class="btn-create" disabled>Create from Template</button>
         </div>
     </div>
     
     <script nonce="{{nonce}}">
         const vscode = acquireVsCodeApi();
+        let selectedTemplate = null;
+        let templates = [];
         
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
@@ -166,6 +253,8 @@
         
         function selectFolder() { vscode.postMessage({ command: 'selectFolder' }); }
         function selectSdkPath() { vscode.postMessage({ command: 'selectSdkPath' }); }
+        function selectTemplateFolder() { vscode.postMessage({ command: 'selectTemplateFolder' }); }
+        function selectTemplateSdkPath() { vscode.postMessage({ command: 'selectTemplateSdkPath' }); }
         
         function validateForm() {
             const projectName = document.getElementById('projectName').value.trim();
@@ -173,6 +262,14 @@
             const createButton = document.getElementById('createButton');
             if (projectName || saveLocation) hideError();
             if (createButton) createButton.disabled = !projectName || !saveLocation;
+            
+            // Validate template form
+            const templateProjectName = document.getElementById('templateProjectName')?.value.trim();
+            const templateSaveLocation = document.getElementById('templateSaveLocation')?.value.trim();
+            const createTemplateButton = document.getElementById('createTemplateButton');
+            if (createTemplateButton) {
+                createTemplateButton.disabled = !templateProjectName || !templateSaveLocation || !selectedTemplate;
+            }
         }
         
         function createProject() {
@@ -188,6 +285,61 @@
                     pixelMode: document.getElementById('pixelMode').value,
                     honeyguiSdkPath: document.getElementById('honeyguiSdkPath').value.trim() || ''
                 }
+            });
+        }
+        
+        function createTemplateProject() {
+            if (!selectedTemplate) {
+                showError('Please select a template');
+                return;
+            }
+            vscode.postMessage({
+                command: 'createTemplateProject',
+                config: {
+                    templateId: selectedTemplate,
+                    projectName: document.getElementById('templateProjectName').value.trim(),
+                    saveLocation: document.getElementById('templateSaveLocation').value.trim(),
+                    appId: document.getElementById('templateAppId').value.trim(),
+                    resolution: document.getElementById('templateResolution').value,
+                    targetEngine: 'honeygui',
+                    minSdk: document.getElementById('templateMinSdk').value,
+                    pixelMode: document.getElementById('templatePixelMode').value,
+                    honeyguiSdkPath: document.getElementById('templateSdkPath').value.trim() || ''
+                }
+            });
+        }
+        
+        function selectTemplateCard(templateId) {
+            selectedTemplate = templateId;
+            document.querySelectorAll('.template-card').forEach(card => {
+                card.classList.toggle('selected', card.dataset.templateId === templateId);
+            });
+            
+            // Update recommended resolution
+            const template = templates.find(t => t.id === templateId);
+            if (template) {
+                document.getElementById('templateResolution').value = template.recommendedResolution;
+            }
+            
+            validateForm();
+        }
+        
+        function renderTemplates(templateList) {
+            templates = templateList;
+            const container = document.getElementById('templateList');
+            container.innerHTML = templateList.map(t => `
+                <div class="template-card" data-template-id="${t.id}">
+                    <h3>${t.name}</h3>
+                    <p>${t.description}</p>
+                    <span class="badge">${t.category}</span>
+                </div>
+            `).join('');
+            
+            // 添加点击事件监听
+            container.querySelectorAll('.template-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    selectTemplateCard(this.dataset.templateId);
+                });
             });
         }
         
@@ -209,10 +361,21 @@
             document.getElementById('selectSdkButton')?.addEventListener('click', selectSdkPath);
             document.getElementById('createButton')?.addEventListener('click', createProject);
             
+            document.getElementById('selectTemplateFolderButton')?.addEventListener('click', selectTemplateFolder);
+            document.getElementById('selectTemplateSdkButton')?.addEventListener('click', selectTemplateSdkPath);
+            document.getElementById('createTemplateButton')?.addEventListener('click', createTemplateProject);
+            
             ['saveLocation', 'appId', 'projectName'].forEach(id => {
                 document.getElementById(id)?.addEventListener('input', validateForm);
             });
             ['resolution', 'minSdk', 'pixelMode'].forEach(id => {
+                document.getElementById(id)?.addEventListener('change', validateForm);
+            });
+            
+            ['templateSaveLocation', 'templateAppId', 'templateProjectName'].forEach(id => {
+                document.getElementById(id)?.addEventListener('input', validateForm);
+            });
+            ['templateResolution', 'templateMinSdk', 'templatePixelMode'].forEach(id => {
                 document.getElementById(id)?.addEventListener('change', validateForm);
             });
             
@@ -223,6 +386,17 @@
                     appIdInput.value = 'com.example.' + name;
                 }
             });
+            
+            document.getElementById('templateProjectName')?.addEventListener('input', function() {
+                const appIdInput = document.getElementById('templateAppId');
+                const name = this.value.trim();
+                if (appIdInput.value.startsWith('com.example.')) {
+                    appIdInput.value = 'com.example.' + name;
+                }
+            });
+            
+            // Request templates from extension
+            vscode.postMessage({ command: 'getTemplates' });
             
             validateForm();
         });
@@ -235,6 +409,14 @@
                 validateForm();
             } else if (msg.command === 'sdkPathSelected') {
                 document.getElementById('honeyguiSdkPath').value = msg.sdkPath;
+            } else if (msg.command === 'templateFolderSelected') {
+                document.getElementById('templateSaveLocation').value = msg.folderPath;
+                hideError();
+                validateForm();
+            } else if (msg.command === 'templateSdkPathSelected') {
+                document.getElementById('templateSdkPath').value = msg.sdkPath;
+            } else if (msg.command === 'templatesLoaded') {
+                renderTemplates(msg.templates);
             } else if (msg.command === 'error') {
                 showError(msg.text);
             }

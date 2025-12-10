@@ -5,6 +5,7 @@ import { TemplateManager } from '../template/TemplateManager';
 import { HmlTemplateManager } from '../hml/HmlTemplateManager';
 import { WebviewUtils } from '../common/WebviewUtils';
 import { logger } from '../utils/Logger';
+import { getAllTemplateInfo, getTemplateById } from '../template/templates';
 
 /**
  * 项目创建面板管理类
@@ -84,8 +85,20 @@ export class CreateProjectPanel {
                     case 'selectSdkPath':
                         await this._selectSdkPath();
                         break;
+                    case 'selectTemplateFolder':
+                        await this._selectTemplateFolder();
+                        break;
+                    case 'selectTemplateSdkPath':
+                        await this._selectTemplateSdkPath();
+                        break;
+                    case 'getTemplates':
+                        this._sendTemplates();
+                        break;
                     case 'createProject':
                         await this._createProject(message.config);
+                        break;
+                    case 'createTemplateProject':
+                        await this._createTemplateProject(message.config);
                         break;
                     case 'notify':
                         vscode.window.showInformationMessage(message.text);
@@ -183,6 +196,66 @@ export class CreateProjectPanel {
             logger.error(`选择 SDK 路径失败: ${error}`);
             WebviewUtils.handleWebviewError(this._panel.webview, 'Failed to select SDK path');
         }
+    }
+
+    /**
+     * 选择模板项目文件夹
+     */
+    private async _selectTemplateFolder(): Promise<void> {
+        try {
+            const options: vscode.OpenDialogOptions = {
+                canSelectFolders: true,
+                canSelectFiles: false,
+                canSelectMany: false,
+                openLabel: 'Select project location'
+            };
+            
+            const result = await vscode.window.showOpenDialog(options);
+            if (result && result.length > 0) {
+                this._panel.webview.postMessage({
+                    command: 'templateFolderSelected',
+                    folderPath: result[0].fsPath
+                });
+            }
+        } catch (error) {
+            logger.error(`选择文件夹失败: ${error}`);
+            WebviewUtils.handleWebviewError(this._panel.webview, 'Failed to select folder');
+        }
+    }
+
+    /**
+     * 选择模板项目的 SDK 路径
+     */
+    private async _selectTemplateSdkPath(): Promise<void> {
+        try {
+            const options: vscode.OpenDialogOptions = {
+                canSelectFolders: true,
+                canSelectFiles: false,
+                canSelectMany: false,
+                openLabel: 'Select HoneyGUI SDK location'
+            };
+            
+            const result = await vscode.window.showOpenDialog(options);
+            if (result && result.length > 0) {
+                this._panel.webview.postMessage({
+                    command: 'templateSdkPathSelected',
+                    sdkPath: result[0].fsPath
+                });
+            }
+        } catch (error) {
+            logger.error(`选择 SDK 路径失败: ${error}`);
+            WebviewUtils.handleWebviewError(this._panel.webview, 'Failed to select SDK path');
+        }
+    }
+
+    /**
+     * 发送模板列表到 Webview
+     */
+    private _sendTemplates(): void {
+        this._panel.webview.postMessage({
+            command: 'templatesLoaded',
+            templates: getAllTemplateInfo()
+        });
     }
 
     /**
@@ -354,6 +427,180 @@ export class CreateProjectPanel {
 
         // SDK 路径已保存到 project.json，项目将直接引用 SDK 而不拷贝文件
         logger.info(`[CreateProjectPanel] Project created with target engine: ${targetEngine}, SDK path: ${projectConfig.honeyguiSdkPath || 'default'}`);
+    }
+
+    /**
+     * 创建模板项目
+     */
+    private async _createTemplateProject(config: any): Promise<void> {
+        try {
+            const { templateId, projectName, saveLocation, appId, honeyguiSdkPath } = config;
+
+            logger.info(`[CreateProjectPanel] Creating template project: templateId=${templateId}, projectName=${projectName}`);
+
+            // 验证必填字段
+            if (!templateId || !projectName || !saveLocation || !appId) {
+                logger.error('[CreateProjectPanel] Validation failed: Missing required fields');
+                this._panel.webview.postMessage({
+                    command: 'error',
+                    text: '请填写所有必填字段并选择模板'
+                });
+                return;
+            }
+
+            // 验证项目名称格式
+            const invalidChars = /[<>:*"?|\\/]/;
+            if (invalidChars.test(projectName)) {
+                logger.error(`[CreateProjectPanel] Invalid project name: ${projectName}`);
+                this._panel.webview.postMessage({
+                    command: 'error',
+                    text: '项目名称包含非法字符，不能包含: < > : * " ? | \\ /'
+                });
+                return;
+            }
+
+            const projectPath = path.join(saveLocation, projectName);
+
+            // 检查项目路径是否已存在
+            if (fs.existsSync(projectPath)) {
+                logger.error(`[CreateProjectPanel] Project directory already exists: ${projectPath}`);
+                this._panel.webview.postMessage({
+                    command: 'error',
+                    text: `项目已存在: "${projectName}"\n\n目录 "${projectPath}" 已存在。\n\n请选择其他名称或删除现有项目。`
+                });
+                return;
+            }
+
+            // 显示创建中消息
+            vscode.window.showInformationMessage(`Creating project from template: ${projectName}...`);
+
+            // 获取模板实例
+            const template = getTemplateById(templateId);
+            if (!template) {
+                throw new Error(`Template not found: ${templateId}`);
+            }
+
+            // 设置 SDK 路径
+            const sdkPath = honeyguiSdkPath || path.join(require('os').homedir(), '.HoneyGUI-SDK');
+
+            // 使用模板创建项目（拷贝完整项目）
+            await template.createProject(projectPath, projectName, appId, sdkPath);
+
+            // 显示成功消息
+            this._panel.webview.postMessage({
+                command: 'notify',
+                text: `Template project created successfully: ${projectPath}`
+            });
+
+            // 保存待激活项目信息
+            await this._context.globalState.update('pendingProjectActivation', {
+                projectPath: projectPath,
+                projectName: projectName,
+                timestamp: Date.now()
+            });
+
+            // 自动打开项目文件夹
+            await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(projectPath), false);
+
+            // 关闭Webview
+            this.dispose();
+
+        } catch (error) {
+            logger.error(`创建模板项目失败: ${error}`);
+            this._panel.webview.postMessage({
+                command: 'error',
+                text: `Failed to create template project: ${error instanceof Error ? error.message : 'Unknown error'}`
+            });
+        }
+    }
+
+    /**
+     * 创建模板项目结构
+     */
+    private async _createTemplateProjectStructure(
+        projectPath: string,
+        projectName: string,
+        appId: string,
+        resolution: string,
+        targetEngine: string,
+        minSdk: string,
+        pixelMode: string,
+        templateId: string,
+        honeyguiSdkPath?: string
+    ): Promise<void> {
+        // 创建目录结构
+        fs.mkdirSync(projectPath, { recursive: true });
+        fs.mkdirSync(path.join(projectPath, 'ui'), { recursive: true });
+        fs.mkdirSync(path.join(projectPath, 'ui', 'main'), { recursive: true });
+        fs.mkdirSync(path.join(projectPath, 'src'), { recursive: true });
+        fs.mkdirSync(path.join(projectPath, 'assets'), { recursive: true });
+
+        // 获取模板实例
+        const template = getTemplateById(templateId);
+        if (!template) {
+            throw new Error(`Template not found: ${templateId}`);
+        }
+
+        // 使用模板生成 HML 文件
+        const hmlFileName = `${projectName}Main.hml`;
+        const mainHmlContent = template.generateHml({
+            projectName,
+            resolution,
+            appId,
+            minSdk,
+            pixelMode
+        });
+        fs.writeFileSync(path.join(projectPath, 'ui', 'main', hmlFileName), mainHmlContent, 'utf8');
+
+        // 拷贝模板资源
+        await template.copyAssets(projectPath);
+
+        // 创建README文件
+        const readmeContent = `# ${projectName}
+
+Created from template: **${template.name}**
+
+${template.description}
+
+## Project Info
+- APP ID: ${appId}
+- Resolution: ${resolution}
+- Target Engine: ${targetEngine}
+- Min SDK: ${minSdk}
+- Pixel Mode: ${pixelMode}
+
+## Getting Started
+
+1. Open the HML file in \`ui/main/${hmlFileName}\`
+2. Design your UI in the visual designer
+3. Generate code and compile
+
+Created: ${new Date().toLocaleString()}
+`;
+        fs.writeFileSync(path.join(projectPath, 'README.md'), readmeContent, 'utf8');
+
+        // 创建 project.json 项目配置文件
+        const projectConfig = {
+            name: projectName,
+            appId: appId,
+            version: '1.0.0',
+            resolution: resolution,
+            targetEngine: targetEngine,
+            minSdk: minSdk,
+            pixelMode: pixelMode,
+            mainHmlFile: `ui/main/${hmlFileName}`,
+            honeyguiSdkPath: honeyguiSdkPath || path.join(require('os').homedir(), '.HoneyGUI-SDK'),
+            template: templateId,
+            created: new Date().toISOString()
+        };
+
+        fs.writeFileSync(
+            path.join(projectPath, 'project.json'),
+            JSON.stringify(projectConfig, null, 2),
+            'utf8'
+        );
+
+        logger.info(`[CreateProjectPanel] Template project created: ${templateId}`);
     }
 
     /**
