@@ -62,34 +62,67 @@ const Model3DPreview: React.FC<{ modelPath: string }> = ({ modelPath }) => {
     if (!containerRef.current || !modelPath) return;
 
     const scene = new THREE.Scene();
+    scene.background = null;
+    
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
-    camera.position.set(0, 0, -3);
+    camera.position.set(0, 0, -5);
     camera.lookAt(0, 0, 0);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(100, 100);
-    renderer.setClearColor(0x000000, 0);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.sortObjects = true;
     containerRef.current.appendChild(renderer.domElement);
 
+    // 添加光源（与设计窗口一致）
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
     scene.add(ambientLight);
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    directionalLight.position.set(5, -5, -5);
-    scene.add(directionalLight);
+    
+    const directionalLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
+    directionalLight1.position.set(5, -5, -5);
+    scene.add(directionalLight1);
+    
+    const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
+    directionalLight2.position.set(-5, 5, 5);
+    scene.add(directionalLight2);
 
     const ext = modelPath.split('.').pop()?.toLowerCase();
 
+    const onLoadSuccess = (model: THREE.Object3D) => {
+      // 调整坐标系：正X向右，正Y向下，正Z向里（与设计窗口一致）
+      model.scale.set(1, -1, -1);
+      model.rotation.y = Math.PI;
+      
+      scene.add(model);
+      
+      // 计算模型边界并居中
+      const box = new THREE.Box3().setFromObject(model);
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+      
+      // 将模型移到中心
+      model.position.sub(center);
+      
+      // 调整相机位置以适应模型大小
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const fov = camera.fov * (Math.PI / 180);
+      let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+      cameraZ *= 1.5;
+      camera.position.z = -cameraZ;
+      camera.lookAt(0, 0, 0);
+      
+      renderer.render(scene, camera);
+    };
+
     if (ext === 'gltf' || ext === 'glb') {
       const loader = new GLTFLoader();
+      const gltfPath = modelPath.substring(0, modelPath.lastIndexOf('/') + 1);
+      const gltfFileName = modelPath.substring(modelPath.lastIndexOf('/') + 1);
+      
+      loader.setPath(gltfPath);
       loader.load(
-        modelPath,
-        (gltf) => {
-          const model = gltf.scene;
-          model.scale.set(1, -1, -1);
-          model.rotation.y = Math.PI;
-          scene.add(model);
-          renderer.render(scene, camera);
-        },
+        gltfFileName,
+        (gltf) => onLoadSuccess(gltf.scene),
         undefined,
         () => setError(true)
       );
@@ -97,19 +130,60 @@ const Model3DPreview: React.FC<{ modelPath: string }> = ({ modelPath }) => {
       const mtlPath = modelPath.replace(/\.obj$/i, '.mtl');
       const mtlLoader = new MTLLoader();
       
+      const texturePath = mtlPath.substring(0, mtlPath.lastIndexOf('/') + 1);
+      const mtlFileName = mtlPath.substring(mtlPath.lastIndexOf('/') + 1);
+      
+      mtlLoader.setPath(texturePath);
       mtlLoader.load(
-        mtlPath,
+        mtlFileName,
         (materials) => {
           materials.preload();
+          
+          // 修复材质（与设计窗口一致）
+          Object.keys(materials.materials).forEach((key) => {
+            const mat = materials.materials[key] as any;
+            mat.side = THREE.DoubleSide;
+            mat.flatShading = false;
+            
+            if (mat.opacity < 1.0 || mat.transparent) {
+              mat.transparent = true;
+              mat.alphaTest = 0.5;
+            }
+            
+            if (mat.map) {
+              mat.map.needsUpdate = true;
+              mat.map.minFilter = THREE.LinearFilter;
+              mat.map.magFilter = THREE.LinearFilter;
+              mat.map.anisotropy = 16;
+              
+              if (mat.map.format === THREE.RGBAFormat) {
+                mat.transparent = true;
+                mat.alphaTest = 0.5;
+              }
+            }
+            
+            mat.needsUpdate = true;
+          });
+          
           const objLoader = new OBJLoader();
+          const objPath = modelPath.substring(0, modelPath.lastIndexOf('/') + 1);
+          const objFileName = modelPath.substring(modelPath.lastIndexOf('/') + 1);
+          
+          objLoader.setPath(objPath);
           objLoader.setMaterials(materials);
           objLoader.load(
-            modelPath,
+            objFileName,
             (obj) => {
-              obj.scale.set(1, -1, -1);
-              obj.rotation.y = Math.PI;
-              scene.add(obj);
-              renderer.render(scene, camera);
+              // 确保材质正确应用
+              obj.traverse((child: any) => {
+                if (child.isMesh && child.material) {
+                  if (child.material.type === 'MeshPhongMaterial') {
+                    child.material.side = THREE.DoubleSide;
+                    child.material.needsUpdate = true;
+                  }
+                }
+              });
+              onLoadSuccess(obj);
             },
             undefined,
             () => setError(true)
@@ -117,14 +191,24 @@ const Model3DPreview: React.FC<{ modelPath: string }> = ({ modelPath }) => {
         },
         undefined,
         () => {
+          // MTL 加载失败，使用默认材质
           const objLoader = new OBJLoader();
+          const objPath = modelPath.substring(0, modelPath.lastIndexOf('/') + 1);
+          const objFileName = modelPath.substring(modelPath.lastIndexOf('/') + 1);
+          
+          objLoader.setPath(objPath);
           objLoader.load(
-            modelPath,
+            objFileName,
             (obj) => {
-              obj.scale.set(1, -1, -1);
-              obj.rotation.y = Math.PI;
-              scene.add(obj);
-              renderer.render(scene, camera);
+              obj.traverse((child: any) => {
+                if (child.isMesh) {
+                  child.material = new THREE.MeshStandardMaterial({
+                    color: 0xcccccc,
+                    side: THREE.DoubleSide
+                  });
+                }
+              });
+              onLoadSuccess(obj);
             },
             undefined,
             () => setError(true)
