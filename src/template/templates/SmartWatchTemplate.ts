@@ -3,7 +3,7 @@
  */
 
 import * as path from 'path';
-import { BaseTemplate } from '../../BaseTemplate';
+import { BaseTemplate } from './BaseTemplate';
 
 export class SmartWatchTemplate extends BaseTemplate {
     id = 'smartwatch';
@@ -14,6 +14,6 @@ export class SmartWatchTemplate extends BaseTemplate {
     
     protected getTemplateProjectPath(): string {
         // 指向项目根目录的 template-projects/smartwatch
-        return path.join(__dirname, '..', '..', '..', '..', '..', 'template-projects', 'smartwatch');
+        return path.join(__dirname, '..', '..', '..', 'template-projects', 'smartwatch');
     }
 }

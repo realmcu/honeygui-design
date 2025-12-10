@@ -35,7 +35,6 @@ export const widgetRegistry: Record<string, React.FC<WidgetProps>> = {
   hg_slider: SliderWidget,
   hg_view: ContainerWidget,
   hg_window: ContainerWidget,
-  hg_screen: ContainerWidget,
   hg_image: ImageWidget,
   hg_canvas: ContainerWidget,
   hg_list: ListWidget,

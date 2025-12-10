@@ -270,7 +270,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     }
 
     // 容器组件需要渲染子组件
-    const isContainer = ['hg_view', 'hg_window', 'hg_screen', 'hg_canvas', 'hg_list', 'hg_list_item'].includes(component.type);
+    const isContainer = ['hg_view', 'hg_window', 'hg_canvas', 'hg_list', 'hg_list_item'].includes(component.type);
     
     if (isContainer) {
       // 正常渲染所有子组件

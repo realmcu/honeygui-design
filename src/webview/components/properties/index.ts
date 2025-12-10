@@ -19,7 +19,6 @@ export const propertyPanelRegistry: Record<ComponentType, React.FC<PropertyPanel
   hg_slider: DefaultProperties,
   hg_image: DefaultProperties,
   hg_window: DefaultProperties,
-  hg_screen: DefaultProperties,
   hg_canvas: DefaultProperties,
   hg_list: DefaultProperties,
   hg_list_item: ListItemProperties,

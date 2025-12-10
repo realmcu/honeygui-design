@@ -137,35 +137,9 @@ const parseResolutionStr = (res?: string): { width: number; height: number } => 
   };
 };
 
-// 创建默认hg_screen容器
-const createDefaultScreen = (resolution?: string): Component => {
-  const generateSimpleId = (): string => `hg_screen_${Date.now()}`;
-  const size = parseResolutionStr(resolution);
-  return {
-    id: generateSimpleId(),
-    type: 'hg_screen' as ComponentType,
-    name: 'Screen',
-    position: {
-      x: 50,
-      y: 50,
-      width: size.width,
-      height: size.height
-    },
-    style: {
-      backgroundColor: '#000000'
-    },
-    visible: true,
-    enabled: true,
-    locked: false,
-    zIndex: 0,
-    children: [],
-    parent: null
-  };
-};
-
 export const useDesignerStore = create<DesignerStore>((set, get) => ({
   // State
-  components: [], // 初始化时不创建hg_screen，等待projectConfig加载
+  components: [],
   projectConfig: null as any, // 项目配置（分辨率等）
   selectedComponent: null,
   selectedComponents: [],
@@ -443,14 +417,10 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   // Project configuration
   setProjectConfig: (config) => {
     set({ projectConfig: config, canvasSize: parseResolutionStr(config?.resolution) });
-    // 不再自动创建默认hg_screen，信任从后端加载的数据
-    // 如果确实需要hg_screen，后端会在loadHml时提供
   },
 
   // Initialize with project config
   initializeWithProjectConfig: (config) => {
-    // 信任从后端加载的组件数据，不再自动创建默认hg_screen
-    // 后端会在loadHml时提供正确的组件树
     set({
       projectConfig: config,
       selectedComponent: null,

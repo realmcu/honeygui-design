@@ -3,7 +3,7 @@
  */
 
 import * as path from 'path';
-import { BaseTemplate } from '../../BaseTemplate';
+import { BaseTemplate } from './BaseTemplate';
 
 export class SettingsTemplate extends BaseTemplate {
     id = 'settings';
@@ -13,6 +13,6 @@ export class SettingsTemplate extends BaseTemplate {
     recommendedResolution = '480X272';
     
     protected getTemplateProjectPath(): string {
-        return path.join(__dirname, '..', '..', '..', '..', '..', 'template-projects', 'settings');
+        return path.join(__dirname, '..', '..', '..', 'template-projects', 'settings');
     }
 }

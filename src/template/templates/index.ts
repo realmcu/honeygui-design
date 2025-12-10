@@ -3,9 +3,9 @@
  */
 
 import { ITemplate, TemplateInfo } from './ITemplate';
-import { SmartWatchTemplate } from './wearable/smartwatch/SmartWatchTemplate';
-import { SettingsTemplate } from './utility/settings/SettingsTemplate';
-import { DashboardTemplate } from './utility/dashboard/DashboardTemplate';
+import { SmartWatchTemplate } from './SmartWatchTemplate';
+import { SettingsTemplate } from './SettingsTemplate';
+import { DashboardTemplate } from './DashboardTemplate';
 
 /**
  * 所有可用模板

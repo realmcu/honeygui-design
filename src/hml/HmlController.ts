@@ -205,14 +205,14 @@ export class HmlController {
         authorEmail?: string;
         resolution?: string;
     } = {}): HmlDocument {
-        // 创建默认的screen组件（新格式）
+        // 创建默认的 view 组件（新格式）
         const resolution = options.resolution || '480X272';
         const size = this._parseResolution(resolution);
 
-        const screenComponent: Component = {
-            id: 'hg_screen_' + Date.now(),
-            type: 'hg_screen',
-            name: 'Screen',
+        const viewComponent: Component = {
+            id: 'hg_view_' + Date.now(),
+            type: 'hg_view',
+            name: 'MainView',
             position: {
                 x: 50,
                 y: 50,
@@ -248,7 +248,7 @@ export class HmlController {
                 }
             },
             view: {
-                components: [screenComponent]
+                components: [viewComponent]
             }
         };
 
