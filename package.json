@@ -187,6 +187,12 @@
         "icon": "$(debug-stop)"
       },
       {
+        "command": "honeygui.simulation.clean",
+        "title": "HoneyGUI: Clean Build",
+        "category": "HoneyGUI",
+        "icon": "$(trash)"
+      },
+      {
         "command": "honeygui.openResourceManager",
         "title": "HoneyGUI: Open Resource Manager",
         "category": "HoneyGUI"

@@ -299,6 +299,56 @@ export class SimulationRunner {
     }
 
     /**
+     * 清理编译产物
+     */
+    async clean(): Promise<void> {
+        const fs = require('fs');
+        const rimraf = require('rimraf');
+
+        this.log('开始清理编译产物...');
+
+        // 1. 清理 build 目录
+        const buildDir = path.join(this.projectRoot, 'build');
+        if (fs.existsSync(buildDir)) {
+            this.log(`清理 build 目录: ${buildDir}`);
+            await new Promise<void>((resolve, reject) => {
+                rimraf(buildDir, (err: Error | null) => {
+                    if (err) reject(err);
+                    else resolve();
+                });
+            });
+        }
+
+        // 2. 清理 src/autogen 目录
+        const autogenDir = path.join(this.projectRoot, 'src', 'autogen');
+        if (fs.existsSync(autogenDir)) {
+            this.log(`清理 autogen 目录: ${autogenDir}`);
+            await new Promise<void>((resolve, reject) => {
+                rimraf(autogenDir, (err: Error | null) => {
+                    if (err) reject(err);
+                    else resolve();
+                });
+            });
+        }
+
+        // 3. 清理 assets 目录下的 .bin 文件
+        const assetsDir = path.join(this.projectRoot, 'assets');
+        if (fs.existsSync(assetsDir)) {
+            this.log(`清理 assets 目录下的 .bin 文件`);
+            const files = fs.readdirSync(assetsDir);
+            for (const file of files) {
+                if (file.endsWith('.bin')) {
+                    const filePath = path.join(assetsDir, file);
+                    fs.unlinkSync(filePath);
+                    this.log(`删除: ${file}`);
+                }
+            }
+        }
+
+        this.log('清理完成');
+    }
+
+    /**
      * 清理资源
      */
     dispose(): void {
