@@ -211,6 +211,14 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     const component = state.components.find((c) => c.id === id);
     if (!component) return;
 
+    // 禁止删除主视图（根容器）
+    if (component.type === 'hg_view' && component.parent === null) {
+      if (vscodeAPI) {
+        vscodeAPI.postMessage({ command: 'notify', text: '主视图不可删除' });
+      }
+      return;
+    }
+
     set((state) => ({
       components: state.components.filter((c) => c.id !== id && c.parent !== id)
     }));
@@ -224,12 +232,27 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
 
   removeComponents: (ids) => {
     if (!ids || ids.length === 0) return;
+    
+    // 过滤掉主视图（根容器），不允许删除
+    const state = get();
+    const protectedIds = state.components
+      .filter(c => c.type === 'hg_view' && c.parent === null)
+      .map(c => c.id);
+    const filteredIds = ids.filter(id => !protectedIds.includes(id));
+    
+    if (filteredIds.length === 0) {
+      if (vscodeAPI) {
+        vscodeAPI.postMessage({ command: 'notify', text: '主视图不可删除' });
+      }
+      return;
+    }
+    
     set((state) => ({
-      components: state.components.filter((c) => !ids.includes(c.id) && !ids.includes(c.parent as any))
+      components: state.components.filter((c) => !filteredIds.includes(c.id) && !filteredIds.includes(c.parent as any))
     }));
     if (vscodeAPI) {
-      vscodeAPI.postMessage({ command: 'delete', content: { ids, components: get().components } });
-      vscodeAPI.postMessage({ command: 'notify', text: `批量删除控件: ${ids.length} 个` });
+      vscodeAPI.postMessage({ command: 'delete', content: { ids: filteredIds, components: get().components } });
+      vscodeAPI.postMessage({ command: 'notify', text: `批量删除控件: ${filteredIds.length} 个` });
     }
     get().saveToFile();
   },

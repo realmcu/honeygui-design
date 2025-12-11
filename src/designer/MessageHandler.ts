@@ -359,7 +359,7 @@ export class MessageHandler {
             const designName = path.basename(hmlDir);
 
             // 构建回调文件路径
-            const callbackFile = path.join(projectRoot, 'src', 'autogen', designName, `${designName}_callbacks.c`);
+            const callbackFile = path.join(projectRoot, 'src', 'callbacks', `${designName}_callbacks.c`);
             
             // 检查文件是否存在，如果不存在则先生成代码
             const fs = require('fs');

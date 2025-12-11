@@ -325,11 +325,15 @@ export class CreateProjectPanel {
                 return;
             }
             
-            // 显示创建中消息
-            vscode.window.showInformationMessage(`Creating project: ${projectName}...`);
-            
-            // 创建项目结构
-            await this._createProjectStructure(projectPath, projectName, appId, resolution, targetEngine || 'honeygui', minSdk, pixelMode, honeyguiSdkPath);
+            // 使用 withProgress 显示创建进度（完成后自动消失）
+            await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: `Creating project: ${projectName}...`,
+                cancellable: false
+            }, async () => {
+                // 创建项目结构
+                await this._createProjectStructure(projectPath, projectName, appId, resolution, targetEngine || 'honeygui', minSdk, pixelMode, honeyguiSdkPath);
+            });
             
             // 显示成功消息
             this._panel.webview.postMessage({
@@ -471,9 +475,6 @@ export class CreateProjectPanel {
                 return;
             }
 
-            // 显示创建中消息
-            vscode.window.showInformationMessage(`Creating project from template: ${projectName}...`);
-
             // 获取模板实例
             const template = getTemplateById(templateId);
             if (!template) {
@@ -483,8 +484,15 @@ export class CreateProjectPanel {
             // 设置 SDK 路径
             const sdkPath = honeyguiSdkPath || path.join(require('os').homedir(), '.HoneyGUI-SDK');
 
-            // 使用模板创建项目（拷贝完整项目）
-            await template.createProject(projectPath, projectName, appId, sdkPath);
+            // 使用 withProgress 显示创建进度（完成后自动消失）
+            await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: `Creating project from template: ${projectName}...`,
+                cancellable: false
+            }, async () => {
+                // 使用模板创建项目（拷贝完整项目）
+                await template.createProject(projectPath, projectName, appId, sdkPath);
+            });
 
             // 显示成功消息
             this._panel.webview.postMessage({

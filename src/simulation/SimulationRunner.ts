@@ -307,7 +307,7 @@ export class SimulationRunner {
 
         this.log('开始清理编译产物...');
 
-        // 1. 清理 build 目录
+        // 清理 build 目录（包含所有编译产物和转换后的资源）
         const buildDir = path.join(this.projectRoot, 'build');
         if (fs.existsSync(buildDir)) {
             this.log(`清理 build 目录: ${buildDir}`);
@@ -317,44 +317,6 @@ export class SimulationRunner {
                     else resolve();
                 });
             });
-        }
-
-        // 2. 清理 src/ui 目录
-        const uiDir = path.join(this.projectRoot, 'src', 'ui');
-        if (fs.existsSync(uiDir)) {
-            this.log(`清理 ui 目录: ${uiDir}`);
-            await new Promise<void>((resolve, reject) => {
-                rimraf(uiDir, (err: Error | null) => {
-                    if (err) reject(err);
-                    else resolve();
-                });
-            });
-        }
-
-        // 3. 清理 src/callbacks 目录
-        const callbacksDir = path.join(this.projectRoot, 'src', 'callbacks');
-        if (fs.existsSync(callbacksDir)) {
-            this.log(`清理 callbacks 目录: ${callbacksDir}`);
-            await new Promise<void>((resolve, reject) => {
-                rimraf(callbacksDir, (err: Error | null) => {
-                    if (err) reject(err);
-                    else resolve();
-                });
-            });
-        }
-
-        // 4. 清理 assets 目录下的 .bin 文件
-        const assetsDir = path.join(this.projectRoot, 'assets');
-        if (fs.existsSync(assetsDir)) {
-            this.log(`清理 assets 目录下的 .bin 文件`);
-            const files = fs.readdirSync(assetsDir);
-            for (const file of files) {
-                if (file.endsWith('.bin')) {
-                    const filePath = path.join(assetsDir, file);
-                    fs.unlinkSync(filePath);
-                    this.log(`删除: ${file}`);
-                }
-            }
         }
 
         this.log('清理完成');

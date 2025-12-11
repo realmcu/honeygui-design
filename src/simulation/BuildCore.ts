@@ -70,12 +70,12 @@ export class BuildCore {
     async copyGeneratedCode(): Promise<void> {
         this.logger.log('检查生成的代码...');
 
-        const srcAutogen = path.join(this.projectRoot, 'src', 'autogen');
-        if (!fs.existsSync(srcAutogen)) {
-            throw new Error(`生成的代码目录不存在: ${srcAutogen}`);
+        const srcDir = path.join(this.projectRoot, 'src');
+        if (!fs.existsSync(srcDir)) {
+            throw new Error(`生成的代码目录不存在: ${srcDir}`);
         }
 
-        const sconscript = path.join(srcAutogen, 'SConscript');
+        const sconscript = path.join(srcDir, 'SConscript');
         if (!fs.existsSync(sconscript)) {
             throw new Error(`SConscript 文件不存在: ${sconscript}，请先生成代码`);
         }
@@ -263,17 +263,17 @@ export class BuildCore {
             );
         }
 
-        // 在 DoBuilding 之前添加项目 autogen 代码的编译（仅当不存在时）
-        if (!content.includes('PROJECT_AUTOGEN')) {
-            const autogenInclude = `
-# Include project autogen code
-PROJECT_AUTOGEN = '${projectRootNormalized}/src/autogen'
-if os.path.exists(os.path.join(PROJECT_AUTOGEN, 'SConscript')):
-    objs.extend(SConscript(os.path.join(PROJECT_AUTOGEN, 'SConscript')))
+        // 在 DoBuilding 之前添加项目 src 代码的编译（仅当不存在时）
+        if (!content.includes('PROJECT_SRC')) {
+            const srcInclude = `
+# Include project src code
+PROJECT_SRC = '${projectRootNormalized}/src'
+if os.path.exists(os.path.join(PROJECT_SRC, 'SConscript')):
+    objs.extend(SConscript(os.path.join(PROJECT_SRC, 'SConscript')))
 `;
             content = content.replace(
                 /# Build\s*\nDoBuilding\(TARGET, objs\)/,
-                `${autogenInclude}\n# Build\nDoBuilding(TARGET, objs)`
+                `${srcInclude}\n# Build\nDoBuilding(TARGET, objs)`
             );
         }
         
