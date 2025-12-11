@@ -5,7 +5,7 @@
         <author name="HoneyGUI Design" />
     </meta>
     <view>
-        <hg_view id="watchFace" x="0" y="0" width="410" height="502" name="watchFace" backgroundColor="#000000">
+        <hg_view id="mainView" x="0" y="0" width="410" height="502" name="mainView" backgroundColor="#000000">
             <!-- Time Display -->
             <hg_text id="timeText" x="125" y="211" width="160" height="60" name="timeText"
                      text="12:30" fontSize="48" color="#FFFFFF" align="center" />

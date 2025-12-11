@@ -164,7 +164,7 @@ export const HgViewProperties: React.FC<PropertyPanelProps> = ({ component, onUp
                         >
                           <option value="">-- 选择目标视图 --</option>
                           {getAvailableViews().map(view => (
-                            <option key={view.id} value={view.name}>{view.name || view.id}</option>
+                            <option key={view.id} value={view.id}>{view.name || view.id}</option>
                           ))}
                         </select>
                       </div>
