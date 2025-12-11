@@ -90,6 +90,8 @@ export interface DesignerStore extends DesignerState {
   // View connections
   showViewConnections: boolean;
   setShowViewConnections: (show: boolean) => void;
+  showViewRelationModal: boolean;
+  setShowViewRelationModal: (show: boolean) => void;
 
   // Drag and drop
   startDrag: (componentId: string, mousePos: { x: number; y: number }) => void;
@@ -151,6 +153,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   canvasBackgroundColor: '#3c3c3c', // 默认画布背景色为深灰色
   editingMode: 'select',
   showViewConnections: true, // 默认显示视图连接
+  showViewRelationModal: false,
   undoStack: [],
   redoStack: [],
   vscodeAPI: null,
@@ -342,6 +345,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   setEditingMode: (mode) => set({ editingMode: mode }),
   setCanvasBackgroundColor: (color) => set({ canvasBackgroundColor: color }),
   setShowViewConnections: (show) => set({ showViewConnections: show }),
+  setShowViewRelationModal: (show) => set({ showViewRelationModal: show }),
 
   // Drag and drop
   startDrag: (componentId, mousePos) => {

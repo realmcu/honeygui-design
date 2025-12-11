@@ -6,6 +6,7 @@ import PropertiesPanel from './components/PropertiesPanel';
 import ComponentTree from './components/ComponentTree';
 import AssetsPanel from './components/AssetsPanel';
 import Toolbar from './components/Toolbar';
+import { ViewRelationModal } from './components/ViewRelationModal';
 import { Component, ComponentType } from './types';
 import useKeyboardShortcuts from './utils/keyboardShortcuts';
 import { getAbsolutePosition, findComponentAtPosition } from './utils/componentUtils';
@@ -29,6 +30,9 @@ const App: React.FC = () => {
     addComponent,
     setProjectConfig,
     setCanvasBackgroundColor,
+    components,
+    showViewRelationModal,
+    setShowViewRelationModal,
   } = useDesignerStore();
 
   // Tab 切换状态
@@ -852,6 +856,13 @@ const App: React.FC = () => {
           <PropertiesPanel />
         </div>
       </div>
+
+      {/* View Relation Modal */}
+      <ViewRelationModal
+        visible={showViewRelationModal}
+        onClose={() => setShowViewRelationModal(false)}
+        components={components}
+      />
     </div>
   );
 };
