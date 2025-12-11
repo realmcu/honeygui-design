@@ -319,19 +319,31 @@ export class SimulationRunner {
             });
         }
 
-        // 2. 清理 src/autogen 目录
-        const autogenDir = path.join(this.projectRoot, 'src', 'autogen');
-        if (fs.existsSync(autogenDir)) {
-            this.log(`清理 autogen 目录: ${autogenDir}`);
+        // 2. 清理 src/ui 目录
+        const uiDir = path.join(this.projectRoot, 'src', 'ui');
+        if (fs.existsSync(uiDir)) {
+            this.log(`清理 ui 目录: ${uiDir}`);
             await new Promise<void>((resolve, reject) => {
-                rimraf(autogenDir, (err: Error | null) => {
+                rimraf(uiDir, (err: Error | null) => {
                     if (err) reject(err);
                     else resolve();
                 });
             });
         }
 
-        // 3. 清理 assets 目录下的 .bin 文件
+        // 3. 清理 src/callbacks 目录
+        const callbacksDir = path.join(this.projectRoot, 'src', 'callbacks');
+        if (fs.existsSync(callbacksDir)) {
+            this.log(`清理 callbacks 目录: ${callbacksDir}`);
+            await new Promise<void>((resolve, reject) => {
+                rimraf(callbacksDir, (err: Error | null) => {
+                    if (err) reject(err);
+                    else resolve();
+                });
+            });
+        }
+
+        // 4. 清理 assets 目录下的 .bin 文件
         const assetsDir = path.join(this.projectRoot, 'assets');
         if (fs.existsSync(assetsDir)) {
             this.log(`清理 assets 目录下的 .bin 文件`);

@@ -69,12 +69,10 @@ export class CodeGenerator {
 
         const config = ProjectUtils.loadProjectConfig(projectRoot);
         const srcDir = ProjectUtils.getSrcDir(projectRoot);
-        const autogenDir = path.join(srcDir, 'autogen');
-        const userDir = path.join(srcDir, 'user'); // 用户代码目录
 
         // 生成项目入口文件（只生成一次）
         try {
-            const entryFile = EntryFileGenerator.generate(autogenDir, config.name || 'HoneyGUI');
+            const entryFile = EntryFileGenerator.generate(srcDir, config.name || 'HoneyGUI');
             logger.info(`入口文件: ${path.basename(entryFile)}`);
         } catch (error) {
             logger.error(`生成入口文件失败: ${error}`);
@@ -95,7 +93,7 @@ export class CodeGenerator {
             });
 
             try {
-                const result = await this.generateSingle(hmlFile, srcDir, designName, userDir);
+                const result = await this.generateSingle(hmlFile, srcDir, designName);
                 successCount++;
                 totalFiles += result.fileCount;
             } catch (error) {
@@ -122,21 +120,15 @@ export class CodeGenerator {
     private async generateSingle(
         hmlFile: string,
         srcDir: string,
-        designName: string,
-        userDir: string
+        designName: string
     ): Promise<{ fileCount: number }> {
         const hmlController = new HmlController();
         await hmlController.loadFile(hmlFile);
 
-        const outputDir = path.join(srcDir, 'autogen', designName);
-        const userCodeDir = path.join(userDir, designName);
-        const hmlFileName = path.basename(hmlFile, '.hml');
-        
         const generatorOptions: CodeGenOptions = {
-            outputDir,
-            hmlFileName,
-            enableProtectedAreas: true,
-            userCodeDir  // 启用用户代码目录
+            srcDir,
+            designName,
+            enableProtectedAreas: true
         };
 
         // 获取项目配置中的目标引擎

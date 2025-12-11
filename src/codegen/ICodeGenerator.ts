@@ -8,10 +8,9 @@ import { Component } from '../hml/types';
 export type OverwritePolicy = 'always' | 'once' | 'protected';
 
 export interface CodeGenOptions {
-  outputDir: string;
-  hmlFileName: string;  // HML文件名（不含扩展名）
+  srcDir: string;           // src 根目录
+  designName: string;       // 设计名称（用于文件命名）
   enableProtectedAreas?: boolean;
-  userCodeDir?: string; // 用户代码目录（可选）
 }
 
 export interface CodeGenResult {

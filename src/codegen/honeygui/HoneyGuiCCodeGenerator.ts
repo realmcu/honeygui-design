@@ -38,55 +38,67 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
   async generate(): Promise<CodeGenResult> {
     try {
       const files: string[] = [];
-      const baseName = this.options.hmlFileName;
+      const designName = this.options.designName;
+      const srcDir = this.options.srcDir;
 
-      // 确保输出目录存在
-      if (!fs.existsSync(this.options.outputDir)) {
-        fs.mkdirSync(this.options.outputDir, { recursive: true });
-      }
+      // 创建目录结构
+      const uiDir = path.join(srcDir, 'ui');
+      const callbacksDir = path.join(srcDir, 'callbacks');
+      const userDir = path.join(srcDir, 'user');
 
-      // === 自动生成文件（每次覆盖）===
-      // UI头文件
-      const uiHeaderFile = path.join(this.options.outputDir, `${baseName}_ui.h`);
-      fs.writeFileSync(uiHeaderFile, this.generateUiHeader(baseName));
+      [uiDir, callbacksDir, userDir].forEach(dir => {
+        if (!fs.existsSync(dir)) {
+          fs.mkdirSync(dir, { recursive: true });
+        }
+      });
+
+      // === UI 代码（每次覆盖）===
+      const uiHeaderFile = path.join(uiDir, `${designName}_ui.h`);
+      fs.writeFileSync(uiHeaderFile, this.generateUiHeader(designName));
       files.push(uiHeaderFile);
 
-      // UI实现文件
-      const uiImplFile = path.join(this.options.outputDir, `${baseName}_ui.c`);
-      fs.writeFileSync(uiImplFile, this.generateUiImplementation(baseName));
+      const uiImplFile = path.join(uiDir, `${designName}_ui.c`);
+      fs.writeFileSync(uiImplFile, this.generateUiImplementation(designName));
       files.push(uiImplFile);
 
-      // === 回调文件（只生成一次 + 保护区）===
-      const callbackHeaderFile = path.join(this.options.outputDir, `${baseName}_callbacks.h`);
-      const callbackImplFile = path.join(this.options.outputDir, `${baseName}_callbacks.c`);
+      // === 回调代码（保护区）===
+      const callbackHeaderFile = path.join(callbacksDir, `${designName}_callbacks.h`);
+      const callbackImplFile = path.join(callbacksDir, `${designName}_callbacks.c`);
       
       // 回调头文件：只生成一次
       if (!fs.existsSync(callbackHeaderFile)) {
-        fs.writeFileSync(callbackHeaderFile, this.generateCallbackHeader(baseName));
+        fs.writeFileSync(callbackHeaderFile, this.generateCallbackHeader(designName));
         files.push(callbackHeaderFile);
       }
       
       // 回调实现文件：保护区合并
       if (!fs.existsSync(callbackImplFile)) {
-        fs.writeFileSync(callbackImplFile, this.generateCallbackImplementation(baseName));
+        fs.writeFileSync(callbackImplFile, this.generateCallbackImplementation(designName));
         files.push(callbackImplFile);
       } else if (this.options.enableProtectedAreas) {
         const existing = fs.readFileSync(callbackImplFile, 'utf-8');
-        const merged = this.mergeProtectedAreas(existing, this.generateCallbackImplementation(baseName));
+        const merged = this.mergeProtectedAreas(existing, this.generateCallbackImplementation(designName));
         fs.writeFileSync(callbackImplFile, merged);
         files.push(callbackImplFile);
       }
 
-      // === 用户代码文件（只生成一次）===
-      if (this.options.userCodeDir) {
-        const userFiles = this.generateUserCodeFiles(baseName);
-        files.push(...userFiles);
+      // === 用户代码（只生成一次）===
+      const userHeaderFile = path.join(userDir, `${designName}.h`);
+      const userImplFile = path.join(userDir, `${designName}.c`);
+
+      if (!fs.existsSync(userHeaderFile)) {
+        fs.writeFileSync(userHeaderFile, this.generateUserHeader(designName));
+        files.push(userHeaderFile);
+      }
+
+      if (!fs.existsSync(userImplFile)) {
+        fs.writeFileSync(userImplFile, this.generateUserImplementation(designName));
+        files.push(userImplFile);
       }
 
       // 生成 SConscript
-      const autogenDir = path.dirname(this.options.outputDir);
-      SConscriptGenerator.generate(autogenDir);
-      files.push(path.join(autogenDir, 'SConscript'));
+      SConscriptGenerator.generate(srcDir);
+      files.push(path.join(srcDir, 'SConscript'));
 
       return { success: true, files };
     } catch (error) {
@@ -96,34 +108,6 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
         errors: [error instanceof Error ? error.message : String(error)]
       };
     }
-  }
-
-  /**
-   * 生成用户代码文件（只生成一次，不覆盖）
-   */
-  private generateUserCodeFiles(baseName: string): string[] {
-    const files: string[] = [];
-    const userDir = this.options.userCodeDir!;
-
-    if (!fs.existsSync(userDir)) {
-      fs.mkdirSync(userDir, { recursive: true });
-    }
-
-    // 用户头文件
-    const userHeaderFile = path.join(userDir, `${baseName}.h`);
-    if (!fs.existsSync(userHeaderFile)) {
-      fs.writeFileSync(userHeaderFile, this.generateUserHeader(baseName));
-      files.push(userHeaderFile);
-    }
-
-    // 用户实现文件
-    const userImplFile = path.join(userDir, `${baseName}.c`);
-    if (!fs.existsSync(userImplFile)) {
-      fs.writeFileSync(userImplFile, this.generateUserImplementation(baseName));
-      files.push(userImplFile);
-    }
-
-    return files;
   }
 
   /**
@@ -140,7 +124,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
  * 可以在此添加自定义逻辑、状态管理等
  */
 
-#include "${baseName}_ui.h"
+#include "../ui/${baseName}_ui.h"
 
 // 用户自定义函数声明
 void ${baseName}_init_user(void);
@@ -232,7 +216,7 @@ void ${baseName}_update_user(void) {
  * 生成时间: ${new Date().toISOString()}
  */
 #include "${baseName}_ui.h"
-#include "${baseName}_callbacks.h"
+#include "../callbacks/${baseName}_callbacks.h"
 #include <stddef.h>
 
 // 组件句柄定义
@@ -538,6 +522,7 @@ void ${baseName}_update_user(void) {
    */
   private generateCallbackImplementation(baseName: string): string {
     let code = `#include "${baseName}_callbacks.h"
+#include "../ui/${baseName}_ui.h"
 #include <stdio.h>
 
 // 事件回调函数实现

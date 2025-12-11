@@ -7,7 +7,7 @@ import { CodeGenerator } from '../services/CodeGenerator';
 import { ComponentManager } from './ComponentManager';
 import { FileManager } from './FileManager';
 import { MessageHandler } from './MessageHandler';
-import { CodeGenOptions } from '../codegen/honeygui';
+import { CodeGenOptions } from '../codegen/ICodeGenerator';
 import { WebviewContentProvider } from './WebviewContentProvider';
 import { DesignerService } from './DesignerService';
 import { CollaborationService, CollaborationMessage } from '../core/CollaborationService';
