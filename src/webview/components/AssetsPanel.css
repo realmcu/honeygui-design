@@ -5,13 +5,26 @@
   height: 100%;
 }
 
-.assets-filter {
+.assets-header {
   display: flex;
-  gap: 4px;
+  justify-content: space-between;
+  align-items: center;
   padding: 8px;
   border-bottom: 1px solid var(--vscode-panel-border);
   background: var(--vscode-sideBar-background);
   flex-shrink: 0;
+  gap: 8px;
+}
+
+.assets-filter {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+
+.assets-actions {
+  display: flex;
+  gap: 4px;
 }
 
 .filter-btn {
@@ -39,6 +52,24 @@
   color: var(--vscode-button-foreground);
   border-color: var(--vscode-button-background);
   font-weight: 500;
+}
+
+.upload-btn {
+  padding: 4px 8px;
+  border: 1px solid var(--vscode-input-border);
+  border-radius: 3px;
+  background: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.upload-btn:hover {
+  background: var(--vscode-button-secondaryHoverBackground);
+  border-color: var(--vscode-focusBorder);
 }
 
 .assets-content {

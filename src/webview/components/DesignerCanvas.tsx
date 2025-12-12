@@ -131,8 +131,9 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     // 计算鼠标相对于可拖拽组件的偏移量
     if (canvasRef.current) {
       const rect = canvasRef.current.getBoundingClientRect();
-      const mouseX = (e.clientX - rect.left - canvasOffset.x) / zoom;
-      const mouseY = (e.clientY - rect.top - canvasOffset.y) / zoom;
+      const effectiveZoom = zoom / (window.devicePixelRatio || 1);
+      const mouseX = (e.clientX - rect.left - canvasOffset.x) / effectiveZoom;
+      const mouseY = (e.clientY - rect.top - canvasOffset.y) / effectiveZoom;
       
       setDragOffset({
         x: mouseX - draggableComponent.position.x,
@@ -163,8 +164,9 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
       if (!rect) return;
 
       // 计算鼠标在画布中的位置
-      const mouseX = (e.clientX - rect.left - canvasOffset.x) / zoom;
-      const mouseY = (e.clientY - rect.top - canvasOffset.y) / zoom;
+      const effectiveZoom = zoom / (window.devicePixelRatio || 1);
+      const mouseX = (e.clientX - rect.left - canvasOffset.x) / effectiveZoom;
+      const mouseY = (e.clientY - rect.top - canvasOffset.y) / effectiveZoom;
       
       // 减去偏移量得到组件左上角的位置
       let x = mouseX - dragOffset.x;
@@ -356,7 +358,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
             position: 'absolute',
             left: canvasOffset.x,
             top: canvasOffset.y,
-            transform: `scale(${zoom})`,
+            transform: `scale(${zoom / (window.devicePixelRatio || 1)})`,
             transformOrigin: '0 0',
             width: canvasSize.width,
             height: canvasSize.height,
@@ -371,7 +373,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
         {/* 视图连接层 - 独立于组件层 */}
         <ViewConnectionLayer
           components={components}
-          zoom={zoom}
+          zoom={zoom / (window.devicePixelRatio || 1)}
           offset={canvasOffset}
           visible={showViewConnections}
         />

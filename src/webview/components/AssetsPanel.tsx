@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trash2, Edit2 } from 'lucide-react';
+import { Trash2, Edit2, Upload, FolderUp } from 'lucide-react';
 import { AssetFile } from '../types';
 import './AssetsPanel.css';
 import * as THREE from 'three';
@@ -257,6 +257,8 @@ const AssetsPanel: React.FC = () => {
   const [editingAsset, setEditingAsset] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
 
   // 按类型分类资源（递归处理）
   const categorizedAssets = React.useMemo(() => {
@@ -543,6 +545,44 @@ const AssetsPanel: React.FC = () => {
     }
   };
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const fileArray = Array.from(files);
+    const objFiles = fileArray.filter(f => f.name.toLowerCase().endsWith('.obj'));
+    
+    if (objFiles.length > 0) {
+      for (const objFile of objFiles) {
+        await processObjWithDependencies(objFile, files, '');
+      }
+      
+      const processedNames = new Set<string>();
+      for (const objFile of objFiles) {
+        const deps = await parseObjDependencies(objFile);
+        processedNames.add(objFile.name);
+        if (deps.mtlFile) processedNames.add(deps.mtlFile);
+        
+        const depFiles = findDependencyFiles(objFile.name, deps, files);
+        if (depFiles.mtl) {
+          const mtlDeps = await parseMtlDependencies(depFiles.mtl, deps);
+          mtlDeps.textures.forEach(t => processedNames.add(t));
+        }
+      }
+      
+      fileArray.forEach(file => {
+        if (!processedNames.has(file.name)) {
+          processFile(file, '');
+        }
+      });
+    } else {
+      fileArray.forEach(file => processFile(file, ''));
+    }
+    
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (folderInputRef.current) folderInputRef.current.value = '';
+  };
+
   const currentAssets = categorizedAssets[activeCategory];
   const emptyMessage = activeCategory === 'all' ? '暂无资源' : 
     activeCategory === 'images' ? '暂无图片资源' :
@@ -550,31 +590,65 @@ const AssetsPanel: React.FC = () => {
 
   return (
     <div className="assets-panel">
-      <div className="assets-filter">
-        <button 
-          className={`filter-btn ${activeCategory === 'all' ? 'active' : ''}`}
-          onClick={() => setActiveCategory('all')}
-        >
-          全部 ({counts.all})
-        </button>
-        <button 
-          className={`filter-btn ${activeCategory === 'images' ? 'active' : ''}`}
-          onClick={() => setActiveCategory('images')}
-        >
-          图片 ({counts.images})
-        </button>
-        <button 
-          className={`filter-btn ${activeCategory === 'videos' ? 'active' : ''}`}
-          onClick={() => setActiveCategory('videos')}
-        >
-          视频 ({counts.videos})
-        </button>
-        <button 
-          className={`filter-btn ${activeCategory === 'models' ? 'active' : ''}`}
-          onClick={() => setActiveCategory('models')}
-        >
-          3D ({counts.models})
-        </button>
+      <div className="assets-header">
+        <div className="assets-filter">
+          <button 
+            className={`filter-btn ${activeCategory === 'all' ? 'active' : ''}`}
+            onClick={() => setActiveCategory('all')}
+          >
+            全部 ({counts.all})
+          </button>
+          <button 
+            className={`filter-btn ${activeCategory === 'images' ? 'active' : ''}`}
+            onClick={() => setActiveCategory('images')}
+          >
+            图片 ({counts.images})
+          </button>
+          <button 
+            className={`filter-btn ${activeCategory === 'videos' ? 'active' : ''}`}
+            onClick={() => setActiveCategory('videos')}
+          >
+            视频 ({counts.videos})
+          </button>
+          <button 
+            className={`filter-btn ${activeCategory === 'models' ? 'active' : ''}`}
+            onClick={() => setActiveCategory('models')}
+          >
+            3D ({counts.models})
+          </button>
+        </div>
+        <div className="assets-actions">
+          <button 
+            className="upload-btn" 
+            onClick={() => fileInputRef.current?.click()}
+            title="上传文件"
+          >
+            <Upload size={16} />
+          </button>
+          <button 
+            className="upload-btn" 
+            onClick={() => folderInputRef.current?.click()}
+            title="上传文件夹"
+          >
+            <FolderUp size={16} />
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept=".png,.jpg,.jpeg,.gif,.bmp,.svg,.webp,.mp4,.avi,.mov,.mkv,.webm,.gltf,.glb,.obj,.mtl"
+            style={{ display: 'none' }}
+            onChange={handleFileSelect}
+          />
+          <input
+            ref={folderInputRef}
+            type="file"
+            multiple
+            {...({ webkitdirectory: '', directory: '' } as any)}
+            style={{ display: 'none' }}
+            onChange={handleFileSelect}
+          />
+        </div>
       </div>
       <div 
         className={`assets-content ${isDragOver ? 'drag-over' : ''}`}
