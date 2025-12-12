@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hml>
+    <meta>
+        <project name="{{PROJECT_NAME}}" appId="{{APP_ID}}" resolution="800X480" minSdk="API 2: HoneyGUI V1.1.0" pixelMode="ARGB8888" />
+        <author name="HoneyGUI Design" />
+    </meta>
+    <view>
+        <hg_view id="mainView" x="69" y="57" width="800" height="480" backgroundColor="#000000" name="mainView">
+            <hg_image id="hg_image_1765440312282_hnzy" x="285" y="133" width="190" height="190" src="assets/StartEngine.png" name="image_2282" zIndex="1" />
+        </hg_view>
+    </view>
+</hml>

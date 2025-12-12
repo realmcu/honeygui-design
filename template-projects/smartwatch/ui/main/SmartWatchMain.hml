@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <hml>
     <meta>
-        <project name="{{PROJECT_NAME}}" appId="{{APP_ID}}" resolution="410X502" minSdk="API 2: HoneyGUI V1.1.0" pixelMode="ARGB8888" />
+        <project name="SmartWatchTemplate" appId="com.honeygui.smartwatch" resolution="410X502" minSdk="API 2: HoneyGUI V1.1.0" pixelMode="ARGB8888" />
         <author name="HoneyGUI Design" />
     </meta>
     <view>

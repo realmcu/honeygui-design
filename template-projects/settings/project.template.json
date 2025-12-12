@@ -1,0 +1,13 @@
+{
+  "name": "{{PROJECT_NAME}}",
+  "appId": "{{APP_ID}}",
+  "version": "1.0.0",
+  "resolution": "480X272",
+  "targetEngine": "honeygui",
+  "minSdk": "API 2: HoneyGUI V1.1.0",
+  "pixelMode": "ARGB8888",
+  "mainHmlFile": "ui/main/{{PROJECT_NAME}}Main.hml",
+  "honeyguiSdkPath": "{{SDK_PATH}}",
+  "template": "settings",
+  "created": "{{CREATED_TIME}}"
+}
