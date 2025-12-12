@@ -168,6 +168,7 @@ void ${baseName}_update_user(void) {
     const componentTypes = [...new Set(this.components.map(c => c.type))];
     const headers = this.apiMapper.getRequiredHeaders(componentTypes);
     const hasView = componentTypes.includes('hg_view');
+    const has3D = componentTypes.includes('hg_3d');
 
     let code = `/**
  * ${baseName} UI定义（自动生成，请勿手动修改）
@@ -186,16 +187,23 @@ void ${baseName}_update_user(void) {
       code += `#include "gui_view_instance.h"\n`;
     }
 
+    if (has3D) {
+      code += `#include "gui_lite3d.h"\n`;
+      code += `#include "gui_vfs.h"\n`;
+    }
+
     headers.forEach(header => {
       if (header !== 'gui_view.h') {
         code += `#include "${header}"\n`;
       }
     });
 
+    // 3D 模型不需要外部数据声明（使用 VFS 路径加载 bin 文件）
+
     code += `\n// 组件句柄声明\n`;
 
     this.components.forEach(comp => {
-      if (comp.type !== 'hg_view') {
+      if (comp.type !== 'hg_view' && comp.type !== 'hg_3d') {
         code += `extern gui_obj_t *${comp.id};\n`;
       }
     });
@@ -223,12 +231,41 @@ void ${baseName}_update_user(void) {
 `;
 
     this.components.forEach(comp => {
-      if (comp.type !== 'hg_view') {
+      if (comp.type !== 'hg_view' && comp.type !== 'hg_3d') {
         code += `gui_obj_t *${comp.id} = NULL;\n`;
       }
     });
 
     code += `\n`;
+
+    // 生成所有 3D 模型的全局变换回调函数
+    const has3DComponents = this.components.some(c => c.type === 'hg_3d');
+    if (has3DComponents) {
+      code += `// 3D 模型全局变换回调函数\n`;
+      this.components.forEach(comp => {
+        if (comp.type === 'hg_3d') {
+          const worldX = comp.data?.worldX ?? 0;
+          const worldY = comp.data?.worldY ?? 0;
+          const worldZ = comp.data?.worldZ ?? 30;
+          const rotationX = comp.data?.rotationX ?? 0;
+          const rotationY = comp.data?.rotationY ?? 0;
+          const rotationZ = comp.data?.rotationZ ?? 0;
+          const scale = comp.data?.scale ?? 5;
+          const cameraPosX = comp.data?.cameraPosX ?? 0;
+          const cameraPosY = comp.data?.cameraPosY ?? 0;
+          const cameraPosZ = comp.data?.cameraPosZ ?? 0;
+          const cameraLookX = comp.data?.cameraLookX ?? 0;
+          const cameraLookY = comp.data?.cameraLookY ?? 0;
+          const cameraLookZ = comp.data?.cameraLookZ ?? 1;
+          
+          code += `static void ${comp.id}_global_cb(l3_model_base_t *this)\n`;
+          code += `{\n`;
+          code += `    l3_camera_UVN_initialize(&this->camera, l3_4d_point(${cameraPosX}, ${cameraPosY}, ${cameraPosZ}), l3_4d_point(${cameraLookX}, ${cameraLookY}, ${cameraLookZ}), 1, 32767, 90, this->viewPortWidth, this->viewPortHeight);\n`;
+          code += `    l3_world_initialize(&this->world, ${worldX}, ${worldY}, ${worldZ}, ${rotationX}, ${rotationY}, ${rotationZ}, ${scale});\n`;
+          code += `}\n\n`;
+        }
+      });
+    }
 
     // 不再生成独立的 on_switch_in 回调函数，直接在 GUI_VIEW_INSTANCE 的 switch_in 中处理
 
@@ -369,16 +406,41 @@ void ${baseName}_update_user(void) {
             vfsPath = '/' + vfsPath;
         }
 
-        let createFunc = '';
-        if (ext === 'obj') {
-            createFunc = 'l3_create_obj_model';
-        } else if (ext === 'gltf' || ext === 'glb') {
-            createFunc = 'l3_create_gltf_model';
+        let code = '';
+        
+        if (ext === 'obj' || ext === 'gltf') {
+            const callbackName = `${component.id}_global_cb`;
+            
+            // 将模型文件路径转换为 bin 文件路径
+            // OBJ: xxx.obj -> desc_xxx.bin
+            // GLTF: xxx.gltf -> gltf_desc_xxx.bin
+            const pathParts = vfsPath.split('/');
+            const fileName = pathParts[pathParts.length - 1];
+            const baseName = fileName.replace(/\.(obj|gltf)$/i, '');
+            const dirPath = pathParts.slice(0, -1).join('/');
+            
+            let binFileName: string;
+            if (ext === 'obj') {
+                binFileName = `desc_${baseName}.bin`;
+            } else {
+                binFileName = `gltf_desc_${baseName}.bin`;
+            }
+            
+            const binPath = dirPath ? `${dirPath}/${binFileName}` : `/${binFileName}`;
+            
+            // 通过 gui_vfs_get_file_address 获取文件地址
+            code += `${indentStr}void *${component.id}_addr = (void *)gui_vfs_get_file_address("${binPath}");\n`;
+
+            // 创建 l3_model_base_t（使用文件地址）
+            code += `${indentStr}l3_model_base_t *${component.id}_model = l3_create_model(${component.id}_addr, L3_DRAW_FRONT_ONLY, ${x}, ${y}, ${width}, ${height});\n`;
+            code += `${indentStr}l3_set_global_transform(${component.id}_model, (l3_global_transform_cb)${callbackName});\n`; 
+            // 创建 gui_lite3d 控件（局部变量）
+            code += `${indentStr}gui_lite3d_t *${component.id} = gui_lite3d_create(${parentRef}, "${component.name}", ${component.id}_model, ${x}, ${y}, ${width}, ${height});\n`;
         } else {
-            return `${indentStr}// 警告: 不支持的3D模型格式: ${ext}\n`;
+            code += `${indentStr}// 警告: 不支持的3D模型格式: ${ext}\n`;
         }
 
-        return `${indentStr}${component.id} = (gui_obj_t *)gui_3d_create(${parentRef}, "${component.name}", ${createFunc}("${vfsPath}"), ${x}, ${y}, ${width}, ${height});\n`;
+        return code;
     }
 
     return `${indentStr}${component.id} = ${mapping.createFunction}(${parentRef}, "${component.name}", ${x}, ${y}, ${width}, ${height});\n`;

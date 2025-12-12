@@ -167,11 +167,14 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
       const mouseY = (e.clientY - rect.top - canvasOffset.y) / zoom;
       
       // 减去偏移量得到组件左上角的位置
-      const x = mouseX - dragOffset.x;
-      const y = mouseY - dragOffset.y;
+      let x = mouseX - dragOffset.x;
+      let y = mouseY - dragOffset.y;
 
       const component = components.find(c => c.id === draggedComponent);
       if (component) {
+        x = Math.round(x);
+        y = Math.round(y);
+        
         updateComponent(component.id, {
           position: {
             ...component.position,

@@ -38,7 +38,22 @@ export const PropertyEditor: React.FC<PropertyEditorProps> = ({
         <input
           type="number"
           value={value ?? ''}
-          onChange={(e) => onChange(parseInt(e.target.value) || 0)}
+          onChange={(e) => {
+            const val = e.target.value;
+            if (val === '' || val === '-') {
+              onChange(0);
+            } else {
+              const num = parseFloat(val);
+              onChange(isNaN(num) ? 0 : num);
+            }
+          }}
+          onBlur={(e) => {
+            // 失焦时确保是有效数字
+            const val = e.target.value;
+            if (val === '' || val === '-') {
+              onChange(0);
+            }
+          }}
           disabled={disabled}
           title={title}
           style={{ ...inputStyle, ...disabledStyle }}

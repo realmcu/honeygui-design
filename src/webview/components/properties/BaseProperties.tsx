@@ -20,10 +20,16 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
   disableParent = false,
 }) => {
   const handlePositionChange = (field: 'x' | 'y' | 'width' | 'height', value: number) => {
+    // 对于 3D 组件，XY 必须是整数
+    let finalValue = value;
+    if (component.type === 'hg_3d' && (field === 'x' || field === 'y')) {
+      finalValue = Math.round(value);
+    }
+    
     onUpdate({
       position: {
         ...component.position,
-        [field]: value,
+        [field]: finalValue,
       },
     });
   };

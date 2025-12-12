@@ -65,8 +65,8 @@ const Model3DPreview: React.FC<{ modelPath: string }> = ({ modelPath }) => {
     scene.background = null;
     
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
-    camera.position.set(0, 0, -5);
-    camera.lookAt(0, 0, 0);
+    camera.position.set(0, 0, 0);
+    camera.lookAt(0, 0, 1);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(100, 100);
@@ -90,8 +90,7 @@ const Model3DPreview: React.FC<{ modelPath: string }> = ({ modelPath }) => {
 
     const onLoadSuccess = (model: THREE.Object3D) => {
       // 调整坐标系：正X向右，正Y向下，正Z向里（与设计窗口一致）
-      model.scale.set(1, -1, -1);
-      model.rotation.y = Math.PI;
+      model.rotation.x = Math.PI;
       
       scene.add(model);
       
@@ -108,8 +107,8 @@ const Model3DPreview: React.FC<{ modelPath: string }> = ({ modelPath }) => {
       const fov = camera.fov * (Math.PI / 180);
       let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
       cameraZ *= 1.5;
-      camera.position.z = -cameraZ;
-      camera.lookAt(0, 0, 0);
+      camera.position.z = cameraZ;
+      camera.lookAt(0, 0, 1);
       
       renderer.render(scene, camera);
     };

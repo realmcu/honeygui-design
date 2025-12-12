@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import { spawn } from 'child_process';
 import { ImageConverterService } from '../services/ImageConverterService';
 import { VideoConverterService } from '../services/VideoConverterService';
+import { Model3DConverterService } from '../services/Model3DConverterService';
 import { ProjectConfig } from '../common/ProjectConfig';
 import { RomfsConfig } from '../common/RomfsConfig';
 
@@ -138,6 +139,21 @@ export class BuildCore {
 
 
 
+        // 转换 3D 模型资源
+        this.logger.log('转换 3D 模型资源...');
+        const model3DConverter = new Model3DConverterService(this.sdkPath);
+        const model3DResults = await model3DConverter.convertAssetsDir(assetsDir, outputDir);
+
+        const model3DFailed = model3DResults.filter(r => !r.success);
+        if (model3DFailed.length > 0) {
+            for (const f of model3DFailed) {
+                this.logger.log(`3D模型转换失败: ${f.inputPath} - ${f.error}`, true);
+            }
+            throw new Error(`${model3DFailed.length} 个3D模型转换失败`);
+        }
+
+        this.logger.log(`3D模型转换完成: ${model3DResults.length} 个`);
+
         // 打包 romfs
         await this.packRomfs();
     }
@@ -235,8 +251,68 @@ export class BuildCore {
     }
 
     private generateConfig(): void {
-        const configContent = 'CONFIG_REALTEK_HONEYGUI=y\n';
-        fs.writeFileSync(path.join(this.buildDir, '.config'), configContent);
+        const kconfigPath = path.join(this.buildDir, 'Kconfig.gui');
+        const configLines: string[] = [];
+        
+        // 1. 启用 HoneyGUI 框架
+        configLines.push('CONFIG_REALTEK_HONEYGUI=y');
+        
+        // 2. 解析 Kconfig.gui，提取 HoneyGUI Feature Configuration 中默认打开的配置项
+        if (fs.existsSync(kconfigPath)) {
+            try {
+                const kconfigContent = fs.readFileSync(kconfigPath, 'utf-8');
+                const lines = kconfigContent.split('\n');
+                
+                let inFeatureMenu = false;
+                let currentConfig = '';
+                let defaultValue = '';
+                
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    
+                    // 检测进入 HoneyGUI Feature Configuration 菜单
+                    if (line.includes('HoneyGUI Feature Configuration')) {
+                        inFeatureMenu = true;
+                        continue;
+                    }
+                    
+                    // 检测退出菜单
+                    if (inFeatureMenu && line === 'endmenu') {
+                        inFeatureMenu = false;
+                        continue;
+                    }
+                    
+                    // 在 Feature Configuration 菜单内
+                    if (inFeatureMenu) {
+                        // 提取 config 名称
+                        if (line.startsWith('config ')) {
+                            currentConfig = line.replace('config ', '').trim();
+                            
+                            // 将所有配置项都设置为 y
+                            if (currentConfig) {
+                                // 如果配置名不是以 CONFIG_ 开头，添加 CONFIG_ 前缀
+                                const configName = currentConfig.startsWith('CONFIG_') 
+                                    ? currentConfig 
+                                    : `CONFIG_${currentConfig}`;
+                                configLines.push(`${configName}=y`);
+                            }
+                        }
+                    }
+                }
+                
+                this.logger.log(`从 Kconfig.gui 解析到 ${configLines.length - 1} 个默认启用的配置项`);
+            } catch (error) {
+                this.logger.log(`解析 Kconfig.gui 失败: ${error}`);
+                this.logger.log('使用最小配置');
+            }
+        } else {
+            this.logger.log('Kconfig.gui 不存在，使用最小配置');
+        }
+        
+        // 3. 写入 .config 文件
+        const configPath = path.join(this.buildDir, '.config');
+        fs.writeFileSync(configPath, configLines.join('\n') + '\n');
+        this.logger.log(`.config 文件已生成，包含 ${configLines.length} 个配置项`);
     }
 
     private modifySConstruct(): void {
