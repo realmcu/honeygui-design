@@ -224,17 +224,57 @@ export class BuildCore {
                 shell: true
             });
 
+            let compiledCount = 0;
+
             compileProcess.stdout?.on('data', (data) => {
-                this.logger.log(data.toString());
+                const output = data.toString();
+                const lines = output.split('\n');
+                
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (!trimmed) continue;
+                    
+                    // 过滤掉不需要的日志
+                    if (trimmed.includes('Warning: Command is too long')) continue;
+                    
+                    // 只显示关键信息
+                    if (trimmed.startsWith('CC ') || trimmed.startsWith('Compiling ')) {
+                        // 编译文件，统计数量，不逐条输出
+                        compiledCount++;
+                    } else if (trimmed.startsWith('LINK ') || trimmed.includes('Linking')) {
+                        this.logger.log(`链接中... (已编译 ${compiledCount} 个文件)`);
+                    } else if (trimmed.includes('error:') || trimmed.includes('Error:')) {
+                        this.logger.log(trimmed, true);
+                    } else if (trimmed.includes('warning:') && !trimmed.includes('Command is too long')) {
+                        // 只显示重要警告，跳过常见无害警告
+                        if (!trimmed.includes('unused') && !trimmed.includes('deprecated')) {
+                            this.logger.log(trimmed);
+                        }
+                    } else if (trimmed.startsWith('scons:')) {
+                        this.logger.log(trimmed);
+                    }
+                }
             });
 
             compileProcess.stderr?.on('data', (data) => {
-                this.logger.log(data.toString(), true);
+                const output = data.toString();
+                const lines = output.split('\n');
+                
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (!trimmed) continue;
+                    if (trimmed.includes('Warning: Command is too long')) continue;
+                    
+                    // stderr 通常是错误信息，显示出来
+                    if (trimmed.includes('error:') || trimmed.includes('Error:')) {
+                        this.logger.log(trimmed, true);
+                    }
+                }
             });
 
             compileProcess.on('exit', (code) => {
                 if (code === 0) {
-                    this.logger.log('编译成功！');
+                    this.logger.log(`编译成功！共编译 ${compiledCount} 个文件`);
                     resolve();
                 } else {
                     reject(new Error(`编译失败，退出码: ${code}`));
@@ -253,6 +293,11 @@ export class BuildCore {
     private generateConfig(): void {
         const kconfigPath = path.join(this.buildDir, 'Kconfig.gui');
         const configLines: string[] = [];
+        
+        // 需要禁用的配置项（会导致问题）
+        const disabledConfigs = [
+            'ENABLE_RTK_GUI_CONSOLE',  // 禁用 shell console，避免 "Command is too long" 警告
+        ];
         
         // 1. 启用 HoneyGUI 框架
         configLines.push('CONFIG_REALTEK_HONEYGUI=y');
@@ -288,8 +333,8 @@ export class BuildCore {
                         if (line.startsWith('config ')) {
                             currentConfig = line.replace('config ', '').trim();
                             
-                            // 将所有配置项都设置为 y
-                            if (currentConfig) {
+                            // 跳过需要禁用的配置项
+                            if (currentConfig && !disabledConfigs.includes(currentConfig)) {
                                 // 如果配置名不是以 CONFIG_ 开头，添加 CONFIG_ 前缀
                                 const configName = currentConfig.startsWith('CONFIG_') 
                                     ? currentConfig 

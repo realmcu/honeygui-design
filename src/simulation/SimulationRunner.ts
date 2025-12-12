@@ -250,7 +250,8 @@ export class SimulationRunner {
                 const lines = data.toString().split('\n');
                 lines.forEach((line: string) => {
                     const trimmed = line.trim();
-                    if (trimmed) {
+                    // 过滤掉无用的警告
+                    if (trimmed && !trimmed.includes('Command is too long')) {
                         this.log(`[仿真] ${trimmed}`);
                     }
                 });
@@ -264,7 +265,8 @@ export class SimulationRunner {
                 const lines = data.toString().split('\n');
                 lines.forEach((line: string) => {
                     const trimmed = line.trim();
-                    if (trimmed) {
+                    // 过滤掉无用的警告
+                    if (trimmed && !trimmed.includes('Command is too long')) {
                         this.log(`[仿真错误] ${trimmed}`);
                     }
                 });
@@ -303,7 +305,6 @@ export class SimulationRunner {
      */
     async clean(): Promise<void> {
         const fs = require('fs');
-        const rimraf = require('rimraf');
 
         this.log('开始清理编译产物...');
 
@@ -311,12 +312,7 @@ export class SimulationRunner {
         const buildDir = path.join(this.projectRoot, 'build');
         if (fs.existsSync(buildDir)) {
             this.log(`清理 build 目录: ${buildDir}`);
-            await new Promise<void>((resolve, reject) => {
-                rimraf(buildDir, (err: Error | null) => {
-                    if (err) reject(err);
-                    else resolve();
-                });
-            });
+            await fs.promises.rm(buildDir, { recursive: true, force: true });
         }
 
         this.log('清理完成');
