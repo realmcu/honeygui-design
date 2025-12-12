@@ -17,6 +17,7 @@ export class SimulationRunner {
     private sdkPath: string;
     private outputChannel: vscode.OutputChannel;
     private currentProcess: ChildProcess | null = null;
+    private simulatorTerminal: vscode.Terminal | null = null;
     private isRunning: boolean = false;
     private currentFile: string | null = null;
     private listener?: RunnerListener;
@@ -26,6 +27,16 @@ export class SimulationRunner {
         this.projectRoot = projectRoot;
         this.sdkPath = sdkPath;
         this.outputChannel = outputChannel;
+        
+        // 监听终端关闭事件
+        vscode.window.onDidCloseTerminal((terminal) => {
+            if (terminal === this.simulatorTerminal) {
+                this.isRunning = false;
+                this.simulatorTerminal = null;
+                this.listener?.onExit?.(0);
+                this.log('仿真器终端已关闭');
+            }
+        });
     }
 
     /**
@@ -70,33 +81,37 @@ export class SimulationRunner {
      * 停止仿真
      */
     async stop(): Promise<void> {
+        // 关闭终端方式的仿真器
+        if (this.simulatorTerminal) {
+            this.log('正在关闭仿真器终端...');
+            this.simulatorTerminal.dispose();
+            this.simulatorTerminal = null;
+            this.log('仿真器终端已关闭');
+        }
+        
+        // 兼容旧的进程方式（保留以防需要）
         if (this.currentProcess && this.currentProcess.pid) {
-            this.log('正在停止仿真器...');
+            this.log('正在停止仿真器进程...');
             
             try {
                 if (process.platform === 'win32') {
-                    // Windows: 使用 taskkill 杀死进程树
                     exec(`taskkill /F /T /PID ${this.currentProcess.pid}`, (error) => {
                         if (error) {
                             this.log(`taskkill 错误: ${error.message}`);
                         }
                     });
                 } else {
-                    // Linux/macOS: 杀死整个进程组
                     try {
                         process.kill(-this.currentProcess.pid, 'SIGTERM');
                     } catch (err) {
-                        // 如果进程组不存在，尝试杀死单个进程
                         this.currentProcess.kill('SIGTERM');
                     }
                 }
                 
-                // 等待 2 秒，如果还没退出则强制杀死
                 await new Promise<void>((resolve) => {
                     const timeout = setTimeout(() => {
                         if (this.currentProcess && this.currentProcess.pid) {
                             try {
-                                this.log('强制终止仿真器进程');
                                 if (process.platform === 'win32') {
                                     exec(`taskkill /F /T /PID ${this.currentProcess.pid}`);
                                 } else {
@@ -123,7 +138,7 @@ export class SimulationRunner {
             }
             
             this.currentProcess = null;
-            this.log('仿真器已停止');
+            this.log('仿真器进程已停止');
         }
         this.isRunning = false;
         this.currentFile = null;
@@ -156,9 +171,6 @@ export class SimulationRunner {
         this.log('环境检查通过');
     }
 
-    /**
-     * 生成代码
-     */
     /**
      * 生成代码
      */
@@ -203,7 +215,7 @@ export class SimulationRunner {
     }
 
     /**
-     * 运行仿真器
+     * 运行仿真器（使用 Terminal，支持交互输入）
      */
     private async run(): Promise<void> {
         if (!this.buildManager) {
@@ -216,81 +228,35 @@ export class SimulationRunner {
         this.log(`启动仿真器: ${exePath}`);
         this.log(`工作目录: ${buildDir}`);
 
-        // 使用 stdbuf 强制无缓冲输出（Linux）或直接运行（Windows）
-        let command: string;
-        let args: string[];
-        
-        if (process.platform === 'win32') {
-            command = exePath;
-            args = [];
-        } else {
-            // Linux: 使用 stdbuf -o0 -e0 强制标准输出和错误输出无缓冲
-            command = 'stdbuf';
-            args = ['-o0', '-e0', exePath];
+        // 关闭已有的仿真器终端
+        if (this.simulatorTerminal) {
+            this.simulatorTerminal.dispose();
+            this.simulatorTerminal = null;
         }
 
-        this.currentProcess = spawn(command, args, {
+        // 创建新终端运行仿真器
+        this.simulatorTerminal = vscode.window.createTerminal({
+            name: 'HoneyGUI Simulator',
             cwd: buildDir,
-            stdio: ['pipe', 'pipe', 'pipe'],  // stdin 用 pipe，getchar() 会阻塞等待而不是收到 EOF
-            env: { 
-                ...process.env,
+            env: {
                 SDL_STDIO_REDIRECT: '0',
                 TERM: 'xterm'
-            },
-            shell: false,
-            // Linux: 创建新进程组以便杀死所有子进程
-            // Windows: 不使用 detached，使用 taskkill 杀死进程树
-            detached: process.platform !== 'win32'
+            }
         });
 
-        // 实时输出 stdout
-        if (this.currentProcess.stdout) {
-            this.currentProcess.stdout.setEncoding('utf8');
-            this.currentProcess.stdout.on('data', (data) => {
-                const lines = data.toString().split('\n');
-                lines.forEach((line: string) => {
-                    const trimmed = line.trim();
-                    // 过滤掉无用的警告
-                    if (trimmed && !trimmed.includes('Command is too long')) {
-                        this.log(`[仿真] ${trimmed}`);
-                    }
-                });
-            });
+        // 显示终端
+        this.simulatorTerminal.show();
+
+        // 发送运行命令
+        if (process.platform === 'win32') {
+            this.simulatorTerminal.sendText(exePath);
+        } else {
+            // Linux: 直接运行
+            this.simulatorTerminal.sendText(exePath);
         }
 
-        // 实时输出 stderr
-        if (this.currentProcess.stderr) {
-            this.currentProcess.stderr.setEncoding('utf8');
-            this.currentProcess.stderr.on('data', (data) => {
-                const lines = data.toString().split('\n');
-                lines.forEach((line: string) => {
-                    const trimmed = line.trim();
-                    // 过滤掉无用的警告
-                    if (trimmed && !trimmed.includes('Command is too long')) {
-                        this.log(`[仿真错误] ${trimmed}`);
-                    }
-                });
-            });
-        }
-
-        this.currentProcess.on('spawn', () => {
-            this.log('仿真器进程已启动 (PID: ' + this.currentProcess?.pid + ')');
-        });
-
-        this.currentProcess.on('exit', (code) => {
-            this.isRunning = false;
-            this.currentProcess = null;
-            this.listener?.onExit?.(code);
-            this.log(`仿真器已退出，退出码: ${code}`);
-        });
-
-        this.currentProcess.on('error', (error) => {
-            this.listener?.onError?.(error);
-            this.log(`[错误] 仿真器进程错误: ${error.message}`);
-        });
-        
-        this.log('仿真器已启动，等待输出...');
-        this.log('注意: HoneyGUI 的日志可能直接显示在图形窗口中');
+        this.log('仿真器已在终端中启动');
+        this.log('提示: 可在终端中输入 letter shell 命令进行交互');
     }
 
     /**
@@ -330,6 +296,10 @@ export class SimulationRunner {
      */
     dispose(): void {
         this.stop();
+        if (this.simulatorTerminal) {
+            this.simulatorTerminal.dispose();
+            this.simulatorTerminal = null;
+        }
         this.buildManager?.dispose();
     }
 }
