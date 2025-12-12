@@ -128,13 +128,29 @@ export class SimulationService {
      * 清理编译产物
      */
     async cleanSimulation(): Promise<void> {
-        const workspaceFolders = vscode.workspace.workspaceFolders;
-        if (!workspaceFolders || workspaceFolders.length === 0) {
-            vscode.window.showErrorMessage('未打开工作区');
+        // 查找项目根目录（与 startSimulation 逻辑一致）
+        let projectRoot: string | undefined;
+
+        // 优先使用当前打开的 HML 文件所在项目
+        const activeEditor = vscode.window.activeTextEditor;
+        if (activeEditor && activeEditor.document.fileName.endsWith('.hml')) {
+            projectRoot = ProjectUtils.findProjectRoot(activeEditor.document.fileName);
+        }
+
+        // 如果没有，尝试从工作区查找
+        if (!projectRoot) {
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            if (workspaceFolders && workspaceFolders.length > 0) {
+                projectRoot = ProjectUtils.findProjectRoot(workspaceFolders[0].uri.fsPath);
+            }
+        }
+
+        if (!projectRoot) {
+            vscode.window.showErrorMessage('未找到项目根目录（project.json）');
             return;
         }
 
-        const projectRoot = workspaceFolders[0].uri.fsPath;
+        this.outputChannel.show(true);
         const runner = new SimulationRunner(projectRoot, '', this.outputChannel);
         runner.setListener({
             onLog: (message: string) => {
@@ -142,6 +158,7 @@ export class SimulationService {
             }
         });
         await runner.clean();
+        vscode.window.showInformationMessage('清理完成');
     }
 
     /**

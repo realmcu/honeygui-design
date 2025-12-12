@@ -231,7 +231,7 @@ export class SimulationRunner {
 
         this.currentProcess = spawn(command, args, {
             cwd: buildDir,
-            stdio: ['ignore', 'pipe', 'pipe'],
+            stdio: ['pipe', 'pipe', 'pipe'],  // stdin 用 pipe，getchar() 会阻塞等待而不是收到 EOF
             env: { 
                 ...process.env,
                 SDL_STDIO_REDIRECT: '0',

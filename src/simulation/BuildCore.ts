@@ -294,11 +294,6 @@ export class BuildCore {
         const kconfigPath = path.join(this.buildDir, 'Kconfig.gui');
         const configLines: string[] = [];
         
-        // 需要禁用的配置项（会导致问题）
-        const disabledConfigs = [
-            'ENABLE_RTK_GUI_CONSOLE',  // 禁用 shell console，避免 "Command is too long" 警告
-        ];
-        
         // 1. 启用 HoneyGUI 框架
         configLines.push('CONFIG_REALTEK_HONEYGUI=y');
         
@@ -333,8 +328,7 @@ export class BuildCore {
                         if (line.startsWith('config ')) {
                             currentConfig = line.replace('config ', '').trim();
                             
-                            // 跳过需要禁用的配置项
-                            if (currentConfig && !disabledConfigs.includes(currentConfig)) {
+                            if (currentConfig) {
                                 // 如果配置名不是以 CONFIG_ 开头，添加 CONFIG_ 前缀
                                 const configName = currentConfig.startsWith('CONFIG_') 
                                     ? currentConfig 
