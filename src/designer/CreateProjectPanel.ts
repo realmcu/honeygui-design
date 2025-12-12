@@ -7,6 +7,7 @@ import { HmlTemplateManager } from '../hml/HmlTemplateManager';
 import { WebviewUtils } from '../common/WebviewUtils';
 import { logger } from '../utils/Logger';
 import { getAllTemplateInfo, getTemplateById } from '../template/templates';
+import { ProjectUtils } from '../utils/ProjectUtils';
 
 /**
  * 项目创建面板管理类
@@ -270,7 +271,7 @@ export class CreateProjectPanel {
             logger.info(`[CreateProjectPanel] Creating project: projectName=${projectName}, saveLocation=${saveLocation}, appId=${appId}, targetEngine=${targetEngine}, sdkPath=${honeyguiSdkPath}`);
 
             // 设置默认 SDK 路径
-            const sdkPath = honeyguiSdkPath || path.join(os.homedir(), '.HoneyGUI-SDK');
+            const sdkPath = honeyguiSdkPath || ProjectUtils.getDefaultSdkPath();
             logger.info(`[CreateProjectPanel] Using SDK path: ${sdkPath}`);
 
             // 验证必填字段
@@ -420,7 +421,7 @@ export class CreateProjectPanel {
             minSdk: minSdk,
             pixelMode: pixelMode,
             mainHmlFile: `ui/main/${hmlFileName}`, // 使用新的文件名
-            honeyguiSdkPath: honeyguiSdkPath || path.join(os.homedir(), '.HoneyGUI-SDK'),
+            honeyguiSdkPath: honeyguiSdkPath || ProjectUtils.getDefaultSdkPath(),
             created: new Date().toISOString()
         };
 
@@ -483,7 +484,7 @@ export class CreateProjectPanel {
             }
 
             // 设置 SDK 路径
-            const sdkPath = honeyguiSdkPath || path.join(os.homedir(), '.HoneyGUI-SDK');
+            const sdkPath = honeyguiSdkPath || ProjectUtils.getDefaultSdkPath();
 
             // 使用 withProgress 显示创建进度（完成后自动消失）
             await vscode.window.withProgress({
@@ -598,7 +599,7 @@ Created: ${new Date().toLocaleString()}
             minSdk: minSdk,
             pixelMode: pixelMode,
             mainHmlFile: `ui/main/${hmlFileName}`,
-            honeyguiSdkPath: honeyguiSdkPath || path.join(os.homedir(), '.HoneyGUI-SDK'),
+            honeyguiSdkPath: honeyguiSdkPath || ProjectUtils.getDefaultSdkPath(),
             template: templateId,
             created: new Date().toISOString()
         };

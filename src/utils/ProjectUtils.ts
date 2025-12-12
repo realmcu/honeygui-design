@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 import { ProjectConfig, DEFAULT_PROJECT_CONFIG } from '../common/ProjectConfig';
 import { logger } from './Logger';
 
@@ -7,6 +8,13 @@ import { logger } from './Logger';
  * 项目工具类
  */
 export class ProjectUtils {
+    /**
+     * 获取默认 SDK 路径
+     */
+    public static getDefaultSdkPath(): string {
+        return path.join(os.homedir(), '.HoneyGUI-SDK');
+    }
+
     /**
      * 从文件路径向上查找项目根目录（包含project.json的目录）
      * @param filePath 文件路径

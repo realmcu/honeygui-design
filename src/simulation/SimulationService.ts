@@ -222,7 +222,7 @@ export class SimulationService {
         }
 
         // 3. 默认路径
-        const defaultPath = path.join(os.homedir(), '.HoneyGUI-SDK');
+        const defaultPath = ProjectUtils.getDefaultSdkPath();
         if (fs.existsSync(defaultPath)) {
             return defaultPath;
         }
