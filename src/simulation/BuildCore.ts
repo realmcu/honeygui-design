@@ -88,6 +88,11 @@ export class BuildCore {
         const assetsDir = path.join(this.projectRoot, 'assets');
         const outputDir = path.join(this.buildDir, 'assets');
 
+        // 确保 build/assets 目录存在
+        if (!fs.existsSync(outputDir)) {
+            fs.mkdirSync(outputDir, { recursive: true });
+        }
+
         // 转换图片资源
         this.logger.log('转换图片资源...');
         const imageConverter = new ImageConverterService(this.sdkPath);

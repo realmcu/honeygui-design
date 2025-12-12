@@ -46,8 +46,15 @@ Ctrl+Shift+P → HoneyGUI: New Project
 my-project/
 ├── ui/main/
 │   └── main.hml          # HML设计文件
-├── src/autogen/main/     # 生成的C代码
+├── src/                  # 源代码目录
+│   ├── autogen/          # 自动生成的代码
+│   └── user/             # 用户代码
 ├── assets/               # 资源文件
+├── build/                # 编译产物（编译后生成）
+│   ├── assets/           # 转换后的资源（.bin）
+│   ├── root_image.bin    # romfs 文件系统
+│   ├── gui.exe           # 可执行文件（Windows）
+│   └── ...               # SDK win32_sim 文件
 └── project.json          # 项目配置
 ```
 

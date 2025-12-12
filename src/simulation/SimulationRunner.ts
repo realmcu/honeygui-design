@@ -315,6 +315,13 @@ export class SimulationRunner {
             await fs.promises.rm(buildDir, { recursive: true, force: true });
         }
 
+        // 清理 src/ui 目录（自动生成的 UI 代码）
+        const uiDir = path.join(this.projectRoot, 'src', 'ui');
+        if (fs.existsSync(uiDir)) {
+            this.log(`清理 src/ui 目录: ${uiDir}`);
+            await fs.promises.rm(uiDir, { recursive: true, force: true });
+        }
+
         this.log('清理完成');
     }
 

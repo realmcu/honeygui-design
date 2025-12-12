@@ -128,7 +128,7 @@ export class SimulationService {
      * 清理编译产物
      */
     async cleanSimulation(): Promise<void> {
-        // 查找项目根目录（与 startSimulation 逻辑一致）
+        // 查找项目根目录
         let projectRoot: string | undefined;
 
         // 优先使用当前打开的 HML 文件所在项目

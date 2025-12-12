@@ -13,6 +13,13 @@ export class ProjectUtils {
      * @returns 项目根目录，如果未找到返回undefined
      */
     static findProjectRoot(filePath: string): string | undefined {
+        // 如果传入的是目录且包含 project.json，直接返回
+        if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
+            if (fs.existsSync(path.join(filePath, 'project.json'))) {
+                return filePath;
+            }
+        }
+
         let dir = path.dirname(filePath);
         
         // 向上查找，直到找到包含project.json的目录
