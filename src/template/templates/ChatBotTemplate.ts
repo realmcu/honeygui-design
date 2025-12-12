@@ -9,6 +9,6 @@ export class ChatBotTemplate extends BaseTemplate {
     recommendedResolution = '480X320';
     
     protected getTemplateProjectPath(): string {
-        return path.join(__dirname, '..', '..', '..', 'template-projects', 'chatbot');
+        return path.join(__dirname, '..', '..', '..', '..', 'template-projects', 'chatbot');
     }
 }

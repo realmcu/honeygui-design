@@ -9,6 +9,6 @@ export class RotaryTemplate extends BaseTemplate {
     recommendedResolution = '480X480';
     
     protected getTemplateProjectPath(): string {
-        return path.join(__dirname, '..', '..', '..', 'template-projects', 'rotary');
+        return path.join(__dirname, '..', '..', '..', '..', 'template-projects', 'rotary');
     }
 }
