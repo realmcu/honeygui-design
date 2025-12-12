@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as os from 'os';
 import * as fs from 'fs';
 import { SimulationRunner } from './SimulationRunner';
 import { ProjectUtils } from '../utils/ProjectUtils';
@@ -221,7 +222,7 @@ export class SimulationService {
         }
 
         // 3. 默认路径
-        const defaultPath = path.join(require('os').homedir(), '.HoneyGUI-SDK');
+        const defaultPath = path.join(os.homedir(), '.HoneyGUI-SDK');
         if (fs.existsSync(defaultPath)) {
             return defaultPath;
         }

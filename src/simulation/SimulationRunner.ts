@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as fs from 'fs';
 import { spawn, exec, ChildProcess } from 'child_process';
 import { RunnerStatus, RunnerListener } from '../common/RunnerStatus';
 import { EnvironmentChecker } from './EnvironmentChecker';
@@ -270,8 +271,6 @@ export class SimulationRunner {
      * 清理编译产物
      */
     async clean(): Promise<void> {
-        const fs = require('fs');
-
         this.log('开始清理编译产物...');
 
         // 清理 build 目录（包含所有编译产物和转换后的资源）

@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
+import * as fs from 'fs';
 import { logger } from '../utils/Logger';
 import { AssetManager } from './AssetManager';
 import { CodeGenerator } from '../services/CodeGenerator';
@@ -6,6 +8,7 @@ import { ComponentManager } from './ComponentManager';
 import { FileManager } from './FileManager';
 import { HmlController } from '../hml/HmlController';
 import { CollaborationService } from '../core/CollaborationService';
+import { ProjectUtils } from '../utils/ProjectUtils';
 
 /**
  * 消息处理器 - 负责分发来自Webview的消息
@@ -209,7 +212,6 @@ export class MessageHandler {
      */
     private async _handleBrowseFile(componentId: string, propertyName: string, filters: any): Promise<void> {
         try {
-            const ProjectUtils = require('../utils/ProjectUtils').ProjectUtils;
             const projectRoot = this._fileManager.currentFilePath 
                 ? ProjectUtils.findProjectRoot(this._fileManager.currentFilePath)
                 : undefined;
@@ -238,7 +240,6 @@ export class MessageHandler {
             if (uris && uris.length > 0) {
                 const selectedPath = uris[0].fsPath;
                 // 转换为相对于项目根目录的路径
-                const path = require('path');
                 let relativePath = path.relative(projectRoot, selectedPath);
                 // 统一使用正斜杠
                 relativePath = relativePath.replace(/\\/g, '/');
@@ -272,7 +273,6 @@ export class MessageHandler {
      * 生成代码
      */
     private async handleGenerateCode(): Promise<void> {
-        const ProjectUtils = require('../utils/ProjectUtils').ProjectUtils;
         const projectRoot = this._fileManager.currentFilePath 
             ? ProjectUtils.findProjectRoot(this._fileManager.currentFilePath)
             : undefined;
@@ -346,8 +346,6 @@ export class MessageHandler {
             }
 
             // 获取项目根目录
-            const path = require('path');
-            const ProjectUtils = require('../utils/ProjectUtils').ProjectUtils;
             const projectRoot = ProjectUtils.findProjectRoot(currentFile);
             if (!projectRoot) {
                 vscode.window.showErrorMessage('未找到项目根目录');
@@ -362,7 +360,6 @@ export class MessageHandler {
             const callbackFile = path.join(projectRoot, 'src', 'callbacks', `${designName}_callbacks.c`);
             
             // 检查文件是否存在，如果不存在则先生成代码
-            const fs = require('fs');
             if (!fs.existsSync(callbackFile)) {
                 const result = await vscode.window.showInformationMessage(
                     '回调文件不存在，是否先生成代码？',

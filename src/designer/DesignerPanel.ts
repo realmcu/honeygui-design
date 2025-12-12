@@ -11,6 +11,7 @@ import { CodeGenOptions } from '../codegen/ICodeGenerator';
 import { WebviewContentProvider } from './WebviewContentProvider';
 import { DesignerService } from './DesignerService';
 import { CollaborationService, CollaborationMessage } from '../core/CollaborationService';
+import { ProjectUtils } from '../utils/ProjectUtils';
 
 /**
  * 设计器Webview面板管理类
@@ -199,7 +200,7 @@ export class DesignerPanel {
      */
     public async generateCode(): Promise<void> {
         const projectRoot = this._fileManager.currentFilePath 
-            ? require('../utils/ProjectUtils').ProjectUtils.findProjectRoot(this._fileManager.currentFilePath)
+            ? ProjectUtils.findProjectRoot(this._fileManager.currentFilePath)
             : undefined;
         
         if (!projectRoot) {
