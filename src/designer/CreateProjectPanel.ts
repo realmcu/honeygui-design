@@ -265,10 +265,10 @@ export class CreateProjectPanel {
      */
     private async _createProject(config: any): Promise<void> {
         try {
-            const { projectName, saveLocation, appId, resolution, targetEngine, minSdk, pixelMode, honeyguiSdkPath } = config;
+            const { projectName, saveLocation, appId, resolution, targetEngine, minSdk, pixelMode, honeyguiSdkPath, romfsBaseAddr } = config;
 
             // 记录日志用于调试
-            logger.info(`[CreateProjectPanel] Creating project: projectName=${projectName}, saveLocation=${saveLocation}, appId=${appId}, targetEngine=${targetEngine}, sdkPath=${honeyguiSdkPath}`);
+            logger.info(`[CreateProjectPanel] Creating project: projectName=${projectName}, saveLocation=${saveLocation}, appId=${appId}, targetEngine=${targetEngine}, sdkPath=${honeyguiSdkPath}, romfsBaseAddr=${romfsBaseAddr}`);
 
             // 设置默认 SDK 路径
             const sdkPath = honeyguiSdkPath || ProjectUtils.getDefaultSdkPath();
@@ -334,7 +334,7 @@ export class CreateProjectPanel {
                 cancellable: false
             }, async () => {
                 // 创建项目结构
-                await this._createProjectStructure(projectPath, projectName, appId, resolution, targetEngine || 'honeygui', minSdk, pixelMode, honeyguiSdkPath);
+                await this._createProjectStructure(projectPath, projectName, appId, resolution, targetEngine || 'honeygui', minSdk, pixelMode, honeyguiSdkPath, romfsBaseAddr);
             });
             
             // 显示成功消息
@@ -382,7 +382,8 @@ export class CreateProjectPanel {
         targetEngine: string,
         minSdk: string,
         pixelMode: string,
-        honeyguiSdkPath?: string
+        honeyguiSdkPath?: string,
+        romfsBaseAddr?: string
     ): Promise<void> {
         // 创建目录结构
         fs.mkdirSync(projectPath, { recursive: true });
@@ -422,6 +423,7 @@ export class CreateProjectPanel {
             pixelMode: pixelMode,
             mainHmlFile: `ui/main/${hmlFileName}`, // 使用新的文件名
             honeyguiSdkPath: honeyguiSdkPath || ProjectUtils.getDefaultSdkPath(),
+            romfsBaseAddr: romfsBaseAddr || '0x04400000',
             created: new Date().toISOString()
         };
 
@@ -432,7 +434,7 @@ export class CreateProjectPanel {
         );
 
         // SDK 路径已保存到 project.json，项目将直接引用 SDK 而不拷贝文件
-        logger.info(`[CreateProjectPanel] Project created with target engine: ${targetEngine}, SDK path: ${projectConfig.honeyguiSdkPath || 'default'}`);
+        logger.info(`[CreateProjectPanel] Project created with target engine: ${targetEngine}, SDK path: ${projectConfig.honeyguiSdkPath || 'default'}, romfs base addr: ${projectConfig.romfsBaseAddr}`);
     }
 
     /**

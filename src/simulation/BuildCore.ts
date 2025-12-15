@@ -168,12 +168,26 @@ export class BuildCore {
 
         const assetsDir = path.join(this.buildDir, 'assets');
         const romfsOutput = path.join(this.buildDir, RomfsConfig.getFileName());
+        const romfsBinOutput = path.join(this.buildDir, 'app_romfs.bin');
         const mkromfsScript = path.join(this.sdkPath, 'tool', 'mkromfs', 'mkromfs_for_honeygui.py');
 
         if (!fs.existsSync(mkromfsScript)) {
             throw new Error(`mkromfs 脚本不存在: ${mkromfsScript}`);
         }
 
+        // 获取 romfs 基地址
+        const baseAddr = this.projectConfig.romfsBaseAddr || '0x04400000';
+
+        // 生成 C 文件
+        await this.runMkromfs(mkromfsScript, assetsDir, romfsOutput, false, baseAddr);
+        this.logger.log('romfs C 文件生成完成');
+
+        // 生成二进制文件
+        await this.runMkromfs(mkromfsScript, assetsDir, romfsBinOutput, true, baseAddr);
+        this.logger.log(`romfs 二进制文件生成完成 (基地址: ${baseAddr})`);
+    }
+
+    private async runMkromfs(script: string, inputDir: string, outputFile: string, binary: boolean, baseAddr: string): Promise<void> {
         return new Promise((resolve, reject) => {
             // 尝试多个 Python 命令
             const pythonCandidates = process.platform === 'win32' 
@@ -187,7 +201,12 @@ export class BuildCore {
                 pythonCmd = 'py';
             }
 
-            const proc = spawn(pythonCmd, [mkromfsScript, '-i', assetsDir, '-o', romfsOutput], {
+            const args = [script, '-i', inputDir, '-o', outputFile, '-a', baseAddr];
+            if (binary) {
+                args.push('-b');
+            }
+
+            const proc = spawn(pythonCmd, args, {
                 cwd: this.buildDir,
                 shell: true
             });
@@ -202,7 +221,6 @@ export class BuildCore {
 
             proc.on('close', (code) => {
                 if (code === 0) {
-                    this.logger.log('romfs C 文件生成完成');
                     resolve();
                 } else {
                     reject(new Error(`romfs 打包失败，退出码: ${code}`));
