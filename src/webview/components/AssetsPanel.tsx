@@ -257,6 +257,7 @@ const AssetsPanel: React.FC = () => {
   const [editingAsset, setEditingAsset] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
+  const [gridColumns, setGridColumns] = useState(3);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
 
@@ -591,64 +592,71 @@ const AssetsPanel: React.FC = () => {
   return (
     <div className="assets-panel">
       <div className="assets-header">
-        <div className="assets-filter">
-          <button 
-            className={`filter-btn ${activeCategory === 'all' ? 'active' : ''}`}
-            onClick={() => setActiveCategory('all')}
-          >
-            全部 ({counts.all})
-          </button>
-          <button 
-            className={`filter-btn ${activeCategory === 'images' ? 'active' : ''}`}
-            onClick={() => setActiveCategory('images')}
-          >
-            图片 ({counts.images})
-          </button>
-          <button 
-            className={`filter-btn ${activeCategory === 'videos' ? 'active' : ''}`}
-            onClick={() => setActiveCategory('videos')}
-          >
-            视频 ({counts.videos})
-          </button>
-          <button 
-            className={`filter-btn ${activeCategory === 'models' ? 'active' : ''}`}
-            onClick={() => setActiveCategory('models')}
-          >
-            3D ({counts.models})
-          </button>
-        </div>
-        <div className="assets-actions">
-          <button 
-            className="upload-btn" 
-            onClick={() => fileInputRef.current?.click()}
-            title="上传文件"
-          >
-            <Upload size={16} />
-          </button>
-          <button 
-            className="upload-btn" 
-            onClick={() => folderInputRef.current?.click()}
-            title="上传文件夹"
-          >
-            <FolderUp size={16} />
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept=".png,.jpg,.jpeg,.gif,.bmp,.svg,.webp,.mp4,.avi,.mov,.mkv,.webm,.gltf,.glb,.obj,.mtl"
-            style={{ display: 'none' }}
-            onChange={handleFileSelect}
-          />
-          <input
-            ref={folderInputRef}
-            type="file"
-            multiple
-            {...({ webkitdirectory: '', directory: '' } as any)}
-            style={{ display: 'none' }}
-            onChange={handleFileSelect}
-          />
-        </div>
+        <button 
+          className={`filter-btn ${activeCategory === 'all' ? 'active' : ''}`}
+          onClick={() => setActiveCategory('all')}
+        >
+          全部 ({counts.all})
+        </button>
+        <button 
+          className={`filter-btn ${activeCategory === 'images' ? 'active' : ''}`}
+          onClick={() => setActiveCategory('images')}
+        >
+          图片 ({counts.images})
+        </button>
+        <button 
+          className={`filter-btn ${activeCategory === 'videos' ? 'active' : ''}`}
+          onClick={() => setActiveCategory('videos')}
+        >
+          视频 ({counts.videos})
+        </button>
+        <button 
+          className={`filter-btn ${activeCategory === 'models' ? 'active' : ''}`}
+          onClick={() => setActiveCategory('models')}
+        >
+          3D ({counts.models})
+        </button>
+        <button 
+          className="upload-btn" 
+          onClick={() => fileInputRef.current?.click()}
+          title="上传文件"
+        >
+          <Upload size={16} />
+        </button>
+        <button 
+          className="upload-btn" 
+          onClick={() => folderInputRef.current?.click()}
+          title="上传文件夹"
+        >
+          <FolderUp size={16} />
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept=".png,.jpg,.jpeg,.gif,.bmp,.svg,.webp,.mp4,.avi,.mov,.mkv,.webm,.gltf,.glb,.obj,.mtl"
+          style={{ display: 'none' }}
+          onChange={handleFileSelect}
+        />
+        <input
+          ref={folderInputRef}
+          type="file"
+          multiple
+          {...({ webkitdirectory: '', directory: '' } as any)}
+          style={{ display: 'none' }}
+          onChange={handleFileSelect}
+        />
+      </div>
+      <div className="assets-toolbar">
+        <input 
+          type="range" 
+          min="2" 
+          max="6" 
+          value={gridColumns} 
+          onChange={(e) => setGridColumns(Number(e.target.value))}
+          title={`列数: ${gridColumns}`}
+        />
+        <span className="grid-columns-label">{gridColumns} 列</span>
       </div>
       <div 
         className={`assets-content ${isDragOver ? 'drag-over' : ''}`}
@@ -662,7 +670,7 @@ const AssetsPanel: React.FC = () => {
             <p className="hint">拖拽文件到此处</p>
           </div>
         ) : (
-          <div className="assets-grid">
+          <div className="assets-grid" style={{ gridTemplateColumns: `repeat(${gridColumns}, 1fr)` }}>
             {currentAssets.map(asset => renderAssetItem(asset))}
           </div>
         )}

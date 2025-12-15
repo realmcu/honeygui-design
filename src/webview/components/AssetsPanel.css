@@ -7,13 +7,34 @@
 
 .assets-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   padding: 8px;
   border-bottom: 1px solid var(--vscode-panel-border);
   background: var(--vscode-sideBar-background);
   flex-shrink: 0;
+  gap: 4px;
+}
+
+.assets-toolbar {
+  display: flex;
+  align-items: center;
   gap: 8px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+  background: var(--vscode-sideBar-background);
+  flex-shrink: 0;
+}
+
+.assets-toolbar input[type="range"] {
+  flex: 1;
+  min-width: 80px;
+}
+
+.grid-columns-label {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  white-space: nowrap;
 }
 
 .assets-filter {
@@ -27,23 +48,24 @@
   gap: 4px;
 }
 
-.filter-btn {
-  padding: 4px 10px;
+.filter-btn,
+.upload-btn {
+  padding: 4px 8px;
   border: 1px solid var(--vscode-input-border);
   border-radius: 3px;
   background: var(--vscode-input-background);
   color: var(--vscode-foreground);
-  font-size: 11px;
+  font-size: 10px;
   cursor: pointer;
   opacity: 0.8;
   transition: all 0.2s;
   white-space: nowrap;
-}
-
-.filter-btn:hover {
-  opacity: 1;
-  background: var(--vscode-list-hoverBackground);
-  border-color: var(--vscode-focusBorder);
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
 }
 
 .filter-btn.active {
@@ -55,16 +77,15 @@
 }
 
 .upload-btn {
-  padding: 4px 8px;
-  border: 1px solid var(--vscode-input-border);
-  border-radius: 3px;
   background: var(--vscode-button-secondaryBackground);
   color: var(--vscode-button-secondaryForeground);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
+}
+
+.filter-btn:hover,
+.upload-btn:hover {
+  opacity: 1;
+  background: var(--vscode-list-hoverBackground);
+  border-color: var(--vscode-focusBorder);
 }
 
 .upload-btn:hover {
@@ -229,10 +250,9 @@
   padding-left: 4px;
 }
 
-/* 网格布局 - 3列紧凑布局 */
+/* 网格布局 - 动态列数 */
 .assets-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
   gap: 4px;
   padding: 2px 0;
   margin-left: -16px;
