@@ -23,7 +23,7 @@ CPPPATH = [cwd]
 for root, dirs, files in os.walk(cwd):
     CPPPATH.append(root)
 
-group = DefineGroup('autogen', src, depend=[''], CPPPATH=CPPPATH)
+group = DefineGroup('project', src, depend=[''], CPPPATH=CPPPATH)
 Return('group')
 `;
         const sconscriptPath = path.join(targetDir, 'SConscript');

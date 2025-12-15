@@ -47,8 +47,9 @@ my-project/
 ├── ui/main/
 │   └── main.hml          # HML设计文件
 ├── src/                  # 源代码目录
-│   ├── autogen/          # 自动生成的代码
-│   └── user/             # 用户代码
+│   ├── ui/               # UI代码（自动生成）
+│   ├── callbacks/        # 回调代码（保护区）
+│   └── user/             # 用户代码（只生成一次）
 ├── assets/               # 资源文件
 ├── build/                # 编译产物（编译后生成）
 │   ├── assets/           # 转换后的资源（.bin）
@@ -77,14 +78,15 @@ my-project/
 点击工具栏"生成代码"按钮，自动生成：
 ```
 src/
-├── autogen/main/           # 自动生成目录
+├── ui/                     # UI代码目录
 │   ├── main_ui.h           # UI声明（每次覆盖）
-│   ├── main_ui.c           # UI实现（每次覆盖）
+│   └── main_ui.c           # UI实现（每次覆盖）
+├── callbacks/              # 回调代码目录
 │   ├── main_callbacks.h    # 回调声明（只生成一次）
 │   └── main_callbacks.c    # 回调实现（保护区机制）
-└── user/main/              # 用户代码目录
-    ├── main.h              # 用户头文件（只生成一次）
-    └── main.c              # 用户逻辑（只生成一次）
+└── user/                   # 用户代码目录
+    ├── main_user.h         # 用户头文件（只生成一次）
+    └── main_user.c         # 用户逻辑（只生成一次）
 ```
 
 **文件覆盖策略**：
@@ -182,8 +184,7 @@ Ctrl+Shift+P → HoneyGUI: Join Session
   "resolution": "480X272",
   "honeyguiSdkPath": "/path/to/sdk",  // 可选，覆盖全局设置
   "codeGeneration": {
-    "language": "c",
-    "outputPath": "src/autogen"
+    "language": "c"
   }
 }
 ```

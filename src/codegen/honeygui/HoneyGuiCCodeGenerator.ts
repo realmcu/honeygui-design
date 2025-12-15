@@ -83,8 +83,8 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       }
 
       // === 用户代码（只生成一次）===
-      const userHeaderFile = path.join(userDir, `${designName}.h`);
-      const userImplFile = path.join(userDir, `${designName}.c`);
+      const userHeaderFile = path.join(userDir, `${designName}_user.h`);
+      const userImplFile = path.join(userDir, `${designName}_user.c`);
 
       if (!fs.existsSync(userHeaderFile)) {
         fs.writeFileSync(userHeaderFile, this.generateUserHeader(designName));
@@ -138,7 +138,7 @@ void ${baseName}_update_user(void);
    * 生成用户实现文件模板
    */
   private generateUserImplementation(baseName: string): string {
-    return `#include "${baseName}.h"
+    return `#include "${baseName}_user.h"
 #include <stdio.h>
 
 /**
