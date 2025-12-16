@@ -133,17 +133,25 @@ export class AssetManager {
             
             if (fs.existsSync(filePath)) {
                 const relativePath = `assets/${fileName}`;
+                const ext = path.extname(fileName).toLowerCase();
                 
-                logger.info(`[删除资源] 删除文件: ${filePath}, 相对路径: ${relativePath}`);
+                // 检查是否是 3D 模型文件
+                const is3DModel = ['.obj', '.gltf', '.glb'].includes(ext);
                 
-                // 删除文件
-                fs.unlinkSync(filePath);
-                
-                // 通知前端删除引用此资源的组件
-                this._panel.webview.postMessage({
-                    command: 'deleteComponentsByImagePath',
-                    imagePath: relativePath
-                });
+                if (is3DModel) {
+                    // 删除 3D 模型及其配套文件
+                    await this.delete3DModelWithDependencies(filePath, fileName, assetsDir);
+                } else {
+                    // 普通文件直接删除
+                    logger.info(`[删除资源] 删除文件: ${filePath}, 相对路径: ${relativePath}`);
+                    fs.unlinkSync(filePath);
+                    
+                    // 通知前端删除引用此资源的组件
+                    this._panel.webview.postMessage({
+                        command: 'deleteComponentsByImagePath',
+                        imagePath: relativePath
+                    });
+                }
                 
                 vscode.window.showInformationMessage('资源文件已删除');
                 // 重新加载资源列表
@@ -155,6 +163,152 @@ export class AssetManager {
         } catch (error) {
             logger.error(`删除资源文件失败: ${error}`);
             vscode.window.showErrorMessage('删除资源文件失败');
+        }
+    }
+
+    /**
+     * 删除 3D 模型及其依赖文件（MTL、贴图等）
+     */
+    private async delete3DModelWithDependencies(
+        modelPath: string,
+        fileName: string,
+        assetsDir: string
+    ): Promise<void> {
+        const ext = path.extname(fileName).toLowerCase();
+        const baseName = path.basename(fileName, ext);
+        const modelDir = path.dirname(modelPath);
+        const deletedFiles: string[] = [];
+
+        try {
+            // 1. 先收集所有需要删除的文件（在删除之前）
+            const filesToDelete: string[] = [modelPath];
+            
+            // 2. 如果是 OBJ 文件，收集 MTL 和贴图
+            if (ext === '.obj') {
+                const mtlPath = path.join(modelDir, `${baseName}.mtl`);
+                if (fs.existsSync(mtlPath)) {
+                    // 先解析 MTL 文件获取贴图列表
+                    const textures = this.extractTexturesFromMtlFile(mtlPath);
+                    
+                    // 添加 MTL 文件到删除列表
+                    filesToDelete.push(mtlPath);
+                    
+                    // 添加贴图文件到删除列表
+                    for (const textureName of textures) {
+                        const texturePath = path.join(modelDir, textureName);
+                        if (fs.existsSync(texturePath)) {
+                            filesToDelete.push(texturePath);
+                        }
+                    }
+                }
+            }
+            
+            // 3. 如果是 GLTF，收集关联的 .bin 文件和贴图
+            else if (ext === '.gltf') {
+                if (fs.existsSync(modelPath)) {
+                    const gltfContent = fs.readFileSync(modelPath, 'utf-8');
+                    const relatedFiles = this.extractGltfDependencies(gltfContent, modelDir);
+                    
+                    for (const relatedFile of relatedFiles) {
+                        if (fs.existsSync(relatedFile)) {
+                            filesToDelete.push(relatedFile);
+                        }
+                    }
+                }
+            }
+
+            // 4. 执行删除操作
+            for (const fileToDelete of filesToDelete) {
+                if (fs.existsSync(fileToDelete)) {
+                    logger.info(`[删除3D模型] 删除文件: ${fileToDelete}`);
+                    fs.unlinkSync(fileToDelete);
+                    
+                    const relativeFilePath = path.relative(assetsDir, fileToDelete).replace(/\\/g, '/');
+                    deletedFiles.push(relativeFilePath);
+                }
+            }
+
+            // 5. 通知前端删除引用这些资源的组件
+            for (const deletedFile of deletedFiles) {
+                const relativePath = `assets/${deletedFile}`;
+                this._panel.webview.postMessage({
+                    command: 'deleteComponentsByImagePath',
+                    imagePath: relativePath
+                });
+            }
+
+            logger.info(`[删除3D模型] 共删除 ${deletedFiles.length} 个文件: ${deletedFiles.join(', ')}`);
+            
+        } catch (error) {
+            logger.error(`[删除3D模型] 删除过程出错: ${error}`);
+            throw error;
+        }
+    }
+
+    /**
+     * 从 MTL 文件中提取贴图文件名
+     */
+    private extractTexturesFromMtlFile(mtlPath: string): string[] {
+        try {
+            const mtlContent = fs.readFileSync(mtlPath, 'utf-8');
+            const textures = new Set<string>();
+            const lines = mtlContent.split('\n');
+            
+            // 支持常见的贴图类型
+            const mapTypes = ['map_Kd', 'map_Ka', 'map_Ks', 'map_Ns', 'map_d', 'map_bump', 'bump'];
+            
+            for (const line of lines) {
+                const trimmed = line.trim();
+                for (const mapType of mapTypes) {
+                    if (trimmed.startsWith(mapType + ' ')) {
+                        const texturePath = trimmed.substring(mapType.length + 1).trim();
+                        // 移除可能的选项参数（如 -blendu on）
+                        const parts = texturePath.split(/\s+/);
+                        const filename = parts[parts.length - 1];
+                        if (filename && !filename.startsWith('-')) {
+                            textures.add(filename);
+                        }
+                    }
+                }
+            }
+            
+            return Array.from(textures);
+        } catch (error) {
+            logger.error(`[删除3D模型] 解析 MTL 文件失败: ${error}`);
+            return [];
+        }
+    }
+
+    /**
+     * 从 GLTF 文件中提取依赖文件路径
+     */
+    private extractGltfDependencies(gltfContent: string, modelDir: string): string[] {
+        try {
+            const gltf = JSON.parse(gltfContent);
+            const dependencies: string[] = [];
+            
+            // 提取 .bin 文件
+            if (gltf.buffers) {
+                for (const buffer of gltf.buffers) {
+                    if (buffer.uri && !buffer.uri.startsWith('data:')) {
+                        dependencies.push(path.join(modelDir, buffer.uri));
+                    }
+                }
+            }
+            
+            // 提取贴图文件
+            if (gltf.images) {
+                for (const image of gltf.images) {
+                    if (image.uri && !image.uri.startsWith('data:')) {
+                        dependencies.push(path.join(modelDir, image.uri));
+                    }
+                }
+            }
+            
+            return dependencies;
+        } catch (error) {
+            logger.error(`[删除3D模型] 解析 GLTF 文件失败: ${error}`);
+            return [];
         }
     }
 
