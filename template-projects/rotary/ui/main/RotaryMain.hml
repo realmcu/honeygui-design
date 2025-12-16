@@ -6,40 +6,29 @@
     </meta>
     <view>
         <hg_view id="mainView" x="0" y="0" width="480" height="480" name="mainView" backgroundColor="#000000">
-            <!-- Center Circle Background -->
-            <hg_view id="centerCircle" x="90" y="90" width="300" height="300" name="centerCircle" backgroundColor="#1A1A1A">
-                <!-- Time Display -->
-                <hg_text id="timeText" x="100" y="110" width="100" height="50" name="timeText"
-                         text="12:30" fontSize="36" color="#FFFFFF" align="center" />
-                
-                <!-- Date Display -->
-                <hg_text id="dateText" x="85" y="170" width="130" height="30" name="dateText"
-                         text="Wed, Dec 11" fontSize="16" color="#AAAAAA" align="center" />
-            </hg_view>
+            <!-- Time Display (center) -->
+            <hg_text id="timeText" x="190" y="200" width="100" height="50" name="timeText"
+                     text="12:30" fontSize="36" color="#FFFFFF" align="center" />
+            
+            <!-- Date Display (center) -->
+            <hg_text id="dateText" x="175" y="260" width="130" height="30" name="dateText"
+                     text="Wed, Dec 11" fontSize="16" color="#AAAAAA" align="center" />
             
             <!-- Top Icon (Phone) -->
-            <hg_view id="topIcon" x="215" y="30" width="50" height="50" name="topIcon" backgroundColor="#2A2A2A">
-                <hg_text id="phoneIcon" x="10" y="10" width="30" height="30" name="phoneIcon"
-                         text="📞" fontSize="24" align="center" />
-            </hg_view>
+            <hg_text id="phoneIcon" x="225" y="40" width="30" height="30" name="phoneIcon"
+                     text="📞" fontSize="24" align="center" />
             
             <!-- Right Icon (Messages) -->
-            <hg_view id="rightIcon" x="400" y="215" width="50" height="50" name="rightIcon" backgroundColor="#2A2A2A">
-                <hg_text id="msgIcon" x="10" y="10" width="30" height="30" name="msgIcon"
-                         text="💬" fontSize="24" align="center" />
-            </hg_view>
+            <hg_text id="msgIcon" x="410" y="225" width="30" height="30" name="msgIcon"
+                     text="💬" fontSize="24" align="center" />
             
             <!-- Bottom Icon (Music) -->
-            <hg_view id="bottomIcon" x="215" y="400" width="50" height="50" name="bottomIcon" backgroundColor="#2A2A2A">
-                <hg_text id="musicIcon" x="10" y="10" width="30" height="30" name="musicIcon"
-                         text="🎵" fontSize="24" align="center" />
-            </hg_view>
+            <hg_text id="musicIcon" x="225" y="410" width="30" height="30" name="musicIcon"
+                     text="🎵" fontSize="24" align="center" />
             
             <!-- Left Icon (Settings) -->
-            <hg_view id="leftIcon" x="30" y="215" width="50" height="50" name="leftIcon" backgroundColor="#2A2A2A">
-                <hg_text id="settingsIcon" x="10" y="10" width="30" height="30" name="settingsIcon"
-                         text="⚙️" fontSize="24" align="center" />
-            </hg_view>
+            <hg_text id="settingsIcon" x="40" y="225" width="30" height="30" name="settingsIcon"
+                     text="⚙️" fontSize="24" align="center" />
             
             <!-- Battery Indicator -->
             <hg_progressbar id="battery" x="190" y="440" width="100" height="10" name="battery"
