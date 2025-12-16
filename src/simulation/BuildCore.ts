@@ -159,6 +159,14 @@ export class BuildCore {
 
         this.logger.log(`3D模型转换完成: ${model3DResults.length} 个`);
 
+        // 拷贝 ui 目录到 build/assets
+        const uiSrcDir = path.join(this.projectRoot, 'ui');
+        const uiDestDir = path.join(outputDir, 'ui');
+        if (fs.existsSync(uiSrcDir)) {
+            this.copyDirectory(uiSrcDir, uiDestDir);
+            this.logger.log('UI 目录已拷贝到 assets');
+        }
+
         // 打包 romfs
         await this.packRomfs();
     }
