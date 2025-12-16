@@ -142,6 +142,7 @@ const componentDefinitions: ComponentDefinition[] = [
     defaultSize: { width: 400, height: 400 },
     properties: [
       { name: 'modelPath', label: '模型路径', type: 'string', group: 'data' },
+      { name: 'drawType', label: '绘制类型', type: 'select', defaultValue: 'L3_DRAW_FRONT_AND_SORT', options: ['L3_DRAW_FRONT_ONLY', 'L3_DRAW_FRONT_AND_BACK', 'L3_DRAW_FRONT_AND_SORT'], group: 'data' },
       { name: 'worldX', label: '世界X', type: 'number', defaultValue: 0, group: 'style' },
       { name: 'worldY', label: '世界Y', type: 'number', defaultValue: 0, group: 'style' },
       { name: 'worldZ', label: '世界Z', type: 'number', defaultValue: 30, group: 'style' },

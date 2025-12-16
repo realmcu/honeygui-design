@@ -56,22 +56,51 @@ const VideoPreview: React.FC<{ videoPath: string }> = ({ videoPath }) => {
 // 3D 模型预览组件
 const Model3DPreview: React.FC<{ modelPath: string }> = ({ modelPath }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const sceneRef = useRef<THREE.Scene | null>(null);
+  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const [error, setError] = useState(false);
+  const [thumbnail, setThumbnail] = useState<string | null>(null);
 
   useEffect(() => {
     if (!containerRef.current || !modelPath) return;
 
     const scene = new THREE.Scene();
     scene.background = null;
+    sceneRef.current = scene;
     
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
     camera.position.set(0, 0, 0);
     camera.lookAt(0, 0, 1);
+    cameraRef.current = camera;
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    const renderer = new THREE.WebGLRenderer({ 
+      antialias: true, 
+      alpha: true,
+      preserveDrawingBuffer: true  // 保持绘制缓冲区，防止内容丢失
+    });
     renderer.setSize(100, 100);
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.sortObjects = true;
+    rendererRef.current = renderer;
+    
+    // 监听WebGL上下文丢失和恢复
+    const canvas = renderer.domElement;
+    const handleContextLost = (event: Event) => {
+      event.preventDefault();
+      console.warn('[3D预览] WebGL上下文丢失');
+    };
+    
+    const handleContextRestored = () => {
+      console.log('[3D预览] WebGL上下文恢复，重新渲染');
+      if (sceneRef.current && cameraRef.current && rendererRef.current) {
+        rendererRef.current.render(sceneRef.current, cameraRef.current);
+      }
+    };
+    
+    canvas.addEventListener('webglcontextlost', handleContextLost);
+    canvas.addEventListener('webglcontextrestored', handleContextRestored);
+    
     containerRef.current.appendChild(renderer.domElement);
 
     // 添加光源（与设计窗口一致）
@@ -110,7 +139,29 @@ const Model3DPreview: React.FC<{ modelPath: string }> = ({ modelPath }) => {
       camera.position.z = cameraZ;
       camera.lookAt(0, 0, 1);
       
+      // 初始渲染
       renderer.render(scene, camera);
+      
+      // 生成缩略图并保存
+      setTimeout(() => {
+        renderer.render(scene, camera);
+        try {
+          const dataURL = renderer.domElement.toDataURL('image/png');
+          setThumbnail(dataURL);
+          
+          // 生成缩略图后，清理WebGL资源
+          renderer.dispose();
+          scene.clear();
+          if (containerRef.current && renderer.domElement.parentNode === containerRef.current) {
+            containerRef.current.removeChild(renderer.domElement);
+          }
+          rendererRef.current = null;
+          sceneRef.current = null;
+          cameraRef.current = null;
+        } catch (err) {
+          console.warn('[3D预览] 生成缩略图失败:', err);
+        }
+      }, 200);
     };
 
     if (ext === 'gltf' || ext === 'glb') {
@@ -217,15 +268,38 @@ const Model3DPreview: React.FC<{ modelPath: string }> = ({ modelPath }) => {
     }
 
     return () => {
-      renderer.dispose();
-      if (containerRef.current && renderer.domElement.parentNode === containerRef.current) {
-        containerRef.current.removeChild(renderer.domElement);
+      const canvas = rendererRef.current?.domElement;
+      if (canvas) {
+        canvas.removeEventListener('webglcontextlost', () => {});
+        canvas.removeEventListener('webglcontextrestored', () => {});
       }
+      
+      if (rendererRef.current) {
+        rendererRef.current.dispose();
+        if (containerRef.current && rendererRef.current.domElement.parentNode === containerRef.current) {
+          containerRef.current.removeChild(rendererRef.current.domElement);
+        }
+      }
+      
+      sceneRef.current = null;
+      cameraRef.current = null;
+      rendererRef.current = null;
     };
   }, [modelPath]);
 
   if (error) {
     return <div className="file-icon" style={{ fontSize: '48px' }}>🧊</div>;
+  }
+
+  // 如果已生成缩略图，显示图片而不是WebGL canvas
+  if (thumbnail) {
+    return (
+      <img 
+        src={thumbnail} 
+        alt="3D Model Preview" 
+        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+      />
+    );
   }
 
   return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />;

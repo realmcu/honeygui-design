@@ -397,6 +397,7 @@ void ${baseName}_update_user(void) {
     // 特殊处理3D模型组件
     if (component.type === 'hg_3d') {
         const modelPath = component.data?.modelPath || '';
+        const drawType = component.data?.drawType || 'L3_DRAW_FRONT_AND_SORT';
         const ext = modelPath.split('.').pop()?.toLowerCase();
         
         // 去掉 assets/ 前缀
@@ -431,8 +432,8 @@ void ${baseName}_update_user(void) {
             // 通过 gui_vfs_get_file_address 获取文件地址
             code += `${indentStr}void *${component.id}_addr = (void *)gui_vfs_get_file_address("${binPath}");\n`;
 
-            // 创建 l3_model_base_t（使用文件地址）
-            code += `${indentStr}l3_model_base_t *${component.id}_model = l3_create_model(${component.id}_addr, L3_DRAW_FRONT_ONLY, ${x}, ${y}, ${width}, ${height});\n`;
+            // 创建 l3_model_base_t（使用绘制类型）
+            code += `${indentStr}l3_model_base_t *${component.id}_model = l3_create_model(${component.id}_addr, ${drawType}, ${x}, ${y}, ${width}, ${height});\n`;
             code += `${indentStr}l3_set_global_transform(${component.id}_model, (l3_global_transform_cb)${callbackName});\n`; 
             // 创建 gui_lite3d 控件（局部变量）
             code += `${indentStr}gui_lite3d_t *${component.id} = gui_lite3d_create(${parentRef}, "${component.name}", ${component.id}_model, ${x}, ${y}, ${width}, ${height});\n`;

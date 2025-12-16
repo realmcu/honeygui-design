@@ -58,6 +58,18 @@ export const Hg3DProperties: React.FC<PropertyPanelProps> = ({ component, onUpda
           </div>
         </div>
 
+        <div className="property-item">
+          <label>绘制类型</label>
+          <PropertyEditor
+            type="select"
+            value={component.data?.drawType ?? 'L3_DRAW_FRONT_AND_SORT'}
+            onChange={(value) => onUpdate({ data: { ...component.data, drawType: value } })}
+            options={['L3_DRAW_FRONT_ONLY', 'L3_DRAW_FRONT_AND_BACK', 'L3_DRAW_FRONT_AND_SORT']}
+          />
+          <div style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '2px' }}>
+            仅正面 / 正面和背面 / 正面并排序（默认）
+          </div>
+        </div>
 
       </div>
 

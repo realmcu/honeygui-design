@@ -106,12 +106,13 @@ export const Model3DWidget: React.FC<WidgetProps> = ({ component, style, handler
     // 加载模型
     const ext = modelPath?.split('.').pop()?.toLowerCase();
     
-    const onLoadSuccess = (model: THREE.Object3D) => {
-      // 应用缩放
+    const onLoadSuccess = (model: THREE.Object3D, modelType: 'obj' | 'gltf') => {
+      // 直接应用用户设置的缩放值
+      // OBJ和GLTF统一处理，不做归一化
       model.scale.set(scale, scale, scale);
       
       // 坐标系转换：X轴旋转180度，实现 Y上→Y下，Z外→Z里
-      // 这样就得到了 HoneyGUI 坐标系：X右，Y下，Z里
+      // 得到 HoneyGUI 坐标系：X右，Y下，Z里
       model.rotation.x = Math.PI;
       
       // 应用用户旋转（叠加在坐标系转换之上）
@@ -143,7 +144,28 @@ export const Model3DWidget: React.FC<WidgetProps> = ({ component, style, handler
       loader.setPath(gltfPath);
       loader.load(
         gltfFileName,
-        (gltf: any) => onLoadSuccess(gltf.scene),
+        (gltf: any) => {
+          // GLTF场景可能包含多层嵌套，需要规范化
+          const model = gltf.scene;
+          
+          // 遍历场景图，确保材质正确设置
+          model.traverse((child: any) => {
+            if (child.isMesh && child.material) {
+              // 确保双面渲染
+              if (Array.isArray(child.material)) {
+                child.material.forEach((mat: any) => {
+                  mat.side = THREE.DoubleSide;
+                  mat.needsUpdate = true;
+                });
+              } else {
+                child.material.side = THREE.DoubleSide;
+                child.material.needsUpdate = true;
+              }
+            }
+          });
+          
+          onLoadSuccess(model, 'gltf');
+        },
         undefined,
         onLoadError
       );
@@ -215,7 +237,7 @@ export const Model3DWidget: React.FC<WidgetProps> = ({ component, style, handler
                     }
                   }
                 });
-                onLoadSuccess(obj);
+                onLoadSuccess(obj, 'obj');
               },
               undefined,
               onLoadError
@@ -239,7 +261,7 @@ export const Model3DWidget: React.FC<WidgetProps> = ({ component, style, handler
                     });
                   }
                 });
-                onLoadSuccess(obj);
+                onLoadSuccess(obj, 'obj');
               },
               undefined,
               onLoadError
@@ -263,7 +285,7 @@ export const Model3DWidget: React.FC<WidgetProps> = ({ component, style, handler
                 });
               }
             });
-            onLoadSuccess(obj);
+            onLoadSuccess(obj, 'obj');
           },
           undefined,
           onLoadError
