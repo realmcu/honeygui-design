@@ -3,6 +3,7 @@
   "appId": "com.honeygui.smartwatch",
   "version": "1.0.0",
   "resolution": "410X502",
+  "cornerRadius": 60,
   "targetEngine": "honeygui",
   "minSdk": "API 2: HoneyGUI V1.1.0",
   "pixelMode": "ARGB8888",

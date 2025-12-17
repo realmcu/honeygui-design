@@ -3,6 +3,7 @@
   "appId": "{{APP_ID}}",
   "version": "1.0.0",
   "resolution": "480X320",
+  "cornerRadius": 0,
   "targetEngine": "honeygui",
   "minSdk": "API 2: HoneyGUI V1.1.0",
   "pixelMode": "ARGB8888",
