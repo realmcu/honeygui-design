@@ -331,10 +331,32 @@ const AssetsPanel: React.FC = () => {
   const [newName, setNewName] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
   const [gridColumns, setGridColumns] = useState(3);
+  const [currentPath, setCurrentPath] = useState<string[]>([]);  // 当前浏览路径
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
 
-  // 按类型分类资源（递归处理）
+  // 获取当前路径下的内容（仅用于"全部"分类）
+  const getCurrentFolderContent = React.useMemo(() => {
+    let current = assets;
+    
+    // 根据 currentPath 导航到目标文件夹
+    for (const folderName of currentPath) {
+      const folder = current.find(item => item.type === 'folder' && item.name === folderName);
+      if (folder && folder.children) {
+        current = folder.children;
+      } else {
+        return { folders: [], files: [] };
+      }
+    }
+    
+    // 分离文件夹和文件
+    const folders = current.filter(item => item.type === 'folder');
+    const files = current.filter(item => item.type !== 'folder');
+    
+    return { folders, files };
+  }, [assets, currentPath]);
+
+  // 按类型分类资源
   const categorizedAssets = React.useMemo(() => {
     const result: Record<AssetCategory, AssetFile[]> = {
       all: [],
@@ -343,28 +365,43 @@ const AssetsPanel: React.FC = () => {
       models: []
     };
     
+    // "全部"分类：使用当前目录的文件
+    if (activeCategory === 'all') {
+      const { files } = getCurrentFolderContent;
+      for (const asset of files) {
+        const category = getAssetCategory(asset.name);
+        if (category) {
+          result.all.push(asset);
+        }
+        if (isModelDependency(asset.name)) {
+          result.all.push(asset);
+        }
+      }
+    }
+    
+    // 其他分类：递归扁平化所有文件
     const processAssets = (assetList: AssetFile[]) => {
       for (const asset of assetList) {
         if (asset.type === 'folder' && asset.children) {
           processAssets(asset.children);
         } else {
           const category = getAssetCategory(asset.name);
-          if (category) {
+          if (category && category !== 'all') {
             result[category].push(asset);
-            result.all.push(asset);
           }
-          // 将 mtl 文件也归类到 models（作为依赖显示）
           if (isModelDependency(asset.name)) {
             result.models.push(asset);
-            result.all.push(asset);
           }
         }
       }
     };
     
-    processAssets(assets);
+    if (activeCategory !== 'all') {
+      processAssets(assets);
+    }
+    
     return result;
-  }, [assets]);
+  }, [assets, currentPath, getCurrentFolderContent, activeCategory]);
 
   // 获取各类型数量
   const counts = React.useMemo(() => ({
@@ -473,6 +510,23 @@ const AssetsPanel: React.FC = () => {
     );
   };
 
+  const renderFolderItem = (folder: AssetFile) => {
+    return (
+      <div 
+        key={folder.path} 
+        className="asset-grid-item folder-item"
+        onClick={() => setCurrentPath([...currentPath, folder.name])}
+      >
+        <div className="asset-preview folder-preview">
+          <div className="file-icon" style={{ fontSize: '48px' }}>📁</div>
+        </div>
+        <div className="asset-info">
+          <span className="asset-name" title={folder.name}>{folder.name}</span>
+        </div>
+      </div>
+    );
+  };
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -555,34 +609,43 @@ const AssetsPanel: React.FC = () => {
   };
 
   const currentAssets = categorizedAssets[activeCategory];
+  const { folders } = getCurrentFolderContent;
   const emptyMessage = activeCategory === 'all' ? '暂无资源' : 
     activeCategory === 'images' ? '暂无图片资源' :
     activeCategory === 'videos' ? '暂无视频资源' : '暂无3D模型资源';
+
+  // 切换分类时重置路径
+  const handleCategoryChange = (category: AssetCategory) => {
+    setActiveCategory(category);
+    if (category !== 'all') {
+      setCurrentPath([]);  // 切换到其他分类时回到根目录
+    }
+  };
 
   return (
     <div className="assets-panel">
       <div className="assets-header">
         <button 
           className={`filter-btn ${activeCategory === 'all' ? 'active' : ''}`}
-          onClick={() => setActiveCategory('all')}
+          onClick={() => handleCategoryChange('all')}
         >
           全部 ({counts.all})
         </button>
         <button 
           className={`filter-btn ${activeCategory === 'images' ? 'active' : ''}`}
-          onClick={() => setActiveCategory('images')}
+          onClick={() => handleCategoryChange('images')}
         >
           图片 ({counts.images})
         </button>
         <button 
           className={`filter-btn ${activeCategory === 'videos' ? 'active' : ''}`}
-          onClick={() => setActiveCategory('videos')}
+          onClick={() => handleCategoryChange('videos')}
         >
           视频 ({counts.videos})
         </button>
         <button 
           className={`filter-btn ${activeCategory === 'models' ? 'active' : ''}`}
-          onClick={() => setActiveCategory('models')}
+          onClick={() => handleCategoryChange('models')}
         >
           3D ({counts.models})
         </button>
@@ -617,6 +680,32 @@ const AssetsPanel: React.FC = () => {
           onChange={handleFileSelect}
         />
       </div>
+      
+      {/* 面包屑导航 - 仅在"全部"分类时显示 */}
+      {activeCategory === 'all' && (
+        <div className="breadcrumb">
+          <span 
+            className="breadcrumb-item" 
+            onClick={() => setCurrentPath([])}
+            title="返回根目录"
+          >
+            🏠 根目录
+          </span>
+          {currentPath.map((folder, index) => (
+            <React.Fragment key={index}>
+              <span className="breadcrumb-separator">/</span>
+              <span 
+                className="breadcrumb-item"
+                onClick={() => setCurrentPath(currentPath.slice(0, index + 1))}
+                title={folder}
+              >
+                {folder}
+              </span>
+            </React.Fragment>
+          ))}
+        </div>
+      )}
+      
       <div className="assets-toolbar">
         <input 
           type="range" 
@@ -634,13 +723,16 @@ const AssetsPanel: React.FC = () => {
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
-        {currentAssets.length === 0 ? (
+        {folders.length === 0 && currentAssets.length === 0 ? (
           <div className="empty-state">
             <p>{emptyMessage}</p>
             <p className="hint">拖拽文件到此处</p>
           </div>
         ) : (
           <div className="assets-grid" style={{ gridTemplateColumns: `repeat(${gridColumns}, 1fr)` }}>
+            {/* 先显示文件夹（仅在"全部"分类时显示） */}
+            {activeCategory === 'all' && folders.map(folder => renderFolderItem(folder))}
+            {/* 再显示文件 */}
             {currentAssets.map(asset => renderAssetItem(asset))}
           </div>
         )}

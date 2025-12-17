@@ -26,6 +26,37 @@
   flex-shrink: 0;
 }
 
+/* 面包屑导航 */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--vscode-editor-background);
+  border-bottom: 1px solid var(--vscode-panel-border);
+  font-size: 12px;
+  overflow-x: auto;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.breadcrumb-item {
+  cursor: pointer;
+  color: var(--vscode-textLink-foreground);
+  padding: 2px 4px;
+  border-radius: 3px;
+  transition: background 0.2s;
+}
+
+.breadcrumb-item:hover {
+  background: var(--vscode-list-hoverBackground);
+  text-decoration: underline;
+}
+
+.breadcrumb-separator {
+  margin: 0 4px;
+  color: var(--vscode-descriptionForeground);
+}
+
 .assets-toolbar input[type="range"] {
   flex: 1;
   min-width: 80px;
@@ -275,6 +306,21 @@
 
 .asset-grid-item:hover {
   background: rgba(255, 255, 255, 0.05);
+}
+
+/* 文件夹样式 */
+.folder-item {
+  cursor: pointer;
+}
+
+.folder-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.folder-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .asset-grid-item .asset-preview {
