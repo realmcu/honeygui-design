@@ -279,7 +279,12 @@ export class BuildCore {
                         compiledCount++;
                     } else if (trimmed.startsWith('LINK ') || trimmed.includes('Linking')) {
                         this.logger.log(`链接中... (已编译 ${compiledCount} 个文件)`);
-                    } else if (trimmed.includes('error:') || trimmed.includes('Error:')) {
+                    } else if (trimmed.includes('error:') || trimmed.includes('Error:') ||
+                               trimmed.includes('undefined reference') ||
+                               trimmed.includes('multiple definition') ||
+                               trimmed.includes('collect2') ||
+                               trimmed.includes('ld returned')) {
+                        // 显示所有错误信息，包括链接错误
                         this.logger.log(trimmed, true);
                     } else if (trimmed.includes('warning:') && !trimmed.includes('Command is too long')) {
                         // 只显示重要警告，跳过常见无害警告
@@ -302,7 +307,12 @@ export class BuildCore {
                     if (trimmed.includes('Warning: Command is too long')) continue;
                     
                     // stderr 通常是错误信息，显示出来
-                    if (trimmed.includes('error:') || trimmed.includes('Error:')) {
+                    // 包括：error:, Error:, undefined reference, multiple definition, collect2
+                    if (trimmed.includes('error:') || trimmed.includes('Error:') ||
+                        trimmed.includes('undefined reference') || 
+                        trimmed.includes('multiple definition') ||
+                        trimmed.includes('collect2') ||
+                        trimmed.includes('ld returned')) {
                         this.logger.log(trimmed, true);
                     }
                 }

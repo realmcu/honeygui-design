@@ -379,6 +379,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.19.25",
+    "@types/pngjs": "^6.0.5",
     "@types/react": "^19.2.4",
     "@types/react-dom": "^19.2.3",
     "@types/vscode": "^1.80.0",
