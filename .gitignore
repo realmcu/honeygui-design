@@ -108,3 +108,7 @@ template-projects/*/.vscode/
 # - *.template.* 文件：模板版本（包含占位符），用于复制给用户，需要跟踪
 # - 非 .template 文件：开发版本（真实值），可以直接运行，需要跟踪
 # 两者都需要提交到 Git
+
+# 测试文件
+test-service-output/
+test-services.js
