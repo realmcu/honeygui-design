@@ -104,7 +104,10 @@ export class BuildCore {
 
         // 转换视频资源
         this.logger.log('转换视频资源...');
-        const videoConverter = new VideoConverterService();
+        // 传递日志回调，让 VideoConverterService 的日志输出到 Output Channel
+        const videoConverter = new VideoConverterService(this.sdkPath, (msg) => {
+            this.logger.log(msg);
+        });
         
         // 检查 FFmpeg 是否可用
         const ffmpegAvailable = await videoConverter.checkFFmpegAvailable();
@@ -112,17 +115,11 @@ export class BuildCore {
             this.logger.log('FFmpeg 未找到，跳过视频转换。请安装 FFmpeg 并添加到系统 PATH。', true);
             this.logger.log('视频转换跳过: 0 个');
         } else {
-            // 从项目配置获取默认视频转换选项
-            const defaultVideoOptions = {
-                format: (this.projectConfig.videoFormat as 'mjpeg' | 'avi' | 'h264') || 'mjpeg',
-                quality: this.projectConfig.videoQuality || 85,
-                frameRate: this.projectConfig.videoFrameRate || 30
-            };
-
-            const videoResults = await videoConverter.convertAssetsDir(
+            // 获取视频组件配置并进行智能转换
+            const videoResults = await this.convertVideosWithComponentConfig(
+                videoConverter,
                 assetsDir,
-                outputDir,
-                defaultVideoOptions
+                outputDir
             );
 
             const videoFailed = videoResults.filter(r => !r.success);
@@ -131,6 +128,14 @@ export class BuildCore {
                     this.logger.log(`视频转换失败: ${f.inputPath} - ${f.error}`, true);
                 }
                 throw new Error(`${videoFailed.length} 个视频转换失败`);
+            }
+
+            // 记录警告信息
+            const videoWarnings = videoResults.filter(r => r.success && r.warning);
+            if (videoWarnings.length > 0) {
+                for (const w of videoWarnings) {
+                    this.logger.log(`视频转换警告: ${w.inputPath} - ${w.warning}`, false);
+                }
             }
 
             this.logger.log(`视频转换完成: ${videoResults.length} 个`);
@@ -299,6 +304,220 @@ if os.path.exists(os.path.join(PROJECT_AUTOGEN, 'SConscript')):
         }
 
         return defaultResolution;
+    }
+
+    /**
+     * 根据组件配置转换视频资源
+     */
+    private async convertVideosWithComponentConfig(
+        videoConverter: VideoConverterService,
+        assetsDir: string,
+        outputDir: string
+    ): Promise<any[]> {
+        if (!fs.existsSync(assetsDir)) {
+            return [];
+        }
+
+        // 获取项目中所有视频组件的配置
+        const videoComponentConfigs = await this.getVideoComponentConfigs();
+        
+        // 支持的视频格式
+        const videoExts = [
+            '.mp4', '.avi', '.mov', '.mkv', '.webm', '.flv', '.wmv',
+            '.m4v', '.3gp', '.asf', '.rm', '.rmvb', '.vob', '.ts'
+        ];
+        
+        const convertTasks: Array<Promise<any>> = [];
+
+        const scanDir = (dir: string) => {
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+                const fullPath = path.join(dir, entry.name);
+                if (entry.isDirectory()) {
+                    scanDir(fullPath);
+                } else if (videoExts.includes(path.extname(entry.name).toLowerCase())) {
+                    const relativePath = path.relative(assetsDir, fullPath);
+                    const normalizedPath = relativePath.replace(/\\/g, '/');
+                    
+                    // 查找使用此视频的组件配置
+                    const componentConfig = videoComponentConfigs.find(config => 
+                        config.src === normalizedPath || 
+                        config.src === `assets/${normalizedPath}` ||
+                        config.src.endsWith(normalizedPath)
+                    );
+                    
+                    // 使用组件配置或默认配置
+                    const configFormat = componentConfig?.format || 
+                        (this.projectConfig.videoFormat as 'mjpeg' | 'avi' | 'h264') || 'mjpeg';
+                    
+                    // 获取原始质量值
+                    const rawQuality = componentConfig?.quality ?? this.projectConfig.videoQuality;
+                    
+                    // 根据格式校验和修正质量值
+                    const quality = this.normalizeVideoQuality(rawQuality, configFormat);
+                    
+                    const options = componentConfig ? {
+                        format: configFormat,
+                        quality: quality,
+                        frameRate: componentConfig.frameRate || 30,
+                        crop: componentConfig.crop,
+                        scale: componentConfig.scale
+                    } : {
+                        format: configFormat,
+                        quality: quality,
+                        frameRate: this.projectConfig.videoFrameRate || 30
+                    };
+                    
+                    // 生成输出路径
+                    const outputExt = this.getVideoOutputExtension(options.format);
+                    const outputPath = path.join(
+                        outputDir,
+                        relativePath.replace(/\.[^.]+$/i, outputExt)
+                    );
+                    
+                    // 添加转换任务
+                    convertTasks.push(
+                        videoConverter.convert(fullPath, outputPath, options)
+                    );
+                    
+                    this.logger.log(`计划转换: ${normalizedPath} -> ${options.format} (${outputExt})`);
+                }
+            }
+        };
+
+        scanDir(assetsDir);
+        
+        // 并行执行所有转换任务
+        return Promise.all(convertTasks);
+    }
+
+    /**
+     * 获取项目中所有视频组件的配置
+     */
+    private async getVideoComponentConfigs(): Promise<Array<{
+        src: string;
+        format?: 'mjpeg' | 'avi' | 'h264';
+        quality?: number;
+        frameRate?: number;
+        crop?: any;
+        scale?: any;
+    }>> {
+        const configs: Array<any> = [];
+        
+        try {
+            // 扫描 UI 目录中的所有 HML 文件
+            const uiDir = path.join(this.projectRoot, 'ui');
+            if (fs.existsSync(uiDir)) {
+                await this.scanHmlFilesForVideoConfigs(uiDir, configs);
+            }
+        } catch (error) {
+            this.logger.log(`读取视频组件配置时出错: ${error}`, true);
+        }
+        
+        return configs;
+    }
+
+    /**
+     * 扫描 HML 文件中的视频组件配置
+     */
+    private async scanHmlFilesForVideoConfigs(dir: string, configs: Array<any>): Promise<void> {
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        
+        for (const entry of entries) {
+            const fullPath = path.join(dir, entry.name);
+            
+            if (entry.isDirectory()) {
+                await this.scanHmlFilesForVideoConfigs(fullPath, configs);
+            } else if (entry.name.endsWith('.hml')) {
+                try {
+                    const content = fs.readFileSync(fullPath, 'utf-8');
+                    this.extractVideoConfigsFromHml(content, configs);
+                } catch (error) {
+                    this.logger.log(`读取 HML 文件失败: ${fullPath} - ${error}`, true);
+                }
+            }
+        }
+    }
+
+    /**
+     * 从 HML 内容中提取视频组件配置
+     */
+    private extractVideoConfigsFromHml(hmlContent: string, configs: Array<any>): void {
+        // 使用正则表达式匹配 hg_video 标签
+        const videoTagRegex = /<hg_video[^>]*>/g;
+        let match;
+        
+        while ((match = videoTagRegex.exec(hmlContent)) !== null) {
+            const tagContent = match[0];
+            
+            // 提取属性
+            const config: any = {};
+            
+            // 提取 src 属性
+            const srcMatch = tagContent.match(/src\s*=\s*["']([^"']+)["']/);
+            if (srcMatch) {
+                config.src = srcMatch[1];
+            }
+            
+            // 提取 format 属性
+            const formatMatch = tagContent.match(/format\s*=\s*["']([^"']+)["']/);
+            if (formatMatch) {
+                config.format = formatMatch[1];
+            }
+            
+            // 提取 quality 属性
+            const qualityMatch = tagContent.match(/quality\s*=\s*["']?(\d+)["']?/);
+            if (qualityMatch) {
+                config.quality = parseInt(qualityMatch[1]);
+            }
+            
+            // 提取 frameRate 属性
+            const frameRateMatch = tagContent.match(/frameRate\s*=\s*["']?(\d+)["']?/);
+            if (frameRateMatch) {
+                config.frameRate = parseInt(frameRateMatch[1]);
+            }
+            
+            // 只有当有 src 属性时才添加配置
+            if (config.src) {
+                configs.push(config);
+            }
+        }
+    }
+
+    /**
+     * 获取视频输出扩展名
+     */
+    private getVideoOutputExtension(format: string): string {
+        switch (format) {
+            case 'mjpeg':
+                return '.mjpeg';
+            case 'avi':
+                return '.avi';
+            case 'h264':
+                return '.h264';
+            default:
+                return '.mjpeg';
+        }
+    }
+
+    /**
+     * 校验和修正视频质量值
+     * MJPEG/AVI: 1-31 (1=最高质量)
+     * H.264: 0-51 (CRF值，23=默认)
+     */
+    private normalizeVideoQuality(quality: number | undefined, format: string): number {
+        if (format === 'h264') {
+            // H.264 CRF 值范围 0-51，默认 23
+            if (quality === undefined || quality < 0 || quality > 51) {
+                return 23;
+            }
+            return quality;
+        } else {
+            // MJPEG/AVI 质量范围 1-31，默认 1（最高质量）
+            if (quality === undefined || quality < 1 || quality > 31) {
+                return 1;
+            }
+            return quality;
+        }
     }
 
     protected copyDirectory(src: string, dest: string): void {

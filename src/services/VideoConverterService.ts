@@ -5,9 +5,8 @@ import { spawn } from 'child_process';
 export interface VideoConvertOptions {
     format: 'mjpeg' | 'avi' | 'h264';
     frameRate?: number;  // 帧率
-    quality?: number;    // 质量 (0-100)，用于 MJPEG 和 H.264
-    bitrate?: string;    // 码率，如 '1M', '500k'
-    // 视频裁剪和缩放选项
+    quality?: number;    // 质量: MJPEG/AVI 为 1-31（1最高），H264 为 CRF 值 0-51
+    // 视频裁剪和缩放选项（FFmpeg 预处理）
     crop?: {
         x: number;       // 裁剪起始 X 坐标
         y: number;       // 裁剪起始 Y 坐标
@@ -26,12 +25,41 @@ export interface VideoConvertResult {
     inputPath: string;
     outputPath: string;
     error?: string;
+    warning?: string;    // 警告信息（非致命错误）
     duration?: number;   // 转换耗时（秒）
 }
 
+/**
+ * 日志回调函数类型
+ */
+export type LogCallback = (message: string) => void;
+
+/**
+ * 视频转换服务
+ * 
+ * 转换流程：
+ * 1. FFmpeg 预处理（仅尺寸变换：缩放/裁剪），如有需要
+ * 2. SDK video_converter 进行格式转换和编码
+ * 3. 如果没有尺寸变换需求，直接调用 SDK 转换原始视频
+ */
 export class VideoConverterService {
-    constructor() {
-        // FFmpeg 不需要 SDK 路径，假定已在系统 PATH 中
+    private sdkPath?: string;
+    private logCallback?: LogCallback;
+
+    constructor(sdkPath?: string, logCallback?: LogCallback) {
+        this.sdkPath = sdkPath;
+        this.logCallback = logCallback;
+    }
+
+    /**
+     * 输出日志
+     */
+    private log(message: string): void {
+        if (this.logCallback) {
+            this.logCallback(message);
+        }
+        // 同时输出到控制台（用于调试）
+        console.log(`[VideoConverter] ${message}`);
     }
 
     /**
@@ -52,7 +80,7 @@ export class VideoConverterService {
     }
 
     /**
-     * 根据格式和选项构建输出文件扩展名
+     * 根据格式构建输出文件扩展名
      */
     private getOutputExtension(format: string): string {
         switch (format) {
@@ -61,138 +89,25 @@ export class VideoConverterService {
             case 'avi':
                 return '.avi';
             case 'h264':
-                return '.h264';  // H.264 原始流格式
+                return '.h264';
             default:
                 return '.mjpeg';
         }
     }
 
     /**
-     * 构建 FFmpeg 命令参数
+     * 检查是否需要 FFmpeg 预处理（尺寸变换）
      */
-    private buildFFmpegArgs(
-        inputPath: string,
-        outputPath: string,
-        options: VideoConvertOptions
-    ): string[] {
-        const args = [
-            '-i', inputPath,  // 输入文件
-            '-y',             // 覆盖输出文件
-        ];
-
-        // 添加视频滤镜（裁剪和缩放）
-        const videoFilters: string[] = [];
-        
-        // 裁剪滤镜
-        if (options.crop) {
-            const { x, y, width, height } = options.crop;
-            videoFilters.push(`crop=${width}:${height}:${x}:${y}`);
-        }
-        
-        // 缩放滤镜
-        if (options.scale) {
-            const { width, height, keepAspectRatio } = options.scale;
-            if (keepAspectRatio) {
-                // 保持宽高比，使用 scale 滤镜的 force_original_aspect_ratio
-                videoFilters.push(`scale=${width}:${height}:force_original_aspect_ratio=decrease`);
-                videoFilters.push(`pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:black`);
-            } else {
-                // 拉伸到指定尺寸
-                videoFilters.push(`scale=${width}:${height}`);
-            }
-        }
-        
-        // 如果有视频滤镜，添加 -vf 参数
-        if (videoFilters.length > 0) {
-            args.push('-vf', videoFilters.join(','));
-        }
-
-        switch (options.format) {
-            case 'mjpeg':
-                // 帧率设置（MJPEG 格式）
-                if (options.frameRate !== undefined) {
-                    args.push('-r', options.frameRate.toString());
-                }
-                
-                args.push(
-                    '-vcodec', 'mjpeg',        // 视频编码器
-                    '-pix_fmt', 'yuvj420p',    // 像素格式：yuvj420p（MJPEG 专用）
-                    '-an'                      // 无音频输出
-                );
-                
-                // 质量设置（MJPEG 使用 -q:v 参数，范围 1-31，数值越小质量越高）
-                if (options.quality !== undefined) {
-                    // 将 0-100 映射到 31-1，推荐范围 2-8
-                    const qValue = Math.max(1, Math.round(31 - (options.quality / 100) * 30));
-                    args.push('-q:v', qValue.toString());
-                } else {
-                    args.push('-q:v', '5');    // 默认质量
-                }
-                break;
-
-            case 'avi':
-                // 帧率设置（AVI 格式）
-                if (options.frameRate !== undefined) {
-                    args.push('-r', options.frameRate.toString());
-                } else {
-                    args.push('-r', '25');     // 默认 25fps
-                }
-                
-                args.push(
-                    '-an',                     // 无音频输出
-                    '-vcodec', 'mjpeg',        // 视频编码器
-                    '-pix_fmt', 'yuvj420p'     // 像素格式：yuvj420p
-                );
-                
-                // 质量设置
-                if (options.quality !== undefined) {
-                    const qValue = Math.max(1, Math.round(31 - (options.quality / 100) * 30));
-                    args.push('-q:v', qValue.toString());
-                } else {
-                    args.push('-q:v', '5');    // 默认质量
-                }
-                break;
-
-            case 'h264':
-                // 帧率设置（H.264 格式）
-                if (options.frameRate !== undefined) {
-                    args.push('-r', options.frameRate.toString());
-                } else {
-                    args.push('-r', '30');     // 默认 30fps
-                }
-                
-                args.push(
-                    '-c:v', 'libx264',         // H.264 编码器
-                    '-x264-params', 'cabac=0:ref=3:deblock=1:0:0:analyse=0x1:0x111:me=hex:subme=7:psy=1:psy_rd=1.0:0.0:mixed_ref=1:me_range=16:chroma_me=1:trellis=1:8x8dct=0:deadzone-inter=21:deadzone-intra=11:fast_pskip=1:chroma_qp_offset=-2:threads=11:lookahead_threads=1:sliced_threads=0:nr=0:decimate=1:interlaced=0:bluray_compat=0:constrained_intra=0:bframes=0:weightp=0:keyint=40:min-keyint=4:scenecut=40:intra_refresh=0:rc_lookahead=40:mbtree=1:qcomp=0.60:qpmin=0:qpmax=69:qpstep=4:ipratio=1.40:aq-mode=1:aq-strength=1.00',
-                    '-an',                     // 无音频输出
-                    '-f', 'rawvideo'           // 原始视频格式
-                );
-                
-                // 质量设置（H.264 使用 CRF）
-                if (options.quality !== undefined) {
-                    // 将 0-100 映射到 51-18
-                    const crfValue = Math.round(51 - (options.quality / 100) * 33);
-                    // 在 x264-params 中已经包含了 crf=23，这里需要替换
-                    const lastArgIndex = args.length - 3; // -x264-params 的索引
-                    const x264Params = args[lastArgIndex + 1];
-                    args[lastArgIndex + 1] = x264Params.replace('crf=23', `crf=${crfValue}`);
-                }
-                break;
-        }
-
-        // 码率设置（优先级高于质量）
-        if (options.bitrate) {
-            args.push('-b:v', options.bitrate);
-        }
-
-        // 输出文件
-        args.push(outputPath);
-
-        return args;
+    private needsPreprocessing(options: VideoConvertOptions): boolean {
+        return !!(options.crop || options.scale);
     }
 
     /**
-     * Convert a single video file using FFmpeg
+     * 转换单个视频文件
+     * 
+     * 流程：
+     * 1. 如果有尺寸变换需求，先用 FFmpeg 预处理
+     * 2. 调用 SDK video_converter 进行格式转换
      */
     async convert(
         inputPath: string,
@@ -209,17 +124,6 @@ export class VideoConverterService {
             };
         }
 
-        // 检查 FFmpeg 是否可用
-        const ffmpegAvailable = await this.checkFFmpegAvailable();
-        if (!ffmpegAvailable) {
-            return {
-                success: false,
-                inputPath,
-                outputPath,
-                error: 'FFmpeg not found in system PATH. Please install FFmpeg and add it to PATH.'
-            };
-        }
-
         // 确保输出目录存在
         const outputDir = path.dirname(outputPath);
         if (!fs.existsSync(outputDir)) {
@@ -227,89 +131,312 @@ export class VideoConverterService {
         }
 
         const startTime = Date.now();
+        let videoToConvert = inputPath;
+        let tempPreprocessFile: string | null = null;
 
+        // 第一步：FFmpeg 预处理（如果需要尺寸变换）
+        if (this.needsPreprocessing(options)) {
+            const ffmpegAvailable = await this.checkFFmpegAvailable();
+            if (!ffmpegAvailable) {
+                return {
+                    success: false,
+                    inputPath,
+                    outputPath,
+                    error: 'FFmpeg not found. Required for video scaling/cropping.'
+                };
+            }
+
+            // 创建临时文件用于预处理输出
+            const inputExt = path.extname(inputPath);
+            const outputBase = outputPath.slice(0, -path.extname(outputPath).length);
+            tempPreprocessFile = outputBase + '.preprocess' + inputExt;
+
+            const preprocessResult = await this.ffmpegPreprocess(inputPath, tempPreprocessFile, options);
+            if (!preprocessResult.success) {
+                return preprocessResult;
+            }
+
+            videoToConvert = tempPreprocessFile;
+        }
+
+        // 第二步：SDK video_converter 格式转换
+        const convertResult = await this.sdkConvert(videoToConvert, outputPath, options);
+
+        // 保留预处理后的视频文件（不删除，方便调试）
+        // 预处理文件位于输出目录，文件名为 xxx.preprocess.mp4
+
+        // 计算总耗时
+        const totalDuration = (Date.now() - startTime) / 1000;
+        return {
+            ...convertResult,
+            duration: totalDuration
+        };
+    }
+
+    /**
+     * FFmpeg 预处理（仅尺寸变换）
+     */
+    private async ffmpegPreprocess(
+        inputPath: string,
+        outputPath: string,
+        options: VideoConvertOptions
+    ): Promise<VideoConvertResult> {
         return new Promise((resolve) => {
-            const args = this.buildFFmpegArgs(inputPath, outputPath, options);
+            // 构建 FFmpeg 参数（仅尺寸变换，保持原格式）
+            const args = [
+                '-i', inputPath,
+                '-y',
+            ];
+
+            const videoFilters: string[] = [];
             
+            if (options.crop) {
+                const { x, y, width, height } = options.crop;
+                videoFilters.push(`crop=${width}:${height}:${x}:${y}`);
+            }
+            
+            if (options.scale) {
+                const { width, height, keepAspectRatio } = options.scale;
+                if (keepAspectRatio) {
+                    videoFilters.push(`scale=${width}:${height}:force_original_aspect_ratio=decrease`);
+                    videoFilters.push(`pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:black`);
+                } else {
+                    videoFilters.push(`scale=${width}:${height}`);
+                }
+            }
+
+            if (videoFilters.length > 0) {
+                args.push('-vf', videoFilters.join(','));
+            }
+
+            // 重新编码为通用格式（因为有滤镜无法直接复制流）
+            args.push(
+                '-c:v', 'libx264',  // 使用 H.264 编码
+                '-preset', 'fast',
+                '-crf', '18',       // 高质量
+                '-an',              // 无音频
+                outputPath
+            );
+
+            // 打印 FFmpeg 预处理命令
+            const ffmpegCmd = `ffmpeg ${args.join(' ')}`;
+            this.log(`FFmpeg 预处理命令: ${ffmpegCmd}`);
+
             const proc = spawn('ffmpeg', args, {
                 shell: true,
                 stdio: ['pipe', 'pipe', 'pipe']
             });
-            
-            let stdout = '';
+
             let stderr = '';
-            
-            proc.stdout?.on('data', (data) => {
-                stdout += data.toString();
-            });
-            
             proc.stderr?.on('data', (data) => {
                 stderr += data.toString();
             });
-            
+
             proc.on('close', (code) => {
-                const duration = (Date.now() - startTime) / 1000;
-                
                 if (code === 0) {
-                    resolve({ 
-                        success: true, 
-                        inputPath, 
-                        outputPath,
-                        duration
+                    resolve({
+                        success: true,
+                        inputPath,
+                        outputPath
                     });
                 } else {
                     resolve({
                         success: false,
                         inputPath,
                         outputPath,
-                        error: this.parseFFmpegError(stderr) || `FFmpeg exit code: ${code}`,
-                        duration
+                        error: `FFmpeg preprocessing failed: ${this.parseFFmpegError(stderr)}`
                     });
                 }
             });
 
             proc.on('error', (err) => {
-                const duration = (Date.now() - startTime) / 1000;
                 resolve({
                     success: false,
                     inputPath,
                     outputPath,
-                    error: `FFmpeg process error: ${err.message}`,
-                    duration
+                    error: `FFmpeg process error: ${err.message}`
                 });
             });
         });
     }
 
     /**
-     * 解析 FFmpeg 错误信息，提取有用的错误描述
+     * SDK video_converter 格式转换
      */
-    private parseFFmpegError(stderr: string): string {
-        if (!stderr) return '';
-        
-        // 常见错误模式
-        const errorPatterns = [
-            /No such file or directory/,
-            /Invalid data found when processing input/,
-            /Unknown encoder/,
-            /Permission denied/,
-            /Disk full/
-        ];
-        
-        for (const pattern of errorPatterns) {
-            const match = stderr.match(pattern);
-            if (match) {
-                return match[0];
+    private async sdkConvert(
+        inputPath: string,
+        outputPath: string,
+        options: VideoConvertOptions
+    ): Promise<VideoConvertResult> {
+        // 检查 SDK 路径
+        if (!this.sdkPath) {
+            return {
+                success: false,
+                inputPath,
+                outputPath,
+                error: 'SDK path not configured. Cannot perform video conversion.'
+            };
+        }
+
+        // 检查 SDK 转换工具是否存在
+        const converterPath = this.getConverterPath();
+        if (!fs.existsSync(converterPath)) {
+            return {
+                success: false,
+                inputPath,
+                outputPath,
+                error: `SDK video_converter not found at: ${converterPath}`
+            };
+        }
+
+        return new Promise((resolve) => {
+            const pythonCmd = this.getPythonCommand();
+            const args: string[] = [];
+
+            // 检查是否是 Python 包（目录）
+            const isPackage = fs.statSync(converterPath).isDirectory() &&
+                             fs.existsSync(path.join(converterPath, '__main__.py'));
+
+            if (isPackage) {
+                const moduleName = path.basename(converterPath);
+                args.push('-m', moduleName);
+            } else {
+                args.push(converterPath);
+            }
+
+            // SDK 格式参数映射
+            const sdkFormat = options.format === 'avi' ? 'avi_mjpeg' : options.format;
+
+            // 添加参数
+            args.push('-i', inputPath);
+            args.push('-o', outputPath);
+            args.push('-f', sdkFormat);
+
+            // 添加可选参数
+            if (options.quality !== undefined) {
+                args.push('-q', options.quality.toString());
+            }
+            if (options.frameRate !== undefined) {
+                args.push('-r', options.frameRate.toString());
+            }
+
+            // 设置环境变量
+            const env = { ...process.env };
+            if (isPackage) {
+                const toolDir = path.dirname(converterPath);
+                env.PYTHONPATH = toolDir + (env.PYTHONPATH ? path.delimiter + env.PYTHONPATH : '');
+            }
+
+            // 打印 SDK 转换命令
+            const sdkCmd = `${pythonCmd} ${args.join(' ')}`;
+            this.log(`SDK 转换命令: ${sdkCmd}`);
+            if (isPackage) {
+                this.log(`PYTHONPATH: ${env.PYTHONPATH}`);
+            }
+
+            const proc = spawn(pythonCmd, args, {
+                shell: true,
+                stdio: ['pipe', 'pipe', 'pipe'],
+                env
+            });
+
+            let stdout = '';
+            let stderr = '';
+
+            proc.stdout?.on('data', (data) => {
+                stdout += data.toString();
+            });
+
+            proc.stderr?.on('data', (data) => {
+                stderr += data.toString();
+            });
+
+            proc.on('close', (code) => {
+                if (code === 0) {
+                    // 检查输出文件
+                    if (fs.existsSync(outputPath)) {
+                        resolve({
+                            success: true,
+                            inputPath,
+                            outputPath
+                        });
+                    } else {
+                        // SDK 可能修改了输出文件扩展名，尝试查找
+                        const foundFile = this.findOutputFile(outputPath);
+                        if (foundFile) {
+                            try {
+                                fs.renameSync(foundFile, outputPath);
+                                resolve({
+                                    success: true,
+                                    inputPath,
+                                    outputPath
+                                });
+                            } catch (err) {
+                                resolve({
+                                    success: false,
+                                    inputPath,
+                                    outputPath,
+                                    error: `Failed to rename output file: ${err}`
+                                });
+                            }
+                        } else {
+                            resolve({
+                                success: false,
+                                inputPath,
+                                outputPath,
+                                error: `SDK conversion completed but output file not found`
+                            });
+                        }
+                    }
+                } else {
+                    resolve({
+                        success: false,
+                        inputPath,
+                        outputPath,
+                        error: `SDK video_converter failed (exit code: ${code}): ${stderr}`
+                    });
+                }
+            });
+
+            proc.on('error', (err) => {
+                resolve({
+                    success: false,
+                    inputPath,
+                    outputPath,
+                    error: `SDK video_converter process error: ${err.message}`
+                });
+            });
+        });
+    }
+
+    /**
+     * 查找 SDK 可能生成的输出文件
+     */
+    private findOutputFile(expectedPath: string): string | null {
+        const outputDir = path.dirname(expectedPath);
+        const baseName = path.basename(expectedPath, path.extname(expectedPath));
+        const possibleExtensions = ['.avi', '.mjpeg', '.h264'];
+
+        for (const ext of possibleExtensions) {
+            const possiblePath = path.join(outputDir, baseName + ext);
+            if (fs.existsSync(possiblePath) && possiblePath !== expectedPath) {
+                return possiblePath;
             }
         }
-        
-        // 返回最后几行错误信息
+        return null;
+    }
+
+    /**
+     * 解析 FFmpeg 错误信息
+     */
+    private parseFFmpegError(stderr: string): string {
+        if (!stderr) return 'Unknown error';
         const lines = stderr.trim().split('\n');
         return lines.slice(-3).join('\n');
     }
 
     /**
-     * Convert multiple videos in batch
+     * 批量转换视频
      */
     async convertBatch(
         items: Array<{
@@ -324,19 +451,17 @@ export class VideoConverterService {
     }
 
     /**
-     * Convert all videos in assets directory to build output
-     * 根据项目配置或组件数据中的设置进行转换
+     * 转换 assets 目录下的所有视频
      */
     async convertAssetsDir(
         assetsDir: string,
         outputDir: string,
-        defaultOptions: VideoConvertOptions = { format: 'mjpeg', quality: 85 }
+        defaultOptions: VideoConvertOptions = { format: 'mjpeg', quality: 1 }
     ): Promise<VideoConvertResult[]> {
         if (!fs.existsSync(assetsDir)) {
             return [];
         }
 
-        // 支持更多视频格式
         const videoExts = [
             '.mp4', '.avi', '.mov', '.mkv', '.webm', '.flv', '.wmv',
             '.m4v', '.3gp', '.asf', '.rm', '.rmvb', '.vob', '.ts'
@@ -371,8 +496,7 @@ export class VideoConverterService {
     }
 
     /**
-     * 根据组件配置转换特定视频
-     * 支持每个视频组件有不同的转换设置
+     * 根据组件配置转换视频
      */
     async convertWithComponentConfig(
         inputPath: string,
@@ -381,26 +505,14 @@ export class VideoConverterService {
             format?: 'mjpeg' | 'avi' | 'h264';
             frameRate?: number;
             quality?: number;
-            bitrate?: string;
-            // 新增裁剪和缩放选项
-            crop?: {
-                x: number;
-                y: number;
-                width: number;
-                height: number;
-            };
-            scale?: {
-                width: number;
-                height: number;
-                keepAspectRatio?: boolean;
-            };
+            crop?: { x: number; y: number; width: number; height: number };
+            scale?: { width: number; height: number; keepAspectRatio?: boolean };
         }
     ): Promise<VideoConvertResult> {
         const options: VideoConvertOptions = {
             format: componentData.format || 'mjpeg',
             frameRate: componentData.frameRate,
-            quality: componentData.quality || 85,
-            bitrate: componentData.bitrate,
+            quality: componentData.quality || 1,
             crop: componentData.crop,
             scale: componentData.scale
         };
@@ -414,58 +526,7 @@ export class VideoConverterService {
     }
 
     /**
-     * 转换视频并应用裁剪和缩放
-     * 便捷方法，用于快速应用视频处理
-     */
-    async convertWithProcessing(
-        inputPath: string,
-        outputPath: string,
-        options: {
-            format: 'mjpeg' | 'avi' | 'h264';
-            frameRate?: number;
-            quality?: number;
-            // 裁剪选项
-            cropX?: number;
-            cropY?: number;
-            cropWidth?: number;
-            cropHeight?: number;
-            // 缩放选项
-            scaleWidth?: number;
-            scaleHeight?: number;
-            keepAspectRatio?: boolean;
-        }
-    ): Promise<VideoConvertResult> {
-        const convertOptions: VideoConvertOptions = {
-            format: options.format,
-            frameRate: options.frameRate,
-            quality: options.quality
-        };
-
-        // 添加裁剪选项
-        if (options.cropX !== undefined && options.cropY !== undefined && 
-            options.cropWidth !== undefined && options.cropHeight !== undefined) {
-            convertOptions.crop = {
-                x: options.cropX,
-                y: options.cropY,
-                width: options.cropWidth,
-                height: options.cropHeight
-            };
-        }
-
-        // 添加缩放选项
-        if (options.scaleWidth !== undefined && options.scaleHeight !== undefined) {
-            convertOptions.scale = {
-                width: options.scaleWidth,
-                height: options.scaleHeight,
-                keepAspectRatio: options.keepAspectRatio || false
-            };
-        }
-
-        return this.convert(inputPath, outputPath, convertOptions);
-    }
-
-    /**
-     * 获取视频信息（时长、分辨率、帧率等）
+     * 获取视频信息
      */
     async getVideoInfo(videoPath: string): Promise<{
         duration?: number;
@@ -489,7 +550,6 @@ export class VideoConverterService {
             ], { shell: true });
 
             let stdout = '';
-            
             proc.stdout?.on('data', (data) => {
                 stdout += data.toString();
             });
@@ -512,7 +572,7 @@ export class VideoConverterService {
                         } else {
                             resolve({});
                         }
-                    } catch (err) {
+                    } catch {
                         resolve(null);
                     }
                 } else {
@@ -527,7 +587,38 @@ export class VideoConverterService {
     }
 
     /**
-     * 解析帧率字符串（如 "30/1" -> 30）
+     * 获取 SDK video_converter 路径
+     */
+    private getConverterPath(): string {
+        if (!this.sdkPath) {
+            return '';
+        }
+        
+        const possiblePaths = [
+            path.join(this.sdkPath, 'tool', 'video-convert-tool', 'video_converter'),
+            path.join(this.sdkPath, 'tool', 'video-convert-tool', 'video_converter.py'),
+            path.join(this.sdkPath, 'tool', 'video_converter'),
+            path.join(this.sdkPath, 'tool', 'video_converter.py'),
+        ];
+
+        for (const p of possiblePaths) {
+            if (fs.existsSync(p)) {
+                return p;
+            }
+        }
+
+        return possiblePaths[0];
+    }
+
+    /**
+     * 获取 Python 命令
+     */
+    private getPythonCommand(): string {
+        return process.platform === 'win32' ? 'py' : 'python3';
+    }
+
+    /**
+     * 解析帧率字符串
      */
     private parseFrameRate(frameRateStr: string): number | undefined {
         if (!frameRateStr) return undefined;

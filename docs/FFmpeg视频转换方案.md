@@ -67,8 +67,9 @@ ffmpeg -i input.mp4 -c:v mjpeg -q:v 8 -c:a pcm_s16le output.mjpeg
 **新的构造函数**：
 ```typescript
 export class VideoConverterService {
-    constructor() {
-        // 不再需要 SDK 路径，FFmpeg 从系统 PATH 调用
+    constructor(sdkPath?: string) {
+        // FFmpeg 从系统 PATH 调用
+        // SDK 路径用于后处理脚本（可选）
     }
 }
 ```
@@ -78,6 +79,18 @@ export class VideoConverterService {
 async checkFFmpegAvailable(): Promise<boolean> {
     // 检查系统中是否安装了 FFmpeg
 }
+```
+
+### 2. 双阶段转换流程
+
+**第一阶段：FFmpeg 转换**
+```typescript
+private async ffmpegConvert(inputPath: string, outputPath: string, options: VideoConvertOptions): Promise<VideoConvertResult>
+```
+
+**第二阶段：SDK 后处理**
+```typescript
+private async postProcessVideo(inputPath: string, outputPath: string, options: VideoConvertOptions): Promise<VideoConvertResult>
 ```
 
 ### 2. 格式支持增强
@@ -171,7 +184,41 @@ ffmpeg -i input.mp4 -vf "crop=640:480:100:50,scale=400:300" output.mp4
 
 ## 🔧 新增功能
 
-### 1. 视频信息获取
+### 1. SDK 后处理集成
+
+**智能后处理流程**：
+```typescript
+// 1. FFmpeg 转换到临时文件（保持正确的文件扩展名）
+const outputExt = path.extname(outputPath);
+const outputBase = outputPath.slice(0, -outputExt.length);
+const tempOutput = outputBase + '.tmp' + outputExt;  // 例如: birds.tmp.mjpeg
+const ffmpegResult = await this.ffmpegConvert(inputPath, tempOutput, options);
+
+// 2. SDK 后处理（如果可用）
+const postProcessResult = await this.postProcessVideo(tempOutput, outputPath, options);
+
+// 3. 清理临时文件
+fs.unlinkSync(tempOutput);
+```
+
+**临时文件命名策略**：
+- ❌ 旧方案: `birds.mjpeg` + `.temp` = `birds.mjpeg.temp` (FFmpeg 无法识别)
+- ✅ 新方案: `birds.mjpeg` → `birds.tmp.mjpeg` (保持正确扩展名)
+
+**后处理脚本检测**：
+- 自动检测多个可能的脚本路径
+- 支持降级到直接文件复制
+- 提供详细的警告和错误信息
+
+**支持的脚本路径**：
+```
+SDK/tool/video-convert-tool/video_converter.py  (推荐)
+SDK/tool/video_converter.py
+SDK/tools/video_converter.py
+SDK/video_converter.py
+```
+
+### 2. 视频信息获取
 ```typescript
 async getVideoInfo(videoPath: string): Promise<{
     duration?: number;
@@ -210,16 +257,22 @@ const videoExts = [
 ];
 ```
 
-### 4. 转换性能监控
+### 4. 增强的结果报告
 ```typescript
 interface VideoConvertResult {
     success: boolean;
     inputPath: string;
     outputPath: string;
     error?: string;
+    warning?: string;    // 新增：警告信息
     duration?: number;   // 新增：转换耗时
 }
 ```
+
+**警告信息示例**：
+- SDK 后处理脚本未找到，使用直接复制
+- 后处理失败，回退到文件复制
+- Python 环境问题，跳过后处理
 
 ## 📋 部署要求
 

@@ -338,6 +338,7 @@ void ${baseName}_update_user(void) {
         const src = component.data?.src || '';
         const frameRate = component.data?.frameRate || 30;
         const autoPlay = component.data?.autoPlay !== false; // 默认自动播放
+        const loop = component.data?.loop === true; // 循环播放，默认关闭
         
         // 将视频扩展名替换为转换后的格式
         let videoSrc = src;
@@ -364,6 +365,11 @@ void ${baseName}_update_user(void) {
         
         // 设置帧率
         code += `${indentStr}gui_video_set_frame_rate((gui_video_t *)${component.id}, ${frameRate}.f);\n`;
+        
+        // 设置循环播放
+        if (loop) {
+            code += `${indentStr}gui_video_set_repeat_count((gui_video_t *)${component.id}, GUI_VIDEO_REPEAT_INFINITE);\n`;
+        }
         
         // 设置播放状态
         if (autoPlay) {

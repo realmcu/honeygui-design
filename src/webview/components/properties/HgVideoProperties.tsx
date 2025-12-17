@@ -29,12 +29,28 @@ const helpTextStyle: React.CSSProperties = {
 
 export const HgVideoProperties: React.FC<PropertyPanelProps> = ({ component, onUpdate }) => {
   const handlePropertyChange = (property: string, value: any) => {
-    onUpdate({
-      data: {
-        ...component.data,
-        [property]: value
+    const newData = {
+      ...component.data,
+      [property]: value
+    };
+    
+    // 当格式改变时，自动调整质量值到正确范围
+    if (property === 'format') {
+      const currentQuality = component.data?.quality;
+      if (value === 'h264') {
+        // H.264: CRF 0-51，默认 23
+        if (currentQuality === undefined || currentQuality < 0 || currentQuality > 51) {
+          newData.quality = 23;
+        }
+      } else {
+        // MJPEG/AVI: 1-31，默认 1
+        if (currentQuality === undefined || currentQuality < 1 || currentQuality > 31) {
+          newData.quality = 1;
+        }
       }
-    });
+    }
+    
+    onUpdate({ data: newData });
   };
 
   const videoData = component.data || {};
@@ -43,6 +59,7 @@ export const HgVideoProperties: React.FC<PropertyPanelProps> = ({ component, onU
   const frameRate = videoData.frameRate || 30;
   const quality = videoData.quality || 85;
   const autoPlay = videoData.autoPlay !== false;
+  const loop = videoData.loop === true;  // 循环播放，默认关闭
 
   return (
     <div className="properties-content">
@@ -82,42 +99,7 @@ export const HgVideoProperties: React.FC<PropertyPanelProps> = ({ component, onU
         </select>
         <small style={helpTextStyle}>编译时将视频转换为此格式</small>
 
-        {format === 'mjpeg' && (
-          <>
-            <label style={labelStyle}>质量 (0-100)</label>
-            <input
-              type="number"
-              min="0"
-              max="100"
-              value={quality}
-              onChange={(e) => handlePropertyChange('quality', parseInt(e.target.value) || 85)}
-              style={inputStyle}
-            />
-            <small style={helpTextStyle}>MJPEG 压缩质量，数值越高质量越好</small>
-          </>
-        )}
-
-        {format === 'avi' && (
-          <>
-            <label style={labelStyle}>帧率 (FPS)</label>
-            <input
-              type="number"
-              min="1"
-              max="60"
-              value={frameRate}
-              onChange={(e) => handlePropertyChange('frameRate', parseInt(e.target.value) || 30)}
-              style={inputStyle}
-            />
-            <small style={helpTextStyle}>AVI 输出帧率</small>
-          </>
-        )}
-      </div>
-
-      {/* 播放设置 */}
-      <div style={{ marginTop: '16px' }}>
-        <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', fontWeight: 600 }}>播放设置</h4>
-        
-        <label style={labelStyle}>播放帧率</label>
+        <label style={labelStyle}>帧率 (FPS)</label>
         <input
           type="number"
           min="1"
@@ -126,7 +108,42 @@ export const HgVideoProperties: React.FC<PropertyPanelProps> = ({ component, onU
           onChange={(e) => handlePropertyChange('frameRate', parseInt(e.target.value) || 30)}
           style={inputStyle}
         />
-        <small style={helpTextStyle}>运行时播放帧率</small>
+        <small style={helpTextStyle}>输出视频帧率</small>
+
+        {(format === 'mjpeg' || format === 'avi') && (
+          <>
+            <label style={labelStyle}>质量 (1-31)</label>
+            <input
+              type="number"
+              min="1"
+              max="31"
+              value={quality <= 31 ? quality : 1}
+              onChange={(e) => handlePropertyChange('quality', parseInt(e.target.value) || 1)}
+              style={inputStyle}
+            />
+            <small style={helpTextStyle}>JPEG 压缩质量，1=最高质量，31=最低质量</small>
+          </>
+        )}
+
+        {format === 'h264' && (
+          <>
+            <label style={labelStyle}>CRF 质量 (0-51)</label>
+            <input
+              type="number"
+              min="0"
+              max="51"
+              value={quality <= 51 ? quality : 23}
+              onChange={(e) => handlePropertyChange('quality', parseInt(e.target.value) || 23)}
+              style={inputStyle}
+            />
+            <small style={helpTextStyle}>H.264 CRF 值，0=无损，23=默认，51=最低质量</small>
+          </>
+        )}
+      </div>
+
+      {/* 播放设置 */}
+      <div style={{ marginTop: '16px' }}>
+        <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', fontWeight: 600 }}>播放设置</h4>
 
         <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
           <input
@@ -138,6 +155,17 @@ export const HgVideoProperties: React.FC<PropertyPanelProps> = ({ component, onU
           自动播放
         </label>
         <small style={helpTextStyle}>组件创建后自动开始播放</small>
+
+        <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', cursor: 'pointer', marginTop: '8px' }}>
+          <input
+            type="checkbox"
+            checked={loop}
+            onChange={(e) => handlePropertyChange('loop', e.target.checked)}
+            style={{ marginRight: '8px' }}
+          />
+          循环播放
+        </label>
+        <small style={helpTextStyle}>视频播放结束后自动重新开始</small>
       </div>
 
       {/* 提示信息 */}
@@ -150,13 +178,13 @@ export const HgVideoProperties: React.FC<PropertyPanelProps> = ({ component, onU
           fontSize: '11px',
           color: 'var(--vscode-descriptionForeground)'
         }}>
-          <strong>转换说明：</strong>
+          <strong>格式说明：</strong>
           <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
-            <li>MJPEG: 适合高质量视频，文件较大</li>
-            <li>AVI: 兼容性好，支持设置帧率</li>
-            <li>H.264: 压缩率高，文件较小</li>
+            <li>MJPEG: Motion JPEG，质量 1-31（1=最高）</li>
+            <li>AVI: MJPEG 封装，质量 1-31（1=最高）</li>
+            <li>H.264: 高压缩率，CRF 0-51（23=默认）</li>
           </ul>
-          编译时会自动调用 SDK 工具转换视频格式
+          编译时自动调用 SDK 工具转换
         </div>
       </div>
     </div>

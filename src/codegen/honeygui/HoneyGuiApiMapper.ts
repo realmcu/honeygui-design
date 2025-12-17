@@ -131,13 +131,11 @@ export class HoneyGuiApiMapper {
     });
 
     // 视频
+    // 注意：frameRate 和 autoPlay 已在 HoneyGuiCCodeGenerator.ts 的视频组件专门处理中生成
     this.mappings.set('hg_video', {
       componentType: 'hg_video',
       createFunction: 'gui_video_create_from_fs',  // 使用支持文件系统的创建函数
-      propertySetters: [
-        { property: 'frameRate', apiFunction: 'gui_video_set_frame_rate' },
-        { property: 'autoPlay', apiFunction: 'gui_video_set_state' }
-      ],
+      propertySetters: [],  // 属性设置在 generateComponentCreate 中专门处理
       eventHandlers: [],
       includeHeader: 'gui_video.h'
     });
