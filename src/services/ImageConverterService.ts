@@ -1,6 +1,7 @@
 import * as path from 'path';
 import * as fs from 'fs';
-import { spawn } from 'child_process';
+import { ImageConverter } from '../../tools/image-converter/converter';
+import { PixelFormat } from '../../tools/image-converter/types';
 
 export interface ConvertResult {
     success: boolean;
@@ -10,53 +11,42 @@ export interface ConvertResult {
 }
 
 export class ImageConverterService {
-    private sdkPath: string;
+    private converter: ImageConverter;
 
-    constructor(sdkPath: string) {
-        this.sdkPath = sdkPath;
-    }
-
-    private getConverterScript(): string {
-        return path.join(this.sdkPath, 'tool', 'image-convert-tool', 'image_converter.py');
-    }
-
-    /**
-     * Get Python command based on platform
-     */
-    private getPythonCommand(): string {
-        // Windows 通常使用 'python'，Linux/macOS 使用 'python3'
-        return process.platform === 'win32' ? 'python' : 'python3';
+    constructor(sdkPath?: string) {
+        // SDK path 不再需要，但保留参数以兼容现有代码
+        this.converter = new ImageConverter();
     }
 
     /**
      * Convert a single image to bin format
      */
     async convert(inputPath: string, outputPath: string, format: string = 'auto'): Promise<ConvertResult> {
-        const script = this.getConverterScript();
-        
-        if (!fs.existsSync(script)) {
-            return { success: false, inputPath, outputPath, error: `Converter not found: ${script}` };
+        try {
+            // 确保输出目录存在
+            const outputDir = path.dirname(outputPath);
+            if (!fs.existsSync(outputDir)) {
+                fs.mkdirSync(outputDir, { recursive: true });
+            }
+
+            // 转换格式字符串到 PixelFormat
+            let pixelFormat: PixelFormat | 'auto' = 'auto';
+            if (format !== 'auto') {
+                const formatMap: Record<string, PixelFormat> = {
+                    'rgb565': PixelFormat.RGB565,
+                    'rgb888': PixelFormat.RGB888,
+                    'argb8888': PixelFormat.ARGB8888,
+                    'argb8565': PixelFormat.ARGB8565,
+                    'a8': PixelFormat.A8,
+                };
+                pixelFormat = formatMap[format.toLowerCase()] || 'auto';
+            }
+
+            await this.converter.convert(inputPath, outputPath, pixelFormat);
+            return { success: true, inputPath, outputPath };
+        } catch (error: any) {
+            return { success: false, inputPath, outputPath, error: error.message };
         }
-
-        return new Promise((resolve) => {
-            const pythonCmd = this.getPythonCommand();
-            const proc = spawn(pythonCmd, [script, '-i', inputPath, '-o', outputPath, '-f', format]);
-            
-            let stderr = '';
-            proc.stderr.on('data', (data) => { stderr += data.toString(); });
-            
-            proc.on('close', (code) => {
-                if (code === 0) {
-                    resolve({ success: true, inputPath, outputPath });
-                } else {
-                    resolve({ success: false, inputPath, outputPath, error: stderr || `Exit code: ${code}` });
-                }
-            });
-
-            proc.on('error', (err) => {
-                resolve({ success: false, inputPath, outputPath, error: err.message });
-            });
-        });
     }
 
     /**
@@ -74,7 +64,7 @@ export class ImageConverterService {
             return [];
         }
 
-        const imageExts = ['.png', '.jpg', '.jpeg', '.bmp', '.gif', '.tiff', '.tif', '.webp'];
+        const imageExts = ['.png', '.jpg', '.jpeg'];
         const items: Array<{ input: string; output: string }> = [];
 
         const scanDir = (dir: string) => {
@@ -84,7 +74,7 @@ export class ImageConverterService {
                     scanDir(fullPath);
                 } else if (imageExts.includes(path.extname(entry.name).toLowerCase())) {
                     const relativePath = path.relative(assetsDir, fullPath);
-                    const outputPath = path.join(outputDir, relativePath.replace(/\.(png|jpe?g|bmp|gif|tiff?|webp)$/i, '.bin'));
+                    const outputPath = path.join(outputDir, relativePath.replace(/\.(png|jpe?g)$/i, '.bin'));
                     items.push({ input: fullPath, output: outputPath });
                 }
             }
