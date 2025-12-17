@@ -1,242 +1,114 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import * as vscode from 'vscode';
-// Simple mock implementation for Handlebars since it's not installed
-const handlebars = {
-    compile: (template: string) => {
-        return (context: any) => {
-            // Basic template substitution for testing
-            return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
-                return context[key] || '';
-            });
-        };
-    }
-};
-import { promisify } from 'util';
-
-// 定义模板配置接口
-interface TemplateConfig {
-  id: string;
-  name: string;
-  description: string;
-  version: string;
-  author?: string;
-  defaultValues: Record<string, any>;
-  requiredFields: string[];
-  files: TemplateFile[];
-}
-
-// 定义模板文件接口
-interface TemplateFile {
-  source: string;
-  target: string;
-  isTemplate: boolean;
-}
-
-// 定义模板变量接口
-export interface TemplateVariables {
-  projectName: string;
-  [key: string]: any;
-}
 
 /**
- * 项目模板类，负责模板的加载、渲染和生成
+ * 简化的项目模板类
+ * 直接复制模板目录，然后替换关键字段
  */
 export class ProjectTemplate {
-  private config: TemplateConfig;
   private templateDir: string;
+  private templateName: string;
 
-  /**
-   * 构造函数
-   * @param templateDir 模板目录路径
-   * @param config 模板配置
-   */
-  constructor(templateDir: string, config: TemplateConfig) {
+  constructor(templateDir: string) {
     this.templateDir = templateDir;
-    this.config = config;
-  }
-
-  /**
-   * 获取模板ID
-   */
-  public getId(): string {
-    return this.config.id;
+    this.templateName = path.basename(templateDir);
   }
 
   /**
    * 获取模板名称
    */
   public getName(): string {
-    return this.config.name;
-  }
-
-  /**
-   * 获取模板描述
-   */
-  public getDescription(): string {
-    return this.config.description;
-  }
-
-  /**
-   * 获取模板版本
-   */
-  public getVersion(): string {
-    return this.config.version;
-  }
-
-  /**
-   * 获取模板作者
-   */
-  public getAuthor(): string | undefined {
-    return this.config.author;
-  }
-
-  /**
-   * 获取默认值
-   */
-  public getDefaultValues(): Record<string, any> {
-    return { ...this.config.defaultValues };
-  }
-
-  /**
-   * 获取必填字段列表
-   */
-  public getRequiredFields(): string[] {
-    return [...this.config.requiredFields];
-  }
-
-  /**
-   * 验证变量是否满足模板要求
-   */
-  public validateVariables(variables: TemplateVariables): { valid: boolean; errors: string[] } {
-    const errors: string[] = [];
-
-    // 验证必填字段
-    for (const field of this.config.requiredFields) {
-      if (!(field in variables) || variables[field] === undefined || variables[field] === '') {
-        errors.push(`必填字段 '${field}' 不能为空`);
-      }
-    }
-
-    return {
-      valid: errors.length === 0,
-      errors
-    };
+    return this.templateName;
   }
 
   /**
    * 生成项目
    * @param outputDir 输出目录
-   * @param variables 模板变量
+   * @param projectName 项目名称
+   * @param sdkPath SDK路径
    */
-  public async generate(outputDir: string, variables: TemplateVariables): Promise<void> {
-    // 验证变量
-    const validation = this.validateVariables(variables);
-    if (!validation.valid) {
-      throw new Error(`模板变量验证失败:\n${validation.errors.join('\n')}`);
+  public async generate(outputDir: string, projectName: string, sdkPath?: string): Promise<void> {
+    // 复制整个模板目录
+    await this.copyDirectory(this.templateDir, outputDir);
+
+    // 修改 project.json
+    const projectJsonPath = path.join(outputDir, 'project.json');
+    if (fs.existsSync(projectJsonPath)) {
+      const projectJson = JSON.parse(fs.readFileSync(projectJsonPath, 'utf8'));
+      projectJson.name = projectName;
+      projectJson.appId = `com.honeygui.${projectName.toLowerCase()}`;
+      if (sdkPath) {
+        projectJson.honeyguiSdkPath = sdkPath;
+      }
+      projectJson.created = new Date().toISOString().split('T')[0];
+      fs.writeFileSync(projectJsonPath, JSON.stringify(projectJson, null, 2), 'utf8');
     }
 
-    // 确保输出目录存在
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir, { recursive: true });
-    }
-
-    // 处理每个模板文件
-    for (const file of this.config.files) {
-      await this.processFile(file, outputDir, variables);
+    // 删除 build 目录（如果存在）
+    const buildDir = path.join(outputDir, 'build');
+    if (fs.existsSync(buildDir)) {
+      fs.rmSync(buildDir, { recursive: true, force: true });
     }
   }
 
   /**
-   * 处理单个模板文件
+   * 递归复制目录
    */
-  private async processFile(file: TemplateFile, outputDir: string, variables: TemplateVariables): Promise<void> {
-    // 渲染目标路径（支持变量替换）
-    const targetPath = this.renderTemplate(file.target, variables);
-    const fullTargetPath = path.join(outputDir, targetPath);
-
-    // 确保目标目录存在
-    const targetDir = path.dirname(fullTargetPath);
-    if (!fs.existsSync(targetDir)) {
-      fs.mkdirSync(targetDir, { recursive: true });
+  private async copyDirectory(src: string, dest: string): Promise<void> {
+    // 跳过 build 目录
+    if (path.basename(src) === 'build') {
+      return;
     }
 
-    // 读取源文件
-    const sourcePath = path.join(this.templateDir, file.source);
-    const sourceContent = await promisify(fs.readFile)(sourcePath, 'utf8');
-
-    // 根据是否是模板文件决定是否渲染内容
-    let content: string;
-    if (file.isTemplate) {
-      content = this.renderTemplate(sourceContent, variables);
-    } else {
-      content = sourceContent;
+    if (!fs.existsSync(dest)) {
+      fs.mkdirSync(dest, { recursive: true });
     }
 
-    // 写入目标文件
-    await promisify(fs.writeFile)(fullTargetPath, content, 'utf8');
-  }
+    const entries = fs.readdirSync(src, { withFileTypes: true });
 
-  /**
-   * 使用Handlebars渲染模板内容
-   */
-  private renderTemplate(content: string, variables: TemplateVariables): string {
-    try {
-      const template = handlebars.compile(content);
-      return template(variables);
-    } catch (error) {
-      throw new Error(`模板渲染失败: ${error instanceof Error ? error.message : String(error)}`);
+    for (const entry of entries) {
+      const srcPath = path.join(src, entry.name);
+      const destPath = path.join(dest, entry.name);
+
+      if (entry.isDirectory()) {
+        await this.copyDirectory(srcPath, destPath);
+      } else {
+        fs.copyFileSync(srcPath, destPath);
+      }
     }
   }
 
   /**
    * 从目录加载模板
-   * @param templateDir 模板目录路径
    */
   public static async loadFromDir(templateDir: string): Promise<ProjectTemplate> {
-    try {
-      // 读取配置文件
-      const configPath = path.join(templateDir, 'template.json');
-      if (!fs.existsSync(configPath)) {
-        throw new Error(`模板配置文件不存在: ${configPath}`);
-      }
-
-      const configContent = await promisify(fs.readFile)(configPath, 'utf8');
-      const config = JSON.parse(configContent) as TemplateConfig;
-
-      // 验证配置
-      if (!config.id) throw new Error('模板缺少id');
-      if (!config.name) throw new Error('模板缺少name');
-      if (!config.files || !Array.isArray(config.files)) {
-        throw new Error('模板缺少files数组');
-      }
-
-      return new ProjectTemplate(templateDir, config);
-    } catch (error) {
-      throw new Error(`加载模板失败: ${error instanceof Error ? error.message : String(error)}`);
+    if (!fs.existsSync(templateDir)) {
+      throw new Error(`模板目录不存在: ${templateDir}`);
     }
+
+    const projectJsonPath = path.join(templateDir, 'project.json');
+    if (!fs.existsSync(projectJsonPath)) {
+      throw new Error(`模板缺少 project.json: ${templateDir}`);
+    }
+
+    return new ProjectTemplate(templateDir);
   }
 
   /**
    * 获取模板信息
    */
-  public getInfo(): {
-    id: string;
-    name: string;
-    description: string;
-    version: string;
-    author?: string;
-    requiredFields: string[];
-    defaultValues: Record<string, any>;
-  } {
+  public getInfo(): { name: string; description: string } {
+    const projectJsonPath = path.join(this.templateDir, 'project.json');
+    if (fs.existsSync(projectJsonPath)) {
+      const projectJson = JSON.parse(fs.readFileSync(projectJsonPath, 'utf8'));
+      return {
+        name: this.templateName,
+        description: projectJson.description || `${this.templateName} 模板项目`
+      };
+    }
     return {
-      id: this.getId(),
-      name: this.getName(),
-      description: this.getDescription(),
-      version: this.getVersion(),
-      author: this.getAuthor(),
-      requiredFields: this.getRequiredFields(),
-      defaultValues: this.getDefaultValues()
+      name: this.templateName,
+      description: `${this.templateName} 模板项目`
     };
   }
 }

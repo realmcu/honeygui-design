@@ -99,6 +99,7 @@ src/**/*.js.map
 e2etest_test_project/
 *_test_project/
 # Template projects - 跟踪模板项目，但忽略生成的文件
+template-projects/*/src/
 template-projects/*/src/ui/
 template-projects/*/src/callbacks/
 template-projects/*/src/user/
@@ -107,8 +108,9 @@ template-projects/*/.vscode/
 
 # 模板文件策略：
 # - *.template.* 文件：模板版本（包含占位符），用于复制给用户，需要跟踪
-# - 非 .template 文件：开发版本（真实值），可以直接运行，需要跟踪
-# 两者都需要提交到 Git
+# - 非 .template 的 HML：开发测试版本，会被忽略
+# - project.json：开发版本，需要跟踪（用于测试模板）
+# - project.template.json：模板版本，需要跟踪（用于创建新项目）
 
 # 测试文件
 test-service-output/
