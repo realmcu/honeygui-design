@@ -9,16 +9,16 @@ import { RomfsConfig } from '../common/RomfsConfig';
 export class EntryFileGenerator {
     /**
      * 生成入口文件
-     * @param autogenDir src/autogen 目录路径
+     * @param srcDir src 目录路径
      * @param projectName 项目名称
      */
-    static generate(autogenDir: string, projectName: string): string {
+    static generate(srcDir: string, projectName: string): string {
         // 确保目录存在
-        if (!fs.existsSync(autogenDir)) {
-            fs.mkdirSync(autogenDir, { recursive: true });
+        if (!fs.existsSync(srcDir)) {
+            fs.mkdirSync(srcDir, { recursive: true });
         }
 
-        const entryFile = path.join(autogenDir, `${projectName}Entry.c`);
+        const entryFile = path.join(srcDir, `${projectName}Entry.c`);
         
         // 只在首次生成时创建
         if (fs.existsSync(entryFile)) {

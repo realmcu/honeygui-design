@@ -1,13 +1,13 @@
 {
-  "name": "{{PROJECT_NAME}}",
-  "appId": "{{APP_ID}}",
+  "name": "SmartWatchTemplate",
+  "appId": "com.honeygui.smartwatch",
   "version": "1.0.0",
   "resolution": "410X502",
   "targetEngine": "honeygui",
   "minSdk": "API 2: HoneyGUI V1.1.0",
   "pixelMode": "ARGB8888",
-  "mainHmlFile": "ui/main/{{PROJECT_NAME}}Main.hml",
-  "honeyguiSdkPath": "{{SDK_PATH}}",
+  "mainHmlFile": "ui/main/SmartWatchMain.hml",
+  "honeyguiSdkPath": "/home/howie_wang/.HoneyGUI-SDK",
   "template": "smartwatch",
-  "created": "{{CREATED_TIME}}"
+  "created": "2025-12-11"
 }

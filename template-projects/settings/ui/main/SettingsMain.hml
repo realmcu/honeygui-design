@@ -1,38 +1,32 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <hml>
     <meta>
-        <project name="{{PROJECT_NAME}}" appId="{{APP_ID}}" resolution="480X272" minSdk="API 2: HoneyGUI V1.1.0" pixelMode="ARGB8888" />
+        <project name="SettingsTemplate" appId="com.honeygui.settings" resolution="480X272" minSdk="API 2: HoneyGUI V1.1.0" pixelMode="ARGB8888" />
         <author name="HoneyGUI Design" />
     </meta>
     <view>
-        <hg_view id="settingsView" x="0" y="0" width="480" height="272" name="settingsView" backgroundColor="#000000">
+        <hg_view id="mainView" x="0" y="0" width="480" height="272" name="mainView" backgroundColor="#000000">
             <!-- Title -->
             <hg_text id="title" x="20" y="20" width="440" height="40" name="title"
                      text="Settings" fontSize="24" color="#FFFFFF" />
             
             <!-- WiFi Option -->
-            <hg_view id="wifiOption" x="20" y="80" width="440" height="60" name="wifiOption">
-                <hg_text id="wifiLabel" x="0" y="15" width="200" height="30" name="wifiLabel"
-                         text="WiFi" fontSize="18" color="#FFFFFF" />
-                <hg_switch id="wifiSwitch" x="380" y="10" width="60" height="40" name="wifiSwitch"
-                           checked="true" />
-            </hg_view>
+            <hg_text id="wifiLabel" x="20" y="95" width="200" height="30" name="wifiLabel"
+                     text="WiFi" fontSize="18" color="#FFFFFF" />
+            <hg_text id="wifiStatus" x="380" y="95" width="80" height="30" name="wifiStatus"
+                     text="ON" fontSize="18" color="#00FF00" />
             
             <!-- Bluetooth Option -->
-            <hg_view id="btOption" x="20" y="150" width="440" height="60" name="btOption">
-                <hg_text id="btLabel" x="0" y="15" width="200" height="30" name="btLabel"
-                         text="Bluetooth" fontSize="18" color="#FFFFFF" />
-                <hg_switch id="btSwitch" x="380" y="10" width="60" height="40" name="btSwitch"
-                           checked="false" />
-            </hg_view>
+            <hg_text id="btLabel" x="20" y="145" width="200" height="30" name="btLabel"
+                     text="Bluetooth" fontSize="18" color="#FFFFFF" />
+            <hg_text id="btStatus" x="380" y="145" width="80" height="30" name="btStatus"
+                     text="OFF" fontSize="18" color="#888888" />
             
-            <!-- Brightness Slider -->
-            <hg_view id="brightnessOption" x="20" y="220" width="440" height="60" name="brightnessOption">
-                <hg_text id="brightnessLabel" x="0" y="0" width="200" height="30" name="brightnessLabel"
-                         text="Brightness" fontSize="18" color="#FFFFFF" />
-                <hg_slider id="brightnessSlider" x="0" y="35" width="420" height="20" name="brightnessSlider"
-                           value="70" min="0" max="100" />
-            </hg_view>
+            <!-- Brightness -->
+            <hg_text id="brightnessLabel" x="20" y="195" width="200" height="30" name="brightnessLabel"
+                     text="Brightness" fontSize="18" color="#FFFFFF" />
+            <hg_text id="brightnessValue" x="380" y="195" width="80" height="30" name="brightnessValue"
+                     text="70%" fontSize="18" color="#FFFFFF" />
         </hg_view>
     </view>
 </hml>

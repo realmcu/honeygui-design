@@ -90,6 +90,8 @@ export interface DesignerStore extends DesignerState {
   // View connections
   showViewConnections: boolean;
   setShowViewConnections: (show: boolean) => void;
+  showViewRelationModal: boolean;
+  setShowViewRelationModal: (show: boolean) => void;
 
   // Drag and drop
   startDrag: (componentId: string, mousePos: { x: number; y: number }) => void;
@@ -151,6 +153,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   canvasBackgroundColor: '#3c3c3c', // 默认画布背景色为深灰色
   editingMode: 'select',
   showViewConnections: true, // 默认显示视图连接
+  showViewRelationModal: false,
   undoStack: [],
   redoStack: [],
   vscodeAPI: null,
@@ -211,25 +214,113 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     const component = state.components.find((c) => c.id === id);
     if (!component) return;
 
+    // 禁止删除默认主视图 mainView
+    if (id === 'mainView') {
+      if (vscodeAPI) {
+        vscodeAPI.postMessage({ command: 'notify', text: '主视图 mainView 不可删除' });
+      }
+      return;
+    }
+
+    // 统计清理的引用数量
+    let cleanedCount = 0;
+    if (component.type === 'hg_view') {
+      state.components.forEach(c => {
+        if (c.type === 'hg_view' && c.view_switch) {
+          const originalLength = c.view_switch.length;
+          const filtered = c.view_switch.filter(sw => sw.target !== id);
+          if (filtered.length < originalLength) {
+            cleanedCount++;
+          }
+        }
+      });
+    }
+
     set((state) => ({
-      components: state.components.filter((c) => c.id !== id && c.parent !== id)
+      components: state.components
+        .filter((c) => c.id !== id && c.parent !== id)
+        .map(c => {
+          // 清理 view_switch 引用
+          if (c.type === 'hg_view' && c.view_switch && c.view_switch.length > 0 && component.type === 'hg_view') {
+            const newViewSwitch = c.view_switch.filter(sw => sw.target !== id);
+            console.log(`[Store] 清理 ${c.id} 的 view_switch: ${c.view_switch.length} -> ${newViewSwitch.length}`);
+            return {
+              ...c,
+              view_switch: newViewSwitch
+            };
+          }
+          return c;
+        })
     }));
     
     if (vscodeAPI) {
       vscodeAPI.postMessage({ command: 'delete', content: { ids: [id], components: get().components } });
-      vscodeAPI.postMessage({ command: 'notify', text: `删除控件: ${id}` });
+      let message = `删除控件: ${id}`;
+      if (cleanedCount > 0) {
+        message += `，已清理 ${cleanedCount} 个视图切换引用`;
+      }
+      vscodeAPI.postMessage({ command: 'notify', text: message });
     }
     get().saveToFile();
   },
 
   removeComponents: (ids) => {
     if (!ids || ids.length === 0) return;
+    
+    // 过滤掉 mainView，不允许删除
+    const state = get();
+    const filteredIds = ids.filter(id => id !== 'mainView');
+    
+    if (filteredIds.length === 0) {
+      if (vscodeAPI) {
+        vscodeAPI.postMessage({ command: 'notify', text: '主视图 mainView 不可删除' });
+      }
+      return;
+    }
+    
+    // 统计清理的引用数量
+    let cleanedCount = 0;
+    const deletedViews = state.components.filter(c => filteredIds.includes(c.id) && c.type === 'hg_view');
+    
+    if (deletedViews.length > 0) {
+      const deletedViewIds = deletedViews.map(v => v.id);
+      state.components.forEach(c => {
+        if (c.type === 'hg_view' && c.view_switch) {
+          const originalLength = c.view_switch.length;
+          const filtered = c.view_switch.filter(sw => !deletedViewIds.includes(sw.target));
+          if (filtered.length < originalLength) {
+            cleanedCount++;
+          }
+        }
+      });
+    }
+    
     set((state) => ({
-      components: state.components.filter((c) => !ids.includes(c.id) && !ids.includes(c.parent as any))
+      components: state.components
+        .filter((c) => !filteredIds.includes(c.id) && !filteredIds.includes(c.parent as any))
+        .map(c => {
+          // 清理 view_switch 引用
+          if (c.type === 'hg_view' && c.view_switch && deletedViews.length > 0) {
+            const deletedViewIds = deletedViews.map(v => v.id);
+            return {
+              ...c,
+              view_switch: c.view_switch.filter(sw => !deletedViewIds.includes(sw.target))
+            };
+          }
+          return c;
+        })
     }));
+    
     if (vscodeAPI) {
-      vscodeAPI.postMessage({ command: 'delete', content: { ids, components: get().components } });
-      vscodeAPI.postMessage({ command: 'notify', text: `批量删除控件: ${ids.length} 个` });
+      vscodeAPI.postMessage({ command: 'delete', content: { ids: filteredIds, components: get().components } });
+      let message = `批量删除控件: ${filteredIds.length} 个`;
+      if (filteredIds.length < ids.length) {
+        message = '根视图已跳过，其他组件已删除';
+      }
+      if (cleanedCount > 0) {
+        message += `，已清理 ${cleanedCount} 个视图切换引用`;
+      }
+      vscodeAPI.postMessage({ command: 'notify', text: message });
     }
     get().saveToFile();
   },
@@ -254,6 +345,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   setEditingMode: (mode) => set({ editingMode: mode }),
   setCanvasBackgroundColor: (color) => set({ canvasBackgroundColor: color }),
   setShowViewConnections: (show) => set({ showViewConnections: show }),
+  setShowViewRelationModal: (show) => set({ showViewRelationModal: show }),
 
   // Drag and drop
   startDrag: (componentId, mousePos) => {
@@ -307,9 +399,13 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
 
     console.log('[Webview Store] 准备保存到文件');
     console.log('[Webview Store] 当前组件数量:', state.components.length);
-    console.log('[Webview Store] 当前组件详情:',
-      state.components.map((c: any) =>
-        `${c.type}(id=${c.id})`).join(', '));
+    
+    // 调试：打印所有 view_switch
+    state.components.forEach(c => {
+      if (c.type === 'hg_view' && c.view_switch && c.view_switch.length > 0) {
+        console.log(`[Webview Store] ${c.id} 的 view_switch:`, JSON.stringify(c.view_switch));
+      }
+    });
 
     vscodeAPI.postMessage({
       command: 'save',

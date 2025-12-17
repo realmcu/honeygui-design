@@ -13,6 +13,6 @@ export class SettingsTemplate extends BaseTemplate {
     recommendedResolution = '480X272';
     
     protected getTemplateProjectPath(): string {
-        return path.join(__dirname, '..', '..', '..', 'template-projects', 'settings');
+        return path.join(__dirname, '..', '..', '..', '..', 'template-projects', 'settings');
     }
 }

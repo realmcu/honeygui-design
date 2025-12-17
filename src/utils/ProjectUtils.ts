@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 import { ProjectConfig, DEFAULT_PROJECT_CONFIG } from '../common/ProjectConfig';
 import { logger } from './Logger';
 
@@ -8,11 +9,25 @@ import { logger } from './Logger';
  */
 export class ProjectUtils {
     /**
+     * 获取默认 SDK 路径
+     */
+    public static getDefaultSdkPath(): string {
+        return path.join(os.homedir(), '.HoneyGUI-SDK');
+    }
+
+    /**
      * 从文件路径向上查找项目根目录（包含project.json的目录）
      * @param filePath 文件路径
      * @returns 项目根目录，如果未找到返回undefined
      */
     static findProjectRoot(filePath: string): string | undefined {
+        // 如果传入的是目录且包含 project.json，直接返回
+        if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
+            if (fs.existsSync(path.join(filePath, 'project.json'))) {
+                return filePath;
+            }
+        }
+
         let dir = path.dirname(filePath);
         
         // 向上查找，直到找到包含project.json的目录

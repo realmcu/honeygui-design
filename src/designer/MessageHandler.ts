@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
+import * as fs from 'fs';
 import { logger } from '../utils/Logger';
 import { AssetManager } from './AssetManager';
 import { CodeGenerator } from '../services/CodeGenerator';
@@ -6,6 +8,8 @@ import { ComponentManager } from './ComponentManager';
 import { FileManager } from './FileManager';
 import { HmlController } from '../hml/HmlController';
 import { CollaborationService } from '../core/CollaborationService';
+import { ProjectUtils } from '../utils/ProjectUtils';
+import { CodeGenerationService } from '../services/CodeGenerationService';
 
 /**
  * 消息处理器 - 负责分发来自Webview的消息
@@ -209,7 +213,6 @@ export class MessageHandler {
      */
     private async _handleBrowseFile(componentId: string, propertyName: string, filters: any): Promise<void> {
         try {
-            const ProjectUtils = require('../utils/ProjectUtils').ProjectUtils;
             const projectRoot = this._fileManager.currentFilePath 
                 ? ProjectUtils.findProjectRoot(this._fileManager.currentFilePath)
                 : undefined;
@@ -238,7 +241,6 @@ export class MessageHandler {
             if (uris && uris.length > 0) {
                 const selectedPath = uris[0].fsPath;
                 // 转换为相对于项目根目录的路径
-                const path = require('path');
                 let relativePath = path.relative(projectRoot, selectedPath);
                 // 统一使用正斜杠
                 relativePath = relativePath.replace(/\\/g, '/');
@@ -272,47 +274,7 @@ export class MessageHandler {
      * 生成代码
      */
     private async handleGenerateCode(): Promise<void> {
-        const ProjectUtils = require('../utils/ProjectUtils').ProjectUtils;
-        const projectRoot = this._fileManager.currentFilePath 
-            ? ProjectUtils.findProjectRoot(this._fileManager.currentFilePath)
-            : undefined;
-        
-        if (!projectRoot) {
-            vscode.window.showErrorMessage('未找到项目根目录');
-            return;
-        }
-
-        await vscode.window.withProgress(
-            {
-                location: vscode.ProgressLocation.Notification,
-                title: '正在生成代码...',
-                cancellable: false
-            },
-            async (progress) => {
-                const result = await this._codeGenerator.generate(projectRoot, (prog) => {
-                    progress.report({
-                        increment: 100 / prog.total,
-                        message: `正在生成 ${prog.designName} (${prog.current}/${prog.total})...`
-                    });
-                });
-
-                if (result.success) {
-                    vscode.window.showInformationMessage(
-                        `成功生成 ${result.successCount} 个设计稿的代码，共 ${result.totalFiles} 个文件`
-                    );
-                } else {
-                    const errorMsg = result.errors.map(e => `${e.designName}: ${e.error}`).join('\n');
-                    vscode.window.showWarningMessage(
-                        `生成完成，成功 ${result.successCount} 个，失败 ${result.errors.length} 个`,
-                        '查看详情'
-                    ).then(selection => {
-                        if (selection === '查看详情') {
-                            vscode.window.showErrorMessage(errorMsg, { modal: true });
-                        }
-                    });
-                }
-            }
-        );
+        await CodeGenerationService.generateFromFile(this._fileManager.currentFilePath, this._codeGenerator);
     }
 
     /**
@@ -346,8 +308,6 @@ export class MessageHandler {
             }
 
             // 获取项目根目录
-            const path = require('path');
-            const ProjectUtils = require('../utils/ProjectUtils').ProjectUtils;
             const projectRoot = ProjectUtils.findProjectRoot(currentFile);
             if (!projectRoot) {
                 vscode.window.showErrorMessage('未找到项目根目录');
@@ -359,10 +319,9 @@ export class MessageHandler {
             const designName = path.basename(hmlDir);
 
             // 构建回调文件路径
-            const callbackFile = path.join(projectRoot, 'src', 'autogen', designName, `${designName}_callbacks.c`);
+            const callbackFile = path.join(projectRoot, 'src', 'callbacks', `${designName}_callbacks.c`);
             
             // 检查文件是否存在，如果不存在则先生成代码
-            const fs = require('fs');
             if (!fs.existsSync(callbackFile)) {
                 const result = await vscode.window.showInformationMessage(
                     '回调文件不存在，是否先生成代码？',

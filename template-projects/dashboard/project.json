@@ -1,13 +1,13 @@
 {
-  "name": "{{PROJECT_NAME}}",
-  "appId": "{{APP_ID}}",
+  "name": "DashboardTemplate",
+  "appId": "com.honeygui.dashboard",
   "version": "1.0.0",
   "resolution": "800X480",
   "targetEngine": "honeygui",
   "minSdk": "API 2: HoneyGUI V1.1.0",
   "pixelMode": "ARGB8888",
-  "mainHmlFile": "ui/main/{{PROJECT_NAME}}Main.hml",
-  "honeyguiSdkPath": "{{SDK_PATH}}",
+  "mainHmlFile": "ui/main/DashboardMain.hml",
+  "honeyguiSdkPath": "/home/howie_wang/.HoneyGUI-SDK",
   "template": "dashboard",
-  "created": "{{CREATED_TIME}}"
+  "created": "2025-12-11"
 }

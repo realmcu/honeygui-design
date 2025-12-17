@@ -26,10 +26,10 @@ export const calculateComponentStyle = (
   
   return {
     position: 'absolute',
-    left: component.position.x * zoom,
-    top: component.position.y * zoom,
-    width: component.position.width * zoom,
-    height: component.position.height * zoom,
+    left: component.position.x,
+    top: component.position.y,
+    width: component.position.width,
+    height: component.position.height,
     display: component.visible ? 'flex' : 'none',
     opacity: component.enabled ? 1 : 0.6,
     cursor: editingMode === 'move' ? 'move' : 'pointer',

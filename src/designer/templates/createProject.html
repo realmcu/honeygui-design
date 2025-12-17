@@ -163,6 +163,11 @@
                 </div>
             </div>
             
+            <div class="form-group">
+                <label for="romfsBaseAddr">Romfs Base Address (for embedded flash)</label>
+                <input type="text" id="romfsBaseAddr" class="form-control" value="0x04400000" placeholder="0x04400000" />
+            </div>
+            
             <button id="createButton" class="btn-create" disabled>Create</button>
         </div>
     </div>
@@ -273,6 +278,14 @@
         }
         
         function createProject() {
+            const romfsAddr = document.getElementById('romfsBaseAddr').value.trim();
+            
+            // 验证地址格式
+            if (romfsAddr && !/^0x[0-9A-Fa-f]+$/.test(romfsAddr)) {
+                showError('Invalid romfs base address. Please use hexadecimal format (e.g., 0x04400000)');
+                return;
+            }
+            
             vscode.postMessage({
                 command: 'createProject',
                 config: {
@@ -283,7 +296,8 @@
                     targetEngine: document.getElementById('targetEngine').value,
                     minSdk: document.getElementById('minSdk').value,
                     pixelMode: document.getElementById('pixelMode').value,
-                    honeyguiSdkPath: document.getElementById('honeyguiSdkPath').value.trim() || ''
+                    honeyguiSdkPath: document.getElementById('honeyguiSdkPath').value.trim() || '',
+                    romfsBaseAddr: romfsAddr || '0x04400000'
                 }
             });
         }

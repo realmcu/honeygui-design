@@ -69,9 +69,36 @@ export abstract class BaseTemplate implements ITemplate {
             if (entry.isDirectory()) {
                 this.copyDirectory(srcPath, destPath);
             } else {
-                fs.copyFileSync(srcPath, destPath);
+                // 跳过 .template.* 文件，它们会在后续处理
+                if (entry.name.includes('.template.')) {
+                    continue;
+                }
+                
+                // 检查是否存在对应的 .template 版本
+                const templateVersion = this.getTemplateVersion(srcPath);
+                const sourceFile = templateVersion || srcPath;
+                
+                fs.copyFileSync(sourceFile, destPath);
             }
         }
+    }
+    
+    /**
+     * 获取文件的模板版本（如果存在）
+     */
+    private getTemplateVersion(filePath: string): string | null {
+        const dir = path.dirname(filePath);
+        const basename = path.basename(filePath);
+        const ext = path.extname(filePath);
+        const nameWithoutExt = basename.slice(0, -ext.length);
+        
+        // 检查 name.template.ext 格式
+        const templatePath = path.join(dir, `${nameWithoutExt}.template${ext}`);
+        if (fs.existsSync(templatePath)) {
+            return templatePath;
+        }
+        
+        return null;
     }
     
     /**

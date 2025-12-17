@@ -9,6 +9,8 @@ template-projects/
 ├── smartwatch/          # 智能手表模板（410X502）
 ├── settings/            # 设置菜单模板（480X272）
 ├── dashboard/           # 仪表盘模板（800X480）
+├── chatbot/             # 聊天机器人模板（480X320）
+├── rotary/              # 旋钮屏模板（480X480）
 └── README.md            # 本文件
 ```
 

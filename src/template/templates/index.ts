@@ -6,6 +6,8 @@ import { ITemplate, TemplateInfo } from './ITemplate';
 import { SmartWatchTemplate } from './SmartWatchTemplate';
 import { SettingsTemplate } from './SettingsTemplate';
 import { DashboardTemplate } from './DashboardTemplate';
+import { ChatBotTemplate } from './ChatBotTemplate';
+import { RotaryTemplate } from './RotaryTemplate';
 
 /**
  * 所有可用模板
@@ -14,6 +16,8 @@ export const TEMPLATE_REGISTRY: ITemplate[] = [
     new SmartWatchTemplate(),
     new SettingsTemplate(),
     new DashboardTemplate(),
+    new ChatBotTemplate(),
+    new RotaryTemplate(),
 ];
 
 /**

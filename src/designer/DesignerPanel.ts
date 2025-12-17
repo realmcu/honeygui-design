@@ -7,10 +7,13 @@ import { CodeGenerator } from '../services/CodeGenerator';
 import { ComponentManager } from './ComponentManager';
 import { FileManager } from './FileManager';
 import { MessageHandler } from './MessageHandler';
-import { CodeGenOptions } from '../codegen/honeygui';
+import { CodeGenOptions } from '../codegen/ICodeGenerator';
 import { WebviewContentProvider } from './WebviewContentProvider';
 import { DesignerService } from './DesignerService';
-import { CollaborationService, CollaborationMessage } from '../core/CollaborationService';
+import { CollaborationService } from '../core/CollaborationService';
+import { ProjectUtils } from '../utils/ProjectUtils';
+import { CodeGenerationService } from '../services/CodeGenerationService';
+import { CollaborationController } from './CollaborationController';
 
 /**
  * 设计器Webview面板管理类
@@ -37,7 +40,7 @@ export class DesignerPanel {
     private readonly _messageHandler: MessageHandler;
     private readonly _webviewContentProvider: WebviewContentProvider;
     private readonly _collaborationService: CollaborationService;
-    private readonly _collaborationMessageHandler: (message: CollaborationMessage) => void;
+    private readonly _collaborationController: CollaborationController;
 
     /**
      * 获取当前的保存事务ID
@@ -110,10 +113,14 @@ export class DesignerPanel {
         // Initialize Collaboration Service
         this._collaborationService = CollaborationService.getInstance();
         
-        // 保存监听器引用，便于精确移除
-        this._collaborationMessageHandler = (message: CollaborationMessage) => {
-            this.handleCollaborationMessage(message);
-        };
+        // Initialize Collaboration Controller
+        this._collaborationController = new CollaborationController(
+            this._collaborationService,
+            this._hmlController,
+            this._fileManager,
+            this._messageHandler,
+            () => this._update()
+        );
 
         // 如果有文档，设置文件路径
         if (document) {
@@ -126,15 +133,14 @@ export class DesignerPanel {
         });
 
         // 监听协同消息
-        this._collaborationService.on('message', this._collaborationMessageHandler);
+        this._collaborationController.start();
 
         // 设置Webview内容
         this._update();
 
         // 处理面板关闭事件
         this._panel.onDidDispose(() => {
-            // 精确移除本实例的监听器，不影响其他监听器
-            this._collaborationService.off('message', this._collaborationMessageHandler);
+            this._collaborationController.stop();
             this.dispose();
         }, null, this._disposables);
 
@@ -198,97 +204,9 @@ export class DesignerPanel {
      * 生成代码
      */
     public async generateCode(): Promise<void> {
-        const projectRoot = this._fileManager.currentFilePath 
-            ? require('../utils/ProjectUtils').ProjectUtils.findProjectRoot(this._fileManager.currentFilePath)
-            : undefined;
-        
-        if (!projectRoot) {
-            vscode.window.showErrorMessage('未找到项目根目录');
-            return;
-        }
-
-        await vscode.window.withProgress(
-            {
-                location: vscode.ProgressLocation.Notification,
-                title: '正在生成代码...',
-                cancellable: false
-            },
-            async (progress) => {
-                const result = await this._codeGenerator.generate(projectRoot, (prog) => {
-                    progress.report({
-                        increment: 100 / prog.total,
-                        message: `正在生成 ${prog.designName} (${prog.current}/${prog.total})...`
-                    });
-                });
-
-                if (result.success) {
-                    vscode.window.showInformationMessage(
-                        `成功生成 ${result.successCount} 个设计稿的代码，共 ${result.totalFiles} 个文件`
-                    );
-                } else {
-                    const errorMsg = result.errors.map(e => `${e.designName}: ${e.error}`).join('\n');
-                    vscode.window.showWarningMessage(
-                        `生成完成，成功 ${result.successCount} 个，失败 ${result.errors.length} 个`,
-                        '查看详情'
-                    ).then(selection => {
-                        if (selection === '查看详情') {
-                            vscode.window.showErrorMessage(errorMsg, { modal: true });
-                        }
-                    });
-                }
-            }
-        );
+        await CodeGenerationService.generateFromFile(this._fileManager.currentFilePath, this._codeGenerator);
     }
 
-    /**
-     * 处理协同消息
-     */
-    private handleCollaborationMessage(message: any): void {
-        // TODO: 实现协同消息处理逻辑
-        logger.info(`[DesignerPanel] Received collaboration message: ${JSON.stringify(message)}`);
-        
-        switch (message.type) {
-            case 'WELCOME':
-                // 新访客加入，如果是主机，发送当前文档状态
-                if (this._collaborationService.isHost) {
-                    const doc = this._hmlController.serializeDocument();
-                    this._collaborationService.broadcast({
-                        type: 'SYNC_INIT',
-                        content: doc
-                    });
-                }
-                break;
-            case 'SYNC_INIT':
-                // 访客收到初始文档状态
-                if (this._collaborationService.isGuest && message.content) {
-                    // 更新本地文档
-                    this._hmlController.applyRemoteUpdate(message.content);
-                    // 刷新 Webview
-                    this._update();
-                }
-                break;
-            case 'REMOTE_UPDATE':
-                // 收到增量更新或全量更新（这里先简化为全量同步）
-                if (this._collaborationService.isGuest && message.content) {
-                    this._hmlController.applyRemoteUpdate(message.content);
-                    this._update();
-                } else if (this._collaborationService.isHost && message.content) {
-                    // 主机收到访客的更新，保存并广播
-                    this._hmlController.applyRemoteUpdate(message.content);
-                    this._update();
-                    // 主机作为真理之源，可以触发保存
-                    this._fileManager.saveHml(message.content);
-                }
-                break;
-            case 'OP_DELTA':
-                // 处理增量操作（由 MessageHandler 广播出来的原子操作）
-                // 无论 Host 还是 Guest，收到 OP_DELTA 都意味着这是来自远程的操作
-                // 传入 fromRemote=true 以避免 MessageHandler 再次广播
-                this._messageHandler.handleMessage(message.payload, true);
-                break;
-        }
-    }
-    
     /**
      * 获取当前的HML文档
      */
@@ -325,8 +243,8 @@ export class DesignerPanel {
         }
         DesignerPanel.currentPanel = undefined;
 
-        // 精确移除本实例的协同消息监听器
-        this._collaborationService.off('message', this._collaborationMessageHandler);
+        // 停止协同监听
+        this._collaborationController.stop();
 
         // 清理所有监听器
         this._disposables.forEach(d => d.dispose());

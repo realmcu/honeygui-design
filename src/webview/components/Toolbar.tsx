@@ -9,8 +9,8 @@ const Toolbar: React.FC = () => {
     zoom,
     setEditingMode,
     editingMode,
-    showViewConnections,
-    setShowViewConnections,
+    showViewRelationModal,
+    setShowViewRelationModal,
     canvasBackgroundColor,
     setCanvasBackgroundColor,
   } = useDesignerStore();
@@ -49,7 +49,7 @@ const Toolbar: React.FC = () => {
   };
 
   const handleToggleViewConnections = () => {
-    setShowViewConnections(!showViewConnections);
+    setShowViewRelationModal(!showViewRelationModal);
   };
 
   const handleBackgroundColorChange = (color: string) => {
@@ -128,12 +128,12 @@ const Toolbar: React.FC = () => {
 
       <div className="toolbar-section">
         <button
-          className={`toolbar-button ${showViewConnections ? 'active' : ''}`}
+          className="toolbar-button"
           onClick={handleToggleViewConnections}
-          title="显示/隐藏视图连接"
+          title="查看视图关系图"
         >
           <GitBranch size={16} />
-          <span>连接</span>
+          <span>关系图</span>
         </button>
         <div className="background-color-picker">
           <button

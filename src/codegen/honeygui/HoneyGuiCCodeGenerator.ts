@@ -38,55 +38,67 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
   async generate(): Promise<CodeGenResult> {
     try {
       const files: string[] = [];
-      const baseName = this.options.hmlFileName;
+      const designName = this.options.designName;
+      const srcDir = this.options.srcDir;
 
-      // 确保输出目录存在
-      if (!fs.existsSync(this.options.outputDir)) {
-        fs.mkdirSync(this.options.outputDir, { recursive: true });
-      }
+      // 创建目录结构
+      const uiDir = path.join(srcDir, 'ui');
+      const callbacksDir = path.join(srcDir, 'callbacks');
+      const userDir = path.join(srcDir, 'user');
 
-      // === 自动生成文件（每次覆盖）===
-      // UI头文件
-      const uiHeaderFile = path.join(this.options.outputDir, `${baseName}_ui.h`);
-      fs.writeFileSync(uiHeaderFile, this.generateUiHeader(baseName));
+      [uiDir, callbacksDir, userDir].forEach(dir => {
+        if (!fs.existsSync(dir)) {
+          fs.mkdirSync(dir, { recursive: true });
+        }
+      });
+
+      // === UI 代码（每次覆盖）===
+      const uiHeaderFile = path.join(uiDir, `${designName}_ui.h`);
+      fs.writeFileSync(uiHeaderFile, this.generateUiHeader(designName));
       files.push(uiHeaderFile);
 
-      // UI实现文件
-      const uiImplFile = path.join(this.options.outputDir, `${baseName}_ui.c`);
-      fs.writeFileSync(uiImplFile, this.generateUiImplementation(baseName));
+      const uiImplFile = path.join(uiDir, `${designName}_ui.c`);
+      fs.writeFileSync(uiImplFile, this.generateUiImplementation(designName));
       files.push(uiImplFile);
 
-      // === 回调文件（只生成一次 + 保护区）===
-      const callbackHeaderFile = path.join(this.options.outputDir, `${baseName}_callbacks.h`);
-      const callbackImplFile = path.join(this.options.outputDir, `${baseName}_callbacks.c`);
+      // === 回调代码（保护区）===
+      const callbackHeaderFile = path.join(callbacksDir, `${designName}_callbacks.h`);
+      const callbackImplFile = path.join(callbacksDir, `${designName}_callbacks.c`);
       
       // 回调头文件：只生成一次
       if (!fs.existsSync(callbackHeaderFile)) {
-        fs.writeFileSync(callbackHeaderFile, this.generateCallbackHeader(baseName));
+        fs.writeFileSync(callbackHeaderFile, this.generateCallbackHeader(designName));
         files.push(callbackHeaderFile);
       }
       
       // 回调实现文件：保护区合并
       if (!fs.existsSync(callbackImplFile)) {
-        fs.writeFileSync(callbackImplFile, this.generateCallbackImplementation(baseName));
+        fs.writeFileSync(callbackImplFile, this.generateCallbackImplementation(designName));
         files.push(callbackImplFile);
       } else if (this.options.enableProtectedAreas) {
         const existing = fs.readFileSync(callbackImplFile, 'utf-8');
-        const merged = this.mergeProtectedAreas(existing, this.generateCallbackImplementation(baseName));
+        const merged = this.mergeProtectedAreas(existing, this.generateCallbackImplementation(designName));
         fs.writeFileSync(callbackImplFile, merged);
         files.push(callbackImplFile);
       }
 
-      // === 用户代码文件（只生成一次）===
-      if (this.options.userCodeDir) {
-        const userFiles = this.generateUserCodeFiles(baseName);
-        files.push(...userFiles);
+      // === 用户代码（只生成一次）===
+      const userHeaderFile = path.join(userDir, `${designName}_user.h`);
+      const userImplFile = path.join(userDir, `${designName}_user.c`);
+
+      if (!fs.existsSync(userHeaderFile)) {
+        fs.writeFileSync(userHeaderFile, this.generateUserHeader(designName));
+        files.push(userHeaderFile);
+      }
+
+      if (!fs.existsSync(userImplFile)) {
+        fs.writeFileSync(userImplFile, this.generateUserImplementation(designName));
+        files.push(userImplFile);
       }
 
       // 生成 SConscript
-      const autogenDir = path.dirname(this.options.outputDir);
-      SConscriptGenerator.generate(autogenDir);
-      files.push(path.join(autogenDir, 'SConscript'));
+      SConscriptGenerator.generate(srcDir);
+      files.push(path.join(srcDir, 'SConscript'));
 
       return { success: true, files };
     } catch (error) {
@@ -96,34 +108,6 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
         errors: [error instanceof Error ? error.message : String(error)]
       };
     }
-  }
-
-  /**
-   * 生成用户代码文件（只生成一次，不覆盖）
-   */
-  private generateUserCodeFiles(baseName: string): string[] {
-    const files: string[] = [];
-    const userDir = this.options.userCodeDir!;
-
-    if (!fs.existsSync(userDir)) {
-      fs.mkdirSync(userDir, { recursive: true });
-    }
-
-    // 用户头文件
-    const userHeaderFile = path.join(userDir, `${baseName}.h`);
-    if (!fs.existsSync(userHeaderFile)) {
-      fs.writeFileSync(userHeaderFile, this.generateUserHeader(baseName));
-      files.push(userHeaderFile);
-    }
-
-    // 用户实现文件
-    const userImplFile = path.join(userDir, `${baseName}.c`);
-    if (!fs.existsSync(userImplFile)) {
-      fs.writeFileSync(userImplFile, this.generateUserImplementation(baseName));
-      files.push(userImplFile);
-    }
-
-    return files;
   }
 
   /**
@@ -140,7 +124,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
  * 可以在此添加自定义逻辑、状态管理等
  */
 
-#include "${baseName}_ui.h"
+#include "../ui/${baseName}_ui.h"
 
 // 用户自定义函数声明
 void ${baseName}_init_user(void);
@@ -154,7 +138,7 @@ void ${baseName}_update_user(void);
    * 生成用户实现文件模板
    */
   private generateUserImplementation(baseName: string): string {
-    return `#include "${baseName}.h"
+    return `#include "${baseName}_user.h"
 #include <stdio.h>
 
 /**
@@ -184,6 +168,7 @@ void ${baseName}_update_user(void) {
     const componentTypes = [...new Set(this.components.map(c => c.type))];
     const headers = this.apiMapper.getRequiredHeaders(componentTypes);
     const hasView = componentTypes.includes('hg_view');
+    const has3D = componentTypes.includes('hg_3d');
 
     let code = `/**
  * ${baseName} UI定义（自动生成，请勿手动修改）
@@ -202,16 +187,23 @@ void ${baseName}_update_user(void) {
       code += `#include "gui_view_instance.h"\n`;
     }
 
+    if (has3D) {
+      code += `#include "gui_lite3d.h"\n`;
+      code += `#include "gui_vfs.h"\n`;
+    }
+
     headers.forEach(header => {
       if (header !== 'gui_view.h') {
         code += `#include "${header}"\n`;
       }
     });
 
+    // 3D 模型不需要外部数据声明（使用 VFS 路径加载 bin 文件）
+
     code += `\n// 组件句柄声明\n`;
 
     this.components.forEach(comp => {
-      if (comp.type !== 'hg_view') {
+      if (comp.type !== 'hg_view' && comp.type !== 'hg_3d') {
         code += `extern gui_obj_t *${comp.id};\n`;
       }
     });
@@ -232,19 +224,48 @@ void ${baseName}_update_user(void) {
  * 生成时间: ${new Date().toISOString()}
  */
 #include "${baseName}_ui.h"
-#include "${baseName}_callbacks.h"
+#include "../callbacks/${baseName}_callbacks.h"
 #include <stddef.h>
 
 // 组件句柄定义
 `;
 
     this.components.forEach(comp => {
-      if (comp.type !== 'hg_view') {
+      if (comp.type !== 'hg_view' && comp.type !== 'hg_3d') {
         code += `gui_obj_t *${comp.id} = NULL;\n`;
       }
     });
 
     code += `\n`;
+
+    // 生成所有 3D 模型的全局变换回调函数
+    const has3DComponents = this.components.some(c => c.type === 'hg_3d');
+    if (has3DComponents) {
+      code += `// 3D 模型全局变换回调函数\n`;
+      this.components.forEach(comp => {
+        if (comp.type === 'hg_3d') {
+          const worldX = comp.data?.worldX ?? 0;
+          const worldY = comp.data?.worldY ?? 0;
+          const worldZ = comp.data?.worldZ ?? 30;
+          const rotationX = comp.data?.rotationX ?? 0;
+          const rotationY = comp.data?.rotationY ?? 0;
+          const rotationZ = comp.data?.rotationZ ?? 0;
+          const scale = comp.data?.scale ?? 5;
+          const cameraPosX = comp.data?.cameraPosX ?? 0;
+          const cameraPosY = comp.data?.cameraPosY ?? 0;
+          const cameraPosZ = comp.data?.cameraPosZ ?? 0;
+          const cameraLookX = comp.data?.cameraLookX ?? 0;
+          const cameraLookY = comp.data?.cameraLookY ?? 0;
+          const cameraLookZ = comp.data?.cameraLookZ ?? 1;
+          
+          code += `static void ${comp.id}_global_cb(l3_model_base_t *this)\n`;
+          code += `{\n`;
+          code += `    l3_camera_UVN_initialize(&this->camera, l3_4d_point(${cameraPosX}, ${cameraPosY}, ${cameraPosZ}), l3_4d_point(${cameraLookX}, ${cameraLookY}, ${cameraLookZ}), 1, 32767, 90, this->viewPortWidth, this->viewPortHeight);\n`;
+          code += `    l3_world_initialize(&this->world, ${worldX}, ${worldY}, ${worldZ}, ${rotationX}, ${rotationY}, ${rotationZ}, ${scale});\n`;
+          code += `}\n\n`;
+        }
+      });
+    }
 
     // 不再生成独立的 on_switch_in 回调函数，直接在 GUI_VIEW_INSTANCE 的 switch_in 中处理
 
@@ -382,6 +403,7 @@ void ${baseName}_update_user(void) {
     // 特殊处理3D模型组件
     if (component.type === 'hg_3d') {
         const modelPath = component.data?.modelPath || '';
+        const drawType = component.data?.drawType || 'L3_DRAW_FRONT_AND_SORT';
         const ext = modelPath.split('.').pop()?.toLowerCase();
         
         // 去掉 assets/ 前缀
@@ -391,16 +413,41 @@ void ${baseName}_update_user(void) {
             vfsPath = '/' + vfsPath;
         }
 
-        let createFunc = '';
-        if (ext === 'obj') {
-            createFunc = 'l3_create_obj_model';
-        } else if (ext === 'gltf' || ext === 'glb') {
-            createFunc = 'l3_create_gltf_model';
+        let code = '';
+        
+        if (ext === 'obj' || ext === 'gltf') {
+            const callbackName = `${component.id}_global_cb`;
+            
+            // 将模型文件路径转换为 bin 文件路径
+            // OBJ: xxx.obj -> desc_xxx.bin
+            // GLTF: xxx.gltf -> gltf_desc_xxx.bin
+            const pathParts = vfsPath.split('/');
+            const fileName = pathParts[pathParts.length - 1];
+            const baseName = fileName.replace(/\.(obj|gltf)$/i, '');
+            const dirPath = pathParts.slice(0, -1).join('/');
+            
+            let binFileName: string;
+            if (ext === 'obj') {
+                binFileName = `desc_${baseName}.bin`;
+            } else {
+                binFileName = `gltf_desc_${baseName}.bin`;
+            }
+            
+            const binPath = dirPath ? `${dirPath}/${binFileName}` : `/${binFileName}`;
+            
+            // 通过 gui_vfs_get_file_address 获取文件地址
+            code += `${indentStr}void *${component.id}_addr = (void *)gui_vfs_get_file_address("${binPath}");\n`;
+
+            // 创建 l3_model_base_t（使用绘制类型）
+            code += `${indentStr}l3_model_base_t *${component.id}_model = l3_create_model(${component.id}_addr, ${drawType}, ${x}, ${y}, ${width}, ${height});\n`;
+            code += `${indentStr}l3_set_global_transform(${component.id}_model, (l3_global_transform_cb)${callbackName});\n`; 
+            // 创建 gui_lite3d 控件（局部变量）
+            code += `${indentStr}gui_lite3d_t *${component.id} = gui_lite3d_create(${parentRef}, "${component.name}", ${component.id}_model, ${x}, ${y}, ${width}, ${height});\n`;
         } else {
-            return `${indentStr}// 警告: 不支持的3D模型格式: ${ext}\n`;
+            code += `${indentStr}// 警告: 不支持的3D模型格式: ${ext}\n`;
         }
 
-        return `${indentStr}${component.id} = (gui_obj_t *)gui_3d_create(${parentRef}, "${component.name}", ${createFunc}("${vfsPath}"), ${x}, ${y}, ${width}, ${height});\n`;
+        return code;
     }
 
     return `${indentStr}${component.id} = ${mapping.createFunction}(${parentRef}, "${component.name}", ${x}, ${y}, ${width}, ${height});\n`;
@@ -544,6 +591,7 @@ void ${baseName}_update_user(void) {
    */
   private generateCallbackImplementation(baseName: string): string {
     let code = `#include "${baseName}_callbacks.h"
+#include "../ui/${baseName}_ui.h"
 #include <stdio.h>
 
 // 事件回调函数实现

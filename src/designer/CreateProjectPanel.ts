@@ -1,11 +1,13 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as os from 'os';
 import { TemplateManager } from '../template/TemplateManager';
 import { HmlTemplateManager } from '../hml/HmlTemplateManager';
 import { WebviewUtils } from '../common/WebviewUtils';
 import { logger } from '../utils/Logger';
 import { getAllTemplateInfo, getTemplateById } from '../template/templates';
+import { ProjectUtils } from '../utils/ProjectUtils';
 
 /**
  * 项目创建面板管理类
@@ -125,7 +127,7 @@ export class CreateProjectPanel {
      */
     private _getHtmlForWebview(webview: vscode.Webview): string {
         const nonce = this._getNonce();
-        const homeDir = require('os').homedir();
+        const homeDir = os.homedir();
         
         // 读取 HTML 模板
         const templatePath = path.join(this._extensionUri.fsPath, 'src', 'designer', 'templates', 'createProject.html');
@@ -263,13 +265,13 @@ export class CreateProjectPanel {
      */
     private async _createProject(config: any): Promise<void> {
         try {
-            const { projectName, saveLocation, appId, resolution, targetEngine, minSdk, pixelMode, honeyguiSdkPath } = config;
+            const { projectName, saveLocation, appId, resolution, targetEngine, minSdk, pixelMode, honeyguiSdkPath, romfsBaseAddr } = config;
 
             // 记录日志用于调试
-            logger.info(`[CreateProjectPanel] Creating project: projectName=${projectName}, saveLocation=${saveLocation}, appId=${appId}, targetEngine=${targetEngine}, sdkPath=${honeyguiSdkPath}`);
+            logger.info(`[CreateProjectPanel] Creating project: projectName=${projectName}, saveLocation=${saveLocation}, appId=${appId}, targetEngine=${targetEngine}, sdkPath=${honeyguiSdkPath}, romfsBaseAddr=${romfsBaseAddr}`);
 
             // 设置默认 SDK 路径
-            const sdkPath = honeyguiSdkPath || path.join(require('os').homedir(), '.HoneyGUI-SDK');
+            const sdkPath = honeyguiSdkPath || ProjectUtils.getDefaultSdkPath();
             logger.info(`[CreateProjectPanel] Using SDK path: ${sdkPath}`);
 
             // 验证必填字段
@@ -325,11 +327,15 @@ export class CreateProjectPanel {
                 return;
             }
             
-            // 显示创建中消息
-            vscode.window.showInformationMessage(`Creating project: ${projectName}...`);
-            
-            // 创建项目结构
-            await this._createProjectStructure(projectPath, projectName, appId, resolution, targetEngine || 'honeygui', minSdk, pixelMode, honeyguiSdkPath);
+            // 使用 withProgress 显示创建进度（完成后自动消失）
+            await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: `Creating project: ${projectName}...`,
+                cancellable: false
+            }, async () => {
+                // 创建项目结构
+                await this._createProjectStructure(projectPath, projectName, appId, resolution, targetEngine || 'honeygui', minSdk, pixelMode, honeyguiSdkPath, romfsBaseAddr);
+            });
             
             // 显示成功消息
             this._panel.webview.postMessage({
@@ -376,7 +382,8 @@ export class CreateProjectPanel {
         targetEngine: string,
         minSdk: string,
         pixelMode: string,
-        honeyguiSdkPath?: string
+        honeyguiSdkPath?: string,
+        romfsBaseAddr?: string
     ): Promise<void> {
         // 创建目录结构
         fs.mkdirSync(projectPath, { recursive: true });
@@ -415,7 +422,8 @@ export class CreateProjectPanel {
             minSdk: minSdk,
             pixelMode: pixelMode,
             mainHmlFile: `ui/main/${hmlFileName}`, // 使用新的文件名
-            honeyguiSdkPath: honeyguiSdkPath || path.join(require('os').homedir(), '.HoneyGUI-SDK'),
+            honeyguiSdkPath: honeyguiSdkPath || ProjectUtils.getDefaultSdkPath(),
+            romfsBaseAddr: romfsBaseAddr || '0x04400000',
             created: new Date().toISOString()
         };
 
@@ -426,7 +434,7 @@ export class CreateProjectPanel {
         );
 
         // SDK 路径已保存到 project.json，项目将直接引用 SDK 而不拷贝文件
-        logger.info(`[CreateProjectPanel] Project created with target engine: ${targetEngine}, SDK path: ${projectConfig.honeyguiSdkPath || 'default'}`);
+        logger.info(`[CreateProjectPanel] Project created with target engine: ${targetEngine}, SDK path: ${projectConfig.honeyguiSdkPath || 'default'}, romfs base addr: ${projectConfig.romfsBaseAddr}`);
     }
 
     /**
@@ -471,9 +479,6 @@ export class CreateProjectPanel {
                 return;
             }
 
-            // 显示创建中消息
-            vscode.window.showInformationMessage(`Creating project from template: ${projectName}...`);
-
             // 获取模板实例
             const template = getTemplateById(templateId);
             if (!template) {
@@ -481,10 +486,17 @@ export class CreateProjectPanel {
             }
 
             // 设置 SDK 路径
-            const sdkPath = honeyguiSdkPath || path.join(require('os').homedir(), '.HoneyGUI-SDK');
+            const sdkPath = honeyguiSdkPath || ProjectUtils.getDefaultSdkPath();
 
-            // 使用模板创建项目（拷贝完整项目）
-            await template.createProject(projectPath, projectName, appId, sdkPath);
+            // 使用 withProgress 显示创建进度（完成后自动消失）
+            await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: `Creating project from template: ${projectName}...`,
+                cancellable: false
+            }, async () => {
+                // 使用模板创建项目（拷贝完整项目）
+                await template.createProject(projectPath, projectName, appId, sdkPath);
+            });
 
             // 显示成功消息
             this._panel.webview.postMessage({
@@ -589,7 +601,7 @@ Created: ${new Date().toLocaleString()}
             minSdk: minSdk,
             pixelMode: pixelMode,
             mainHmlFile: `ui/main/${hmlFileName}`,
-            honeyguiSdkPath: honeyguiSdkPath || path.join(require('os').homedir(), '.HoneyGUI-SDK'),
+            honeyguiSdkPath: honeyguiSdkPath || ProjectUtils.getDefaultSdkPath(),
             template: templateId,
             created: new Date().toISOString()
         };

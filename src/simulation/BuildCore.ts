@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import { spawn } from 'child_process';
 import { ImageConverterService } from '../services/ImageConverterService';
 import { VideoConverterService } from '../services/VideoConverterService';
+import { Model3DConverterService } from '../services/Model3DConverterService';
 import { ProjectConfig } from '../common/ProjectConfig';
 import { RomfsConfig } from '../common/RomfsConfig';
 
@@ -70,12 +71,12 @@ export class BuildCore {
     async copyGeneratedCode(): Promise<void> {
         this.logger.log('检查生成的代码...');
 
-        const srcAutogen = path.join(this.projectRoot, 'src', 'autogen');
-        if (!fs.existsSync(srcAutogen)) {
-            throw new Error(`生成的代码目录不存在: ${srcAutogen}`);
+        const srcDir = path.join(this.projectRoot, 'src');
+        if (!fs.existsSync(srcDir)) {
+            throw new Error(`生成的代码目录不存在: ${srcDir}`);
         }
 
-        const sconscript = path.join(srcAutogen, 'SConscript');
+        const sconscript = path.join(srcDir, 'SConscript');
         if (!fs.existsSync(sconscript)) {
             throw new Error(`SConscript 文件不存在: ${sconscript}，请先生成代码`);
         }
@@ -86,6 +87,11 @@ export class BuildCore {
     async convertAssets(): Promise<void> {
         const assetsDir = path.join(this.projectRoot, 'assets');
         const outputDir = path.join(this.buildDir, 'assets');
+
+        // 确保 build/assets 目录存在
+        if (!fs.existsSync(outputDir)) {
+            fs.mkdirSync(outputDir, { recursive: true });
+        }
 
         // 转换图片资源
         this.logger.log('转换图片资源...');
@@ -143,6 +149,29 @@ export class BuildCore {
 
 
 
+        // 转换 3D 模型资源
+        this.logger.log('转换 3D 模型资源...');
+        const model3DConverter = new Model3DConverterService(this.sdkPath);
+        const model3DResults = await model3DConverter.convertAssetsDir(assetsDir, outputDir);
+
+        const model3DFailed = model3DResults.filter(r => !r.success);
+        if (model3DFailed.length > 0) {
+            for (const f of model3DFailed) {
+                this.logger.log(`3D模型转换失败: ${f.inputPath} - ${f.error}`, true);
+            }
+            throw new Error(`${model3DFailed.length} 个3D模型转换失败`);
+        }
+
+        this.logger.log(`3D模型转换完成: ${model3DResults.length} 个`);
+
+        // 拷贝 ui 目录到 build/assets
+        const uiSrcDir = path.join(this.projectRoot, 'ui');
+        const uiDestDir = path.join(outputDir, 'ui');
+        if (fs.existsSync(uiSrcDir)) {
+            this.copyDirectory(uiSrcDir, uiDestDir);
+            this.logger.log('UI 目录已拷贝到 assets');
+        }
+
         // 打包 romfs
         await this.packRomfs();
     }
@@ -152,12 +181,26 @@ export class BuildCore {
 
         const assetsDir = path.join(this.buildDir, 'assets');
         const romfsOutput = path.join(this.buildDir, RomfsConfig.getFileName());
+        const romfsBinOutput = path.join(this.buildDir, 'app_romfs.bin');
         const mkromfsScript = path.join(this.sdkPath, 'tool', 'mkromfs', 'mkromfs_for_honeygui.py');
 
         if (!fs.existsSync(mkromfsScript)) {
             throw new Error(`mkromfs 脚本不存在: ${mkromfsScript}`);
         }
 
+        // 获取 romfs 基地址
+        const baseAddr = this.projectConfig.romfsBaseAddr || '0x04400000';
+
+        // 生成 C 文件
+        await this.runMkromfs(mkromfsScript, assetsDir, romfsOutput, false, baseAddr);
+        this.logger.log('romfs C 文件生成完成');
+
+        // 生成二进制文件
+        await this.runMkromfs(mkromfsScript, assetsDir, romfsBinOutput, true, baseAddr);
+        this.logger.log(`romfs 二进制文件生成完成 (基地址: ${baseAddr})`);
+    }
+
+    private async runMkromfs(script: string, inputDir: string, outputFile: string, binary: boolean, baseAddr: string): Promise<void> {
         return new Promise((resolve, reject) => {
             // 尝试多个 Python 命令
             const pythonCandidates = process.platform === 'win32' 
@@ -171,7 +214,12 @@ export class BuildCore {
                 pythonCmd = 'py';
             }
 
-            const proc = spawn(pythonCmd, [mkromfsScript, '-i', assetsDir, '-o', romfsOutput], {
+            const args = [script, '-i', inputDir, '-o', outputFile, '-a', baseAddr];
+            if (binary) {
+                args.push('-b');
+            }
+
+            const proc = spawn(pythonCmd, args, {
                 cwd: this.buildDir,
                 shell: true
             });
@@ -186,7 +234,6 @@ export class BuildCore {
 
             proc.on('close', (code) => {
                 if (code === 0) {
-                    this.logger.log('romfs C 文件生成完成');
                     resolve();
                 } else {
                     reject(new Error(`romfs 打包失败，退出码: ${code}`));
@@ -213,17 +260,57 @@ export class BuildCore {
                 shell: true
             });
 
+            let compiledCount = 0;
+
             compileProcess.stdout?.on('data', (data) => {
-                this.logger.log(data.toString());
+                const output = data.toString();
+                const lines = output.split('\n');
+                
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (!trimmed) continue;
+                    
+                    // 过滤掉不需要的日志
+                    if (trimmed.includes('Warning: Command is too long')) continue;
+                    
+                    // 只显示关键信息
+                    if (trimmed.startsWith('CC ') || trimmed.startsWith('Compiling ')) {
+                        // 编译文件，统计数量，不逐条输出
+                        compiledCount++;
+                    } else if (trimmed.startsWith('LINK ') || trimmed.includes('Linking')) {
+                        this.logger.log(`链接中... (已编译 ${compiledCount} 个文件)`);
+                    } else if (trimmed.includes('error:') || trimmed.includes('Error:')) {
+                        this.logger.log(trimmed, true);
+                    } else if (trimmed.includes('warning:') && !trimmed.includes('Command is too long')) {
+                        // 只显示重要警告，跳过常见无害警告
+                        if (!trimmed.includes('unused') && !trimmed.includes('deprecated')) {
+                            this.logger.log(trimmed);
+                        }
+                    } else if (trimmed.startsWith('scons:')) {
+                        this.logger.log(trimmed);
+                    }
+                }
             });
 
             compileProcess.stderr?.on('data', (data) => {
-                this.logger.log(data.toString(), true);
+                const output = data.toString();
+                const lines = output.split('\n');
+                
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (!trimmed) continue;
+                    if (trimmed.includes('Warning: Command is too long')) continue;
+                    
+                    // stderr 通常是错误信息，显示出来
+                    if (trimmed.includes('error:') || trimmed.includes('Error:')) {
+                        this.logger.log(trimmed, true);
+                    }
+                }
             });
 
             compileProcess.on('exit', (code) => {
                 if (code === 0) {
-                    this.logger.log('编译成功！');
+                    this.logger.log(`编译成功！共编译 ${compiledCount} 个文件`);
                     resolve();
                 } else {
                     reject(new Error(`编译失败，退出码: ${code}`));
@@ -240,8 +327,67 @@ export class BuildCore {
     }
 
     private generateConfig(): void {
-        const configContent = 'CONFIG_REALTEK_HONEYGUI=y\n';
-        fs.writeFileSync(path.join(this.buildDir, '.config'), configContent);
+        const kconfigPath = path.join(this.buildDir, 'Kconfig.gui');
+        const configLines: string[] = [];
+        
+        // 1. 启用 HoneyGUI 框架
+        configLines.push('CONFIG_REALTEK_HONEYGUI=y');
+        
+        // 2. 解析 Kconfig.gui，提取 HoneyGUI Feature Configuration 中默认打开的配置项
+        if (fs.existsSync(kconfigPath)) {
+            try {
+                const kconfigContent = fs.readFileSync(kconfigPath, 'utf-8');
+                const lines = kconfigContent.split('\n');
+                
+                let inFeatureMenu = false;
+                let currentConfig = '';
+                let defaultValue = '';
+                
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    
+                    // 检测进入 HoneyGUI Feature Configuration 菜单
+                    if (line.includes('HoneyGUI Feature Configuration')) {
+                        inFeatureMenu = true;
+                        continue;
+                    }
+                    
+                    // 检测退出菜单
+                    if (inFeatureMenu && line === 'endmenu') {
+                        inFeatureMenu = false;
+                        continue;
+                    }
+                    
+                    // 在 Feature Configuration 菜单内
+                    if (inFeatureMenu) {
+                        // 提取 config 名称
+                        if (line.startsWith('config ')) {
+                            currentConfig = line.replace('config ', '').trim();
+                            
+                            if (currentConfig) {
+                                // 如果配置名不是以 CONFIG_ 开头，添加 CONFIG_ 前缀
+                                const configName = currentConfig.startsWith('CONFIG_') 
+                                    ? currentConfig 
+                                    : `CONFIG_${currentConfig}`;
+                                configLines.push(`${configName}=y`);
+                            }
+                        }
+                    }
+                }
+                
+                this.logger.log(`从 Kconfig.gui 解析到 ${configLines.length - 1} 个默认启用的配置项`);
+            } catch (error) {
+                this.logger.log(`解析 Kconfig.gui 失败: ${error}`);
+                this.logger.log('使用最小配置');
+            }
+        } else {
+            this.logger.log('Kconfig.gui 不存在，使用最小配置');
+        }
+        
+        // 3. 写入 .config 文件
+        const configPath = path.join(this.buildDir, '.config');
+        fs.writeFileSync(configPath, configLines.join('\n') + '\n');
+        this.logger.log(`.config 文件已生成，包含 ${configLines.length} 个配置项`);
     }
 
     private modifySConstruct(): void {
@@ -268,17 +414,17 @@ export class BuildCore {
             );
         }
 
-        // 在 DoBuilding 之前添加项目 autogen 代码的编译（仅当不存在时）
-        if (!content.includes('PROJECT_AUTOGEN')) {
-            const autogenInclude = `
-# Include project autogen code
-PROJECT_AUTOGEN = '${projectRootNormalized}/src/autogen'
-if os.path.exists(os.path.join(PROJECT_AUTOGEN, 'SConscript')):
-    objs.extend(SConscript(os.path.join(PROJECT_AUTOGEN, 'SConscript')))
+        // 在 DoBuilding 之前添加项目 src 代码的编译（仅当不存在时）
+        if (!content.includes('PROJECT_SRC')) {
+            const srcInclude = `
+# Include project src code
+PROJECT_SRC = '${projectRootNormalized}/src'
+if os.path.exists(os.path.join(PROJECT_SRC, 'SConscript')):
+    objs.extend(SConscript(os.path.join(PROJECT_SRC, 'SConscript')))
 `;
             content = content.replace(
                 /# Build\s*\nDoBuilding\(TARGET, objs\)/,
-                `${autogenInclude}\n# Build\nDoBuilding(TARGET, objs)`
+                `${srcInclude}\n# Build\nDoBuilding(TARGET, objs)`
             );
         }
         

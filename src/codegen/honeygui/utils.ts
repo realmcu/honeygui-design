@@ -6,24 +6,14 @@ import * as path from 'path';
 
 /**
  * 根据HML文件路径计算C代码输出目录
- * 规则：ui/xxx/ -> src/autogen/xxx/
+ * 规则：ui/xxx/ -> src/
  * 
  * @param hmlFilePath HML文件的完整路径
  * @param projectRoot 项目根目录
- * @returns 输出目录路径
- * 
- * @example
- * // ui/main/main.hml -> src/autogen/main/
- * // ui/settings/settings.hml -> src/autogen/settings/
+ * @returns 输出目录路径（src/）
  */
 export function getOutputDir(hmlFilePath: string, projectRoot: string): string {
-  const relativePath = path.relative(projectRoot, hmlFilePath);
-  const dirName = path.dirname(relativePath);
-  
-  // 将 ui/xxx 替换为 src/autogen/xxx
-  const outputDir = dirName.replace(/^ui/, 'src/autogen');
-  
-  return path.join(projectRoot, outputDir);
+  return path.join(projectRoot, 'src');
 }
 
 /**

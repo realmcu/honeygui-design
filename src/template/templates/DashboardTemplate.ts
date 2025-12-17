@@ -13,6 +13,6 @@ export class DashboardTemplate extends BaseTemplate {
     recommendedResolution = '800X480';
     
     protected getTemplateProjectPath(): string {
-        return path.join(__dirname, '..', '..', '..', 'template-projects', 'dashboard');
+        return path.join(__dirname, '..', '..', '..', '..', 'template-projects', 'dashboard');
     }
 }

@@ -34,7 +34,7 @@
     "onView:honeygui.quick",
     "onWorkspaceContains:**/*.hml"
   ],
-  "main": "./out/extension.js",
+  "main": "./out/src/extension.js",
   "contributes": {
     "languages": [
       {
@@ -185,6 +185,12 @@
         "title": "HoneyGUI: Stop Simulation",
         "category": "HoneyGUI",
         "icon": "$(debug-stop)"
+      },
+      {
+        "command": "honeygui.simulation.clean",
+        "title": "HoneyGUI: Clean Build",
+        "category": "HoneyGUI",
+        "icon": "$(trash)"
       },
       {
         "command": "honeygui.openResourceManager",
@@ -354,8 +360,8 @@
     }
   },
   "scripts": {
-    "test": "echo 'Unit tests not yet configured. Use npm run test:e2e for E2E tests or F5 for manual testing.'",
-    "test:e2e": "npm run clean:src && npx ts-node scripts/e2e-test.ts",
+    "test": "npm run test:templates",
+    "test:templates": "npm run compile && node ./out/test/templates/run-templates-tests.js",
     "test:video-formats": "npx ts-node scripts/test-three-formats.ts",
     "test:video-formats:quick": "node test-formats-quick.js",
     "vscode:prepublish": "npm run compile && npm run build:webview",
@@ -406,7 +412,9 @@
     "@types/three": "^0.181.0",
     "chokidar": "^3.6.0",
     "fast-xml-parser": "^4.3.2",
+    "jpeg-js": "^0.4.4",
     "lucide-react": "^0.553.0",
+    "pngjs": "^7.0.0",
     "three": "^0.181.2",
     "ws": "^8.18.3",
     "xml-js": "^1.6.11",

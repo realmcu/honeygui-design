@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hml>
+    <meta>
+        <project name="{{PROJECT_NAME}}" appId="{{APP_ID}}" resolution="480X320" minSdk="API 2: HoneyGUI V1.1.0" pixelMode="ARGB8888" />
+        <author name="HoneyGUI Design" />
+    </meta>
+    <view>
+        <hg_view id="mainView" x="0" y="0" width="480" height="320" name="mainView" backgroundColor="#F5F5F5">
+            <!-- Header -->
+            <hg_view id="header" x="0" y="0" width="480" height="50" name="header" backgroundColor="#4A90E2">
+                <hg_text id="headerTitle" x="20" y="12" width="440" height="26" name="headerTitle"
+                         text="AI Assistant" fontSize="20" color="#FFFFFF" />
+            </hg_view>
+            
+            <!-- Chat Area -->
+            <hg_view id="chatArea" x="0" y="50" width="480" height="210" name="chatArea" backgroundColor="#FFFFFF">
+                <!-- Bot Message 1 -->
+                <hg_view id="botMsg1" x="10" y="10" width="350" height="60" name="botMsg1" backgroundColor="#E8F4FD">
+                    <hg_text id="botText1" x="10" y="10" width="330" height="40" name="botText1"
+                             text="Hello! How can I help you today?" fontSize="14" color="#333333" />
+                </hg_view>
+                
+                <!-- User Message 1 -->
+                <hg_view id="userMsg1" x="120" y="80" width="350" height="60" name="userMsg1" backgroundColor="#4A90E2">
+                    <hg_text id="userText1" x="10" y="10" width="330" height="40" name="userText1"
+                             text="What's the weather like?" fontSize="14" color="#FFFFFF" />
+                </hg_view>
+                
+                <!-- Bot Message 2 -->
+                <hg_view id="botMsg2" x="10" y="150" width="350" height="50" name="botMsg2" backgroundColor="#E8F4FD">
+                    <hg_text id="botText2" x="10" y="10" width="330" height="30" name="botText2"
+                             text="It's sunny, 22°C" fontSize="14" color="#333333" />
+                </hg_view>
+            </hg_view>
+            
+            <!-- Input Area -->
+            <hg_view id="inputArea" x="0" y="260" width="480" height="60" name="inputArea" backgroundColor="#FFFFFF">
+                <hg_input id="messageInput" x="10" y="10" width="380" height="40" name="messageInput"
+                          placeholder="Type a message..." fontSize="14" />
+                <hg_button id="sendBtn" x="400" y="10" width="70" height="40" name="sendBtn"
+                           text="Send" fontSize="14" backgroundColor="#4A90E2" textColor="#FFFFFF" />
+            </hg_view>
+        </hg_view>
+    </view>
+</hml>

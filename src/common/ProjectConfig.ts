@@ -15,6 +15,7 @@ export interface ProjectConfig {
     uiDir?: string;          // UI目录，默认 "ui"
     srcDir?: string;         // 源码目录，默认 "src"
     honeyguiSdkPath?: string; // HoneyGUI SDK 路径（用于编译仿真）
+    romfsBaseAddr?: string;   // romfs 基地址（十六进制，如 "0x04400000"），用于嵌入式烧录
     
     // 视频转换配置
     videoFormat?: 'mjpeg' | 'avi' | 'h264';  // 默认视频输出格式
@@ -44,5 +45,6 @@ export const DEFAULT_PROJECT_CONFIG: Partial<ProjectConfig> = {
     targetEngine: 'honeygui',
     assetsDir: 'assets',
     uiDir: 'ui',
-    srcDir: 'src'
+    srcDir: 'src',
+    romfsBaseAddr: '0x04400000'  // 默认 romfs 基地址
 };

@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as os from 'os';
 import * as fs from 'fs';
 import { SimulationRunner } from './SimulationRunner';
 import { ProjectUtils } from '../utils/ProjectUtils';
@@ -12,6 +13,7 @@ export class SimulationService {
     private context: vscode.ExtensionContext;
     private runner: SimulationRunner | null = null;
     private statusBarItem: vscode.StatusBarItem;
+    private cleanStatusBarItem: vscode.StatusBarItem;
     private outputChannel: vscode.OutputChannel;
 
     constructor(context: vscode.ExtensionContext) {
@@ -22,6 +24,13 @@ export class SimulationService {
         this.statusBarItem.text = '$(rocket) 编译仿真: 未运行';
         this.statusBarItem.command = 'honeygui.simulation';
         this.statusBarItem.show();
+
+        // 创建 Clean 状态栏按钮
+        this.cleanStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
+        this.cleanStatusBarItem.text = '$(trash) Clean';
+        this.cleanStatusBarItem.command = 'honeygui.simulation.clean';
+        this.cleanStatusBarItem.tooltip = '清理编译产物';
+        this.cleanStatusBarItem.show();
 
         // 创建输出通道
         this.outputChannel = vscode.window.createOutputChannel('HoneyGUI Simulation');
@@ -42,6 +51,13 @@ export class SimulationService {
         this.context.subscriptions.push(
             vscode.commands.registerCommand('honeygui.simulation.stop', async () => {
                 await this.stopSimulation();
+            })
+        );
+
+        // 清理编译产物
+        this.context.subscriptions.push(
+            vscode.commands.registerCommand('honeygui.simulation.clean', async () => {
+                await this.cleanSimulation();
             })
         );
     }
@@ -110,6 +126,43 @@ export class SimulationService {
     }
 
     /**
+     * 清理编译产物
+     */
+    async cleanSimulation(): Promise<void> {
+        // 查找项目根目录
+        let projectRoot: string | undefined;
+
+        // 优先使用当前打开的 HML 文件所在项目
+        const activeEditor = vscode.window.activeTextEditor;
+        if (activeEditor && activeEditor.document.fileName.endsWith('.hml')) {
+            projectRoot = ProjectUtils.findProjectRoot(activeEditor.document.fileName);
+        }
+
+        // 如果没有，尝试从工作区查找
+        if (!projectRoot) {
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            if (workspaceFolders && workspaceFolders.length > 0) {
+                projectRoot = ProjectUtils.findProjectRoot(workspaceFolders[0].uri.fsPath);
+            }
+        }
+
+        if (!projectRoot) {
+            vscode.window.showErrorMessage('未找到项目根目录（project.json）');
+            return;
+        }
+
+        this.outputChannel.show(true);
+        const runner = new SimulationRunner(projectRoot, '', this.outputChannel);
+        runner.setListener({
+            onLog: (message: string) => {
+                this.outputChannel.appendLine(message);
+            }
+        });
+        await runner.clean();
+        vscode.window.showInformationMessage('清理完成');
+    }
+
+    /**
      * 选择 HML 文件
      */
     private async selectHmlFile(): Promise<string | undefined> {
@@ -169,7 +222,7 @@ export class SimulationService {
         }
 
         // 3. 默认路径
-        const defaultPath = path.join(require('os').homedir(), '.HoneyGUI-SDK');
+        const defaultPath = ProjectUtils.getDefaultSdkPath();
         if (fs.existsSync(defaultPath)) {
             return defaultPath;
         }

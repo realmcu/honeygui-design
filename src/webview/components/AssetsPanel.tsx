@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trash2, Edit2 } from 'lucide-react';
+import { Trash2, Edit2, Upload, FolderUp } from 'lucide-react';
 import { AssetFile } from '../types';
 import './AssetsPanel.css';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js';
-import { parseObjDependencies, parseMtlDependencies, findDependencyFiles } from '../utils/objDependencyParser';
 
 // 文件类型分类
 const IMAGE_EXTS = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'webp'];
@@ -56,22 +55,51 @@ const VideoPreview: React.FC<{ videoPath: string }> = ({ videoPath }) => {
 // 3D 模型预览组件
 const Model3DPreview: React.FC<{ modelPath: string }> = ({ modelPath }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const sceneRef = useRef<THREE.Scene | null>(null);
+  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const [error, setError] = useState(false);
+  const [thumbnail, setThumbnail] = useState<string | null>(null);
 
   useEffect(() => {
     if (!containerRef.current || !modelPath) return;
 
     const scene = new THREE.Scene();
     scene.background = null;
+    sceneRef.current = scene;
     
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
-    camera.position.set(0, 0, -5);
-    camera.lookAt(0, 0, 0);
+    camera.position.set(0, 0, 0);
+    camera.lookAt(0, 0, 1);
+    cameraRef.current = camera;
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    const renderer = new THREE.WebGLRenderer({ 
+      antialias: true, 
+      alpha: true,
+      preserveDrawingBuffer: true  // 保持绘制缓冲区，防止内容丢失
+    });
     renderer.setSize(100, 100);
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.sortObjects = true;
+    rendererRef.current = renderer;
+    
+    // 监听WebGL上下文丢失和恢复
+    const canvas = renderer.domElement;
+    const handleContextLost = (event: Event) => {
+      event.preventDefault();
+      console.warn('[3D预览] WebGL上下文丢失');
+    };
+    
+    const handleContextRestored = () => {
+      console.log('[3D预览] WebGL上下文恢复，重新渲染');
+      if (sceneRef.current && cameraRef.current && rendererRef.current) {
+        rendererRef.current.render(sceneRef.current, cameraRef.current);
+      }
+    };
+    
+    canvas.addEventListener('webglcontextlost', handleContextLost);
+    canvas.addEventListener('webglcontextrestored', handleContextRestored);
+    
     containerRef.current.appendChild(renderer.domElement);
 
     // 添加光源（与设计窗口一致）
@@ -90,8 +118,7 @@ const Model3DPreview: React.FC<{ modelPath: string }> = ({ modelPath }) => {
 
     const onLoadSuccess = (model: THREE.Object3D) => {
       // 调整坐标系：正X向右，正Y向下，正Z向里（与设计窗口一致）
-      model.scale.set(1, -1, -1);
-      model.rotation.y = Math.PI;
+      model.rotation.x = Math.PI;
       
       scene.add(model);
       
@@ -108,10 +135,32 @@ const Model3DPreview: React.FC<{ modelPath: string }> = ({ modelPath }) => {
       const fov = camera.fov * (Math.PI / 180);
       let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
       cameraZ *= 1.5;
-      camera.position.z = -cameraZ;
-      camera.lookAt(0, 0, 0);
+      camera.position.z = cameraZ;
+      camera.lookAt(0, 0, 1);
       
+      // 初始渲染
       renderer.render(scene, camera);
+      
+      // 生成缩略图并保存
+      setTimeout(() => {
+        renderer.render(scene, camera);
+        try {
+          const dataURL = renderer.domElement.toDataURL('image/png');
+          setThumbnail(dataURL);
+          
+          // 生成缩略图后，清理WebGL资源
+          renderer.dispose();
+          scene.clear();
+          if (containerRef.current && renderer.domElement.parentNode === containerRef.current) {
+            containerRef.current.removeChild(renderer.domElement);
+          }
+          rendererRef.current = null;
+          sceneRef.current = null;
+          cameraRef.current = null;
+        } catch (err) {
+          console.warn('[3D预览] 生成缩略图失败:', err);
+        }
+      }, 200);
     };
 
     if (ext === 'gltf' || ext === 'glb') {
@@ -218,15 +267,38 @@ const Model3DPreview: React.FC<{ modelPath: string }> = ({ modelPath }) => {
     }
 
     return () => {
-      renderer.dispose();
-      if (containerRef.current && renderer.domElement.parentNode === containerRef.current) {
-        containerRef.current.removeChild(renderer.domElement);
+      const canvas = rendererRef.current?.domElement;
+      if (canvas) {
+        canvas.removeEventListener('webglcontextlost', () => {});
+        canvas.removeEventListener('webglcontextrestored', () => {});
       }
+      
+      if (rendererRef.current) {
+        rendererRef.current.dispose();
+        if (containerRef.current && rendererRef.current.domElement.parentNode === containerRef.current) {
+          containerRef.current.removeChild(rendererRef.current.domElement);
+        }
+      }
+      
+      sceneRef.current = null;
+      cameraRef.current = null;
+      rendererRef.current = null;
     };
   }, [modelPath]);
 
   if (error) {
     return <div className="file-icon" style={{ fontSize: '48px' }}>🧊</div>;
+  }
+
+  // 如果已生成缩略图，显示图片而不是WebGL canvas
+  if (thumbnail) {
+    return (
+      <img 
+        src={thumbnail} 
+        alt="3D Model Preview" 
+        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+      />
+    );
   }
 
   return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />;
@@ -258,8 +330,33 @@ const AssetsPanel: React.FC = () => {
   const [editingAsset, setEditingAsset] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
+  const [gridColumns, setGridColumns] = useState(3);
+  const [currentPath, setCurrentPath] = useState<string[]>([]);  // 当前浏览路径
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
 
-  // 按类型分类资源（递归处理）
+  // 获取当前路径下的内容（仅用于"全部"分类）
+  const getCurrentFolderContent = React.useMemo(() => {
+    let current = assets;
+    
+    // 根据 currentPath 导航到目标文件夹
+    for (const folderName of currentPath) {
+      const folder = current.find(item => item.type === 'folder' && item.name === folderName);
+      if (folder && folder.children) {
+        current = folder.children;
+      } else {
+        return { folders: [], files: [] };
+      }
+    }
+    
+    // 分离文件夹和文件
+    const folders = current.filter(item => item.type === 'folder');
+    const files = current.filter(item => item.type !== 'folder');
+    
+    return { folders, files };
+  }, [assets, currentPath]);
+
+  // 按类型分类资源
   const categorizedAssets = React.useMemo(() => {
     const result: Record<AssetCategory, AssetFile[]> = {
       all: [],
@@ -268,28 +365,43 @@ const AssetsPanel: React.FC = () => {
       models: []
     };
     
+    // "全部"分类：使用当前目录的文件
+    if (activeCategory === 'all') {
+      const { files } = getCurrentFolderContent;
+      for (const asset of files) {
+        const category = getAssetCategory(asset.name);
+        if (category) {
+          result.all.push(asset);
+        }
+        if (isModelDependency(asset.name)) {
+          result.all.push(asset);
+        }
+      }
+    }
+    
+    // 其他分类：递归扁平化所有文件
     const processAssets = (assetList: AssetFile[]) => {
       for (const asset of assetList) {
         if (asset.type === 'folder' && asset.children) {
           processAssets(asset.children);
         } else {
           const category = getAssetCategory(asset.name);
-          if (category) {
+          if (category && category !== 'all') {
             result[category].push(asset);
-            result.all.push(asset);
           }
-          // 将 mtl 文件也归类到 models（作为依赖显示）
           if (isModelDependency(asset.name)) {
             result.models.push(asset);
-            result.all.push(asset);
           }
         }
       }
     };
     
-    processAssets(assets);
+    if (activeCategory !== 'all') {
+      processAssets(assets);
+    }
+    
     return result;
-  }, [assets]);
+  }, [assets, currentPath, getCurrentFolderContent, activeCategory]);
 
   // 获取各类型数量
   const counts = React.useMemo(() => ({
@@ -398,6 +510,23 @@ const AssetsPanel: React.FC = () => {
     );
   };
 
+  const renderFolderItem = (folder: AssetFile) => {
+    return (
+      <div 
+        key={folder.path} 
+        className="asset-grid-item folder-item"
+        onClick={() => setCurrentPath([...currentPath, folder.name])}
+      >
+        <div className="asset-preview folder-preview">
+          <div className="file-icon" style={{ fontSize: '48px' }}>📁</div>
+        </div>
+        <div className="asset-info">
+          <span className="asset-name" title={folder.name}>{folder.name}</span>
+        </div>
+      </div>
+    );
+  };
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -415,37 +544,7 @@ const AssetsPanel: React.FC = () => {
     e.stopPropagation();
     setIsDragOver(false);
 
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const files = Array.from(e.dataTransfer.files);
-      const objFiles = files.filter(f => f.name.toLowerCase().endsWith('.obj'));
-      
-      if (objFiles.length > 0) {
-        for (const objFile of objFiles) {
-          await processObjWithDependencies(objFile, e.dataTransfer.files, '');
-        }
-        
-        const processedNames = new Set<string>();
-        for (const objFile of objFiles) {
-          const deps = await parseObjDependencies(objFile);
-          processedNames.add(objFile.name);
-          if (deps.mtlFile) processedNames.add(deps.mtlFile);
-          
-          const depFiles = findDependencyFiles(objFile.name, deps, e.dataTransfer.files);
-          if (depFiles.mtl) {
-            const mtlDeps = await parseMtlDependencies(depFiles.mtl, deps);
-            mtlDeps.textures.forEach(t => processedNames.add(t));
-          }
-        }
-        
-        files.forEach(file => {
-          if (!processedNames.has(file.name)) {
-            processFile(file, '');
-          }
-        });
-        return;
-      }
-    }
-
+    // 简化逻辑：拖拽什么就拷贝什么
     if (e.dataTransfer.items) {
       const items = Array.from(e.dataTransfer.items);
       for (const item of items) {
@@ -457,55 +556,6 @@ const AssetsPanel: React.FC = () => {
     } else if (e.dataTransfer.files) {
       Array.from(e.dataTransfer.files).forEach(file => processFile(file, ''));
     }
-  };
-
-  const processObjWithDependencies = async (objFile: File, fileList: FileList, relativePath: string) => {
-    const deps = await parseObjDependencies(objFile);
-    const depFiles = findDependencyFiles(objFile.name, deps, fileList);
-    
-    if (depFiles.mtl) {
-      const mtlDeps = await parseMtlDependencies(depFiles.mtl, deps);
-      deps.textures = mtlDeps.textures;
-      depFiles.textures = Array.from(fileList).filter(f => deps.textures.includes(f.name));
-    }
-    
-    await uploadFile(objFile, relativePath);
-    if (depFiles.mtl) await uploadFile(depFiles.mtl, relativePath);
-    for (const textureFile of depFiles.textures) {
-      await uploadFile(textureFile, relativePath);
-    }
-    
-    const missingFiles: string[] = [];
-    if (deps.mtlFile && !depFiles.mtl) missingFiles.push(deps.mtlFile);
-    const missingTextures = deps.textures.filter(t => !depFiles.textures.some(f => f.name === t));
-    missingFiles.push(...missingTextures);
-    
-    if (missingFiles.length > 0) {
-      window.vscodeAPI?.postMessage({
-        command: 'notify',
-        text: `${objFile.name} 缺少依赖文件: ${missingFiles.join(', ')}。请同时选中这些文件一起拖拽。`
-      });
-    }
-  };
-
-  const uploadFile = (file: File, relativePath: string): Promise<void> => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const arrayBuffer = event.target?.result as ArrayBuffer;
-        const uint8Array = new Uint8Array(arrayBuffer);
-        window.vscodeAPI?.postMessage({
-          command: 'saveImageToAssets',
-          fileName: file.name,
-          fileData: Array.from(uint8Array),
-          relativePath: relativePath,
-          dropPosition: undefined,
-          targetContainerId: undefined
-        });
-        resolve();
-      };
-      reader.readAsArrayBuffer(file);
-    });
   };
 
   const processEntry = async (entry: any, relativePath: string): Promise<void> => {
@@ -523,59 +573,149 @@ const AssetsPanel: React.FC = () => {
   };
 
   const processFile = (file: File, relativePath: string) => {
-    const ext = getFileExt(file.name);
-    const validExts = [...IMAGE_EXTS, ...VIDEO_EXTS, ...MODEL_EXTS, ...MODEL_DEP_EXTS];
+    // 拷贝所有文件，不做过滤
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const arrayBuffer = event.target?.result as ArrayBuffer;
+      const uint8Array = new Uint8Array(arrayBuffer);
+      window.vscodeAPI?.postMessage({
+        command: 'saveImageToAssets',
+        fileName: file.name,
+        fileData: Array.from(uint8Array),
+        relativePath: relativePath,
+        dropPosition: undefined,
+        targetContainerId: undefined
+      });
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    // 拷贝所有选中的文件，保留目录结构
+    Array.from(files).forEach(file => {
+      // webkitRelativePath 包含完整路径（如 "folder/subfolder/file.txt"）
+      // 需要去掉文件名，只保留目录路径
+      const relativePath = file.webkitRelativePath 
+        ? file.webkitRelativePath.split('/').slice(0, -1).join('/')
+        : '';
+      processFile(file, relativePath);
+    });
     
-    if (validExts.includes(ext)) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const arrayBuffer = event.target?.result as ArrayBuffer;
-        const uint8Array = new Uint8Array(arrayBuffer);
-        window.vscodeAPI?.postMessage({
-          command: 'saveImageToAssets',
-          fileName: file.name,
-          fileData: Array.from(uint8Array),
-          relativePath: relativePath,
-          dropPosition: undefined,
-          targetContainerId: undefined
-        });
-      };
-      reader.readAsArrayBuffer(file);
-    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (folderInputRef.current) folderInputRef.current.value = '';
   };
 
   const currentAssets = categorizedAssets[activeCategory];
+  const { folders } = getCurrentFolderContent;
   const emptyMessage = activeCategory === 'all' ? '暂无资源' : 
     activeCategory === 'images' ? '暂无图片资源' :
     activeCategory === 'videos' ? '暂无视频资源' : '暂无3D模型资源';
 
+  // 切换分类时重置路径
+  const handleCategoryChange = (category: AssetCategory) => {
+    setActiveCategory(category);
+    if (category !== 'all') {
+      setCurrentPath([]);  // 切换到其他分类时回到根目录
+    }
+  };
+
   return (
     <div className="assets-panel">
-      <div className="assets-filter">
+      <div className="assets-header">
         <button 
           className={`filter-btn ${activeCategory === 'all' ? 'active' : ''}`}
-          onClick={() => setActiveCategory('all')}
+          onClick={() => handleCategoryChange('all')}
         >
           全部 ({counts.all})
         </button>
         <button 
           className={`filter-btn ${activeCategory === 'images' ? 'active' : ''}`}
-          onClick={() => setActiveCategory('images')}
+          onClick={() => handleCategoryChange('images')}
         >
           图片 ({counts.images})
         </button>
         <button 
           className={`filter-btn ${activeCategory === 'videos' ? 'active' : ''}`}
-          onClick={() => setActiveCategory('videos')}
+          onClick={() => handleCategoryChange('videos')}
         >
           视频 ({counts.videos})
         </button>
         <button 
           className={`filter-btn ${activeCategory === 'models' ? 'active' : ''}`}
-          onClick={() => setActiveCategory('models')}
+          onClick={() => handleCategoryChange('models')}
         >
           3D ({counts.models})
         </button>
+        <button 
+          className="upload-btn" 
+          onClick={() => fileInputRef.current?.click()}
+          title="上传文件"
+        >
+          <Upload size={16} />
+        </button>
+        <button 
+          className="upload-btn" 
+          onClick={() => folderInputRef.current?.click()}
+          title="上传文件夹"
+        >
+          <FolderUp size={16} />
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept=".png,.jpg,.jpeg,.gif,.bmp,.svg,.webp,.mp4,.avi,.mov,.mkv,.webm,.gltf,.glb,.obj,.mtl"
+          style={{ display: 'none' }}
+          onChange={handleFileSelect}
+        />
+        <input
+          ref={folderInputRef}
+          type="file"
+          multiple
+          {...({ webkitdirectory: '', directory: '' } as any)}
+          style={{ display: 'none' }}
+          onChange={handleFileSelect}
+        />
+      </div>
+      
+      {/* 面包屑导航 - 仅在"全部"分类时显示 */}
+      {activeCategory === 'all' && (
+        <div className="breadcrumb">
+          <span 
+            className="breadcrumb-item" 
+            onClick={() => setCurrentPath([])}
+            title="返回根目录"
+          >
+            🏠 根目录
+          </span>
+          {currentPath.map((folder, index) => (
+            <React.Fragment key={index}>
+              <span className="breadcrumb-separator">/</span>
+              <span 
+                className="breadcrumb-item"
+                onClick={() => setCurrentPath(currentPath.slice(0, index + 1))}
+                title={folder}
+              >
+                {folder}
+              </span>
+            </React.Fragment>
+          ))}
+        </div>
+      )}
+      
+      <div className="assets-toolbar">
+        <input 
+          type="range" 
+          min="2" 
+          max="6" 
+          value={gridColumns} 
+          onChange={(e) => setGridColumns(Number(e.target.value))}
+          title={`列数: ${gridColumns}`}
+        />
+        <span className="grid-columns-label">{gridColumns} 列</span>
       </div>
       <div 
         className={`assets-content ${isDragOver ? 'drag-over' : ''}`}
@@ -583,13 +723,16 @@ const AssetsPanel: React.FC = () => {
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
-        {currentAssets.length === 0 ? (
+        {folders.length === 0 && currentAssets.length === 0 ? (
           <div className="empty-state">
             <p>{emptyMessage}</p>
             <p className="hint">拖拽文件到此处</p>
           </div>
         ) : (
-          <div className="assets-grid">
+          <div className="assets-grid" style={{ gridTemplateColumns: `repeat(${gridColumns}, 1fr)` }}>
+            {/* 先显示文件夹（仅在"全部"分类时显示） */}
+            {activeCategory === 'all' && folders.map(folder => renderFolderItem(folder))}
+            {/* 再显示文件 */}
             {currentAssets.map(asset => renderAssetItem(asset))}
           </div>
         )}

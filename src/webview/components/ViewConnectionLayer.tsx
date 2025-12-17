@@ -32,12 +32,12 @@ export const ViewConnectionLayer: React.FC<ViewConnectionLayerProps> = ({
   // 使用 useMemo 缓存连接计算
   const connections = useMemo(() => {
     const result: Connection[] = [];
-    const viewsByName = new Map<string, Component>();
+    const viewsById = new Map<string, Component>();
 
-    // 建立 name -> component 映射（只包含 hg_view）
+    // 建立 id -> component 映射（只包含 hg_view）
     components.forEach(comp => {
-      if (comp.type === 'hg_view' && comp.name) {
-        viewsByName.set(comp.name, comp);
+      if (comp.type === 'hg_view') {
+        viewsById.set(comp.id, comp);
       }
     });
 
@@ -45,9 +45,9 @@ export const ViewConnectionLayer: React.FC<ViewConnectionLayerProps> = ({
     components.forEach(comp => {
       if (comp.type === 'hg_view' && comp.view_switch) {
         comp.view_switch.forEach((sw, idx) => {
-          const target = viewsByName.get(sw.target);
+          const target = viewsById.get(sw.target);
           // 跳过自连接
-          if (comp.name === sw.target) return;
+          if (comp.id === sw.target) return;
           
           result.push({
             id: `${comp.id}-${sw.target}-${idx}`,

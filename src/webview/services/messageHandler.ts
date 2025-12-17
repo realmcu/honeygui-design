@@ -61,7 +61,7 @@ export const create3DComponentAtPosition = (
     id: `hg_3d_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
     type: 'hg_3d',
     name: `model_${Date.now().toString().substr(-4)}`,
-    position: { x: relativeX, y: relativeY, width: 200, height: 200 },
+    position: { x: relativeX, y: relativeY, width: 400, height: 400 },
     visible: true,
     enabled: true,
     locked: false,
@@ -69,7 +69,22 @@ export const create3DComponentAtPosition = (
     children: [],
     parent: targetContainerId,
     style: {},
-    data: { modelPath },
+    data: { 
+      modelPath,
+      worldX: 0,
+      worldY: 0,
+      worldZ: 30,
+      rotationX: 0,
+      rotationY: 0,
+      rotationZ: 0,
+      scale: 5,
+      cameraPosX: 0,
+      cameraPosY: 0,
+      cameraPosZ: 0,
+      cameraLookX: 0,
+      cameraLookY: 0,
+      cameraLookZ: 1,
+    },
   };
 
   addComponent(component3D);
