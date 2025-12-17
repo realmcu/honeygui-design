@@ -1,0 +1,35 @@
+{
+  "name": "@honeygui/tools",
+  "version": "1.0.0",
+  "description": "HoneyGUI conversion tools - Pure JS/TS implementation",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "keywords": [
+    "honeygui",
+    "image-converter",
+    "3d-converter",
+    "obj",
+    "gltf"
+  ],
+  "author": "HoneyGUI Team",
+  "license": "MIT",
+  "dependencies": {
+    "gltf-loader-ts": "^0.3.1",
+    "jpeg-js": "^0.4.4",
+    "pngjs": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/jpeg-js": "^0.3.0",
+    "@types/node": "^20.10.0",
+    "@types/pngjs": "^6.0.5",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.0",
+    "typescript": "^5.3.0"
+  }
+}
