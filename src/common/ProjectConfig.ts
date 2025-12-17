@@ -17,6 +17,10 @@ export interface ProjectConfig {
     honeyguiSdkPath?: string; // HoneyGUI SDK 路径（用于编译仿真）
     romfsBaseAddr?: string;   // romfs 基地址（十六进制，如 "0x04400000"），用于嵌入式烧录
     
+    // 屏幕形状配置（与 SDK DRV_LCD_CORNER_RADIUS 对应）
+    // 0 = 矩形（默认）, -1 = 圆形, >0 = 圆角半径（像素）
+    cornerRadius?: number;
+    
     // 视频转换配置
     videoFormat?: 'mjpeg' | 'avi' | 'h264';  // 默认视频输出格式
     videoQuality?: number;    // 视频质量 (0-100)，默认 85
@@ -46,5 +50,6 @@ export const DEFAULT_PROJECT_CONFIG: Partial<ProjectConfig> = {
     assetsDir: 'assets',
     uiDir: 'ui',
     srcDir: 'src',
-    romfsBaseAddr: '0x04400000'  // 默认 romfs 基地址
+    romfsBaseAddr: '0x04400000',  // 默认 romfs 基地址
+    cornerRadius: 0  // 默认矩形屏幕，-1 为圆形，>0 为圆角半径
 };

@@ -126,13 +126,22 @@
 
             <div class="form-row">
                 <div class="form-group">
+                    <label for="cornerRadius">Screen Shape</label>
+                    <select id="cornerRadius" class="form-control">
+                        <option value="0">Rectangle (0)</option>
+                        <option value="-1">Circle (-1)</option>
+                        <option value="20">Rounded 20px</option>
+                        <option value="40">Rounded 40px</option>
+                        <option value="60">Rounded 60px</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label for="targetEngine">Target Engine</label>
                     <select id="targetEngine" class="form-control">
                         <option value="honeygui">HoneyGUI</option>
                         <option value="lvgl" disabled>LVGL (Coming Soon)</option>
                     </select>
                 </div>
-                <div class="form-group"></div>
             </div>
 
             <div class="form-row">
@@ -293,6 +302,7 @@
                     saveLocation: document.getElementById('saveLocation').value.trim(),
                     appId: document.getElementById('appId').value.trim(),
                     resolution: document.getElementById('resolution').value,
+                    cornerRadius: parseInt(document.getElementById('cornerRadius').value, 10),
                     targetEngine: document.getElementById('targetEngine').value,
                     minSdk: document.getElementById('minSdk').value,
                     pixelMode: document.getElementById('pixelMode').value,

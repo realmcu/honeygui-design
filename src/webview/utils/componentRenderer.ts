@@ -10,7 +10,8 @@ export const calculateComponentStyle = (
   isMultiSelected: boolean,
   isHovered: boolean,
   editingMode: 'select' | 'move' | 'resize',
-  isListItem: boolean = false
+  isListItem: boolean = false,
+  projectConfig?: any
 ): React.CSSProperties => {
   // List 容器不显示边框
   let border = '1px solid transparent';
@@ -24,6 +25,22 @@ export const calculateComponentStyle = (
     border = '1px dashed #007ACC';
   }
   
+  // 计算圆角：hg_view 使用项目配置，其他组件使用自身样式
+  // -1 表示圆形（50%），0 表示矩形，>0 表示具体像素值
+  let borderRadius: number | undefined;
+  if (component.type === 'hg_view') {
+    borderRadius = projectConfig?.cornerRadius;
+  } else {
+    borderRadius = component.style?.borderRadius;
+  }
+  
+  let borderRadiusValue: string | undefined;
+  if (borderRadius === -1) {
+    borderRadiusValue = '50%';
+  } else if (borderRadius && borderRadius > 0) {
+    borderRadiusValue = `${borderRadius}px`;
+  }
+
   return {
     position: 'absolute',
     left: component.position.x,
@@ -34,6 +51,8 @@ export const calculateComponentStyle = (
     opacity: component.enabled ? 1 : 0.6,
     cursor: editingMode === 'move' ? 'move' : 'pointer',
     border,
+    borderRadius: borderRadiusValue,
+    overflow: borderRadiusValue ? 'hidden' : undefined,
     background: component.style?.backgroundColor || 'transparent',
     color: component.style?.color || 'inherit',
     fontSize: component.style?.fontSize ? `${component.style.fontSize}px` : undefined,

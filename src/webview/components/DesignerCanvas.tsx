@@ -42,6 +42,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     addToSelection,
     setSelectedComponents,
     showViewConnections,
+    projectConfig,
   } = useDesignerStore();
   
   // 使用画布缩放 Hook
@@ -239,7 +240,8 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
       isMultiSelected,
       isHovered,
       editingMode,
-      isListItem
+      isListItem,
+      projectConfig
     );
 
     const handleMouseEnter = () => {

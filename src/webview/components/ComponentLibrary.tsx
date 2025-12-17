@@ -76,6 +76,7 @@ const componentDefinitions: ComponentDefinition[] = [
     defaultSize: { width: 350, height: 250 },
     properties: [
       { name: 'backgroundColor', label: '背景色', type: 'color', defaultValue: '#000000', group: 'style' },
+      { name: 'borderRadius', label: '圆角', type: 'number', defaultValue: 0, group: 'style' },
       { name: 'padding', label: '内边距', type: 'number', defaultValue: 12, group: 'style' },
       { name: 'overflow', label: '溢出处理', type: 'select', defaultValue: 'auto', options: ['auto', 'hidden', 'scroll'], group: 'style' },
     ],

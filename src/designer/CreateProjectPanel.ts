@@ -265,10 +265,10 @@ export class CreateProjectPanel {
      */
     private async _createProject(config: any): Promise<void> {
         try {
-            const { projectName, saveLocation, appId, resolution, targetEngine, minSdk, pixelMode, honeyguiSdkPath, romfsBaseAddr } = config;
+            const { projectName, saveLocation, appId, resolution, cornerRadius, targetEngine, minSdk, pixelMode, honeyguiSdkPath, romfsBaseAddr } = config;
 
             // 记录日志用于调试
-            logger.info(`[CreateProjectPanel] Creating project: projectName=${projectName}, saveLocation=${saveLocation}, appId=${appId}, targetEngine=${targetEngine}, sdkPath=${honeyguiSdkPath}, romfsBaseAddr=${romfsBaseAddr}`);
+            logger.info(`[CreateProjectPanel] Creating project: projectName=${projectName}, saveLocation=${saveLocation}, appId=${appId}, targetEngine=${targetEngine}, sdkPath=${honeyguiSdkPath}, romfsBaseAddr=${romfsBaseAddr}, cornerRadius=${cornerRadius}`);
 
             // 设置默认 SDK 路径
             const sdkPath = honeyguiSdkPath || ProjectUtils.getDefaultSdkPath();
@@ -334,7 +334,7 @@ export class CreateProjectPanel {
                 cancellable: false
             }, async () => {
                 // 创建项目结构
-                await this._createProjectStructure(projectPath, projectName, appId, resolution, targetEngine || 'honeygui', minSdk, pixelMode, honeyguiSdkPath, romfsBaseAddr);
+                await this._createProjectStructure(projectPath, projectName, appId, resolution, cornerRadius, targetEngine || 'honeygui', minSdk, pixelMode, honeyguiSdkPath, romfsBaseAddr);
             });
             
             // 显示成功消息
@@ -379,6 +379,7 @@ export class CreateProjectPanel {
         projectName: string,
         appId: string,
         resolution: string,
+        cornerRadius: number,
         targetEngine: string,
         minSdk: string,
         pixelMode: string,
@@ -418,6 +419,7 @@ export class CreateProjectPanel {
             appId: appId,
             version: '1.0.0',
             resolution: resolution,
+            cornerRadius: cornerRadius ?? 0,  // 屏幕形状：0=矩形, -1=圆形, >0=圆角半径
             targetEngine: targetEngine,  // 添加目标引擎配置
             minSdk: minSdk,
             pixelMode: pixelMode,
