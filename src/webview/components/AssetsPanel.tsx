@@ -6,7 +6,6 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js';
-import { parseObjDependencies, parseMtlDependencies, findDependencyFiles } from '../utils/objDependencyParser';
 
 // 文件类型分类
 const IMAGE_EXTS = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'webp'];
@@ -491,37 +490,7 @@ const AssetsPanel: React.FC = () => {
     e.stopPropagation();
     setIsDragOver(false);
 
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const files = Array.from(e.dataTransfer.files);
-      const objFiles = files.filter(f => f.name.toLowerCase().endsWith('.obj'));
-      
-      if (objFiles.length > 0) {
-        for (const objFile of objFiles) {
-          await processObjWithDependencies(objFile, e.dataTransfer.files, '');
-        }
-        
-        const processedNames = new Set<string>();
-        for (const objFile of objFiles) {
-          const deps = await parseObjDependencies(objFile);
-          processedNames.add(objFile.name);
-          if (deps.mtlFile) processedNames.add(deps.mtlFile);
-          
-          const depFiles = findDependencyFiles(objFile.name, deps, e.dataTransfer.files);
-          if (depFiles.mtl) {
-            const mtlDeps = await parseMtlDependencies(depFiles.mtl, deps);
-            mtlDeps.textures.forEach(t => processedNames.add(t));
-          }
-        }
-        
-        files.forEach(file => {
-          if (!processedNames.has(file.name)) {
-            processFile(file, '');
-          }
-        });
-        return;
-      }
-    }
-
+    // 简化逻辑：拖拽什么就拷贝什么
     if (e.dataTransfer.items) {
       const items = Array.from(e.dataTransfer.items);
       for (const item of items) {
@@ -533,55 +502,6 @@ const AssetsPanel: React.FC = () => {
     } else if (e.dataTransfer.files) {
       Array.from(e.dataTransfer.files).forEach(file => processFile(file, ''));
     }
-  };
-
-  const processObjWithDependencies = async (objFile: File, fileList: FileList, relativePath: string) => {
-    const deps = await parseObjDependencies(objFile);
-    const depFiles = findDependencyFiles(objFile.name, deps, fileList);
-    
-    if (depFiles.mtl) {
-      const mtlDeps = await parseMtlDependencies(depFiles.mtl, deps);
-      deps.textures = mtlDeps.textures;
-      depFiles.textures = Array.from(fileList).filter(f => deps.textures.includes(f.name));
-    }
-    
-    await uploadFile(objFile, relativePath);
-    if (depFiles.mtl) await uploadFile(depFiles.mtl, relativePath);
-    for (const textureFile of depFiles.textures) {
-      await uploadFile(textureFile, relativePath);
-    }
-    
-    const missingFiles: string[] = [];
-    if (deps.mtlFile && !depFiles.mtl) missingFiles.push(deps.mtlFile);
-    const missingTextures = deps.textures.filter(t => !depFiles.textures.some(f => f.name === t));
-    missingFiles.push(...missingTextures);
-    
-    if (missingFiles.length > 0) {
-      window.vscodeAPI?.postMessage({
-        command: 'notify',
-        text: `${objFile.name} 缺少依赖文件: ${missingFiles.join(', ')}。请同时选中这些文件一起拖拽。`
-      });
-    }
-  };
-
-  const uploadFile = (file: File, relativePath: string): Promise<void> => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const arrayBuffer = event.target?.result as ArrayBuffer;
-        const uint8Array = new Uint8Array(arrayBuffer);
-        window.vscodeAPI?.postMessage({
-          command: 'saveImageToAssets',
-          fileName: file.name,
-          fileData: Array.from(uint8Array),
-          relativePath: relativePath,
-          dropPosition: undefined,
-          targetContainerId: undefined
-        });
-        resolve();
-      };
-      reader.readAsArrayBuffer(file);
-    });
   };
 
   const processEntry = async (entry: any, relativePath: string): Promise<void> => {
@@ -599,60 +519,36 @@ const AssetsPanel: React.FC = () => {
   };
 
   const processFile = (file: File, relativePath: string) => {
-    const ext = getFileExt(file.name);
-    const validExts = [...IMAGE_EXTS, ...VIDEO_EXTS, ...MODEL_EXTS, ...MODEL_DEP_EXTS];
-    
-    if (validExts.includes(ext)) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const arrayBuffer = event.target?.result as ArrayBuffer;
-        const uint8Array = new Uint8Array(arrayBuffer);
-        window.vscodeAPI?.postMessage({
-          command: 'saveImageToAssets',
-          fileName: file.name,
-          fileData: Array.from(uint8Array),
-          relativePath: relativePath,
-          dropPosition: undefined,
-          targetContainerId: undefined
-        });
-      };
-      reader.readAsArrayBuffer(file);
-    }
+    // 拷贝所有文件，不做过滤
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const arrayBuffer = event.target?.result as ArrayBuffer;
+      const uint8Array = new Uint8Array(arrayBuffer);
+      window.vscodeAPI?.postMessage({
+        command: 'saveImageToAssets',
+        fileName: file.name,
+        fileData: Array.from(uint8Array),
+        relativePath: relativePath,
+        dropPosition: undefined,
+        targetContainerId: undefined
+      });
+    };
+    reader.readAsArrayBuffer(file);
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    const fileArray = Array.from(files);
-    const objFiles = fileArray.filter(f => f.name.toLowerCase().endsWith('.obj'));
-    
-    if (objFiles.length > 0) {
-      for (const objFile of objFiles) {
-        await processObjWithDependencies(objFile, files, '');
-      }
-      
-      const processedNames = new Set<string>();
-      for (const objFile of objFiles) {
-        const deps = await parseObjDependencies(objFile);
-        processedNames.add(objFile.name);
-        if (deps.mtlFile) processedNames.add(deps.mtlFile);
-        
-        const depFiles = findDependencyFiles(objFile.name, deps, files);
-        if (depFiles.mtl) {
-          const mtlDeps = await parseMtlDependencies(depFiles.mtl, deps);
-          mtlDeps.textures.forEach(t => processedNames.add(t));
-        }
-      }
-      
-      fileArray.forEach(file => {
-        if (!processedNames.has(file.name)) {
-          processFile(file, '');
-        }
-      });
-    } else {
-      fileArray.forEach(file => processFile(file, ''));
-    }
+    // 拷贝所有选中的文件，保留目录结构
+    Array.from(files).forEach(file => {
+      // webkitRelativePath 包含完整路径（如 "folder/subfolder/file.txt"）
+      // 需要去掉文件名，只保留目录路径
+      const relativePath = file.webkitRelativePath 
+        ? file.webkitRelativePath.split('/').slice(0, -1).join('/')
+        : '';
+      processFile(file, relativePath);
+    });
     
     if (fileInputRef.current) fileInputRef.current.value = '';
     if (folderInputRef.current) folderInputRef.current.value = '';
