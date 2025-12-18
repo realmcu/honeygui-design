@@ -51,6 +51,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
   // 使用画布拖拽 Hook
   const {
     isDragging,
+    isSpacePressed,
     handleCanvasMouseDown,
     handleCanvasMouseMove,
     handleCanvasMouseUp
@@ -147,7 +148,13 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     setDragStart({ x: e.clientX, y: e.clientY });
   };
 
-  const handleComponentMouseMove = (e: React.MouseEvent) => {
+  const handleComponentMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    // 先处理画布拖动
+    handleCanvasMouseMove(e);
+    
+    // 如果正在拖动画布，不处理组件拖动
+    if (isDragging) return;
+    
     // 如果有待拖动的组件，检查是否移动了足够距离
     if (pendingDragComponent && !draggedComponent) {
       const deltaX = Math.abs(e.clientX - dragStart.x);
@@ -190,6 +197,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
   };
 
   const handleComponentMouseUp = () => {
+    handleCanvasMouseUp();
     setPendingDragComponent(null);
     setDraggedComponent(null);
   };
@@ -304,7 +312,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
             position: 'relative',
             minWidth: '100%',
             minHeight: '100%',
-            cursor: isDragging && editingMode === 'select' ? 'grabbing' : editingMode === 'move' ? 'grab' : 'default',
+            cursor: isDragging ? 'grabbing' : isSpacePressed ? 'grab' : 'default',
             touchAction: 'none',
             WebkitUserSelect: 'none',
             msUserSelect: 'none',
@@ -354,7 +362,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
             </div>
           )}
           
-        {/* Components and Grid Container - 统一的坐标系统 */}
+        {/* Components and Grid Container - 无限画布 */}
         <div
           style={{
             position: 'absolute',
@@ -362,8 +370,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
             top: canvasOffset.y,
             transform: `scale(${zoom / (window.devicePixelRatio || 1)})`,
             transformOrigin: '0 0',
-            width: canvasSize.width,
-            height: canvasSize.height,
+            // 移除固定尺寸限制，允许组件放置在任意位置
           }}
         >
           {/* 渲染所有顶级组件，并递归渲染其子组件 */}

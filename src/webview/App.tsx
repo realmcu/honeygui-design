@@ -191,6 +191,13 @@ const App: React.FC = () => {
             if (currentComponents.length > 0) {
               console.log('[Webview App] 验证：组件列表:', 
                 currentComponents.map(c => `${c.type}(id=${c.id})`).join(', '));
+              
+              // 自动居中第一个 hg_view
+              const firstView = currentComponents.find(c => c.type === 'hg_view');
+              if (firstView) {
+                console.log('[Webview App] 自动居中第一个 view:', firstView.id);
+                store.centerViewOnCanvas(firstView.id);
+              }
             } else {
               console.error('[Webview App] ❌ 警告：setComponents后组件列表仍为空！');
             }

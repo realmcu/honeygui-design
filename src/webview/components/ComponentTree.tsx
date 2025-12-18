@@ -17,6 +17,7 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
     selectComponent,
     setSelectedComponents,
     updateComponent,
+    centerViewOnCanvas,
   } = useDesignerStore();
 
   const [isExpanded, setIsExpanded] = useState(true);
@@ -37,6 +38,10 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
       setSelectedComponents(next);
     } else {
       selectComponent(componentId);
+      // 如果是 hg_view，自动居中显示
+      if (component.type === 'hg_view') {
+        centerViewOnCanvas(componentId);
+      }
     }
   };
 

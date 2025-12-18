@@ -368,25 +368,11 @@ const AssetsPanel: React.FC = () => {
       fonts: []
     };
     
-    // "全部"分类：使用当前目录的文件
-    if (activeCategory === 'all') {
-      const { files } = getCurrentFolderContent;
-      for (const asset of files) {
-        const category = getAssetCategory(asset.name);
-        if (category) {
-          result.all.push(asset);
-        }
-        if (isModelDependency(asset.name)) {
-          result.all.push(asset);
-        }
-      }
-    }
-    
-    // 其他分类：递归扁平化所有文件
-    const processAssets = (assetList: AssetFile[]) => {
+    // 递归扁平化所有文件，用于统计各分类数量
+    const processAllAssets = (assetList: AssetFile[]) => {
       for (const asset of assetList) {
         if (asset.type === 'folder' && asset.children) {
-          processAssets(asset.children);
+          processAllAssets(asset.children);
         } else {
           const category = getAssetCategory(asset.name);
           if (category && category !== 'all') {
@@ -399,8 +385,22 @@ const AssetsPanel: React.FC = () => {
       }
     };
     
-    if (activeCategory !== 'all') {
-      processAssets(assets);
+    // 始终处理所有资源以统计数量
+    processAllAssets(assets);
+    
+    // "全部"分类：使用当前目录的文件
+    if (activeCategory === 'all') {
+      const { files } = getCurrentFolderContent;
+      result.all = [];
+      for (const asset of files) {
+        const category = getAssetCategory(asset.name);
+        if (category) {
+          result.all.push(asset);
+        }
+        if (isModelDependency(asset.name)) {
+          result.all.push(asset);
+        }
+      }
     }
     
     return result;

@@ -86,6 +86,7 @@ export interface DesignerStore extends DesignerState {
   setCanvasOffset: (offset: { x: number; y: number }) => void;
   setEditingMode: (mode: 'select' | 'move' | 'resize') => void;
   setCanvasBackgroundColor: (color: string) => void;
+  centerViewOnCanvas: (componentId: string) => void;
   
   // View connections
   showViewConnections: boolean;
@@ -364,6 +365,27 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   setCanvasBackgroundColor: (color) => set({ canvasBackgroundColor: color }),
   setShowViewConnections: (show) => set({ showViewConnections: show }),
   setShowViewRelationModal: (show) => set({ showViewRelationModal: show }),
+  
+  // 将指定组件居中显示在画布上
+  centerViewOnCanvas: (componentId) => {
+    const state = get();
+    const component = state.components.find(c => c.id === componentId);
+    if (!component || !component.position) return;
+    
+    // 获取画布容器尺寸（假设全屏）
+    const viewportWidth = window.innerWidth * 0.7; // 画布区域约占 70%
+    const viewportHeight = window.innerHeight;
+    
+    // 计算组件中心点
+    const compCenterX = component.position.x + component.position.width / 2;
+    const compCenterY = component.position.y + component.position.height / 2;
+    
+    // 计算需要的偏移量，使组件中心对齐视口中心
+    const offsetX = viewportWidth / 2 - compCenterX * state.zoom;
+    const offsetY = viewportHeight / 2 - compCenterY * state.zoom;
+    
+    set({ canvasOffset: { x: offsetX, y: offsetY } });
+  },
 
   // Drag and drop
   startDrag: (componentId, mousePos) => {
