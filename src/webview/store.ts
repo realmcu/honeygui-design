@@ -372,17 +372,26 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     const component = state.components.find(c => c.id === componentId);
     if (!component || !component.position) return;
     
-    // 获取画布容器尺寸（假设全屏）
-    const viewportWidth = window.innerWidth * 0.7; // 画布区域约占 70%
-    const viewportHeight = window.innerHeight;
+    // 获取画布容器的实际尺寸
+    const canvasElement = document.querySelector('.designer-canvas');
+    if (!canvasElement) return;
     
-    // 计算组件中心点
+    const rect = canvasElement.getBoundingClientRect();
+    const viewportWidth = rect.width;
+    const viewportHeight = rect.height;
+    
+    // 实际缩放比例（与 DesignerCanvas 中的 transform 一致）
+    const effectiveZoom = state.zoom / (window.devicePixelRatio || 1);
+    
+    // 计算组件中心点（在画布坐标系中）
     const compCenterX = component.position.x + component.position.width / 2;
     const compCenterY = component.position.y + component.position.height / 2;
     
     // 计算需要的偏移量，使组件中心对齐视口中心
-    const offsetX = viewportWidth / 2 - compCenterX * state.zoom;
-    const offsetY = viewportHeight / 2 - compCenterY * state.zoom;
+    // 公式：视口中心 = 组件中心 * effectiveZoom + offset
+    // 所以：offset = 视口中心 - 组件中心 * effectiveZoom
+    const offsetX = viewportWidth / 2 - compCenterX * effectiveZoom;
+    const offsetY = viewportHeight / 2 - compCenterY * effectiveZoom;
     
     set({ canvasOffset: { x: offsetX, y: offsetY } });
   },
