@@ -18,6 +18,11 @@
             </hg_image>
         </hg_view>
         <hg_view id="hg_view_1766022481486_seii" x="636" y="115" width="410" height="502" backgroundColor="#000000" borderRadius="0" padding="12" overflow="auto" name="hg_view_1486" zIndex="1">
+            <events>
+                <event type="onSwipeLeft">
+                    <action type="switchView" target="untitledView" />
+                </event>
+            </events>
             <hg_image id="hg_image_1766022491405_3gr8" x="193" y="244" width="100" height="106" src="assets/UI_app_list/app_activity_icon.png" name="image_1405" zIndex="1" />
         </hg_view>
     </view>

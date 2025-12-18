@@ -415,12 +415,13 @@ export class BuildCore {
 
         // 从projectConfig获取分辨率
         const { width, height } = this.parseResolution(this.projectConfig.resolution);
+        const cornerRadius = this.projectConfig.cornerRadius || 0;
 
         // 添加LCD宏定义到CFLAGS
         if (!content.includes('DRV_LCD_WIDTH')) {
             content = content.replace(
                 /(env_params\s*=\s*{[^}]*'CFLAGS':\s*menu_config\.CFLAGS)/,
-                `$1 + ' -DDRV_LCD_WIDTH=${width} -DDRV_LCD_HEIGHT=${height}'`
+                `$1 + ' -DDRV_LCD_WIDTH=${width} -DDRV_LCD_HEIGHT=${height} -DDRV_LCD_CORNER_RADIUS=${cornerRadius}'`
             );
         }
 
