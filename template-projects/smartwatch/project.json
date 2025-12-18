@@ -8,7 +8,6 @@
   "minSdk": "API 2: HoneyGUI V1.1.0",
   "pixelMode": "ARGB8888",
   "mainHmlFile": "ui/main/SmartWatchMain.hml",
-  "honeyguiSdkPath": "/home/howie_wang/.HoneyGUI-SDK",
   "template": "smartwatch",
   "created": "2025-12-11"
 }
