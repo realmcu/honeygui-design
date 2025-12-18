@@ -111,6 +111,15 @@ HmlEditorProvider.resolveCustomTextEditor()
 2. 在 `HoneyGuiCCodeGenerator.ts` 添加代码生成逻辑
 3. 更新 `ComponentType` 类型定义
 
+### 添加新资源类型（如字体、音频等）
+资源显示涉及前后端两处，必须同时修改：
+1. **后端** `src/designer/AssetManager.ts`：在 `scanAssetsDirectory` 中添加扩展名识别
+2. **前端** `src/webview/components/AssetsPanel.tsx`：
+   - 添加扩展名常量（如 `FONT_EXTS`）
+   - 添加到 `AssetCategory` 类型
+   - 在 `categorizedAssets` 和 `counts` 中添加分类
+   - 在 `renderAssetItem` 中添加渲染逻辑
+
 ### 修改 UI 布局
 - 主布局: `src/webview/App.tsx` + `App.css`
 - 面板样式: `src/webview/components/*.css`

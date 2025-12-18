@@ -167,6 +167,18 @@ const App: React.FC = () => {
             useDesignerStore.setState({ allViews: message.allViews });
             console.log('[Webview App] 所有 view 列表已设置:', message.allViews.length);
           }
+
+          // 设置所有 HML 文件列表
+          if (message.allHmlFiles) {
+            useDesignerStore.setState({ allHmlFiles: message.allHmlFiles });
+            console.log('[Webview App] 所有 HML 文件列表已设置:', message.allHmlFiles.length);
+          }
+
+          // 设置当前文件路径
+          if (message.currentFilePath) {
+            useDesignerStore.setState({ currentFilePath: message.currentFilePath });
+            console.log('[Webview App] 当前文件路径已设置:', message.currentFilePath);
+          }
           
           if (message.components) {
             console.log('[Webview App] 准备设置组件...');
@@ -951,7 +963,6 @@ const App: React.FC = () => {
       <ViewRelationModal
         visible={showViewRelationModal}
         onClose={() => setShowViewRelationModal(false)}
-        components={components}
       />
     </div>
   );

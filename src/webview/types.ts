@@ -59,6 +59,8 @@ export interface PropertyDefinition {
 export interface DesignerState {
   components: Component[];
   allViews?: Array<{id: string, name: string, file: string}>; // 项目中所有 view
+  allHmlFiles?: Array<{path: string, name: string, relativePath: string}>; // 项目中所有 HML 文件
+  currentFilePath?: string; // 当前打开的文件路径
   selectedComponent: string | null;
   selectedComponents: string[];
   hoveredComponent: string | null;

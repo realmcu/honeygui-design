@@ -121,12 +121,37 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
 };
 
 const ComponentTree: React.FC<{ onContextMenu?: (e: React.MouseEvent, componentId: string) => void }> = ({ onContextMenu }) => {
-  const { components } = useDesignerStore();
+  const { components, allHmlFiles, currentFilePath, vscodeAPI } = useDesignerStore();
 
   const rootComponents = components.filter(c => c.parent === null);
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedPath = e.target.value;
+    if (selectedPath && selectedPath !== currentFilePath && vscodeAPI) {
+      vscodeAPI.postMessage({
+        command: 'switchFile',
+        filePath: selectedPath
+      });
+    }
+  };
+
   return (
     <div className="component-tree">
+      {allHmlFiles && allHmlFiles.length > 1 && (
+        <div className="tree-file-selector">
+          <select 
+            value={currentFilePath || ''} 
+            onChange={handleFileChange}
+            className="file-select"
+          >
+            {allHmlFiles.map((file: {path: string, name: string, relativePath: string}) => (
+              <option key={file.path} value={file.path}>
+                {file.relativePath}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
       <div className="tree-content">
         {rootComponents.length === 0 ? (
           <div className="tree-empty">

@@ -16,6 +16,22 @@
   gap: 4px;
 }
 
+.category-select {
+  flex: 1;
+  padding: 4px 8px;
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border);
+  border-radius: 3px;
+  font-size: 12px;
+  cursor: pointer;
+  outline: none;
+}
+
+.category-select:focus {
+  border-color: var(--vscode-focusBorder);
+}
+
 .assets-toolbar {
   display: flex;
   align-items: center;

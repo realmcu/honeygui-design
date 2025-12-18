@@ -11,9 +11,10 @@ import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js';
 const IMAGE_EXTS = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'webp'];
 const VIDEO_EXTS = ['mp4', 'avi', 'mov', 'mkv', 'webm'];
 const MODEL_EXTS = ['gltf', 'glb', 'obj'];
+const FONT_EXTS = ['ttf', 'otf', 'woff', 'woff2', 'bin'];  // 字体文件
 const MODEL_DEP_EXTS = ['mtl'];  // 3D 模型依赖文件
 
-type AssetCategory = 'all' | 'images' | 'videos' | 'models';
+type AssetCategory = 'all' | 'images' | 'videos' | 'models' | 'fonts';
 
 // 视频预览组件
 const VideoPreview: React.FC<{ videoPath: string }> = ({ videoPath }) => {
@@ -315,6 +316,7 @@ const getAssetCategory = (name: string): AssetCategory | null => {
   if (IMAGE_EXTS.includes(ext)) return 'images';
   if (VIDEO_EXTS.includes(ext)) return 'videos';
   if (MODEL_EXTS.includes(ext)) return 'models';
+  if (FONT_EXTS.includes(ext)) return 'fonts';
   return null;
 };
 
@@ -362,7 +364,8 @@ const AssetsPanel: React.FC = () => {
       all: [],
       images: [],
       videos: [],
-      models: []
+      models: [],
+      fonts: []
     };
     
     // "全部"分类：使用当前目录的文件
@@ -408,7 +411,8 @@ const AssetsPanel: React.FC = () => {
     all: categorizedAssets.all.length,
     images: categorizedAssets.images.length,
     videos: categorizedAssets.videos.length,
-    models: categorizedAssets.models.length
+    models: categorizedAssets.models.length,
+    fonts: categorizedAssets.fonts.length
   }), [categorizedAssets]);
 
   useEffect(() => {
@@ -454,6 +458,7 @@ const AssetsPanel: React.FC = () => {
     const isImage = IMAGE_EXTS.includes(ext);
     const isVideo = VIDEO_EXTS.includes(ext);
     const isModel = MODEL_EXTS.includes(ext);
+    const isFont = FONT_EXTS.includes(ext);
     const isMtl = MODEL_DEP_EXTS.includes(ext);
     
     return (
@@ -478,6 +483,7 @@ const AssetsPanel: React.FC = () => {
           )}
           {isModel && <Model3DPreview modelPath={asset.path} />}
           {isVideo && <VideoPreview videoPath={asset.path} />}
+          {isFont && <div className="file-icon" style={{ fontSize: '48px' }}>🔤</div>}
           {isMtl && <div className="file-icon" style={{ fontSize: '48px' }}>📄</div>}
         </div>
         <div className="asset-info">
@@ -612,7 +618,8 @@ const AssetsPanel: React.FC = () => {
   const { folders } = getCurrentFolderContent;
   const emptyMessage = activeCategory === 'all' ? '暂无资源' : 
     activeCategory === 'images' ? '暂无图片资源' :
-    activeCategory === 'videos' ? '暂无视频资源' : '暂无3D模型资源';
+    activeCategory === 'videos' ? '暂无视频资源' : 
+    activeCategory === 'models' ? '暂无3D模型资源' : '暂无字体资源';
 
   // 切换分类时重置路径
   const handleCategoryChange = (category: AssetCategory) => {
@@ -625,30 +632,17 @@ const AssetsPanel: React.FC = () => {
   return (
     <div className="assets-panel">
       <div className="assets-header">
-        <button 
-          className={`filter-btn ${activeCategory === 'all' ? 'active' : ''}`}
-          onClick={() => handleCategoryChange('all')}
+        <select 
+          className="category-select"
+          value={activeCategory}
+          onChange={(e) => handleCategoryChange(e.target.value as AssetCategory)}
         >
-          全部 ({counts.all})
-        </button>
-        <button 
-          className={`filter-btn ${activeCategory === 'images' ? 'active' : ''}`}
-          onClick={() => handleCategoryChange('images')}
-        >
-          图片 ({counts.images})
-        </button>
-        <button 
-          className={`filter-btn ${activeCategory === 'videos' ? 'active' : ''}`}
-          onClick={() => handleCategoryChange('videos')}
-        >
-          视频 ({counts.videos})
-        </button>
-        <button 
-          className={`filter-btn ${activeCategory === 'models' ? 'active' : ''}`}
-          onClick={() => handleCategoryChange('models')}
-        >
-          3D ({counts.models})
-        </button>
+          <option value="all">全部 ({counts.all})</option>
+          <option value="images">图片 ({counts.images})</option>
+          <option value="videos">视频 ({counts.videos})</option>
+          <option value="models">3D ({counts.models})</option>
+          <option value="fonts">字体 ({counts.fonts})</option>
+        </select>
         <button 
           className="upload-btn" 
           onClick={() => fileInputRef.current?.click()}
@@ -667,7 +661,7 @@ const AssetsPanel: React.FC = () => {
           ref={fileInputRef}
           type="file"
           multiple
-          accept=".png,.jpg,.jpeg,.gif,.bmp,.svg,.webp,.mp4,.avi,.mov,.mkv,.webm,.gltf,.glb,.obj,.mtl"
+          accept=".png,.jpg,.jpeg,.gif,.bmp,.svg,.webp,.mp4,.avi,.mov,.mkv,.webm,.gltf,.glb,.obj,.mtl,.ttf,.otf,.woff,.woff2,.bin"
           style={{ display: 'none' }}
           onChange={handleFileSelect}
         />

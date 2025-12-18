@@ -119,6 +119,10 @@ export class MessageHandler {
                 this._assetManager.handleLoadAssets(this._fileManager.currentFilePath);
                 break;
 
+            case 'getFontFiles':
+                this._assetManager.handleGetFontFiles(this._fileManager.currentFilePath);
+                break;
+
             case 'deleteAsset':
                 this._assetManager.handleDeleteAsset(message.fileName, this._fileManager.currentFilePath);
                 break;
@@ -144,6 +148,11 @@ export class MessageHandler {
 
             case 'convertPathToWebviewUri':
                 this._assetManager.handleConvertPathToWebviewUri(message.path, message.requestId, this._fileManager.currentFilePath);
+                break;
+
+            case 'switchFile':
+                await this._handleSwitchFile(message.filePath);
+                break;
                 break;
 
             case 'getImageSize':
@@ -288,6 +297,32 @@ export class MessageHandler {
                 logger.error(`[MessageHandler] 自动代码生成失败: ${err}`);
             });
         }, 2000); // 2秒延迟
+    }
+
+    /**
+     * 切换到其他 HML 文件
+     */
+    private async _handleSwitchFile(filePath: string): Promise<void> {
+        try {
+            logger.info(`[MessageHandler] 切换文件: ${filePath}`);
+            
+            // 打开文档
+            const document = await vscode.workspace.openTextDocument(filePath);
+            
+            // 更新 FileManager 的当前文件路径
+            this._fileManager.currentFilePath = filePath;
+            
+            // 加载文档内容
+            await this._fileManager.loadFromDocument(document);
+            
+            // 重新加载并发送到前端
+            await this._fileManager.reloadCurrentDocument();
+            
+            logger.info(`[MessageHandler] 文件切换完成: ${path.basename(filePath)}`);
+        } catch (error) {
+            logger.error(`[MessageHandler] 切换文件失败: ${error}`);
+            vscode.window.showErrorMessage(`切换文件失败: ${error instanceof Error ? error.message : '未知错误'}`);
+        }
     }
 
     /**

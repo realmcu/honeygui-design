@@ -43,6 +43,45 @@ export class FileManager {
      */
 
     /**
+     * 扫描项目中所有 HML 文件
+     */
+    private scanAllHmlFiles(currentFilePath: string): Array<{path: string, name: string, relativePath: string}> {
+        const projectRoot = ProjectUtils.findProjectRoot(currentFilePath);
+        if (!projectRoot) {
+            return [];
+        }
+
+        const uiDir = ProjectUtils.getUiDir(projectRoot);
+        if (!fs.existsSync(uiDir)) {
+            return [];
+        }
+
+        const allFiles: Array<{path: string, name: string, relativePath: string}> = [];
+        const designDirs = fs.readdirSync(uiDir, { withFileTypes: true })
+            .filter(dirent => dirent.isDirectory())
+            .map(dirent => dirent.name);
+
+        for (const designName of designDirs) {
+            const designDir = path.join(uiDir, designName);
+            const files = fs.readdirSync(designDir);
+            
+            for (const file of files) {
+                if (file.endsWith('.hml')) {
+                    const hmlPath = path.join(designDir, file);
+                    const relativePath = path.relative(projectRoot, hmlPath);
+                    allFiles.push({
+                        path: hmlPath,
+                        name: file,
+                        relativePath: relativePath
+                    });
+                }
+            }
+        }
+
+        return allFiles;
+    }
+
+    /**
      * 扫描项目中所有 HML 文件的 view
      */
     private async scanAllViews(currentFilePath: string): Promise<Array<{id: string, name: string, file: string}>> {
@@ -303,7 +342,7 @@ export class FileManager {
     /**
      * 统一的发送 loadHml 消息方法
      * 负责发送组件数据和项目配置到前端
-     * 自动扫描并包含所有 view 列表
+     * 自动扫描并包含所有 view 列表和所有 HML 文件列表
      */
     private async sendLoadHmlMessage(hmlDocument: any, hmlContent: string): Promise<void> {
         const frontendComponents = this._hmlController.prepareComponentsForFrontend(hmlDocument);
@@ -316,6 +355,9 @@ export class FileManager {
         
         // 扫描所有 view（统一在此处获取）
         const allViews = await this.scanAllViews(this._filePath!);
+        
+        // 扫描所有 HML 文件
+        const allHmlFiles = this.scanAllHmlFiles(this._filePath!);
         
         this._panel.webview.postMessage({
             command: 'loadHml',
@@ -331,7 +373,9 @@ export class FileManager {
             projectConfig: projectConfig,
             designerConfig: designerConfig || { canvasBackgroundColor: '#3c3c3c' },
             projectRoot: projectRoot,
-            allViews: allViews
+            allViews: allViews,
+            allHmlFiles: allHmlFiles,
+            currentFilePath: this._filePath
         });
     }
 

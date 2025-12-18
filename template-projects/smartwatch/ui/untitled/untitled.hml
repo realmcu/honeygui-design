@@ -3,7 +3,7 @@
     <meta>
     </meta>
     <view>
-        <hg_view id="untitledView" x="181" y="27" width="410" height="502" backgroundColor="#000000" name="untitledView">
+        <hg_view id="untitledView" x="126" y="81" width="410" height="502" backgroundColor="#000000" name="untitledView">
             <events>
                 <event type="onSwipeLeft">
                     <action type="switchView" target="mainView" />
@@ -11,6 +11,9 @@
             </events>
             <hg_image id="hg_image_1766027539313_cumd" x="177" y="105" width="100" height="100" src="assets/UI_app_list/app_mail_icon.png" name="image_9313" zIndex="1" />
             <hg_image id="hg_image_1766027540528_yili" x="199" y="341" width="100" height="100" src="assets/UI_app_list/app_cycle_tracking_icon.png" name="image_0529" zIndex="1" />
+        </hg_view>
+        <hg_view id="hg_view_1766044593245_j9p2" x="659" y="56" width="410" height="502" backgroundColor="#000000" borderRadius="0" padding="12" overflow="auto" name="hg_view_3245" zIndex="1">
+            <hg_label id="hg_label_1766044605026_tgpz" x="160" y="204" width="100" height="50" fontSize="32" align="LEFT" letterSpacing="0" lineSpacing="0" wordWrap="false" text="测试你好" fontFile="/NotoSansSC-Bold.ttf" name="hg_label_5026" zIndex="1" />
         </hg_view>
     </view>
 </hml>

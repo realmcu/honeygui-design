@@ -562,25 +562,72 @@ void ${baseName}_update_user(void) {
 
     if (!mapping) return code;
 
-    mapping.propertySetters.forEach(setter => {
-      let value = null;
-
-      // 从style或data中获取值
-      if (component.style && setter.property in component.style) {
-        value = component.style[setter.property];
-      } else if (component.data && setter.property in component.data) {
-        value = component.data[setter.property];
+    // 特殊处理文本组件：fontFile 必须先设置
+    if (component.type === 'hg_label') {
+      const fontFile = component.data?.fontFile;
+      if (fontFile) {
+        code += `${indentStr}gui_text_type_set((gui_text_t *)${component.id}, (void *)"${fontFile}", FONT_SRC_FILESYS);\n`;
       }
-
-      if (value !== null && value !== undefined) {
-        // 应用值转换
-        const transformedValue = setter.valueTransform 
-          ? setter.valueTransform(value) 
-          : (typeof value === 'string' ? `"${value}"` : value);
-
-        code += `${indentStr}${setter.apiFunction}(${component.id}, ${transformedValue});\n`;
+      
+      // 设置字体大小
+      const fontSize = component.style?.fontSize || 16;
+      code += `${indentStr}gui_text_size_set((gui_text_t *)${component.id}, ${fontSize}, 0);\n`;
+      
+      // 设置文本内容
+      const text = component.data?.text || '';
+      const textLen = text.length;
+      code += `${indentStr}gui_text_content_set((gui_text_t *)${component.id}, (void *)"${text}", ${textLen});\n`;
+      
+      // 设置颜色
+      const color = component.style?.color;
+      if (color) {
+        const hexColor = this.apiMapper['colorToHex'](color);
+        code += `${indentStr}gui_text_color_set((gui_text_t *)${component.id}, ${hexColor});\n`;
       }
-    });
+      
+      // 设置对齐方式
+      const align = component.style?.align || 'LEFT';
+      code += `${indentStr}gui_text_mode_set((gui_text_t *)${component.id}, ${align});\n`;
+      
+      // 设置字间距
+      const letterSpacing = component.style?.letterSpacing;
+      if (letterSpacing !== undefined && letterSpacing !== 0) {
+        code += `${indentStr}gui_text_extra_letter_spacing_set((gui_text_t *)${component.id}, ${letterSpacing});\n`;
+      }
+      
+      // 设置行间距
+      const lineSpacing = component.style?.lineSpacing;
+      if (lineSpacing !== undefined && lineSpacing !== 0) {
+        code += `${indentStr}gui_text_extra_line_spacing_set((gui_text_t *)${component.id}, ${lineSpacing});\n`;
+      }
+      
+      // 设置自动换行
+      const wordWrap = component.style?.wordWrap;
+      if (wordWrap) {
+        code += `${indentStr}gui_text_wordwrap_set((gui_text_t *)${component.id}, true);\n`;
+      }
+    } else {
+      // 其他组件：正常处理
+      mapping.propertySetters.forEach(setter => {
+        let value = null;
+
+        // 从style或data中获取值
+        if (component.style && setter.property in component.style) {
+          value = component.style[setter.property];
+        } else if (component.data && setter.property in component.data) {
+          value = component.data[setter.property];
+        }
+
+        if (value !== null && value !== undefined) {
+          // 应用值转换
+          const transformedValue = setter.valueTransform 
+            ? setter.valueTransform(value) 
+            : (typeof value === 'string' ? `"${value}"` : value);
+
+          code += `${indentStr}${setter.apiFunction}(${component.id}, ${transformedValue});\n`;
+        }
+      });
+    }
 
     // 可见性
     if (component.visible !== undefined) {

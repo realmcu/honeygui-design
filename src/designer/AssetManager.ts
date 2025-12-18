@@ -80,6 +80,7 @@ export class AssetManager {
                 const imageExts = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg', '.webp'];
                 const videoExts = ['.mp4', '.avi', '.mov', '.mkv', '.webm'];
                 const modelExts = ['.gltf', '.glb', '.obj'];
+                const fontExts = ['.ttf', '.otf', '.woff', '.woff2', '.bin'];
                 
                 let assetType: string | null = null;
                 if (imageExts.includes(ext)) {
@@ -88,6 +89,8 @@ export class AssetManager {
                     assetType = 'video';
                 } else if (modelExts.includes(ext)) {
                     assetType = 'model3d';
+                } else if (fontExts.includes(ext)) {
+                    assetType = 'font';
                 }
                 
                 if (assetType) {
@@ -105,6 +108,55 @@ export class AssetManager {
         }
         
         return assets;
+    }
+
+    /**
+     * 获取所有字体文件列表
+     */
+    public async handleGetFontFiles(currentFilePath: string | undefined): Promise<void> {
+        try {
+            if (!currentFilePath) {
+                return;
+            }
+
+            const projectRoot = ProjectUtils.findProjectRoot(currentFilePath);
+            if (!projectRoot) {
+                return;
+            }
+
+            const assetsDir = ProjectUtils.getAssetsDir(projectRoot);
+            const fontExts = ['.ttf', '.otf', '.woff', '.woff2', '.bin'];
+            const fonts: string[] = [];
+
+            // 递归扫描字体文件
+            const scanFonts = (dirPath: string, relativePath: string) => {
+                if (!fs.existsSync(dirPath)) return;
+                const files = fs.readdirSync(dirPath);
+                for (const file of files) {
+                    const filePath = path.join(dirPath, file);
+                    const stats = fs.statSync(filePath);
+                    if (stats.isDirectory()) {
+                        scanFonts(filePath, relativePath ? `${relativePath}/${file}` : file);
+                    } else {
+                        const ext = path.extname(file).toLowerCase();
+                        if (fontExts.includes(ext)) {
+                            // 返回VFS路径格式
+                            const vfsPath = relativePath ? `/${relativePath}/${file}` : `/${file}`;
+                            fonts.push(vfsPath);
+                        }
+                    }
+                }
+            };
+
+            scanFonts(assetsDir, '');
+
+            this._panel.webview.postMessage({
+                command: 'fontFilesLoaded',
+                fonts
+            });
+        } catch (error) {
+            logger.error(`获取字体文件列表失败: ${error}`);
+        }
     }
 
     /**

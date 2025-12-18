@@ -1,18 +1,18 @@
 import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { X, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
-import { Component } from '../types';
+import { useDesignerStore } from '../store';
 import type { EventConfig, Action } from '../../hml/eventTypes';
 import './ViewRelationModal.css';
 
 interface ViewRelationModalProps {
   visible: boolean;
   onClose: () => void;
-  components: Component[];
 }
 
 interface ViewNode {
   id: string;
   name: string;
+  file: string;
   x: number;
   y: number;
   width: number;
@@ -36,7 +36,7 @@ const eventTypeToLabel: Record<string, string> = {
 };
 
 // 简单的力导向布局
-const layoutNodes = (views: Component[], edges: ViewEdge[]): ViewNode[] => {
+const layoutNodes = (views: Array<{id: string, name: string, file: string}>, edges: ViewEdge[]): ViewNode[] => {
   const nodeWidth = 120;
   const nodeHeight = 50;
   const padding = 60;
@@ -53,6 +53,7 @@ const layoutNodes = (views: Component[], edges: ViewEdge[]): ViewNode[] => {
     return {
       id: v.id,
       name: v.name,
+      file: v.file,
       x: centerX + radius * Math.cos(angle),
       y: centerY + radius * Math.sin(angle),
       width: nodeWidth,
@@ -128,8 +129,8 @@ const layoutNodes = (views: Component[], edges: ViewEdge[]): ViewNode[] => {
 export const ViewRelationModal: React.FC<ViewRelationModalProps> = ({
   visible,
   onClose,
-  components,
 }) => {
+  const { allViews, components } = useDesignerStore();
   const svgRef = useRef<SVGSVGElement>(null);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -138,10 +139,12 @@ export const ViewRelationModal: React.FC<ViewRelationModalProps> = ({
 
   // 提取视图和连接关系
   const { views, edges } = useMemo(() => {
-    const views = components.filter(c => c.type === 'hg_view');
+    const views = allViews || [];
     const edges: ViewEdge[] = [];
     
-    views.forEach(view => {
+    // 从当前文件的 components 中提取跳转关系
+    const currentViews = components.filter(c => c.type === 'hg_view');
+    currentViews.forEach(view => {
       if (view.eventConfigs) {
         view.eventConfigs.forEach((eventConfig: EventConfig, eventIdx: number) => {
           eventConfig.actions.forEach((action: Action, actionIdx: number) => {
@@ -160,7 +163,7 @@ export const ViewRelationModal: React.FC<ViewRelationModalProps> = ({
     });
     
     return { views, edges };
-  }, [components]);
+  }, [allViews, components]);
 
   // 布局节点
   const nodes = useMemo(() => layoutNodes(views, edges), [views, edges]);
@@ -366,13 +369,22 @@ export const ViewRelationModal: React.FC<ViewRelationModalProps> = ({
                     />
                     <text
                       x={node.x + node.width / 2}
-                      y={node.y + node.height / 2 + 4}
+                      y={node.y + node.height / 2 - 2}
                       fill="var(--vscode-editor-foreground)"
                       fontSize={12}
                       fontWeight="500"
                       textAnchor="middle"
                     >
                       {node.name}
+                    </text>
+                    <text
+                      x={node.x + node.width / 2}
+                      y={node.y + node.height / 2 + 12}
+                      fill="var(--vscode-descriptionForeground)"
+                      fontSize={9}
+                      textAnchor="middle"
+                    >
+                      {node.file}
                     </text>
                   </g>
                 ))}

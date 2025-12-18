@@ -9,6 +9,32 @@
   height: 100%;
 }
 
+/* File selector */
+.tree-file-selector {
+  padding: 8px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.file-select {
+  width: 100%;
+  padding: 4px 8px;
+  background-color: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border);
+  border-radius: 2px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.file-select:hover {
+  background-color: var(--vscode-list-hoverBackground);
+}
+
+.file-select:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
 .tree-content {
   flex: 1;
   overflow-y: auto;

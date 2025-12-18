@@ -62,9 +62,10 @@ export class HoneyGuiApiMapper {
       componentType: 'hg_label',
       createFunction: 'gui_text_create',
       propertySetters: [
-        { property: 'text', apiFunction: 'gui_text_set' },
-        { property: 'fontSize', apiFunction: 'gui_text_set_font_size' },
-        { property: 'color', apiFunction: 'gui_text_set_color', valueTransform: this.colorToHex }
+        { property: 'fontFile', apiFunction: 'gui_text_type_set' },
+        { property: 'text', apiFunction: 'gui_text_content_set' },
+        { property: 'fontSize', apiFunction: 'gui_text_size_set' },
+        { property: 'color', apiFunction: 'gui_text_color_set', valueTransform: this.colorToHex }
       ],
       eventHandlers: [],
       includeHeader: 'gui_text.h'
