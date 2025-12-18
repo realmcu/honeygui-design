@@ -171,13 +171,6 @@ export class DesignerPanel {
         const webview = this._panel.webview;
         this._panel.webview.html = this._webviewContentProvider.getHtmlForWebview(webview);
     }
-
-    /**
-     * 加载文件
-     */
-    public async loadFile(filePath: string): Promise<void> {
-        await this._fileManager.loadFile(filePath);
-    }
     
     /**
      * 创建新的空白文档

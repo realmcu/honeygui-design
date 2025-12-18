@@ -42,6 +42,14 @@ src/webview/
 - **Webview → Extension**: `vscodeAPI.postMessage()`
 - **消息类型**: `loadHml`, `save`, `codegen`, `compile`, etc.
 
+### 4. FileManager 加载流程
+HML 文件通过 CustomTextEditorProvider 打开，加载流程：
+```
+HmlEditorProvider.resolveCustomTextEditor()
+  └─► loadFromDocument(document) ─► 解析内容，等待前端 ready
+  └─► [前端 ready] ─► reloadCurrentDocument() ─► sendLoadHmlMessage()
+```
+
 ## 关键概念
 
 ### HML (HoneyGUI Markup Language)

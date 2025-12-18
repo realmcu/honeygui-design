@@ -3,7 +3,6 @@
  */
 export interface RunnerStatus {
     isRunning: boolean;
-    currentFile?: string;
     error?: string;
 }
 

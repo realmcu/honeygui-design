@@ -20,7 +20,6 @@ export class SimulationRunner {
     private currentProcess: ChildProcess | null = null;
     private simulatorTerminal: vscode.Terminal | null = null;
     private isRunning: boolean = false;
-    private currentFile: string | null = null;
     private listener?: RunnerListener;
     private buildManager: BuildManager | null = null;
 
@@ -50,16 +49,15 @@ export class SimulationRunner {
     /**
      * 启动编译仿真
      */
-    async start(hmlFile: string): Promise<void> {
+    async start(): Promise<void> {
         try {
-            this.currentFile = hmlFile;
             this.listener?.onStart?.();
 
             // 1. 环境检查
             await this.checkEnvironment();
 
-            // 2. 生成代码
-            await this.generateCode(hmlFile);
+            // 2. 生成代码（所有 HML 文件）
+            await this.generateCode();
 
             // 3. 准备编译环境
             await this.setupBuildEnvironment();
@@ -142,7 +140,6 @@ export class SimulationRunner {
             this.log('仿真器进程已停止');
         }
         this.isRunning = false;
-        this.currentFile = null;
     }
 
     /**
@@ -150,8 +147,7 @@ export class SimulationRunner {
      */
     getStatus(): RunnerStatus {
         return {
-            isRunning: this.isRunning,
-            currentFile: this.currentFile || undefined
+            isRunning: this.isRunning
         };
     }
 
@@ -175,8 +171,8 @@ export class SimulationRunner {
     /**
      * 生成代码
      */
-    private async generateCode(hmlFile: string): Promise<void> {
-        this.log('生成 C 代码...');
+    private async generateCode(): Promise<void> {
+        this.log('生成 C 代码（所有界面）...');
 
         // 使用统一的代码生成器
         const codeGenerator = new CodeGenerator();

@@ -193,12 +193,6 @@ export class MessageHandler {
                 this._componentManager.handleDeleteComponent(message.componentId);
                 break;
 
-            case 'loadFile':
-                if (message.filePath) {
-                    this._fileManager.loadFile(message.filePath);
-                }
-                break;
-
             case 'browseFile':
                 this._handleBrowseFile(message.componentId, message.propertyName, message.filters);
                 break;

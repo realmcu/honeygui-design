@@ -161,6 +161,12 @@ const App: React.FC = () => {
             store.setCanvasBackgroundColor(message.designerConfig.canvasBackgroundColor);
             console.log('[Webview App] 背景色已设置');
           }
+
+          // 设置所有 view 列表
+          if (message.allViews) {
+            useDesignerStore.setState({ allViews: message.allViews });
+            console.log('[Webview App] 所有 view 列表已设置:', message.allViews.length);
+          }
           
           if (message.components) {
             console.log('[Webview App] 准备设置组件...');
@@ -293,11 +299,6 @@ const App: React.FC = () => {
         document.body.appendChild(errorDiv);
       }
     }, 2000);
-
-    // Load existing design if any
-    window.vscodeAPI?.postMessage({
-      command: 'loadFile',
-    });
 
     // 清理函数
     return () => {

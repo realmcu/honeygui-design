@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as fs from 'fs';
 import { logger } from '../utils/Logger';
 import { ProjectUtils } from '../utils/ProjectUtils';
 import { HmlController } from '../hml/HmlController';
@@ -40,32 +41,64 @@ export class FileManager {
     /**
      * 加载文件
      */
-    public async loadFile(filePath: string): Promise<void> {
-        this._filePath = filePath;
-        
-        try {
-            // 使用HML控制器加载文件
-            const document = await this._hmlController.loadFile(filePath);
-            
-            // 序列化文档为字符串
-            const hmlContent = this._hmlController.serializeDocument();
-            
-            logger.debug(`[HoneyGUI Designer] 设计器配置加载中...`);
 
-            // 发送HML内容和配置信息到Webview
-            this.sendLoadHmlMessage(document, hmlContent);
-                
-            // 更新面板标题
-            const fileName = path.basename(filePath);
-            this._onDidUpdateTitle.fire(`HoneyGUI 设计器 - ${fileName}`);
-                
-        } catch (error) {
-            logger.error(`加载HML文件失败: ${error}`);
-            vscode.window.showErrorMessage(`加载HML文件失败: ${error instanceof Error ? error.message : '未知错误'}`);
-            
-            // 如果加载失败，创建一个新的空白文档
-            this.createNewDocument();
+    /**
+     * 扫描项目中所有 HML 文件的 view
+     */
+    private async scanAllViews(currentFilePath: string): Promise<Array<{id: string, name: string, file: string}>> {
+        const projectRoot = ProjectUtils.findProjectRoot(currentFilePath);
+        if (!projectRoot) {
+            return [];
         }
+
+        const uiDir = ProjectUtils.getUiDir(projectRoot);
+        if (!fs.existsSync(uiDir)) {
+            return [];
+        }
+
+        const allViews: Array<{id: string, name: string, file: string}> = [];
+        const designDirs = fs.readdirSync(uiDir, { withFileTypes: true })
+            .filter(dirent => dirent.isDirectory())
+            .map(dirent => dirent.name);
+
+        for (const designName of designDirs) {
+            const designDir = path.join(uiDir, designName);
+            const files = fs.readdirSync(designDir);
+            
+            for (const file of files) {
+                if (file.endsWith('.hml')) {
+                    const hmlPath = path.join(designDir, file);
+                    try {
+                        const tempController = new HmlController();
+                        const doc = await tempController.loadFile(hmlPath);
+                        
+                        // 提取所有 hg_view
+                        const extractViews = (components: any[]): void => {
+                            for (const comp of components) {
+                                if (comp.type === 'hg_view') {
+                                    allViews.push({
+                                        id: comp.id,
+                                        name: comp.name || comp.id,
+                                        file: designName
+                                    });
+                                }
+                                if (comp.children && comp.children.length > 0) {
+                                    extractViews(comp.children);
+                                }
+                            }
+                        };
+                        
+                        if (doc.view && doc.view.components) {
+                            extractViews(doc.view.components);
+                        }
+                    } catch (err) {
+                        logger.warn(`扫描 ${hmlPath} 失败: ${err}`);
+                    }
+                }
+            }
+        }
+
+        return allViews;
     }
     
     /**
@@ -113,7 +146,8 @@ export class FileManager {
     }
 
     /**
-     * 从 TextDocument 加载内容（用于 CustomTextEditorProvider）
+     * 从 TextDocument 加载内容（CustomTextEditorProvider 入口）
+     * 不立即发送，等待前端 ready 消息后由 reloadCurrentDocument() 发送
      */
     public async loadFromDocument(document: vscode.TextDocument): Promise<void> {
         this._filePath = document.uri.fsPath;
@@ -122,30 +156,17 @@ export class FileManager {
 
         try {
             const content = document.getText();
-            logger.debug(`[FileManager] 文件内容长度: ${content.length} 字符`);
 
             // 解析文档内容
-            logger.debug(`[FileManager] 解析HML内容...`);
             const hmlDocument = this._hmlController.parseContent(content);
             logger.info(`[FileManager] 解析完成，获得 ${hmlDocument.view?.components?.length || 0} 个组件`);
 
-            // 序列化文档为字符串
-            const hmlContent = this._hmlController.serializeDocument();
-            logger.debug(`[FileManager] 序列化完成，内容长度: ${hmlContent.length}`);
-
-            // 为前端准备组件数据
-            logger.debug(`[FileManager] 准备前端组件数据...`);
+            // 为前端准备组件数据（预处理，等待 ready 消息后发送）
             const frontendComponents = this._hmlController.prepareComponentsForFrontend(hmlDocument);
             logger.info(`[FileManager] 前端组件数据准备完成，共 ${frontendComponents.length} 个组件`);
 
-            // 使用统一的配置加载器
-            const projectConfig = ProjectConfigLoader.loadConfig(document.uri.fsPath);
-            const designerConfig = ProjectConfigLoader.getDesignerConfig(projectConfig);
-            logger.debug(`[FileManager] 项目配置加载完成`);
-
-            // 发送内容到 Webview（不延迟，由前端ready消息触发重新加载）
+            // 不立即发送，等待前端 ready 消息后由 reloadCurrentDocument 发送
             logger.info(`[FileManager] 初始loadHml准备完成，等待前端ready消息`);
-            // 不立即发送，等待前端ready
 
             // 更新面板标题
             const fileName = path.basename(document.fileName);
@@ -155,8 +176,6 @@ export class FileManager {
         } catch (error) {
             logger.error(`从文档加载HML失败: ${error}`);
             vscode.window.showErrorMessage(`加载HML文件失败: ${error instanceof Error ? error.message : '未知错误'}`);
-
-            // 如果加载失败，创建一个新的空白文档
             this.createNewDocument();
         }
     }
@@ -257,7 +276,7 @@ export class FileManager {
     /**
      * 重新加载当前文档
      */
-    public reloadCurrentDocument(): void {
+    public async reloadCurrentDocument(): Promise<void> {
         try {
             if (!this._filePath) {
                 logger.warn('[FileManager] reloadCurrentDocument: 没有文件路径');
@@ -274,8 +293,8 @@ export class FileManager {
             
             logger.info(`[FileManager] 重新发送loadHml，组件数: ${hmlDocument.view?.components?.length || 0}`);
             
-            // 使用统一的发送方法
-            this.sendLoadHmlMessage(hmlDocument, hmlContent);
+            // 使用统一的发送方法（内部会自动获取 allViews）
+            await this.sendLoadHmlMessage(hmlDocument, hmlContent);
         } catch (error) {
             logger.error(`[FileManager] reloadCurrentDocument失败: ${error}`);
         }
@@ -284,15 +303,19 @@ export class FileManager {
     /**
      * 统一的发送 loadHml 消息方法
      * 负责发送组件数据和项目配置到前端
+     * 自动扫描并包含所有 view 列表
      */
-    private sendLoadHmlMessage(hmlDocument: any, hmlContent: string): void {
+    private async sendLoadHmlMessage(hmlDocument: any, hmlContent: string): Promise<void> {
         const frontendComponents = this._hmlController.prepareComponentsForFrontend(hmlDocument);
         
         const projectConfig = ProjectConfigLoader.loadConfig(this._filePath!);
         const designerConfig = ProjectConfigLoader.getDesignerConfig(projectConfig);
         
-        // 获取项目根目录，用于前端转换相对路径
+        // 获取项目根目录
         const projectRoot = ProjectUtils.findProjectRoot(this._filePath!);
+        
+        // 扫描所有 view（统一在此处获取）
+        const allViews = await this.scanAllViews(this._filePath!);
         
         this._panel.webview.postMessage({
             command: 'loadHml',
@@ -307,7 +330,8 @@ export class FileManager {
             components: frontendComponents,
             projectConfig: projectConfig,
             designerConfig: designerConfig || { canvasBackgroundColor: '#3c3c3c' },
-            projectRoot: projectRoot // 发送项目根目录给前端
+            projectRoot: projectRoot,
+            allViews: allViews
         });
     }
 

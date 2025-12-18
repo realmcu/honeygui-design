@@ -67,14 +67,8 @@ export class SimulationService {
      */
     async startSimulation(): Promise<void> {
         try {
-            // 选择 HML 文件
-            const hmlFile = await this.selectHmlFile();
-            if (!hmlFile) {
-                return;
-            }
-
             // 获取项目根目录
-            const projectRoot = ProjectUtils.findProjectRoot(hmlFile);
+            const projectRoot = await this.getProjectRoot();
             if (!projectRoot) {
                 vscode.window.showErrorMessage('无法找到项目根目录（project.json）');
                 return;
@@ -103,7 +97,7 @@ export class SimulationService {
 
             // 启动仿真
             this.updateStatusBar('$(sync~spin) 编译仿真: 启动中...');
-            await this.runner.start(hmlFile);
+            await this.runner.start();
 
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
@@ -163,45 +157,42 @@ export class SimulationService {
     }
 
     /**
-     * 选择 HML 文件
+     * 获取项目根目录
      */
-    private async selectHmlFile(): Promise<string | undefined> {
-        // 如果当前编辑器是 HML 文件，直接使用
+    private async getProjectRoot(): Promise<string | undefined> {
+        // 1. 优先使用当前编辑器所在项目
         const activeEditor = vscode.window.activeTextEditor;
-        if (activeEditor && activeEditor.document.fileName.endsWith('.hml')) {
-            return activeEditor.document.fileName;
+        if (activeEditor) {
+            const projectRoot = ProjectUtils.findProjectRoot(activeEditor.document.fileName);
+            if (projectRoot) {
+                return projectRoot;
+            }
         }
 
-        // 否则让用户选择
+        // 2. 尝试从工作区查找
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (!workspaceFolders || workspaceFolders.length === 0) {
             vscode.window.showErrorMessage('没有打开的工作区');
             return undefined;
         }
 
-        const hmlFiles = await vscode.workspace.findFiles('**/ui/**/*.hml', '**/node_modules/**', 100);
-        
-        if (hmlFiles.length === 0) {
-            vscode.window.showErrorMessage('工作区中未找到 HML 文件');
-            return undefined;
+        // 单个工作区，直接使用
+        if (workspaceFolders.length === 1) {
+            return ProjectUtils.findProjectRoot(workspaceFolders[0].uri.fsPath);
         }
 
-        if (hmlFiles.length === 1) {
-            return hmlFiles[0].fsPath;
-        }
-
-        // 显示选择列表
-        const items = hmlFiles.map(uri => ({
-            label: path.basename(uri.fsPath),
-            description: path.dirname(uri.fsPath),
-            uri
+        // 多个工作区，让用户选择
+        const items = workspaceFolders.map(folder => ({
+            label: folder.name,
+            description: folder.uri.fsPath,
+            folder
         }));
 
         const selected = await vscode.window.showQuickPick(items, {
-            placeHolder: '选择要编译仿真的 HML 文件'
+            placeHolder: '选择要编译的项目'
         });
 
-        return selected?.uri.fsPath;
+        return selected ? ProjectUtils.findProjectRoot(selected.folder.uri.fsPath) : undefined;
     }
 
     /**

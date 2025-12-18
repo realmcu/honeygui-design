@@ -58,6 +58,7 @@ export interface PropertyDefinition {
 
 export interface DesignerState {
   components: Component[];
+  allViews?: Array<{id: string, name: string, file: string}>; // 项目中所有 view
   selectedComponent: string | null;
   selectedComponents: string[];
   hoveredComponent: string | null;

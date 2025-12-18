@@ -25,13 +25,27 @@ interface EventsPanelProps {
 export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate }) => {
   const [expandedEvents, setExpandedEvents] = useState<Set<number>>(new Set([0]));
   const components = useDesignerStore((state) => state.components);
+  const allViews = useDesignerStore((state) => state.allViews || []);
 
   const eventConfigs = component.eventConfigs || [];
   const supportedEvents = getSupportedEvents(component.type);
 
-  // 获取可用的视图列表
+  // 获取可用的视图列表（当前文件 + 其他文件）
   const getAvailableViews = () => {
-    return components.filter(c => c.type === 'hg_view' && c.id !== component.id);
+    // 当前文件的 view
+    const currentViews = components
+      .filter(c => c.type === 'hg_view' && c.id !== component.id)
+      .map(c => ({
+        id: c.id,
+        name: c.name || c.id,
+        file: '当前文件'
+      }));
+    
+    // 其他文件的 view（排除当前文件中已有的）
+    const currentViewIds = new Set(currentViews.map(v => v.id));
+    const otherViews = allViews.filter(v => !currentViewIds.has(v.id));
+    
+    return [...currentViews, ...otherViews];
   };
 
   // 添加事件
@@ -167,7 +181,9 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
                 >
                   <option value="">-- 选择 --</option>
                   {views.map(v => (
-                    <option key={v.id} value={v.id}>{v.name || v.id}</option>
+                    <option key={v.id} value={v.id}>
+                      {v.name} {v.file !== '当前文件' ? `(${v.file})` : ''}
+                    </option>
                   ))}
                 </select>
               </div>

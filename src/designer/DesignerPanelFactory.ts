@@ -70,13 +70,8 @@ export class DesignerPanelFactory {
         const designerPanel = new DesignerPanel(panel, context);
         DesignerPanel.currentPanel = designerPanel;
 
-        if (filePath) {
-            // Register first, then load (so panel is tracked even if load fails)
-            DesignerPanel.registerPanel(filePath, designerPanel);
-            designerPanel.loadFile(filePath);
-        } else {
-            designerPanel.createNewDocument();
-        }
+        // 协同开发场景：创建空白文档，后续由协同服务同步内容
+        designerPanel.createNewDocument();
 
         return designerPanel;
     }
