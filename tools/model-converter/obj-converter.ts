@@ -7,9 +7,9 @@ import { OBJParser } from './obj-parser';
 import { ModelType, FaceType, TOOL_VERSION, MAGIC } from './types';
 
 export class OBJConverter {
-    convert(objPath: string, binPath: string, txtPath: string): void {
+    convert(objPath: string, binPath: string, txtPath: string, outputDir?: string): void {
         const parser = new OBJParser();
-        const model = parser.parse(objPath);
+        const model = parser.parse(objPath, outputDir);
 
         // Determine face type
         let faceType = FaceType.RECTANGLE;

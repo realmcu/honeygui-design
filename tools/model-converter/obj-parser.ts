@@ -7,7 +7,7 @@ import * as path from 'path';
 import { Vec3, Vec2, Index, Material, Shape, OBJModel } from './types';
 
 export class OBJParser {
-    parse(filePath: string): OBJModel {
+    parse(filePath: string, outputDir?: string): OBJModel {
         const content = fs.readFileSync(filePath, 'utf-8');
         const lines = content.split('\n');
         const dir = path.dirname(filePath);
@@ -120,7 +120,16 @@ export class OBJParser {
             const texturePath = (mat as any).texturePath;
             if (texturePath) {
                 const fullPath = path.join(dir, texturePath);
-                const binPath = fullPath.replace(/\.(png|jpe?g|bmp)$/i, '.bin');
+                let binPath = fullPath.replace(/\.(png|jpe?g|bmp)$/i, '.bin');
+                
+                // 如果提供了 outputDir，优先在输出目录查找（图片已转换到输出目录）
+                if (outputDir) {
+                    const relativePath = path.relative(path.dirname(filePath), fullPath);
+                    const outputBinPath = path.join(outputDir, relativePath).replace(/\.(png|jpe?g|bmp)$/i, '.bin');
+                    if (fs.existsSync(outputBinPath)) {
+                        binPath = outputBinPath;
+                    }
+                }
                 
                 if (fs.existsSync(binPath)) {
                     textures.push(fs.readFileSync(binPath));
