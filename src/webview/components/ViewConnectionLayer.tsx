@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Component } from '../types';
+import type { EventConfig, Action } from '../../hml/eventTypes';
 
 interface ViewConnectionLayerProps {
   components: Component[];
@@ -21,6 +22,14 @@ interface Point {
   y: number;
 }
 
+// 事件类型到显示标签的映射
+const eventTypeToLabel: Record<string, string> = {
+  'onSwipeLeft': 'LEFT',
+  'onSwipeRight': 'RIGHT',
+  'onSwipeUp': 'UP',
+  'onSwipeDown': 'DOWN',
+};
+
 export const ViewConnectionLayer: React.FC<ViewConnectionLayerProps> = ({
   components,
   zoom,
@@ -41,20 +50,24 @@ export const ViewConnectionLayer: React.FC<ViewConnectionLayerProps> = ({
       }
     });
 
-    // 收集所有连接关系
+    // 收集所有连接关系 (从 eventConfigs 中提取 switchView 动作)
     components.forEach(comp => {
-      if (comp.type === 'hg_view' && comp.view_switch) {
-        comp.view_switch.forEach((sw, idx) => {
-          const target = viewsById.get(sw.target);
-          // 跳过自连接
-          if (comp.id === sw.target) return;
-          
-          result.push({
-            id: `${comp.id}-${sw.target}-${idx}`,
-            from: comp,
-            to: target!,
-            event: sw.event,
-            isValid: !!target
+      if (comp.type === 'hg_view' && comp.eventConfigs) {
+        comp.eventConfigs.forEach((eventConfig: EventConfig, eventIdx: number) => {
+          eventConfig.actions.forEach((action: Action, actionIdx: number) => {
+            if (action.type === 'switchView' && action.target) {
+              const target = viewsById.get(action.target);
+              // 跳过自连接
+              if (comp.id === action.target) return;
+              
+              result.push({
+                id: `${comp.id}-${action.target}-${eventIdx}-${actionIdx}`,
+                from: comp,
+                to: target!,
+                event: eventConfig.type,
+                isValid: !!target
+              });
+            }
           });
         });
       }
@@ -182,7 +195,7 @@ export const ViewConnectionLayer: React.FC<ViewConnectionLayerProps> = ({
         const { from, to } = getConnectionPoints(conn.from, conn.to);
         const midX = (from.x + to.x) / 2;
         const midY = (from.y + to.y) / 2;
-        const eventLabel = conn.event.replace('GUI_EVENT_TOUCH_MOVE_', '');
+        const eventLabel = eventTypeToLabel[conn.event] || conn.event;
 
         return (
           <g key={conn.id}>

@@ -5,7 +5,7 @@
 
 import { XMLParser } from 'fast-xml-parser';
 import { Component, Meta, View, Document, ComponentPosition } from './types';
-import type { ViewSwitchEvent, ViewSwitchEventType } from './types';
+import type { EventConfig, Action, EventType, ActionType } from './eventTypes';
 import { logger } from '../utils/Logger';
 
 /**
@@ -163,8 +163,8 @@ export class HmlParser {
     // 分离属性
     const { style, data, events } = this._categorizeAttributes(attributes);
 
-    // 解析视图切换配置（仅 hg_view）
-    const view_switch = tagName === 'hg_view' ? this._parseViewSwitch(element) : undefined;
+    // 解析事件配置
+    const eventConfigs = this._parseEventConfigs(element);
 
     // 创建组件
     const component: Component = {
@@ -175,7 +175,7 @@ export class HmlParser {
       style,
       data,
       events,
-      view_switch,
+      eventConfigs,
       children: [],
       parent: parentId || null,
       visible: attributes.visible !== false,
@@ -256,7 +256,7 @@ export class HmlParser {
     parentComponent: Component
   ): void {
     Object.keys(element).forEach(key => {
-      if (key === '_attributes' || key === '_text' || key === 'view_switch') {
+      if (key === '_attributes' || key === '_text' || key === 'events') {
         return;
       }
 
@@ -276,33 +276,62 @@ export class HmlParser {
   }
 
   /**
-   * 解析视图切换配置（仅用于 hg_view）
+   * 解析事件配置 (Event-Action)
    */
-  private _parseViewSwitch(element: any): ViewSwitchEvent[] | undefined {
-    if (!element.view_switch?.switch_event) {
+  private _parseEventConfigs(element: any): EventConfig[] | undefined {
+    if (!element.events?.event) {
       return undefined;
     }
 
-    const switchEventElements = Array.isArray(element.view_switch.switch_event)
-      ? element.view_switch.switch_event
-      : [element.view_switch.switch_event];
+    const eventElements = Array.isArray(element.events.event)
+      ? element.events.event
+      : [element.events.event];
 
-    const viewSwitches: ViewSwitchEvent[] = [];
+    const eventConfigs: EventConfig[] = [];
 
-    switchEventElements.forEach((switchEl: any) => {
-      const attrs = switchEl._attributes || switchEl;
+    eventElements.forEach((eventEl: any) => {
+      const attrs = eventEl._attributes || eventEl;
+      const eventType = attrs.type as EventType;
       
-      if (attrs.event && attrs.target && attrs.switch_out_style && attrs.switch_in_style) {
-        viewSwitches.push({
-          event: attrs.event as ViewSwitchEventType,
-          target: attrs.target,
-          switch_out_style: attrs.switch_out_style,
-          switch_in_style: attrs.switch_in_style,
+      if (!eventType) return;
+
+      const eventConfig: EventConfig = {
+        type: eventType,
+        actions: [],
+      };
+
+      // onMessage 需要 message 属性
+      if (eventType === 'onMessage' && attrs.message) {
+        eventConfig.message = attrs.message;
+      }
+
+      // 解析动作
+      if (eventEl.action) {
+        const actionElements = Array.isArray(eventEl.action)
+          ? eventEl.action
+          : [eventEl.action];
+
+        actionElements.forEach((actionEl: any) => {
+          const actionAttrs = actionEl._attributes || actionEl;
+          const action: Action = {
+            type: actionAttrs.type as ActionType,
+          };
+
+          // 根据动作类型解析参数
+          if (actionAttrs.target) action.target = actionAttrs.target;
+          if (actionAttrs.message) action.message = actionAttrs.message;
+          if (actionAttrs.functionName) action.functionName = actionAttrs.functionName;
+          if (actionAttrs.switchOutStyle) action.switchOutStyle = actionAttrs.switchOutStyle;
+          if (actionAttrs.switchInStyle) action.switchInStyle = actionAttrs.switchInStyle;
+
+          eventConfig.actions.push(action);
         });
       }
+
+      eventConfigs.push(eventConfig);
     });
 
-    return viewSwitches.length > 0 ? viewSwitches : undefined;
+    return eventConfigs.length > 0 ? eventConfigs : undefined;
   }
 
   /**

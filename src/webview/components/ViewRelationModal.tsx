@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { X, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import { Component } from '../types';
+import type { EventConfig, Action } from '../../hml/eventTypes';
 import './ViewRelationModal.css';
 
 interface ViewRelationModalProps {
@@ -25,6 +26,14 @@ interface ViewEdge {
   event: string;
   isValid: boolean;
 }
+
+// 事件类型到显示标签的映射
+const eventTypeToLabel: Record<string, string> = {
+  'onSwipeLeft': 'LEFT',
+  'onSwipeRight': 'RIGHT',
+  'onSwipeUp': 'UP',
+  'onSwipeDown': 'DOWN',
+};
 
 // 简单的力导向布局
 const layoutNodes = (views: Component[], edges: ViewEdge[]): ViewNode[] => {
@@ -133,17 +142,19 @@ export const ViewRelationModal: React.FC<ViewRelationModalProps> = ({
     const edges: ViewEdge[] = [];
     
     views.forEach(view => {
-      if (view.view_switch) {
-        view.view_switch.forEach((sw, idx) => {
-          if (view.id !== sw.target) {
-            edges.push({
-              id: `${view.id}-${sw.target}-${idx}`,
-              from: view.id,
-              to: sw.target,
-              event: sw.event.replace('GUI_EVENT_TOUCH_MOVE_', ''),
-              isValid: views.some(v => v.id === sw.target),
-            });
-          }
+      if (view.eventConfigs) {
+        view.eventConfigs.forEach((eventConfig: EventConfig, eventIdx: number) => {
+          eventConfig.actions.forEach((action: Action, actionIdx: number) => {
+            if (action.type === 'switchView' && action.target && view.id !== action.target) {
+              edges.push({
+                id: `${view.id}-${action.target}-${eventIdx}-${actionIdx}`,
+                from: view.id,
+                to: action.target,
+                event: eventTypeToLabel[eventConfig.type] || eventConfig.type,
+                isValid: views.some(v => v.id === action.target),
+              });
+            }
+          });
         });
       }
     });
@@ -264,7 +275,7 @@ export const ViewRelationModal: React.FC<ViewRelationModalProps> = ({
           ) : edges.length === 0 ? (
             <div className="no-edges-message">
               <div>共 {views.length} 个视图，暂无跳转关系</div>
-              <div className="hint">在视图属性中设置 view_switch 可添加跳转</div>
+              <div className="hint">在视图属性的"事件"标签页中添加 switchView 动作可创建跳转</div>
             </div>
           ) : (
             <svg

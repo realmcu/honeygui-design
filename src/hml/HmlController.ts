@@ -3,6 +3,7 @@ import { HmlParser } from './HmlParser';
 import { Document as HmlDocument, Component } from './types';
 import { HmlSerializer } from './HmlSerializer';
 import { logger } from '../utils/Logger';
+import { ProjectUtils } from '../utils/ProjectUtils';
 
 /**
  * HML控制器类，协调解析器和序列化器的工作
@@ -207,7 +208,7 @@ export class HmlController {
     } = {}): HmlDocument {
         // 创建默认的 view 组件（新格式）
         const resolution = options.resolution || '480X272';
-        const size = this._parseResolution(resolution);
+        const size = ProjectUtils.parseResolution(resolution);
 
         const viewComponent: Component = {
             id: 'hg_view_' + Date.now(),
@@ -264,15 +265,6 @@ export class HmlController {
      * 解析分辨率字符串
      * @private
      */
-    private _parseResolution(resolution: string): { width: number; height: number } {
-        if (!resolution) return { width: 480, height: 272 };
-        const parts = resolution.split('X');
-        return {
-            width: parseInt(parts[0]) || 480,
-            height: parseInt(parts[1]) || 272
-        };
-    }
-
     /**
      * 获取当前文档
      */

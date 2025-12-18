@@ -199,11 +199,11 @@ export class HmlSerializer {
             });
         }
 
-        // 序列化数据属性（data对象），排除 interactions 和 view_switch
+        // 序列化数据属性（data对象），排除特殊字段
         if (component.data) {
             Object.keys(component.data).forEach(propName => {
-                // 跳过 interactions 和 view_switch，它们会作为子元素单独处理
-                if (propName === 'interactions' || propName === 'view_switch') {
+                // 跳过特殊字段，它们会作为子元素单独处理
+                if (propName === 'interactions' || propName === 'view_switch' || propName === 'events') {
                     return;
                 }
                 const value = component.data![propName];
@@ -230,34 +230,44 @@ export class HmlSerializer {
             attributesStr += ' zIndex="' + component.zIndex + '"';
         }
 
-        // 序列化事件处理
-        if (component.events) {
-            Object.keys(component.events).forEach(eventName => {
-                const handler = component.events![eventName];
-                attributesStr += ' on:' + eventName + '="' + this._escapeXmlValue(handler) + '"';
-            });
-        }
+        // 注意: component.events (旧的事件处理器对象) 已废弃，不再序列化
+        // 新的事件系统使用 component.eventConfigs
 
-        // 检查是否有子组件或视图切换配置
+        // 检查是否有子组件或事件配置
         const hasChildren = component.children && component.children.length > 0;
-        const hasViewSwitch = component.type === 'hg_view' && component.view_switch && component.view_switch.length > 0;
+        const hasEventConfigs = component.eventConfigs && component.eventConfigs.length > 0;
 
-        if (hasChildren || hasViewSwitch) {
+        if (hasChildren || hasEventConfigs) {
             componentContent += indent + '<' + component.type + attributesStr + '>' + '\n';
 
-            // 序列化视图切换配置（仅 hg_view）
-            if (hasViewSwitch) {
-                componentContent += indent + '    <view_switch>' + '\n';
-                component.view_switch!.forEach(switchEvent => {
-                    const switchIndent = indent + '        ';
-                    componentContent += switchIndent + '<switch_event\n';
-                    componentContent += switchIndent + '    event="' + switchEvent.event + '"\n';
-                    componentContent += switchIndent + '    target="' + switchEvent.target + '"\n';
-                    componentContent += switchIndent + '    switch_out_style="' + switchEvent.switch_out_style + '"\n';
-                    componentContent += switchIndent + '    switch_in_style="' + switchEvent.switch_in_style + '"\n';
-                    componentContent += switchIndent + '/>\n';
+            // 序列化事件配置 (Event-Action)
+            if (hasEventConfigs) {
+                componentContent += indent + '    <events>' + '\n';
+                component.eventConfigs!.forEach(eventConfig => {
+                    const eventIndent = indent + '        ';
+                    let eventAttrs = 'type="' + eventConfig.type + '"';
+                    if (eventConfig.type === 'onMessage' && eventConfig.message) {
+                        eventAttrs += ' message="' + this._escapeXmlValue(eventConfig.message) + '"';
+                    }
+
+                    if (eventConfig.actions && eventConfig.actions.length > 0) {
+                        componentContent += eventIndent + '<event ' + eventAttrs + '>\n';
+                        eventConfig.actions.forEach(action => {
+                            const actionIndent = eventIndent + '    ';
+                            let actionAttrs = 'type="' + action.type + '"';
+                            if (action.target) actionAttrs += ' target="' + this._escapeXmlValue(action.target) + '"';
+                            if (action.message) actionAttrs += ' message="' + this._escapeXmlValue(action.message) + '"';
+                            if (action.functionName) actionAttrs += ' functionName="' + this._escapeXmlValue(action.functionName) + '"';
+                            if (action.switchOutStyle) actionAttrs += ' switchOutStyle="' + action.switchOutStyle + '"';
+                            if (action.switchInStyle) actionAttrs += ' switchInStyle="' + action.switchInStyle + '"';
+                            componentContent += actionIndent + '<action ' + actionAttrs + ' />\n';
+                        });
+                        componentContent += eventIndent + '</event>\n';
+                    } else {
+                        componentContent += eventIndent + '<event ' + eventAttrs + ' />\n';
+                    }
                 });
-                componentContent += indent + '    </view_switch>' + '\n';
+                componentContent += indent + '    </events>' + '\n';
             }
 
             // 递归序列化子组件

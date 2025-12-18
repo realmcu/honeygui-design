@@ -1,4 +1,5 @@
 import * as path from 'path';
+import { ProjectUtils } from '../utils/ProjectUtils';
 
 /**
  * HML模板管理类 - 集中管理所有HML模板生成逻辑
@@ -33,7 +34,7 @@ export class HmlTemplateManager {
         pixelMode?: string
     ): string {
         // 解析分辨率
-        const [width, height] = resolution.split('X').map(Number);
+        const { width, height } = ProjectUtils.parseResolution(resolution);
 
         // 生成标准格式HML内容
         return `<?xml version="1.0" encoding="UTF-8"?>
@@ -61,7 +62,7 @@ export class HmlTemplateManager {
         description?: string
     ): string {
         // 解析分辨率
-        const [width, height] = resolution.split('X').map(Number);
+        const { width, height } = ProjectUtils.parseResolution(resolution);
 
         // 生成HML内容（不包含完整的meta信息，只保留必要的meta字段）
         let header = `<!-- ${hmlId} - ${description || 'Standalone HML file'} -->`;
@@ -86,7 +87,7 @@ export class HmlTemplateManager {
      * @returns 格式化的HML文件内容
      */
     static generateEmptyHml(hmlId: string, resolution: string): string {
-        const [width, height] = resolution.split('X').map(Number);
+        const { width, height } = ProjectUtils.parseResolution(resolution);
 
         return `<?xml version="1.0" encoding="UTF-8"?>
 <hml>

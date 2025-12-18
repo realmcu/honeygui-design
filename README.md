@@ -259,6 +259,11 @@ cd honeygui-design
 npm install
 ```
 
+### 快速调试 ⚡
+**推荐**: 使用 Watch 模式 + Quick Start 配置，启动速度 < 2秒
+
+详见: [快速调试指南](docs/快速调试指南.md)
+
 ### 开发模式
 ```bash
 # 终端1：编译扩展端
@@ -267,7 +272,7 @@ npm run watch
 # 终端2：编译Webview端
 npm run watch:webview
 
-# 按F5启动调试
+# 调试面板选择 "🚀 Quick Start"，按F5启动
 ```
 
 ### 测试

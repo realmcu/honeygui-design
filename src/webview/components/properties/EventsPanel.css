@@ -1,0 +1,202 @@
+/* 事件面板样式 */
+.events-panel {
+  padding: 8px;
+}
+
+.events-empty {
+  text-align: center;
+  color: var(--vscode-descriptionForeground);
+  padding: 16px;
+  font-size: 12px;
+}
+
+/* 事件项 */
+.event-item {
+  margin-bottom: 12px;
+  border: 1px solid var(--vscode-input-border);
+  border-radius: 4px;
+  background: var(--vscode-editor-background);
+}
+
+.event-header {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  cursor: pointer;
+  gap: 8px;
+  background: var(--vscode-sideBar-background);
+  border-radius: 4px 4px 0 0;
+}
+
+.event-header:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.event-expand-icon {
+  font-size: 10px;
+  color: var(--vscode-descriptionForeground);
+  width: 12px;
+}
+
+.event-type-select {
+  flex: 1;
+  padding: 4px 8px;
+  font-size: 12px;
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border);
+  border-radius: 2px;
+}
+
+.event-remove-btn {
+  padding: 2px 8px;
+  font-size: 11px;
+  background: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.event-remove-btn:hover {
+  background: var(--vscode-errorForeground);
+  color: white;
+}
+
+/* 事件内容 */
+.event-content {
+  padding: 12px;
+  border-top: 1px solid var(--vscode-input-border);
+}
+
+.message-input {
+  margin-bottom: 12px;
+}
+
+.message-input label {
+  display: block;
+  font-size: 11px;
+  margin-bottom: 4px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.message-input input {
+  width: 100%;
+  padding: 4px 8px;
+  font-size: 12px;
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border);
+  border-radius: 2px;
+  box-sizing: border-box;
+}
+
+/* 动作列表 */
+.actions-list {
+  margin-bottom: 8px;
+}
+
+.action-item {
+  margin-bottom: 10px;
+  padding: 10px;
+  background: var(--vscode-input-background);
+  border: 1px solid var(--vscode-input-border);
+  border-radius: 4px;
+}
+
+.action-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.action-type-select {
+  flex: 1;
+  padding: 4px 8px;
+  font-size: 12px;
+  background: var(--vscode-dropdown-background);
+  color: var(--vscode-dropdown-foreground);
+  border: 1px solid var(--vscode-dropdown-border);
+  border-radius: 2px;
+}
+
+.action-remove-btn {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  font-size: 14px;
+  line-height: 1;
+  background: transparent;
+  color: var(--vscode-descriptionForeground);
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.action-remove-btn:hover {
+  background: var(--vscode-errorForeground);
+  color: white;
+}
+
+/* 动作参数 */
+.action-params {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.param-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.param-row label {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.param-row select,
+.param-row input {
+  width: 100%;
+  padding: 4px 8px;
+  font-size: 12px;
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border);
+  border-radius: 2px;
+  box-sizing: border-box;
+}
+
+/* 添加按钮 */
+.add-action-btn {
+  width: 100%;
+  padding: 6px;
+  font-size: 12px;
+  background: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.add-action-btn:hover {
+  background: var(--vscode-button-secondaryHoverBackground);
+}
+
+.add-event-btn {
+  width: 100%;
+  padding: 8px;
+  font-size: 12px;
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.add-event-btn:hover {
+  background: var(--vscode-button-hoverBackground);
+}

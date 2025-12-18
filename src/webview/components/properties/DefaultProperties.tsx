@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { PropertyPanelProps } from './types';
 import { PropertyEditor } from './PropertyEditor';
 import { BaseProperties } from './BaseProperties';
+import { EventsPanel } from './EventsPanel';
 import { componentDefinitions } from '../ComponentLibrary';
 
 export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onUpdate, components }) => {
+  const [activeTab, setActiveTab] = useState<'properties' | 'events'>('properties');
   const definition = componentDefinitions.find((d) => d.type === component.type);
 
   const handleStyleChange = (property: string, value: any) => {
@@ -69,55 +71,80 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
   };
 
   return (
-    <div className="properties-content">
-      <BaseProperties component={component} onUpdate={onUpdate} components={components} />
+    <>
+      <div className="properties-tabs">
+        <button
+          className={activeTab === 'properties' ? 'active' : ''}
+          onClick={() => setActiveTab('properties')}
+        >
+          属性
+        </button>
+        <button
+          className={activeTab === 'events' ? 'active' : ''}
+          onClick={() => setActiveTab('events')}
+        >
+          事件
+        </button>
+      </div>
 
-      {/* Style Properties */}
-      {definition && definition.properties.filter(p => p.group === 'style').length > 0 && (
-        <div className="property-group">
-          <div className="property-group-title">样式</div>
-          {definition.properties
-            .filter(p => p.group === 'style')
-            .map((property) => (
-              <div key={property.name} className="property-item">
-                <label>{property.label}</label>
-                <PropertyEditor
-                  type={property.type as any}
-                  value={(component.style as any)?.[property.name]}
-                  onChange={(value) => handleStyleChange(property.name, value)}
-                  options={property.options as string[]}
-                />
-              </div>
-            ))}
-        </div>
-      )}
+      <div className="properties-content">
+        {activeTab === 'properties' && (
+          <>
+            <BaseProperties component={component} onUpdate={onUpdate} components={components} />
 
-      {/* Data Properties */}
-      {definition && definition.properties.filter(p => p.group === 'data').length > 0 && (
-        <div className="property-group">
-          <div className="property-group-title">数据</div>
-          {definition.properties
-            .filter(p => p.group === 'data')
-            .map((property) => (
-              <div key={property.name} className="property-item">
-                <label>{property.label}</label>
-                {property.name === 'src' && component.type === 'hg_image' ? (
-                  renderImageProperty(
-                    (component.data as any)?.[property.name],
-                    (value) => handleDataChange(property.name, value)
-                  )
-                ) : (
-                  <PropertyEditor
-                    type={property.type as any}
-                    value={(component.data as any)?.[property.name]}
-                    onChange={(value) => handleDataChange(property.name, value)}
-                    options={property.options as string[]}
-                  />
-                )}
+            {/* Style Properties */}
+            {definition && definition.properties.filter(p => p.group === 'style').length > 0 && (
+              <div className="property-group">
+                <div className="property-group-title">样式</div>
+                {definition.properties
+                  .filter(p => p.group === 'style')
+                  .map((property) => (
+                    <div key={property.name} className="property-item">
+                      <label>{property.label}</label>
+                      <PropertyEditor
+                        type={property.type as any}
+                        value={(component.style as any)?.[property.name]}
+                        onChange={(value) => handleStyleChange(property.name, value)}
+                        options={property.options as string[]}
+                      />
+                    </div>
+                  ))}
               </div>
-            ))}
-        </div>
-      )}
-    </div>
+            )}
+
+            {/* Data Properties */}
+            {definition && definition.properties.filter(p => p.group === 'data').length > 0 && (
+              <div className="property-group">
+                <div className="property-group-title">数据</div>
+                {definition.properties
+                  .filter(p => p.group === 'data')
+                  .map((property) => (
+                    <div key={property.name} className="property-item">
+                      <label>{property.label}</label>
+                      {property.name === 'src' && component.type === 'hg_image' ? (
+                        renderImageProperty(
+                          (component.data as any)?.[property.name],
+                          (value) => handleDataChange(property.name, value)
+                        )
+                      ) : (
+                        <PropertyEditor
+                          type={property.type as any}
+                          value={(component.data as any)?.[property.name]}
+                          onChange={(value) => handleDataChange(property.name, value)}
+                          options={property.options as string[]}
+                        />
+                      )}
+                    </div>
+                  ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {activeTab === 'events' && (
+          <EventsPanel component={component} onUpdate={onUpdate} />
+        )}
+      </div>
+    </>
   );
 };

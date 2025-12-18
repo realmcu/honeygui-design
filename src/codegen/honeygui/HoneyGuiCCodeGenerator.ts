@@ -476,12 +476,11 @@ void ${baseName}_update_user(void) {
     code += `${indentStr}static void ${name}_switch_in(gui_view_t *view)\n`;
     code += `${indentStr}{\n`;
     
-    // 1. 注册视图切换事件
-    if (component.view_switch && component.view_switch.length > 0) {
-      component.view_switch.forEach(switchEvent => {
-        const targetComponent = this.componentMap.get(switchEvent.target);
-        const targetName = targetComponent?.name || switchEvent.target;
-        code += `${indentStr}    gui_view_switch_on_event(view, "${targetName}", ${switchEvent.switch_out_style}, ${switchEvent.switch_in_style}, ${switchEvent.event});\n`;
+    // 1. 注册视图切换事件 (从 eventConfigs 中提取 switchView 动作)
+    const switchViewEvents = this.extractSwitchViewEvents(component);
+    if (switchViewEvents.length > 0) {
+      switchViewEvents.forEach(({ guiEvent, targetName, switchOutStyle, switchInStyle }) => {
+        code += `${indentStr}    gui_view_switch_on_event(view, "${targetName}", ${switchOutStyle}, ${switchInStyle}, ${guiEvent});\n`;
       });
     } else {
       code += `${indentStr}    GUI_UNUSED(view);\n`;
@@ -504,6 +503,53 @@ void ${baseName}_update_user(void) {
     code += `${indentStr}GUI_VIEW_INSTANCE("${name}", false, ${name}_switch_in, ${name}_switch_out);\n`;
 
     return code;
+  }
+
+  /**
+   * 从 eventConfigs 中提取 switchView 事件
+   */
+  private extractSwitchViewEvents(component: Component): Array<{
+    guiEvent: string;
+    targetName: string;
+    switchOutStyle: string;
+    switchInStyle: string;
+  }> {
+    const result: Array<{
+      guiEvent: string;
+      targetName: string;
+      switchOutStyle: string;
+      switchInStyle: string;
+    }> = [];
+
+    if (!component.eventConfigs) return result;
+
+    // 事件类型到 GUI_EVENT 的映射
+    const eventTypeToGuiEvent: Record<string, string> = {
+      'onSwipeLeft': 'GUI_EVENT_TOUCH_MOVE_LEFT',
+      'onSwipeRight': 'GUI_EVENT_TOUCH_MOVE_RIGHT',
+      'onSwipeUp': 'GUI_EVENT_TOUCH_MOVE_UP',
+      'onSwipeDown': 'GUI_EVENT_TOUCH_MOVE_DOWN',
+    };
+
+    component.eventConfigs.forEach(eventConfig => {
+      const guiEvent = eventTypeToGuiEvent[eventConfig.type];
+      if (!guiEvent) return;
+
+      eventConfig.actions.forEach(action => {
+        if (action.type === 'switchView' && action.target) {
+          const targetComponent = this.componentMap.get(action.target);
+          const targetName = targetComponent?.name || action.target;
+          result.push({
+            guiEvent,
+            targetName,
+            switchOutStyle: action.switchOutStyle || 'SWITCH_OUT_TO_LEFT_USE_TRANSLATION',
+            switchInStyle: action.switchInStyle || 'SWITCH_IN_FROM_RIGHT_USE_TRANSLATION',
+          });
+        }
+      });
+    });
+
+    return result;
   }
 
   /**

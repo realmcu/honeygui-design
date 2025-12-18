@@ -683,10 +683,16 @@ if os.path.exists(os.path.join(PROJECT_SRC, 'SConscript')):
         const entries = fs.readdirSync(src, { withFileTypes: true });
         for (const entry of entries) {
             const srcPath = path.join(src, entry.name);
-            const destPath = path.join(dest, entry.name);
+            let destPath = path.join(dest, entry.name);
+            
             if (entry.isDirectory()) {
                 this.copyDirectory(srcPath, destPath);
             } else {
+                // 如果是 .hml 文件，改为 .xml 后缀
+                if (entry.name.endsWith('.hml')) {
+                    const newName = entry.name.replace(/\.hml$/, '.xml');
+                    destPath = path.join(dest, newName);
+                }
                 fs.copyFileSync(srcPath, destPath);
             }
         }

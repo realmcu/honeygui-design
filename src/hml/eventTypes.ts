@@ -1,0 +1,138 @@
+/**
+ * Event-Action 系统类型定义
+ */
+
+// ============ 事件类型 ============
+
+export type EventType =
+  // 通用事件
+  | 'onClick'
+  | 'onLongPress'
+  | 'onTouchDown'
+  | 'onTouchUp'
+  // 滑动事件
+  | 'onSwipeLeft'
+  | 'onSwipeRight'
+  | 'onSwipeUp'
+  | 'onSwipeDown'
+  // 状态事件
+  | 'onValueChange'
+  | 'onCheckedChange'
+  // 生命周期事件
+  | 'onShow'
+  | 'onHide'
+  // 消息事件
+  | 'onMessage';
+
+// ============ 动作类型 ============
+
+export type ActionType =
+  // 视图切换(跳转界面，带动画)
+  | 'switchView'
+  // 消息
+  | 'sendMessage'
+  // 自定义
+  | 'callFunction';
+
+// ============ 动作定义 ============
+
+export interface Action {
+  type: ActionType;
+  target?: string;           // 目标视图ID (switchView用)
+  message?: string;          // 消息名(sendMessage用)
+  functionName?: string;     // 函数名(callFunction用)
+  // switchView专用
+  switchOutStyle?: string;   // 退出动画
+  switchInStyle?: string;    // 进入动画
+}
+
+// ============ 事件配置 ============
+
+export interface EventConfig {
+  type: EventType;
+  message?: string;          // 仅 onMessage 事件需要
+  actions: Action[];
+}
+
+// ============ 组件支持的事件映射 ============
+
+export const COMPONENT_SUPPORTED_EVENTS: Record<string, EventType[]> = {
+  hg_view: ['onClick', 'onLongPress', 'onTouchDown', 'onTouchUp', 'onSwipeLeft', 'onSwipeRight', 'onSwipeUp', 'onSwipeDown', 'onShow', 'onHide', 'onMessage'],
+  hg_window: ['onClick', 'onLongPress', 'onTouchDown', 'onTouchUp', 'onSwipeLeft', 'onSwipeRight', 'onSwipeUp', 'onSwipeDown', 'onShow', 'onHide', 'onMessage'],
+  hg_button: ['onClick', 'onLongPress', 'onTouchDown', 'onTouchUp', 'onMessage'],
+  hg_image: ['onClick', 'onLongPress', 'onTouchDown', 'onTouchUp', 'onMessage'],
+  hg_text: ['onClick', 'onLongPress', 'onMessage'],
+  hg_label: ['onClick', 'onLongPress', 'onMessage'],
+  hg_switch: ['onClick', 'onCheckedChange', 'onMessage'],
+  hg_checkbox: ['onClick', 'onCheckedChange', 'onMessage'],
+  hg_radio: ['onClick', 'onCheckedChange', 'onMessage'],
+  hg_slider: ['onClick', 'onValueChange', 'onMessage'],
+  hg_progressbar: ['onClick', 'onValueChange', 'onMessage'],
+  hg_input: ['onClick', 'onValueChange', 'onMessage'],
+  hg_canvas: ['onClick', 'onLongPress', 'onMessage'],
+  hg_arc: ['onClick', 'onLongPress', 'onMessage'],
+  hg_rect: ['onClick', 'onLongPress', 'onMessage'],
+  hg_svg: ['onClick', 'onLongPress', 'onMessage'],
+  hg_lottie: ['onClick', 'onLongPress', 'onMessage'],
+  hg_video: ['onClick', 'onLongPress', 'onMessage'],
+  hg_3d: ['onClick', 'onLongPress', 'onMessage'],
+};
+
+// 默认支持的事件(未在映射中的组件)
+export const DEFAULT_SUPPORTED_EVENTS: EventType[] = ['onClick', 'onLongPress', 'onMessage'];
+
+// ============ 事件显示名称 ============
+
+export const EVENT_LABELS: Record<EventType, string> = {
+  onClick: '单击',
+  onLongPress: '长按',
+  onTouchDown: '按下',
+  onTouchUp: '抬起',
+  onSwipeLeft: '左滑',
+  onSwipeRight: '右滑',
+  onSwipeUp: '上滑',
+  onSwipeDown: '下滑',
+  onValueChange: '值改变',
+  onCheckedChange: '选中改变',
+  onShow: '显示',
+  onHide: '隐藏',
+  onMessage: '消息监听',
+};
+
+// ============ 动作显示名称 ============
+
+export const ACTION_LABELS: Record<ActionType, string> = {
+  switchView: '跳转界面',
+  sendMessage: '发送消息',
+  callFunction: '调用函数',
+};
+
+// ============ 视图切换动画选项 ============
+
+export const SWITCH_OUT_STYLES = [
+  { value: 'SWITCH_OUT_TO_LEFT_USE_TRANSLATION', label: '向左平移' },
+  { value: 'SWITCH_OUT_TO_RIGHT_USE_TRANSLATION', label: '向右平移' },
+  { value: 'SWITCH_OUT_TO_TOP_USE_TRANSLATION', label: '向上平移' },
+  { value: 'SWITCH_OUT_TO_BOTTOM_USE_TRANSLATION', label: '向下平移' },
+  { value: 'SWITCH_OUT_TO_LEFT_USE_CUBE', label: '向左立方体' },
+  { value: 'SWITCH_OUT_TO_RIGHT_USE_CUBE', label: '向右立方体' },
+  { value: 'SWITCH_OUT_NONE_ANIMATION', label: '无动画' },
+  { value: 'SWITCH_OUT_ANIMATION_FADE', label: '淡出' },
+];
+
+export const SWITCH_IN_STYLES = [
+  { value: 'SWITCH_IN_FROM_LEFT_USE_TRANSLATION', label: '从左平移' },
+  { value: 'SWITCH_IN_FROM_RIGHT_USE_TRANSLATION', label: '从右平移' },
+  { value: 'SWITCH_IN_FROM_TOP_USE_TRANSLATION', label: '从上平移' },
+  { value: 'SWITCH_IN_FROM_BOTTOM_USE_TRANSLATION', label: '从下平移' },
+  { value: 'SWITCH_IN_FROM_LEFT_USE_CUBE', label: '从左立方体' },
+  { value: 'SWITCH_IN_FROM_RIGHT_USE_CUBE', label: '从右立方体' },
+  { value: 'SWITCH_IN_NONE_ANIMATION', label: '无动画' },
+  { value: 'SWITCH_IN_ANIMATION_FADE', label: '淡入' },
+];
+
+// ============ 辅助函数 ============
+
+export function getSupportedEvents(componentType: string): EventType[] {
+  return COMPONENT_SUPPORTED_EVENTS[componentType] || DEFAULT_SUPPORTED_EVENTS;
+}

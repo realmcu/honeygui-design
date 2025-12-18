@@ -5,8 +5,20 @@
         <author name="HoneyGUI Design" />
     </meta>
     <view>
-        <hg_view id="mainView" x="160" y="104" width="410" height="502" backgroundColor="#000000" name="mainView">
-            <hg_image id="hg_image_1765962158186_47k1" x="73" y="101" width="200" height="245" src="assets/app_home_list/watchface_big_num.png" name="image_8186" zIndex="1" />
+        <hg_view id="mainView" x="121" y="125" width="410" height="502" backgroundColor="#000000" name="mainView">
+            <events>
+                <event type="onSwipeLeft">
+                    <action type="switchView" target="hg_view_1766022481486_seii" />
+                </event>
+            </events>
+            <hg_image id="hg_image_1766022476082_9kt6" x="145" y="127" width="100" height="100" src="assets/UI_app_list/app_contacts_icon.png" name="image_6082" zIndex="1">
+                <events>
+                    <event type="onClick" />
+                </events>
+            </hg_image>
+        </hg_view>
+        <hg_view id="hg_view_1766022481486_seii" x="636" y="115" width="410" height="502" backgroundColor="#000000" borderRadius="0" padding="12" overflow="auto" name="hg_view_1486" zIndex="1">
+            <hg_image id="hg_image_1766022491405_3gr8" x="193" y="244" width="100" height="106" src="assets/UI_app_list/app_activity_icon.png" name="image_1405" zIndex="1" />
         </hg_view>
     </view>
 </hml>

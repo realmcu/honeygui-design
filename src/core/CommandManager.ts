@@ -7,6 +7,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { CollaborationService } from './CollaborationService';
 import { StatusBarManager } from '../ui/StatusBarManager';
+import { ProjectUtils } from '../utils/ProjectUtils';
 
 /**
  * HoneyGUI命令管理器
@@ -255,13 +256,17 @@ export class CommandManager {
                     const designDir = path.join(uiDir, designName);
                     fs.mkdirSync(designDir, { recursive: true });
                     
+                    // 读取项目配置获取分辨率
+                    const projectConfig = ProjectUtils.loadProjectConfig(workspaceRoot);
+                    const { width, height } = ProjectUtils.parseResolution(projectConfig.resolution);
+                    
                     // 创建HML文件
                     const hmlFilePath = path.join(designDir, `${designName}.hml`);
                     const viewName = `${designName}View`;
                     const defaultContent = `<?xml version="1.0" encoding="UTF-8"?>
 <hml version="1.0">
-    <view id="main" width="480" height="272" background-color="#f0f0f0">
-        <hg_view id="${viewName}" x="0" y="0" width="480" height="272" name="${viewName}" backgroundColor="#000000">
+    <view id="main" width="${width}" height="${height}" background-color="#f0f0f0">
+        <hg_view id="${viewName}" x="0" y="0" width="${width}" height="${height}" name="${viewName}" backgroundColor="#000000">
             <!-- 在这里添加您的组件 -->
         </hg_view>
     </view>

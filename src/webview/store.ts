@@ -226,12 +226,14 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     let cleanedCount = 0;
     if (component.type === 'hg_view') {
       state.components.forEach(c => {
-        if (c.type === 'hg_view' && c.view_switch) {
-          const originalLength = c.view_switch.length;
-          const filtered = c.view_switch.filter(sw => sw.target !== id);
-          if (filtered.length < originalLength) {
-            cleanedCount++;
-          }
+        if (c.eventConfigs) {
+          c.eventConfigs.forEach(eventConfig => {
+            eventConfig.actions.forEach(action => {
+              if (action.type === 'switchView' && action.target === id) {
+                cleanedCount++;
+              }
+            });
+          });
         }
       });
     }
@@ -240,13 +242,18 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       components: state.components
         .filter((c) => c.id !== id && c.parent !== id)
         .map(c => {
-          // 清理 view_switch 引用
-          if (c.type === 'hg_view' && c.view_switch && c.view_switch.length > 0 && component.type === 'hg_view') {
-            const newViewSwitch = c.view_switch.filter(sw => sw.target !== id);
-            console.log(`[Store] 清理 ${c.id} 的 view_switch: ${c.view_switch.length} -> ${newViewSwitch.length}`);
+          // 清理 eventConfigs 中的 switchView 引用
+          if (c.eventConfigs && component.type === 'hg_view') {
+            const newEventConfigs = c.eventConfigs.map(eventConfig => ({
+              ...eventConfig,
+              actions: eventConfig.actions.filter(action => 
+                !(action.type === 'switchView' && action.target === id)
+              )
+            })).filter(eventConfig => eventConfig.actions.length > 0);
+            
             return {
               ...c,
-              view_switch: newViewSwitch
+              eventConfigs: newEventConfigs.length > 0 ? newEventConfigs : undefined
             };
           }
           return c;
@@ -281,16 +288,18 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     // 统计清理的引用数量
     let cleanedCount = 0;
     const deletedViews = state.components.filter(c => filteredIds.includes(c.id) && c.type === 'hg_view');
+    const deletedViewIds = deletedViews.map(v => v.id);
     
     if (deletedViews.length > 0) {
-      const deletedViewIds = deletedViews.map(v => v.id);
       state.components.forEach(c => {
-        if (c.type === 'hg_view' && c.view_switch) {
-          const originalLength = c.view_switch.length;
-          const filtered = c.view_switch.filter(sw => !deletedViewIds.includes(sw.target));
-          if (filtered.length < originalLength) {
-            cleanedCount++;
-          }
+        if (c.eventConfigs) {
+          c.eventConfigs.forEach(eventConfig => {
+            eventConfig.actions.forEach(action => {
+              if (action.type === 'switchView' && action.target && deletedViewIds.includes(action.target)) {
+                cleanedCount++;
+              }
+            });
+          });
         }
       });
     }
@@ -299,12 +308,18 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       components: state.components
         .filter((c) => !filteredIds.includes(c.id) && !filteredIds.includes(c.parent as any))
         .map(c => {
-          // 清理 view_switch 引用
-          if (c.type === 'hg_view' && c.view_switch && deletedViews.length > 0) {
-            const deletedViewIds = deletedViews.map(v => v.id);
+          // 清理 eventConfigs 中的 switchView 引用
+          if (c.eventConfigs && deletedViews.length > 0) {
+            const newEventConfigs = c.eventConfigs.map(eventConfig => ({
+              ...eventConfig,
+              actions: eventConfig.actions.filter(action => 
+                !(action.type === 'switchView' && action.target && deletedViewIds.includes(action.target))
+              )
+            })).filter(eventConfig => eventConfig.actions.length > 0);
+            
             return {
               ...c,
-              view_switch: c.view_switch.filter(sw => !deletedViewIds.includes(sw.target))
+              eventConfigs: newEventConfigs.length > 0 ? newEventConfigs : undefined
             };
           }
           return c;
@@ -400,10 +415,10 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     console.log('[Webview Store] 准备保存到文件');
     console.log('[Webview Store] 当前组件数量:', state.components.length);
     
-    // 调试：打印所有 view_switch
+    // 调试：打印所有 eventConfigs
     state.components.forEach(c => {
-      if (c.type === 'hg_view' && c.view_switch && c.view_switch.length > 0) {
-        console.log(`[Webview Store] ${c.id} 的 view_switch:`, JSON.stringify(c.view_switch));
+      if (c.eventConfigs && c.eventConfigs.length > 0) {
+        console.log(`[Webview Store] ${c.id} 的 eventConfigs:`, JSON.stringify(c.eventConfigs));
       }
     });
 

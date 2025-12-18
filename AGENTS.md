@@ -89,6 +89,11 @@ src/webview/
 - CSS 类: kebab-case (`.designer-canvas`)
 - 函数: camelCase (`handleDrop`)
 
+### 代码复用规则
+- **分辨率解析**：统一使用 `ProjectUtils.parseResolution(resolution)`，不要重复实现
+- **项目配置读取**：使用 `ProjectUtils.loadProjectConfig(projectRoot)`
+- **路径获取**：使用 `ProjectUtils.getAssetsDir()` / `getUiDir()` / `getSrcDir()`
+- **添加新功能前**：先搜索是否已有类似工具函数，避免重复造轮
 
 
 ## 常见任务

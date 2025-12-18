@@ -50,8 +50,57 @@ const App: React.FC = () => {
   const minRightPanelWidth = 250;
   const maxRightPanelWidth = 500;
 
+  // 面板折叠状态
+  const [leftPanelCollapsed, setLeftPanelCollapsed] = React.useState(false);
+  const [rightPanelCollapsed, setRightPanelCollapsed] = React.useState(false);
+  const [savedLeftPanelWidth, setSavedLeftPanelWidth] = React.useState(280);
+  const [savedRightPanelWidth, setSavedRightPanelWidth] = React.useState(300);
+
+  // 切换左侧面板
+  const toggleLeftPanel = () => {
+    if (leftPanelCollapsed) {
+      setLeftPanelWidth(savedLeftPanelWidth);
+      setLeftPanelCollapsed(false);
+    } else {
+      setSavedLeftPanelWidth(leftPanelWidth);
+      setLeftPanelWidth(0);
+      setLeftPanelCollapsed(true);
+    }
+  };
+
+  // 切换右侧面板
+  const toggleRightPanel = () => {
+    if (rightPanelCollapsed) {
+      setRightPanelWidth(savedRightPanelWidth);
+      setRightPanelCollapsed(false);
+    } else {
+      setSavedRightPanelWidth(rightPanelWidth);
+      setRightPanelWidth(0);
+      setRightPanelCollapsed(true);
+    }
+  };
+
   // Initialize keyboard shortcuts
   useKeyboardShortcuts();
+
+  // 快捷键：切换面板
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+B: 切换左侧面板
+      if (e.ctrlKey && e.key === 'b' && !e.shiftKey) {
+        e.preventDefault();
+        toggleLeftPanel();
+      }
+      // Ctrl+Shift+B: 切换右侧面板
+      if (e.ctrlKey && e.shiftKey && e.key === 'B') {
+        e.preventDefault();
+        toggleRightPanel();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [leftPanelCollapsed, rightPanelCollapsed, leftPanelWidth, rightPanelWidth, savedLeftPanelWidth, savedRightPanelWidth]);
 
   // 安全初始化VSCode API（确保只使用已有的实例）
   useEffect(() => {
@@ -798,7 +847,7 @@ const App: React.FC = () => {
       {/* Main Content */}
       <div className="main-content">
         {/* Left Panel - Tabbed */}
-        <div className="left-panel" style={{ width: `${leftPanelWidth}px` }}>
+        <div className="left-panel" style={{ width: `${leftPanelWidth}px`, display: leftPanelCollapsed ? 'none' : 'flex' }}>
           {/* Tab Headers */}
           <div className="tab-headers">
             <button 
@@ -833,7 +882,27 @@ const App: React.FC = () => {
         <div 
           className={`panel-resizer ${isResizingLeft ? 'resizing' : ''}`}
           onMouseDown={handleLeftMouseDown}
-        />
+          style={{ display: leftPanelCollapsed ? 'none' : 'block' }}
+        >
+          <button 
+            className="collapse-button left"
+            onClick={toggleLeftPanel}
+            title="收起左侧面板 (Ctrl+B)"
+          >
+            ◀
+          </button>
+        </div>
+
+        {/* Left Panel Collapsed Button */}
+        {leftPanelCollapsed && (
+          <button 
+            className="expand-button left"
+            onClick={toggleLeftPanel}
+            title="展开左侧面板 (Ctrl+B)"
+          >
+            ▶
+          </button>
+        )}
 
         {/* Center - Canvas */}
         <div
@@ -845,14 +914,34 @@ const App: React.FC = () => {
           <DesignerCanvas onComponentSelect={handleComponentSelect} />
         </div>
 
+        {/* Right Panel Collapsed Button */}
+        {rightPanelCollapsed && (
+          <button 
+            className="expand-button right"
+            onClick={toggleRightPanel}
+            title="展开右侧面板 (Ctrl+Shift+B)"
+          >
+            ◀
+          </button>
+        )}
+
         {/* Resizer for right panel */}
         <div 
           className={`panel-resizer ${isResizingRight ? 'resizing' : ''}`}
           onMouseDown={handleRightMouseDown}
-        />
+          style={{ display: rightPanelCollapsed ? 'none' : 'block' }}
+        >
+          <button 
+            className="collapse-button right"
+            onClick={toggleRightPanel}
+            title="收起右侧面板 (Ctrl+Shift+B)"
+          >
+            ▶
+          </button>
+        </div>
 
         {/* Right Panel - Properties */}
-        <div className="right-panel" style={{ width: `${rightPanelWidth}px` }}>
+        <div className="right-panel" style={{ width: `${rightPanelWidth}px`, display: rightPanelCollapsed ? 'none' : 'flex' }}>
           <PropertiesPanel />
         </div>
       </div>

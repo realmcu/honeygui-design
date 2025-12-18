@@ -97,4 +97,22 @@ export class ProjectUtils {
         const config = this.loadProjectConfig(projectRoot);
         return path.join(projectRoot, config.srcDir || 'src');
     }
+
+    /**
+     * 解析分辨率字符串
+     * @param resolution 分辨率字符串，如 "480X272"
+     * @returns 宽高对象，解析失败返回默认值 480x272
+     */
+    static parseResolution(resolution?: string): { width: number; height: number } {
+        if (!resolution) {
+            return { width: 480, height: 272 };
+        }
+        const parts = resolution.split('X');
+        const width = parseInt(parts[0]);
+        const height = parseInt(parts[1]);
+        if (isNaN(width) || isNaN(height)) {
+            return { width: 480, height: 272 };
+        }
+        return { width, height };
+    }
 }

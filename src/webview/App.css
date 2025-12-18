@@ -93,6 +93,76 @@
   right: -2px;
 }
 
+/* Collapse/Expand Buttons */
+.collapse-button {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 40px;
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  opacity: 0;
+  transition: opacity 0.2s, background-color 0.2s;
+  z-index: 10;
+}
+
+.collapse-button.left {
+  right: -10px;
+}
+
+.collapse-button.right {
+  left: -10px;
+}
+
+.panel-resizer:hover .collapse-button {
+  opacity: 1;
+}
+
+.collapse-button:hover {
+  background: var(--vscode-button-hoverBackground);
+  opacity: 1;
+}
+
+.expand-button {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 60px;
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  transition: background-color 0.2s;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.expand-button.left {
+  left: 0;
+}
+
+.expand-button.right {
+  right: 0;
+}
+
+.expand-button:hover {
+  background: var(--vscode-button-hoverBackground);
+}
+
 /* Responsive design */
 @media (max-width: 1280px) {
   :root {
