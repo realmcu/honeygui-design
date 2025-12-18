@@ -8,16 +8,17 @@
 - **可视化设计器**：基于React的拖放式界面设计，支持HoneyGUI组件库
 - **HML文件格式**：HoneyGUI Markup Language，类XML格式描述界面结构
 - **C代码生成**：将HML设计转换为调用HoneyGUI API的C代码
-- **代码保护区**：重新生成代码时保留用户自定义逻辑
+- **代码保护区**：支持用户自定义逻辑保留机制
 - **编译仿真**：完整的编译-运行-调试流程，基于HoneyGUI SDK
 - **协同开发**：局域网多人实时协同编辑（离线可用）
-- **资源管理**：统一管理图片、字体等资源文件
+- **资源管理**：统一管理图片、字体、视频、3D模型等资源文件
 
 ### 支持的组件类型
 - 容器：`hg_screen`, `hg_view`, `hg_window`
 - 基础控件：`hg_button`, `hg_text`, `hg_image`, `hg_switch`
 - 输入控件：`hg_input`, `hg_checkbox`, `hg_radio`
 - 高级控件：`hg_progressbar`, `hg_slider`, `hg_canvas`
+- 多媒体/3D：`hg_video`, `hg_3d`
 - 以及更多...
 
 ## 安装
@@ -28,10 +29,11 @@
 3. 选择下载的文件并安装
 
 ### 前置依赖（用于编译仿真）
-- **HoneyGUI SDK**：安装到 `~/.HoneyGUI-SDK`
+- **HoneyGUI SDK**：安装到 `~/.HoneyGUI-SDK`（或在设置中配置路径）
 - **SCons**：构建工具（`pip install scons`）
 - **GCC/MinGW**：C编译器
 - **SDL2**：图形库（仅运行仿真时需要）
+- **FFmpeg**：视频转换工具（可选，用于处理视频资源）
 
 ## 快速开始
 
@@ -93,7 +95,7 @@ src/
 | 文件 | 策略 | 说明 |
 |------|------|------|
 | `*_ui.h/c` | 每次覆盖 | 纯UI代码，由设计器完全控制 |
-| `*_callbacks.c` | 保护区 | 新回调自动添加，已有代码保留 |
+| `*_callbacks.c` | 保护区 | 用户自定义逻辑保留 |
 | `user/*.c` | 只生成一次 | 用户完全控制，永不覆盖 |
 
 ### 4. 编译仿真
@@ -104,11 +106,20 @@ Ctrl+Shift+P → HoneyGUI: Compile & Simulate
 
 自动执行：
 1. 环境检查（SDK、SCons、GCC）
-2. 转换图片资源（.png/.jpg → .bin）
+2. 转换资源（图片、视频、3D模型 → .bin）
 3. 生成C代码
 4. 准备编译环境（拷贝SDK的`win32_sim/`到`build/`，修改`build/SConstruct`）
 5. 执行SCons编译
-6. 启动SDL2仿真窗口
+6. 启动SDL2仿真窗口（支持 Letter Shell 交互）
+
+## 资源处理
+
+HoneyGUI Design 自动处理资源转换：
+- **图片**：PNG/JPG/JPEG → HoneyGUI 格式（自动检测格式）
+- **视频**：MP4/AVI 等 → MJPEG/H264/AVI（使用 FFmpeg 预处理）
+- **3D模型**：OBJ/GLTF → HoneyGUI 二进制描述文件（自动处理纹理和依赖）
+
+**注意**：拖拽 GLTF 模型时，请确保同时拖拽关联的 `.bin` 文件。
 
 ## 代码生成策略
 
@@ -128,13 +139,12 @@ gui_obj_t *button1 = NULL;
 ### 2. 回调保护区（保留用户代码）
 ```c
 // main_callbacks.c
-/* @protected start on_button_click */
-void on_button_click(gui_obj_t *obj) {
-    // 用户自定义逻辑，重新生成时保留
-    printf("Button clicked!\n");
-    update_ui_state();
+/* @protected start custom_functions */
+// 用户自定义函数
+void my_custom_logic(void) {
+    // ...
 }
-/* @protected end on_button_click */
+/* @protected end custom_functions */
 ```
 
 ### 3. 用户代码目录（完全控制）
@@ -149,8 +159,6 @@ void main_init_user(void) {
 void main_update_user(void) {
     // 在此添加更新逻辑
 }
-
-// 添加任意自定义函数...
 ```
 
 ## 协同开发
@@ -238,56 +246,6 @@ src/webview/
     └── undoRedo.ts           # 撤销/重做
 ```
 
-### 通信协议
-```typescript
-// 扩展 → Webview
-{ command: 'loadHml', components: [...], projectConfig: {...} }
-{ command: 'showMessage', text: '...', type: 'info' }
-
-// Webview → 扩展
-{ command: 'save', components: [...] }
-{ command: 'codegen', language: 'c' }
-{ command: 'updateComponent', id: '...', updates: {...} }
-```
-
-## 开发指南
-
-### 环境搭建
-```bash
-git clone <repository>
-cd honeygui-design
-npm install
-```
-
-### 快速调试 ⚡
-**推荐**: 使用 Watch 模式 + Quick Start 配置，启动速度 < 2秒
-
-### 开发模式
-```bash
-# 终端1：编译扩展端
-npm run watch
-
-# 终端2：编译Webview端
-npm run watch:webview
-
-# 调试面板选择 "🚀 Quick Start"，按F5启动
-```
-
-### 测试
-```bash
-# E2E测试（需要SDK）
-npm run test:e2e
-
-# 单元测试
-npm test
-```
-
-### 构建发布
-```bash
-npm run vscode:prepublish  # 生产构建
-vsce package               # 打包VSIX
-```
-
 ## 文档
 
 - [文档中心](docs/README.md) - 完整文档导航
@@ -295,23 +253,10 @@ vsce package               # 打包VSIX
 - [预览和编译架构](docs/预览和编译架构.md) - 仿真流程说明
 - [代码生成](docs/代码生成.md) - 代码生成机制
 - [事件系统设计](docs/事件系统设计.md) - 事件绑定和回调机制
+- [资源处理流程](docs/资源处理流程.md) - 图片、视频、3D模型转换
 - [开发指南](docs/开发指南.md) - 开发环境和工作流
 - [测试指南](docs/测试指南.md) - 测试策略和方法
 - [变更日志](docs/变更日志.md) - 版本更新记录
-
-## 版本历史
-
-### v1.3.2 (2025-12-10)
-- 项目模板系统（智能手表、设置菜单、仪表盘）
-- 视频控件 (hg_video) 支持
-
-### v1.3.1 (2025-12-03)
-- 左侧面板改为 Tab 切换模式
-- 修复左侧面板折叠功能异常
-
-### v1.2.1 (2025-11-29)
-- 重构编译架构，抽离BuildCore核心逻辑
-- 改进E2E测试，复用编译逻辑
 
 ## 许可证
 
