@@ -347,16 +347,22 @@ const App: React.FC = () => {
    */
   const findDropTarget = (e: React.DragEvent): Component | null => {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const x = Math.max(0, Math.round(e.clientX - rect.left));
-    const y = Math.max(0, Math.round(e.clientY - rect.top));
+    const state = useDesignerStore.getState();
+    const dpr = window.devicePixelRatio || 1;
+    // 将鼠标坐标转换为画布坐标系（考虑 canvasOffset 和 zoom）
+    const x = Math.round((e.clientX - rect.left - state.canvasOffset.x) / (state.zoom / dpr));
+    const y = Math.round((e.clientY - rect.top - state.canvasOffset.y) / (state.zoom / dpr));
 
-    return findComponentAtPosition(x, y, useDesignerStore.getState().components);
+    return findComponentAtPosition(x, y, state.components);
   };
 
   const handleImageFileDrop = async (e: React.DragEvent, files: FileList, createComponent: boolean = true) => {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const x = Math.max(0, Math.round(e.clientX - rect.left));
-    const y = Math.max(0, Math.round(e.clientY - rect.top));
+    const state = useDesignerStore.getState();
+    const dpr = window.devicePixelRatio || 1;
+    // 将鼠标坐标转换为画布坐标系
+    const x = Math.round((e.clientX - rect.left - state.canvasOffset.x) / (state.zoom / dpr));
+    const y = Math.round((e.clientY - rect.top - state.canvasOffset.y) / (state.zoom / dpr));
 
     let targetContainer: Component | null = null;
 
@@ -392,8 +398,11 @@ const App: React.FC = () => {
 
   const handleModelFileDrop = async (e: React.DragEvent, files: FileList) => {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const x = Math.max(0, Math.round(e.clientX - rect.left));
-    const y = Math.max(0, Math.round(e.clientY - rect.top));
+    const state = useDesignerStore.getState();
+    const dpr = window.devicePixelRatio || 1;
+    // 将鼠标坐标转换为画布坐标系
+    const x = Math.round((e.clientX - rect.left - state.canvasOffset.x) / (state.zoom / dpr));
+    const y = Math.round((e.clientY - rect.top - state.canvasOffset.y) / (state.zoom / dpr));
 
     const targetContainer = findDropTarget(e);
     if (!targetContainer) {
@@ -556,8 +565,11 @@ const App: React.FC = () => {
       const canvasRect = document.querySelector('.designer-canvas')?.getBoundingClientRect();
       if (!canvasRect) return;
 
-      const x = (e.clientX - canvasRect.left) / useDesignerStore.getState().zoom;
-      const y = (e.clientY - canvasRect.top) / useDesignerStore.getState().zoom;
+      const state = useDesignerStore.getState();
+      const dpr = window.devicePixelRatio || 1;
+      // 将鼠标坐标转换为画布坐标系（考虑 canvasOffset 和 zoom）
+      const x = (e.clientX - canvasRect.left - state.canvasOffset.x) / (state.zoom / dpr);
+      const y = (e.clientY - canvasRect.top - state.canvasOffset.y) / (state.zoom / dpr);
 
       const api = useDesignerStore.getState().vscodeAPI;
       if (api) {
