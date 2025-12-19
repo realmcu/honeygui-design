@@ -73,6 +73,7 @@ export interface DesignerState {
   undoStack: any[];
   redoStack: any[];
   projectConfig?: any; // Project configuration (resolution, etc.)
+  assetCategory: 'all' | 'images' | 'videos' | 'models' | 'fonts'; // 资源面板分类
 }
 
 export interface VSCodeAPI {

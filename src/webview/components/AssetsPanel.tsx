@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Trash2, Edit2, Upload, FolderUp } from 'lucide-react';
 import { AssetFile } from '../types';
+import { useDesignerStore } from '../store';
 import './AssetsPanel.css';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -328,7 +329,8 @@ const isModelDependency = (name: string): boolean => {
 
 const AssetsPanel: React.FC = () => {
   const [assets, setAssets] = useState<AssetFile[]>([]);
-  const [activeCategory, setActiveCategory] = useState<AssetCategory>('all');
+  const activeCategory = useDesignerStore((state) => state.assetCategory);
+  const setActiveCategory = useDesignerStore((state) => state.setAssetCategory);
   const [editingAsset, setEditingAsset] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);

@@ -94,6 +94,9 @@ export interface DesignerStore extends DesignerState {
   showViewRelationModal: boolean;
   setShowViewRelationModal: (show: boolean) => void;
 
+  // Assets
+  setAssetCategory: (category: 'all' | 'images' | 'videos' | 'models' | 'fonts') => void;
+
   // Drag and drop
   startDrag: (componentId: string, mousePos: { x: number; y: number }) => void;
   drag: (mousePos: { x: number; y: number }) => void;
@@ -161,6 +164,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   undoStack: [],
   redoStack: [],
   vscodeAPI: null,
+  assetCategory: 'all' as 'all' | 'images' | 'videos' | 'models' | 'fonts', // 资源面板分类
 
   // Actions
   setComponents: (components) => {
@@ -365,6 +369,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   setCanvasBackgroundColor: (color) => set({ canvasBackgroundColor: color }),
   setShowViewConnections: (show) => set({ showViewConnections: show }),
   setShowViewRelationModal: (show) => set({ showViewRelationModal: show }),
+  setAssetCategory: (category) => set({ assetCategory: category }),
   
   // 将指定组件居中显示在画布上
   centerViewOnCanvas: (componentId) => {

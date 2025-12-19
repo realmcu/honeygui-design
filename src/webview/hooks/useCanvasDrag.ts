@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 /**
  * 画布拖拽 Hook
  * 处理画布的拖拽移动
- * 支持：空格+左键拖动、中键拖动
+ * 支持：Ctrl+左键拖动、中键拖动
  */
 export const useCanvasDrag = (
   canvasOffset: { x: number; y: number },
@@ -12,21 +12,20 @@ export const useCanvasDrag = (
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [canvasOffsetStart, setCanvasOffsetStart] = useState({ x: 0, y: 0 });
-  const [isSpacePressed, setIsSpacePressed] = useState(false);
+  const [isCtrlPressed, setIsCtrlPressed] = useState(false);
 
-  // 监听空格键
+  // 监听 Ctrl 键
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Space' && !e.repeat) {
-        e.preventDefault();
-        setIsSpacePressed(true);
+      if (e.ctrlKey && !e.repeat) {
+        setIsCtrlPressed(true);
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code === 'Space') {
-        setIsSpacePressed(false);
-        setIsDragging(false); // 释放空格时停止拖动
+      if (!e.ctrlKey) {
+        setIsCtrlPressed(false);
+        setIsDragging(false); // 释放 Ctrl 时停止拖动
       }
     };
 
@@ -40,8 +39,8 @@ export const useCanvasDrag = (
   }, []);
 
   const handleCanvasMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    // 空格+左键 或 中键
-    if ((e.button === 0 && isSpacePressed) || e.button === 1) {
+    // Ctrl+左键 或 中键
+    if ((e.button === 0 && isCtrlPressed) || e.button === 1) {
       e.preventDefault();
       setIsDragging(true);
       setDragStart({ x: e.clientX, y: e.clientY });
@@ -66,7 +65,7 @@ export const useCanvasDrag = (
 
   return {
     isDragging,
-    isSpacePressed,
+    isSpacePressed: isCtrlPressed,
     handleCanvasMouseDown,
     handleCanvasMouseMove,
     handleCanvasMouseUp
