@@ -6,11 +6,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/realmcu/honeygui-design.git"
+    "url": "https://github.com/realmcu/HoneyGUI.git"
   },
-  "homepage": "https://github.com/realmcu/honeygui-design",
+  "homepage": "https://github.com/realmcu/HoneyGUI",
   "bugs": {
-    "url": "https://github.com/realmcu/honeygui-design/issues"
+    "url": "https://github.com/realmcu/HoneyGUI/issues"
   },
   "publisher": "honeygui-visual-designer",
   "engines": {
@@ -105,16 +105,6 @@
       ],
       "view/title": [
         {
-          "command": "honeygui.switchView",
-          "when": "view == honeygui.welcome",
-          "group": "navigation@1"
-        },
-        {
-          "command": "honeygui.switchView",
-          "when": "view == honeygui.quick",
-          "group": "navigation@1"
-        },
-        {
           "command": "honeygui.collaboration.startHost",
           "when": "view == honeygui.welcome",
           "group": "navigation@2"
@@ -133,11 +123,6 @@
     },
     "commands": [
       {
-        "command": "honeygui.switchView",
-        "title": "Switch View",
-        "icon": "$(swap-horizontal)"
-      },
-      {
         "command": "honeygui.createNewHmlInWorkspace",
         "title": "HoneyGUI: 新建设计",
         "category": "HoneyGUI"
@@ -155,11 +140,6 @@
       {
         "command": "honeygui.newProject",
         "title": "HoneyGUI: New Project",
-        "category": "HoneyGUI"
-      },
-      {
-        "command": "honeygui.openDesigner",
-        "title": "HoneyGUI: Open Designer",
         "category": "HoneyGUI"
       },
       {
@@ -184,71 +164,6 @@
         "title": "HoneyGUI: Stop Simulation",
         "category": "HoneyGUI",
         "icon": "$(debug-stop)"
-      },
-      {
-        "command": "honeygui.simulation.clean",
-        "title": "HoneyGUI: Clean Build",
-        "category": "HoneyGUI",
-        "icon": "$(trash)"
-      },
-      {
-        "command": "honeygui.openResourceManager",
-        "title": "HoneyGUI: Open Resource Manager",
-        "category": "HoneyGUI"
-      },
-      {
-        "command": "honeygui.openDocs",
-        "title": "HoneyGUI: Open Docs",
-        "category": "HoneyGUI"
-      },
-      {
-        "command": "honeygui.migrateXmlToHml",
-        "title": "HoneyGUI: Migrate XML to HML",
-        "category": "HoneyGUI"
-      },
-      {
-        "command": "honeygui.openProject",
-        "title": "Open Project",
-        "category": "HoneyGUI"
-      },
-      {
-        "command": "honeygui.openRecent",
-        "title": "Open Recent",
-        "category": "HoneyGUI"
-      },
-      {
-        "command": "honeygui.showCreateProjectForm",
-        "title": "Create Project",
-        "category": "HoneyGUI"
-      },
-      {
-        "command": "honeygui.openSettings",
-        "title": "Settings",
-        "category": "HoneyGUI",
-        "icon": "$(gear)"
-      },
-      {
-        "command": "honeygui.startProject",
-        "title": "Start",
-        "category": "HoneyGUI",
-        "icon": "$(play)"
-      },
-      {
-        "command": "honeygui.stopProject",
-        "title": "Stop",
-        "category": "HoneyGUI",
-        "icon": "$(stop)"
-      },
-      {
-        "command": "honeygui.restartProject",
-        "title": "Restart",
-        "category": "HoneyGUI",
-        "icon": "$(refresh)"
-      },
-      {
-        "command": "honeygui.toggleEditor",
-        "title": "Toggle Editor Mode",
-        "category": "HoneyGUI"
       },
       {
         "command": "honeygui.collaboration.startHost",
