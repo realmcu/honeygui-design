@@ -5,7 +5,7 @@
         <author name="HoneyGUI Design" />
     </meta>
     <view>
-        <hg_view id="mainView" x="471" y="531" width="410" height="502" backgroundColor="#000000" name="mainView">
+        <hg_view id="mainView" x="78" y="51" width="410" height="502" backgroundColor="#000000" name="mainView">
             <events>
                 <event type="onSwipeLeft">
                     <action type="switchView" target="hg_view_1766022481486_seii" />
@@ -17,7 +17,7 @@
                 </events>
             </hg_image>
         </hg_view>
-        <hg_view id="hg_view_1766022481486_seii" x="1173" y="-84" width="410" height="502" backgroundColor="#000000" borderRadius="0" padding="12" overflow="auto" name="hg_view_1486" zIndex="1">
+        <hg_view id="hg_view_1766022481486_seii" x="617" y="64" width="410" height="502" backgroundColor="#000000" borderRadius="0" padding="12" overflow="auto" name="hg_view_1486" zIndex="1">
             <events>
                 <event type="onSwipeLeft">
                     <action type="switchView" target="untitledView" />
