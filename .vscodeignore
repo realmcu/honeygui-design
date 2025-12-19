@@ -11,6 +11,7 @@ test-service-output/**
 scripts/**
 node_modules/**
 docs/**
+tools/**
 azure.png
 *.vsix
 tsconfig.json
