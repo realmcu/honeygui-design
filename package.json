@@ -2,7 +2,7 @@
   "name": "honeygui-visual-designer",
   "displayName": "HoneyGUI Visual Designer",
   "description": "VS Code 插件，提供 HoneyGUI 可视化界面设计、HML 编辑、C 代码生成与实时仿真功能。",
-  "version": "1.3.9",
+  "version": "1.4.1",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -31,7 +31,12 @@
     "onLanguage:hml",
     "onView:honeygui.welcome",
     "onView:honeygui.quick",
-    "onWorkspaceContains:**/*.hml"
+    "onWorkspaceContains:**/*.hml",
+    "onCommand:honeygui.newProject",
+    "onCommand:honeygui.openProject",
+    "onCommand:honeygui.createNewHmlInWorkspace",
+    "onCommand:honeygui.collaboration.startHost",
+    "onCommand:honeygui.collaboration.joinSession"
   ],
   "main": "./out/src/extension.js",
   "contributes": {
@@ -87,7 +92,7 @@
     "viewsWelcome": [
       {
         "view": "honeygui.welcome",
-        "contents": "[$(add) 新建项目](command:honeygui.newProject)\n[$(file-add) 新建设计](command:honeygui.createNewHmlInWorkspace)\n\n协同开发:\n[$(broadcast) 开启协同 (主机)](command:honeygui.collaboration.startHost)\n[$(plug) 加入协同 (访客)](command:honeygui.collaboration.joinSession)"
+        "contents": "[$(add) 新建项目](command:honeygui.newProject)\n[$(file-add) 新建设计](command:honeygui.createNewHmlInWorkspace)\n[$(folder-opened) 打开项目](command:honeygui.openProject)\n\n协同开发:\n[$(broadcast) 开启协同 (主机)](command:honeygui.collaboration.startHost)\n[$(plug) 加入协同 (访客)](command:honeygui.collaboration.joinSession)"
       }
     ],
     "menus": {
@@ -140,6 +145,11 @@
       {
         "command": "honeygui.newProject",
         "title": "HoneyGUI: New Project",
+        "category": "HoneyGUI"
+      },
+      {
+        "command": "honeygui.openProject",
+        "title": "HoneyGUI: Open Project",
         "category": "HoneyGUI"
       },
       {

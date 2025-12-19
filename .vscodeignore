@@ -1,20 +1,70 @@
+# ========================================
+# HoneyGUI Visual Designer - VSCode Ignore
+# ========================================
+
+# 开发配置
 .vscode/**
 .git/**
 .gitignore
-src/**
-*.ts
-*.map
 .trae/**
 .kiro/**
-test/**
-test-service-output/**
-scripts/**
-node_modules/**
-docs/**
-tools/**
-azure.png
-*.vsix
 tsconfig.json
 webpack.config.js
 AGENTS.md
+
+# 源码（编译后的在 out/ 目录）
+src/**
+!src/designer/templates/**
+
+# TypeScript 相关
+*.ts
+*.map
+
+# 测试
+test/**
+test-service-output/**
 test-services.js
+
+# 脚本和文档
+scripts/**
+docs/**
+tools/**
+
+# 其他
+azure.png
+*.vsix
+fail.log
+
+# ========================================
+# Node Modules - 只保留运行时依赖
+# ========================================
+node_modules/**
+
+# 核心依赖
+!node_modules/chokidar/**
+!node_modules/fast-xml-parser/**
+!node_modules/jpeg-js/**
+!node_modules/pngjs/**
+!node_modules/ws/**
+!node_modules/xml-js/**
+
+# chokidar 依赖链
+!node_modules/anymatch/**
+!node_modules/braces/**
+!node_modules/fill-range/**
+!node_modules/to-regex-range/**
+!node_modules/is-number/**
+!node_modules/glob-parent/**
+!node_modules/is-glob/**
+!node_modules/is-extglob/**
+!node_modules/is-binary-path/**
+!node_modules/binary-extensions/**
+!node_modules/normalize-path/**
+!node_modules/readdirp/**
+!node_modules/picomatch/**
+
+# fast-xml-parser 依赖
+!node_modules/strnum/**
+
+# xml-js 依赖
+!node_modules/sax/**
