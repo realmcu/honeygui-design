@@ -82,9 +82,9 @@ export class FileManager {
     }
 
     /**
-     * 扫描项目中所有 HML 文件的 view
+     * 扫描项目中所有 HML 文件的 view（包含跳转关系）
      */
-    private async scanAllViews(currentFilePath: string): Promise<Array<{id: string, name: string, file: string}>> {
+    private async scanAllViews(currentFilePath: string): Promise<Array<{id: string, name: string, file: string, edges: Array<{target: string, event: string, switchOutStyle?: string, switchInStyle?: string}>}>> {
         const projectRoot = ProjectUtils.findProjectRoot(currentFilePath);
         if (!projectRoot) {
             return [];
@@ -95,7 +95,7 @@ export class FileManager {
             return [];
         }
 
-        const allViews: Array<{id: string, name: string, file: string}> = [];
+        const allViews: Array<{id: string, name: string, file: string, edges: Array<{target: string, event: string, switchOutStyle?: string, switchInStyle?: string}>}> = [];
         const designDirs = fs.readdirSync(uiDir, { withFileTypes: true })
             .filter(dirent => dirent.isDirectory())
             .map(dirent => dirent.name);
@@ -111,14 +111,32 @@ export class FileManager {
                         const tempController = new HmlController();
                         const doc = await tempController.loadFile(hmlPath);
                         
-                        // 提取所有 hg_view
+                        // 提取所有 hg_view 及其跳转关系
                         const extractViews = (components: any[]): void => {
                             for (const comp of components) {
                                 if (comp.type === 'hg_view') {
+                                    // 提取跳转边
+                                    const edges: Array<{target: string, event: string, switchOutStyle?: string, switchInStyle?: string}> = [];
+                                    if (comp.eventConfigs) {
+                                        for (const eventConfig of comp.eventConfigs) {
+                                            for (const action of eventConfig.actions || []) {
+                                                if (action.type === 'switchView' && action.target) {
+                                                    edges.push({
+                                                        target: action.target,
+                                                        event: eventConfig.type,
+                                                        switchOutStyle: action.switchOutStyle,
+                                                        switchInStyle: action.switchInStyle,
+                                                    });
+                                                }
+                                            }
+                                        }
+                                    }
+                                    
                                     allViews.push({
                                         id: comp.id,
                                         name: comp.name || comp.id,
-                                        file: designName
+                                        file: designName,
+                                        edges,
                                     });
                                 }
                                 if (comp.children && comp.children.length > 0) {

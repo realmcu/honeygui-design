@@ -1,9 +1,11 @@
 import React, { useMemo } from 'react';
-import { Component } from '../types';
+import { Component, ViewInfo } from '../types';
 import type { EventConfig, Action } from '../../hml/eventTypes';
+import { useDesignerStore } from '../store';
 
 interface ViewConnectionLayerProps {
   components: Component[];
+  allViews: ViewInfo[];
   zoom: number;
   offset: { x: number; y: number };
   visible: boolean;
@@ -12,228 +14,210 @@ interface ViewConnectionLayerProps {
 interface Connection {
   id: string;
   from: Component;
-  to: Component;
-  event: string;
+  to: Component | null;
+  targetId: string;
+  targetName: string;
+  targetFile: string;
+  isLocal: boolean;
   isValid: boolean;
 }
 
-interface Point {
-  x: number;
-  y: number;
-}
-
-// 事件类型到显示标签的映射
-const eventTypeToLabel: Record<string, string> = {
-  'onSwipeLeft': 'LEFT',
-  'onSwipeRight': 'RIGHT',
-  'onSwipeUp': 'UP',
-  'onSwipeDown': 'DOWN',
-};
+interface Rect { x: number; y: number; w: number; h: number; }
 
 export const ViewConnectionLayer: React.FC<ViewConnectionLayerProps> = ({
-  components,
-  zoom,
-  offset,
-  visible
+  components, allViews, zoom, offset, visible
 }) => {
   if (!visible) return null;
 
-  // 使用 useMemo 缓存连接计算
+  const allHmlFiles = useDesignerStore(state => state.allHmlFiles || []);
+
+  const viewRects = useMemo(() => {
+    return components
+      .filter(c => c.type === 'hg_view')
+      .map(c => ({ x: c.position.x, y: c.position.y, w: c.position.width, h: c.position.height }));
+  }, [components]);
+
   const connections = useMemo(() => {
     const result: Connection[] = [];
-    const viewsById = new Map<string, Component>();
+    const localViewsById = new Map<string, Component>();
+    const allViewsById = new Map<string, ViewInfo>();
 
-    // 建立 id -> component 映射（只包含 hg_view）
     components.forEach(comp => {
-      if (comp.type === 'hg_view') {
-        viewsById.set(comp.id, comp);
-      }
+      if (comp.type === 'hg_view') localViewsById.set(comp.id, comp);
     });
+    allViews.forEach(v => allViewsById.set(v.id, v));
 
-    // 收集所有连接关系 (从 eventConfigs 中提取 switchView 动作)
     components.forEach(comp => {
       if (comp.type === 'hg_view' && comp.eventConfigs) {
         comp.eventConfigs.forEach((eventConfig: EventConfig, eventIdx: number) => {
           eventConfig.actions.forEach((action: Action, actionIdx: number) => {
-            if (action.type === 'switchView' && action.target) {
-              const target = viewsById.get(action.target);
-              // 跳过自连接
-              if (comp.id === action.target) return;
-              
+            if (action.type === 'switchView' && action.target && comp.id !== action.target) {
+              const localTarget = localViewsById.get(action.target);
+              const globalTarget = allViewsById.get(action.target);
               result.push({
                 id: `${comp.id}-${action.target}-${eventIdx}-${actionIdx}`,
                 from: comp,
-                to: target!,
-                event: eventConfig.type,
-                isValid: !!target
+                to: localTarget || null,
+                targetId: action.target,
+                targetName: globalTarget?.name || action.target,
+                targetFile: globalTarget?.file || '',
+                isLocal: !!localTarget,
+                isValid: !!globalTarget,
               });
             }
           });
         });
       }
     });
-
     return result;
-  }, [components]);
+  }, [components, allViews]);
 
-  // 将组件坐标转换为画布坐标
-  const toCanvasCoords = (x: number, y: number) => ({
-    x: x * zoom + offset.x,
-    y: y * zoom + offset.y
-  });
+  const toCanvas = (x: number, y: number) => ({ x: x * zoom + offset.x, y: y * zoom + offset.y });
 
-  // 计算矩形边缘的精确交点
-  const getRectEdgePoint = (rect: Component, center: Point, angle: number): Point => {
-    const { x, y, width, height } = rect.position;
-    const cx = x + width / 2;
-    const cy = y + height / 2;
-    
-    const dx = Math.cos(angle);
-    const dy = Math.sin(angle);
-    
-    // 计算与四条边的交点
+  const isOverlapping = (cx: number, cy: number, r: number, rects: Rect[]) => {
+    for (const rect of rects) {
+      const closestX = Math.max(rect.x, Math.min(cx, rect.x + rect.w));
+      const closestY = Math.max(rect.y, Math.min(cy, rect.y + rect.h));
+      const dx = cx - closestX, dy = cy - closestY;
+      if (dx * dx + dy * dy < (r + 10) * (r + 10)) return true;
+    }
+    return false;
+  };
+
+  const findExternalNodePos = (from: Component, index: number, rects: Rect[]) => {
+    const { x, y, width, height } = from.position;
+    const r = 40, gap = 20, offsetY = index * 90;
+    const candidates = [
+      { x: x + width + gap + r, y: y + height / 2 + offsetY },
+      { x: x - gap - r, y: y + height / 2 + offsetY },
+      { x: x + width / 2 + index * 90, y: y + height + gap + r },
+      { x: x + width / 2 + index * 90, y: y - gap - r },
+    ];
+    for (const pos of candidates) {
+      if (!isOverlapping(pos.x, pos.y, r, rects)) return pos;
+    }
+    return candidates[0];
+  };
+
+  const getRectEdgeFromCenter = (cx: number, cy: number, hw: number, hh: number, targetX: number, targetY: number) => {
+    const dx = targetX - cx, dy = targetY - cy;
+    if (dx === 0 && dy === 0) return { x: cx, y: cy };
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const ux = dx / dist, uy = dy / dist;
     let t = Infinity;
-    
-    // 右边
-    if (dx > 0) t = Math.min(t, (x + width - cx) / dx);
-    // 左边
-    if (dx < 0) t = Math.min(t, (x - cx) / dx);
-    // 下边
-    if (dy > 0) t = Math.min(t, (y + height - cy) / dy);
-    // 上边
-    if (dy < 0) t = Math.min(t, (y - cy) / dy);
-    
-    return {
-      x: cx + dx * t,
-      y: cy + dy * t
-    };
+    if (ux > 0) t = Math.min(t, hw / ux);
+    if (ux < 0) t = Math.min(t, -hw / ux);
+    if (uy > 0) t = Math.min(t, hh / uy);
+    if (uy < 0) t = Math.min(t, -hh / uy);
+    return { x: cx + ux * t, y: cy + uy * t };
   };
 
-  // 计算两个矩形之间的连接点
-  const getConnectionPoints = (from: Component, to: Component) => {
-    const fromCenter = {
-      x: from.position.x + from.position.width / 2,
-      y: from.position.y + from.position.height / 2
-    };
-    const toCenter = {
-      x: to.position.x + to.position.width / 2,
-      y: to.position.y + to.position.height / 2
-    };
-
-    const angle = Math.atan2(toCenter.y - fromCenter.y, toCenter.x - fromCenter.x);
-    
-    const fromPoint = getRectEdgePoint(from, toCenter, angle);
-    const toPoint = getRectEdgePoint(to, fromCenter, angle + Math.PI);
-
-    return { 
-      from: toCanvasCoords(fromPoint.x, fromPoint.y),
-      to: toCanvasCoords(toPoint.x, toPoint.y)
-    };
+  const getCircleEdge = (cx: number, cy: number, r: number, targetX: number, targetY: number) => {
+    const dx = targetX - cx, dy = targetY - cy;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist === 0) return { x: cx, y: cy };
+    return { x: cx + (dx / dist) * r, y: cy + (dy / dist) * r };
   };
+
+  const getLinePath = (
+    fromCx: number, fromCy: number, fromHw: number, fromHh: number,
+    toCx: number, toCy: number, toHw: number, toHh: number, isCircle: boolean
+  ) => {
+    const fromPt = getRectEdgeFromCenter(fromCx, fromCy, fromHw, fromHh, toCx, toCy);
+    const toPt = isCircle
+      ? getCircleEdge(toCx, toCy, toHw, fromCx, fromCy)
+      : getRectEdgeFromCenter(toCx, toCy, toHw, toHh, fromCx, fromCy);
+    
+    const f = toCanvas(fromPt.x, fromPt.y);
+    const dist = Math.sqrt((toPt.x-fromPt.x)**2+(toPt.y-fromPt.y)**2) || 1;
+    const t = toCanvas(toPt.x - (toPt.x - fromPt.x) / dist * 6, toPt.y - (toPt.y - fromPt.y) / dist * 6);
+    
+    return { from: f, to: t, nodeCenter: toCanvas(toCx, toCy) };
+  };
+
+  // 点击外部圆圈，跳转到对应文件
+  const handleExternalClick = (targetFile: string) => {
+    // 根据目录名找到对应的 HML 文件
+    const hmlFile = allHmlFiles.find(f => f.relativePath.includes(`/${targetFile}/`) || f.relativePath.includes(`\\${targetFile}\\`));
+    if (hmlFile) {
+      window.vscodeAPI?.postMessage({
+        command: 'switchFile',
+        filePath: hmlFile.path,
+      });
+    }
+  };
+
+  const externalCountByFrom = new Map<string, number>();
 
   return (
-    <svg
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        pointerEvents: 'none',
-        overflow: 'visible',
-        zIndex: 1000
-      }}
-    >
+    <svg style={{
+      position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+      pointerEvents: 'none', overflow: 'visible', zIndex: 1000
+    }}>
       <defs>
-        {/* 有效连接箭头 */}
-        <marker
-          id="arrowhead-valid"
-          markerWidth="10"
-          markerHeight="7"
-          refX="9"
-          refY="3.5"
-          orient="auto"
-        >
-          <polygon points="0 0, 10 3.5, 0 7" fill="#4CAF50" />
+        <marker id="arr-local" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#4CAF50" />
         </marker>
-        {/* 无效连接箭头 */}
-        <marker
-          id="arrowhead-invalid"
-          markerWidth="10"
-          markerHeight="7"
-          refX="9"
-          refY="3.5"
-          orient="auto"
-        >
-          <polygon points="0 0, 10 3.5, 0 7" fill="#f44336" />
+        <marker id="arr-ext" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#2196F3" />
+        </marker>
+        <marker id="arr-err" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#f44336" />
         </marker>
       </defs>
       
       {connections.map((conn) => {
-        if (!conn.isValid) {
-          // 无效连接：显示警告
-          const warnPos = toCanvasCoords(
-            conn.from.position.x + conn.from.position.width / 2,
-            conn.from.position.y - 10
+        // 本地连接
+        if (conn.isLocal && conn.to) {
+          const fromCx = conn.from.position.x + conn.from.position.width / 2;
+          const fromCy = conn.from.position.y + conn.from.position.height / 2;
+          const toCx = conn.to.position.x + conn.to.position.width / 2;
+          const toCy = conn.to.position.y + conn.to.position.height / 2;
+          const { from, to } = getLinePath(
+            fromCx, fromCy, conn.from.position.width / 2, conn.from.position.height / 2,
+            toCx, toCy, conn.to.position.width / 2, conn.to.position.height / 2, false
           );
           return (
-            <g key={conn.id}>
-              <text
-                x={warnPos.x}
-                y={warnPos.y}
-                fill="#f44336"
-                fontSize={12}
-                textAnchor="middle"
-                style={{ pointerEvents: 'none', userSelect: 'none' }}
-              >
-                ⚠️ 目标不存在
-              </text>
-            </g>
+            <line key={conn.id} x1={from.x} y1={from.y} x2={to.x} y2={to.y}
+              stroke="#4CAF50" strokeWidth={2} strokeDasharray="6,3"
+              markerEnd="url(#arr-local)" opacity={0.85} />
           );
         }
 
-        const { from, to } = getConnectionPoints(conn.from, conn.to);
-        const midX = (from.x + to.x) / 2;
-        const midY = (from.y + to.y) / 2;
-        const eventLabel = eventTypeToLabel[conn.event] || conn.event;
+        // 外部连接
+        const fromId = conn.from.id;
+        const idx = externalCountByFrom.get(fromId) || 0;
+        externalCountByFrom.set(fromId, idx + 1);
+        
+        const extPos = findExternalNodePos(conn.from, idx, viewRects);
+        const r = 40;
+        const fromCx = conn.from.position.x + conn.from.position.width / 2;
+        const fromCy = conn.from.position.y + conn.from.position.height / 2;
+        const { from, to, nodeCenter } = getLinePath(
+          fromCx, fromCy, conn.from.position.width / 2, conn.from.position.height / 2,
+          extPos.x, extPos.y, r, r, true
+        );
+        const color = conn.isValid ? '#2196F3' : '#f44336';
+        const marker = conn.isValid ? 'url(#arr-ext)' : 'url(#arr-err)';
+        const label1 = conn.targetFile || '?';
+        const label2 = conn.targetName.length > 8 ? conn.targetName.slice(0, 8) + '..' : conn.targetName;
+        const canClick = conn.isValid && conn.targetFile;
 
         return (
           <g key={conn.id}>
-            {/* 连接线 */}
-            <line
-              x1={from.x}
-              y1={from.y}
-              x2={to.x}
-              y2={to.y}
-              stroke="#4CAF50"
-              strokeWidth={2}
-              strokeDasharray="5,3"
-              markerEnd="url(#arrowhead-valid)"
-              opacity={0.8}
-            />
-            
-            {/* 标签背景 */}
-            <rect
-              x={midX - 20}
-              y={midY - 10}
-              width={40}
-              height={20}
-              fill="rgba(76, 175, 80, 0.9)"
-              rx={3}
-            />
-            
-            {/* 事件标签 */}
-            <text
-              x={midX}
-              y={midY + 5}
-              fill="white"
-              fontSize={11}
-              fontWeight="bold"
-              textAnchor="middle"
-              style={{ pointerEvents: 'none', userSelect: 'none' }}
+            <line x1={from.x} y1={from.y} x2={to.x} y2={to.y}
+              stroke={color} strokeWidth={2} strokeDasharray="6,3"
+              markerEnd={marker} opacity={0.85} />
+            <g 
+              style={{ pointerEvents: canClick ? 'auto' : 'none', cursor: canClick ? 'pointer' : 'default' }}
+              onClick={(e) => canClick && e.altKey && handleExternalClick(conn.targetFile)}
             >
-              {eventLabel}
-            </text>
+              <circle cx={nodeCenter.x} cy={nodeCenter.y} r={r * zoom}
+                fill={conn.isValid ? 'rgba(33,150,243,0.12)' : 'rgba(244,67,54,0.12)'}
+                stroke={color} strokeWidth={1.5} strokeDasharray="4,2" />
+              <text x={nodeCenter.x} y={nodeCenter.y - 5} fill={color} fontSize={10} textAnchor="middle">{label1}</text>
+              <text x={nodeCenter.x} y={nodeCenter.y + 10} fill={color} fontSize={11} fontWeight="600" textAnchor="middle">{label2}</text>
+            </g>
           </g>
         );
       })}

@@ -43,6 +43,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
     setSelectedComponents,
     showViewConnections,
     projectConfig,
+    allViews,
   } = useDesignerStore();
   
   // 使用画布缩放 Hook
@@ -382,6 +383,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
         {/* 视图连接层 - 独立于组件层 */}
         <ViewConnectionLayer
           components={components}
+          allViews={allViews || []}
           zoom={zoom / (window.devicePixelRatio || 1)}
           offset={canvasOffset}
           visible={showViewConnections}

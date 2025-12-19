@@ -1,7 +1,7 @@
-import React, { useMemo, useRef, useEffect, useState } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { X, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import { useDesignerStore } from '../store';
-import type { EventConfig, Action } from '../../hml/eventTypes';
+import type { ViewInfo } from '../types';
 import './ViewRelationModal.css';
 
 interface ViewRelationModalProps {
@@ -17,6 +17,7 @@ interface ViewNode {
   y: number;
   width: number;
   height: number;
+  isCurrentFile: boolean;
 }
 
 interface ViewEdge {
@@ -27,165 +28,166 @@ interface ViewEdge {
   isValid: boolean;
 }
 
-// 事件类型到显示标签的映射
 const eventTypeToLabel: Record<string, string> = {
-  'onSwipeLeft': 'LEFT',
-  'onSwipeRight': 'RIGHT',
-  'onSwipeUp': 'UP',
-  'onSwipeDown': 'DOWN',
+  'onSwipeLeft': '←',
+  'onSwipeRight': '→',
+  'onSwipeUp': '↑',
+  'onSwipeDown': '↓',
+  'onClick': '点击',
 };
 
-// 简单的力导向布局
-const layoutNodes = (views: Array<{id: string, name: string, file: string}>, edges: ViewEdge[]): ViewNode[] => {
-  const nodeWidth = 120;
-  const nodeHeight = 50;
-  const padding = 60;
+// 基于方向的智能布局
+const layoutNodes = (views: ViewInfo[], edges: ViewEdge[], currentFile: string): ViewNode[] => {
+  const nodeWidth = 140;
+  const nodeHeight = 56;
+  const spacingX = 200;
+  const spacingY = 120;
   
   if (views.length === 0) return [];
-  
-  // 初始位置：圆形布局
-  const centerX = 300;
-  const centerY = 200;
-  const radius = Math.max(100, views.length * 30);
-  
-  const nodes: ViewNode[] = views.map((v, i) => {
-    const angle = (2 * Math.PI * i) / views.length - Math.PI / 2;
-    return {
-      id: v.id,
-      name: v.name,
-      file: v.file,
-      x: centerX + radius * Math.cos(angle),
-      y: centerY + radius * Math.sin(angle),
-      width: nodeWidth,
-      height: nodeHeight,
-    };
+
+  // 按文件分组
+  const fileGroups = new Map<string, ViewInfo[]>();
+  views.forEach(v => {
+    const list = fileGroups.get(v.file) || [];
+    list.push(v);
+    fileGroups.set(v.file, list);
   });
-  
-  // 简单的力导向迭代
-  const iterations = 50;
-  const repulsion = 5000;
-  const attraction = 0.05;
-  
+
+  const nodes: ViewNode[] = [];
+  let groupX = 80;
+
+  // 当前文件优先显示在左侧
+  const sortedFiles = Array.from(fileGroups.keys()).sort((a, b) => {
+    if (a === currentFile) return -1;
+    if (b === currentFile) return 1;
+    return a.localeCompare(b);
+  });
+
+  sortedFiles.forEach(file => {
+    const groupViews = fileGroups.get(file) || [];
+    groupViews.forEach((v, i) => {
+      nodes.push({
+        id: v.id,
+        name: v.name,
+        file: v.file,
+        x: groupX,
+        y: 80 + i * spacingY,
+        width: nodeWidth,
+        height: nodeHeight,
+        isCurrentFile: v.file === currentFile,
+      });
+    });
+    groupX += spacingX;
+  });
+
+  // 力导向微调
+  const iterations = 30;
   for (let iter = 0; iter < iterations; iter++) {
-    const forces: { [id: string]: { fx: number; fy: number } } = {};
+    const forces: Record<string, { fx: number; fy: number }> = {};
     nodes.forEach(n => forces[n.id] = { fx: 0, fy: 0 });
-    
-    // 斥力
+
+    // 节点间斥力
     for (let i = 0; i < nodes.length; i++) {
       for (let j = i + 1; j < nodes.length; j++) {
         const dx = nodes[j].x - nodes[i].x;
         const dy = nodes[j].y - nodes[i].y;
-        const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
-        const force = repulsion / (dist * dist);
-        const fx = (dx / dist) * force;
-        const fy = (dy / dist) * force;
-        forces[nodes[i].id].fx -= fx;
-        forces[nodes[i].id].fy -= fy;
-        forces[nodes[j].id].fx += fx;
-        forces[nodes[j].id].fy += fy;
+        const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 50);
+        if (dist < 180) {
+          const force = 2000 / (dist * dist);
+          forces[nodes[i].id].fx -= (dx / dist) * force;
+          forces[nodes[i].id].fy -= (dy / dist) * force;
+          forces[nodes[j].id].fx += (dx / dist) * force;
+          forces[nodes[j].id].fy += (dy / dist) * force;
+        }
       }
     }
-    
-    // 引力（有连接的节点）
+
+    // 边的引力
     edges.forEach(edge => {
-      const fromNode = nodes.find(n => n.id === edge.from);
-      const toNode = nodes.find(n => n.id === edge.to);
-      if (fromNode && toNode) {
-        const dx = toNode.x - fromNode.x;
-        const dy = toNode.y - fromNode.y;
-        const fx = dx * attraction;
-        const fy = dy * attraction;
-        forces[fromNode.id].fx += fx;
-        forces[fromNode.id].fy += fy;
-        forces[toNode.id].fx -= fx;
-        forces[toNode.id].fy -= fy;
+      const from = nodes.find(n => n.id === edge.from);
+      const to = nodes.find(n => n.id === edge.to);
+      if (from && to) {
+        const dx = to.x - from.x;
+        const dy = to.y - from.y;
+        forces[from.id].fx += dx * 0.02;
+        forces[from.id].fy += dy * 0.02;
+        forces[to.id].fx -= dx * 0.02;
+        forces[to.id].fy -= dy * 0.02;
       }
     });
-    
-    // 应用力
+
     nodes.forEach(n => {
       n.x += forces[n.id].fx * 0.1;
       n.y += forces[n.id].fy * 0.1;
+      n.x = Math.max(40, n.x);
+      n.y = Math.max(40, n.y);
     });
   }
-  
-  // 归一化到可视区域
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  nodes.forEach(n => {
-    minX = Math.min(minX, n.x);
-    minY = Math.min(minY, n.y);
-    maxX = Math.max(maxX, n.x + n.width);
-    maxY = Math.max(maxY, n.y + n.height);
-  });
-  
-  nodes.forEach(n => {
-    n.x = n.x - minX + padding;
-    n.y = n.y - minY + padding;
-  });
-  
+
   return nodes;
 };
 
-export const ViewRelationModal: React.FC<ViewRelationModalProps> = ({
-  visible,
-  onClose,
-}) => {
-  const { allViews, components } = useDesignerStore();
-  const svgRef = useRef<SVGSVGElement>(null);
+export const ViewRelationModal: React.FC<ViewRelationModalProps> = ({ visible, onClose }) => {
+  const { allViews, currentFilePath } = useDesignerStore();
+  const containerRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+  const [hoveredNode, setHoveredNode] = useState<string | null>(null);
 
-  // 提取视图和连接关系
+  // 获取当前文件所属的设计目录名
+  const currentFile = useMemo(() => {
+    if (!currentFilePath) return '';
+    const match = currentFilePath.match(/ui[\/\\]([^\/\\]+)[\/\\]/);
+    return match ? match[1] : '';
+  }, [currentFilePath]);
+
   const { views, edges } = useMemo(() => {
     const views = allViews || [];
     const edges: ViewEdge[] = [];
+    const viewIds = new Set(views.map(v => v.id));
     
-    // 从当前文件的 components 中提取跳转关系
-    const currentViews = components.filter(c => c.type === 'hg_view');
-    currentViews.forEach(view => {
-      if (view.eventConfigs) {
-        view.eventConfigs.forEach((eventConfig: EventConfig, eventIdx: number) => {
-          eventConfig.actions.forEach((action: Action, actionIdx: number) => {
-            if (action.type === 'switchView' && action.target && view.id !== action.target) {
-              edges.push({
-                id: `${view.id}-${action.target}-${eventIdx}-${actionIdx}`,
-                from: view.id,
-                to: action.target,
-                event: eventTypeToLabel[eventConfig.type] || eventConfig.type,
-                isValid: views.some(v => v.id === action.target),
-              });
-            }
-          });
+    views.forEach((view, viewIdx) => {
+      if (view.edges) {
+        view.edges.forEach((edge, edgeIdx) => {
+          if (edge.target && view.id !== edge.target) {
+            edges.push({
+              id: `${view.id}-${edge.target}-${viewIdx}-${edgeIdx}`,
+              from: view.id,
+              to: edge.target,
+              event: eventTypeToLabel[edge.event] || edge.event,
+              isValid: viewIds.has(edge.target),
+            });
+          }
         });
       }
     });
     
     return { views, edges };
-  }, [allViews, components]);
+  }, [allViews]);
 
-  // 布局节点
-  const nodes = useMemo(() => layoutNodes(views, edges), [views, edges]);
+  const nodes = useMemo(() => layoutNodes(views, edges, currentFile), [views, edges, currentFile]);
 
-  // 计算SVG尺寸
-  const svgSize = useMemo(() => {
-    if (nodes.length === 0) return { width: 600, height: 400 };
-    let maxX = 0, maxY = 0;
-    nodes.forEach(n => {
-      maxX = Math.max(maxX, n.x + n.width + 60);
-      maxY = Math.max(maxY, n.y + n.height + 60);
-    });
-    return { width: Math.max(600, maxX), height: Math.max(400, maxY) };
-  }, [nodes]);
+  // 自动适应视图
+  useEffect(() => {
+    if (visible && nodes.length > 0 && containerRef.current) {
+      const container = containerRef.current;
+      const maxX = Math.max(...nodes.map(n => n.x + n.width)) + 80;
+      const maxY = Math.max(...nodes.map(n => n.y + n.height)) + 80;
+      const scaleX = container.clientWidth / maxX;
+      const scaleY = container.clientHeight / maxY;
+      const newZoom = Math.min(scaleX, scaleY, 1) * 0.9;
+      setZoom(newZoom);
+      setPan({ x: 20, y: 20 });
+    }
+  }, [visible, nodes]);
 
-  // 重置视图
   const handleReset = () => {
     setZoom(1);
-    setPan({ x: 0, y: 0 });
+    setPan({ x: 20, y: 20 });
   };
 
-  // 鼠标拖拽平移
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button === 0) {
       setIsPanning(true);
@@ -199,204 +201,190 @@ export const ViewRelationModal: React.FC<ViewRelationModalProps> = ({
     }
   };
 
-  const handleMouseUp = () => {
-    setIsPanning(false);
-  };
+  const handleMouseUp = () => setIsPanning(false);
 
-  // 滚轮缩放
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
-    const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    setZoom(z => Math.max(0.3, Math.min(3, z * delta)));
+    setZoom(z => Math.max(0.3, Math.min(2, z * (e.deltaY > 0 ? 0.9 : 1.1))));
   };
 
   if (!visible) return null;
 
-  // 计算贝塞尔曲线路径
   const getEdgePath = (fromNode: ViewNode, toNode: ViewNode) => {
-    const fromX = fromNode.x + fromNode.width / 2;
-    const fromY = fromNode.y + fromNode.height / 2;
-    const toX = toNode.x + toNode.width / 2;
-    const toY = toNode.y + toNode.height / 2;
+    // 中心点
+    const fromCx = fromNode.x + fromNode.width / 2;
+    const fromCy = fromNode.y + fromNode.height / 2;
+    const toCx = toNode.x + toNode.width / 2;
+    const toCy = toNode.y + toNode.height / 2;
     
-    const dx = toX - fromX;
-    const dy = toY - fromY;
-    const dist = Math.sqrt(dx * dx + dy * dy);
+    // 中心到中心的方向
+    const dx = toCx - fromCx;
+    const dy = toCy - fromCy;
+    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+    const ux = dx / dist, uy = dy / dist;
     
-    // 计算边缘点
-    const fromEdgeX = fromX + (dx / dist) * (fromNode.width / 2);
-    const fromEdgeY = fromY + (dy / dist) * (fromNode.height / 2);
-    const toEdgeX = toX - (dx / dist) * (toNode.width / 2 + 8);
-    const toEdgeY = toY - (dy / dist) * (toNode.height / 2 + 8);
+    // 计算源矩形边缘交点
+    let t1 = Infinity;
+    const hw1 = fromNode.width / 2, hh1 = fromNode.height / 2;
+    if (ux > 0) t1 = Math.min(t1, hw1 / ux);
+    if (ux < 0) t1 = Math.min(t1, -hw1 / ux);
+    if (uy > 0) t1 = Math.min(t1, hh1 / uy);
+    if (uy < 0) t1 = Math.min(t1, -hh1 / uy);
+    const fromEdgeX = fromCx + ux * t1;
+    const fromEdgeY = fromCy + uy * t1;
     
-    // 贝塞尔控制点
-    const midX = (fromEdgeX + toEdgeX) / 2;
-    const midY = (fromEdgeY + toEdgeY) / 2;
-    const offset = Math.min(50, dist * 0.2);
-    const perpX = -dy / dist * offset;
-    const perpY = dx / dist * offset;
+    // 计算目标矩形边缘交点
+    let t2 = Infinity;
+    const hw2 = toNode.width / 2, hh2 = toNode.height / 2;
+    if (-ux > 0) t2 = Math.min(t2, hw2 / -ux);
+    if (-ux < 0) t2 = Math.min(t2, -hw2 / -ux);
+    if (-uy > 0) t2 = Math.min(t2, hh2 / -uy);
+    if (-uy < 0) t2 = Math.min(t2, -hh2 / -uy);
+    const toEdgeX = toCx - ux * (t2 + 8);  // 留出箭头空间
+    const toEdgeY = toCy - uy * (t2 + 8);
     
-    return {
-      path: `M ${fromEdgeX} ${fromEdgeY} Q ${midX + perpX} ${midY + perpY} ${toEdgeX} ${toEdgeY}`,
-      labelX: midX + perpX * 0.5,
-      labelY: midY + perpY * 0.5,
-    };
+    return { path: `M ${fromEdgeX} ${fromEdgeY} L ${toEdgeX} ${toEdgeY}` };
   };
 
+  const isEdgeHighlighted = (edge: ViewEdge) => 
+    hoveredNode && (edge.from === hoveredNode || edge.to === hoveredNode);
+
   return (
-    <div className="view-relation-modal-overlay" onClick={onClose}>
-      <div className="view-relation-modal" onClick={e => e.stopPropagation()}>
-        <div className="view-relation-modal-header">
-          <h3>视图关系图</h3>
-          <div className="view-relation-modal-controls">
-            <button onClick={() => setZoom(z => Math.min(3, z * 1.2))} title="放大">
-              <ZoomIn size={16} />
-            </button>
-            <span className="zoom-label">{Math.round(zoom * 100)}%</span>
-            <button onClick={() => setZoom(z => Math.max(0.3, z / 1.2))} title="缩小">
-              <ZoomOut size={16} />
-            </button>
-            <button onClick={handleReset} title="重置视图">
-              <Maximize2 size={16} />
-            </button>
-            <button className="close-btn" onClick={onClose} title="关闭">
-              <X size={18} />
-            </button>
+    <div className="vrm-overlay" onClick={onClose}>
+      <div className="vrm-dialog" onClick={e => e.stopPropagation()}>
+        <div className="vrm-header">
+          <div className="vrm-title">
+            <span className="vrm-icon">🔗</span>
+            视图导航关系
+          </div>
+          <div className="vrm-toolbar">
+            <button onClick={() => setZoom(z => Math.min(2, z * 1.2))} title="放大"><ZoomIn size={16} /></button>
+            <span className="vrm-zoom">{Math.round(zoom * 100)}%</span>
+            <button onClick={() => setZoom(z => Math.max(0.3, z / 1.2))} title="缩小"><ZoomOut size={16} /></button>
+            <button onClick={handleReset} title="适应窗口"><Maximize2 size={16} /></button>
+            <div className="vrm-divider" />
+            <button className="vrm-close" onClick={onClose}><X size={18} /></button>
           </div>
         </div>
         
         <div 
-          className="view-relation-modal-content"
+          ref={containerRef}
+          className="vrm-canvas"
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
           onWheel={handleWheel}
+          style={{ cursor: isPanning ? 'grabbing' : 'grab' }}
         >
           {views.length === 0 ? (
-            <div className="no-views-message">暂无视图</div>
-          ) : edges.length === 0 ? (
-            <div className="no-edges-message">
-              <div>共 {views.length} 个视图，暂无跳转关系</div>
-              <div className="hint">在视图属性的"事件"标签页中添加 switchView 动作可创建跳转</div>
+            <div className="vrm-empty">
+              <div className="vrm-empty-icon">📭</div>
+              <div>暂无视图</div>
             </div>
           ) : (
-            <svg
-              ref={svgRef}
-              width="100%"
-              height="100%"
-              style={{
-                cursor: isPanning ? 'grabbing' : 'grab',
-              }}
-            >
+            <svg width="100%" height="100%">
               <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
                 <defs>
-                  <marker
-                    id="arrow-valid"
-                    markerWidth="10"
-                    markerHeight="7"
-                    refX="9"
-                    refY="3.5"
-                    orient="auto"
-                  >
-                    <polygon points="0 0, 10 3.5, 0 7" fill="#4CAF50" />
+                  <marker id="vrm-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                    <polygon points="0 0, 8 3, 0 6" fill="#4CAF50" />
                   </marker>
-                  <marker
-                    id="arrow-invalid"
-                    markerWidth="10"
-                    markerHeight="7"
-                    refX="9"
-                    refY="3.5"
-                    orient="auto"
-                  >
-                    <polygon points="0 0, 10 3.5, 0 7" fill="#f44336" />
+                  <marker id="vrm-arrow-hl" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                    <polygon points="0 0, 8 3, 0 6" fill="#2196F3" />
                   </marker>
+                  <marker id="vrm-arrow-err" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                    <polygon points="0 0, 8 3, 0 6" fill="#f44336" />
+                  </marker>
+                  <filter id="vrm-shadow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.15"/>
+                  </filter>
                 </defs>
                 
-                {/* 连接线 */}
+                {/* 边 */}
                 {edges.map(edge => {
                   const fromNode = nodes.find(n => n.id === edge.from);
                   const toNode = nodes.find(n => n.id === edge.to);
                   if (!fromNode || !toNode) return null;
                   
-                  const { path, labelX, labelY } = getEdgePath(fromNode, toNode);
-                  const color = edge.isValid ? '#4CAF50' : '#f44336';
+                  const { path } = getEdgePath(fromNode, toNode);
+                  const highlighted = isEdgeHighlighted(edge);
+                  const color = !edge.isValid ? '#f44336' : highlighted ? '#2196F3' : '#4CAF50';
+                  const marker = !edge.isValid ? 'url(#vrm-arrow-err)' : highlighted ? 'url(#vrm-arrow-hl)' : 'url(#vrm-arrow)';
                   
                   return (
-                    <g key={edge.id}>
-                      <path
-                        d={path}
-                        fill="none"
-                        stroke={color}
-                        strokeWidth={2}
-                        markerEnd={edge.isValid ? 'url(#arrow-valid)' : 'url(#arrow-invalid)'}
-                      />
-                      <rect
-                        x={labelX - 20}
-                        y={labelY - 10}
-                        width={40}
-                        height={20}
-                        fill={color}
-                        rx={3}
-                        opacity={0.9}
-                      />
-                      <text
-                        x={labelX}
-                        y={labelY + 4}
-                        fill="white"
-                        fontSize={10}
-                        fontWeight="bold"
-                        textAnchor="middle"
-                      >
-                        {edge.event}
-                      </text>
+                    <g key={edge.id} opacity={hoveredNode && !highlighted ? 0.3 : 1}>
+                      <path d={path} fill="none" stroke={color} strokeWidth={highlighted ? 2.5 : 2} markerEnd={marker} />
                     </g>
                   );
                 })}
                 
                 {/* 节点 */}
-                {nodes.map(node => (
-                  <g key={node.id}>
-                    <rect
-                      x={node.x}
-                      y={node.y}
-                      width={node.width}
-                      height={node.height}
-                      fill="var(--vscode-editor-background)"
-                      stroke="var(--vscode-focusBorder)"
-                      strokeWidth={2}
-                      rx={6}
-                    />
-                    <text
-                      x={node.x + node.width / 2}
-                      y={node.y + node.height / 2 - 2}
-                      fill="var(--vscode-editor-foreground)"
-                      fontSize={12}
-                      fontWeight="500"
-                      textAnchor="middle"
+                {nodes.map(node => {
+                  const isHovered = hoveredNode === node.id;
+                  const dimmed = hoveredNode && !isHovered && !edges.some(e => 
+                    (e.from === hoveredNode && e.to === node.id) || (e.to === hoveredNode && e.from === node.id)
+                  );
+                  
+                  return (
+                    <g 
+                      key={node.id} 
+                      opacity={dimmed ? 0.3 : 1}
+                      onMouseEnter={() => setHoveredNode(node.id)}
+                      onMouseLeave={() => setHoveredNode(null)}
+                      style={{ cursor: 'pointer' }}
                     >
-                      {node.name}
-                    </text>
-                    <text
-                      x={node.x + node.width / 2}
-                      y={node.y + node.height / 2 + 12}
-                      fill="var(--vscode-descriptionForeground)"
-                      fontSize={9}
-                      textAnchor="middle"
-                    >
-                      {node.file}
-                    </text>
-                  </g>
-                ))}
+                      <rect
+                        x={node.x}
+                        y={node.y}
+                        width={node.width}
+                        height={node.height}
+                        fill={node.isCurrentFile ? '#1a1a2e' : '#2d2d44'}
+                        stroke={isHovered ? '#2196F3' : node.isCurrentFile ? '#4CAF50' : '#555'}
+                        strokeWidth={isHovered ? 3 : node.isCurrentFile ? 2 : 1}
+                        strokeDasharray={node.isCurrentFile ? '' : '4,2'}
+                        rx={8}
+                        filter="url(#vrm-shadow)"
+                      />
+                      {node.isCurrentFile && (
+                        <text x={node.x + 10} y={node.y + 16} fill="#4CAF50" fontSize={11}>★</text>
+                      )}
+                      <text
+                        x={node.x + node.width / 2}
+                        y={node.y + node.height / 2 - 4}
+                        fill="#fff"
+                        fontSize={13}
+                        fontWeight="600"
+                        textAnchor="middle"
+                      >
+                        {node.name.length > 12 ? node.name.slice(0, 12) + '...' : node.name}
+                      </text>
+                      <text
+                        x={node.x + node.width / 2}
+                        y={node.y + node.height / 2 + 14}
+                        fill="#888"
+                        fontSize={10}
+                        textAnchor="middle"
+                      >
+                        {node.file}
+                      </text>
+                    </g>
+                  );
+                })}
               </g>
             </svg>
           )}
         </div>
         
-        <div className="view-relation-modal-footer">
-          <span>视图: {views.length}</span>
-          <span>连接: {edges.length}</span>
-          <span className="hint">拖拽平移 | 滚轮缩放</span>
+        <div className="vrm-footer">
+          <div className="vrm-legend">
+            <span className="vrm-legend-item"><span className="vrm-dot vrm-dot-current" />当前文件</span>
+            <span className="vrm-legend-item"><span className="vrm-dot vrm-dot-other" />其他文件</span>
+            <span className="vrm-legend-item"><span className="vrm-line vrm-line-valid" />有效连接</span>
+            <span className="vrm-legend-item"><span className="vrm-line vrm-line-invalid" />无效连接</span>
+          </div>
+          <div className="vrm-stats">
+            视图 {views.length} · 连接 {edges.length}
+          </div>
         </div>
       </div>
     </div>

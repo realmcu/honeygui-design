@@ -147,7 +147,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   // State
   components: [],
   projectConfig: null as any, // 项目配置（分辨率等）
-  allViews: [] as Array<{id: string, name: string, file: string}>, // 项目中所有 view
+  allViews: [] as Array<{id: string, name: string, file: string, edges: Array<{target: string, event: string, switchOutStyle?: string, switchInStyle?: string}>}>, // 项目中所有 view（含跳转关系）
   allHmlFiles: [] as Array<{path: string, name: string, relativePath: string}>, // 项目中所有 HML 文件
   currentFilePath: '' as string, // 当前打开的文件路径
   selectedComponent: null,

@@ -56,9 +56,25 @@ export interface PropertyDefinition {
   group: 'general' | 'style' | 'data' | 'events';
 }
 
+// 视图跳转边信息
+export interface ViewEdgeInfo {
+  target: string;        // 目标 view id
+  event: string;         // 事件类型 (onSwipeLeft 等)
+  switchOutStyle?: string;
+  switchInStyle?: string;
+}
+
+// 项目中的视图信息（包含跳转关系）
+export interface ViewInfo {
+  id: string;
+  name: string;
+  file: string;          // 所属设计目录名
+  edges: ViewEdgeInfo[]; // 该视图的所有跳转
+}
+
 export interface DesignerState {
   components: Component[];
-  allViews?: Array<{id: string, name: string, file: string}>; // 项目中所有 view
+  allViews?: ViewInfo[]; // 项目中所有 view（含跳转关系）
   allHmlFiles?: Array<{path: string, name: string, relativePath: string}>; // 项目中所有 HML 文件
   currentFilePath?: string; // 当前打开的文件路径
   selectedComponent: string | null;
