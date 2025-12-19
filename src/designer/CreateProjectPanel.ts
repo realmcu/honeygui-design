@@ -102,6 +102,9 @@ export class CreateProjectPanel {
                     case 'createTemplateProject':
                         await this._createTemplateProject(message.config);
                         break;
+                    case 'cloneSdk':
+                        await this._cloneSdk(message.source);
+                        break;
                     case 'notify':
                         vscode.window.showInformationMessage(message.text);
                         break;
@@ -247,6 +250,91 @@ export class CreateProjectPanel {
         } catch (error) {
             logger.error(`选择 SDK 路径失败: ${error}`);
             WebviewUtils.handleWebviewError(this._panel.webview, 'Failed to select SDK path');
+        }
+    }
+
+    /**
+     * 克隆 HoneyGUI SDK
+     */
+    private async _cloneSdk(source: 'github' | 'gitee'): Promise<void> {
+        const urls = {
+            github: 'https://github.com/realmcu/HoneyGUI.git',
+            gitee: 'https://gitee.com/realmcu/HoneyGUI.git'
+        };
+        const url = urls[source] || urls.gitee;
+        const targetPath = path.join(os.homedir(), '.HoneyGUI-SDK');
+
+        try {
+            // 检查目标目录是否已存在
+            if (fs.existsSync(targetPath)) {
+                this._panel.webview.postMessage({
+                    command: 'cloneComplete',
+                    sdkPath: targetPath
+                });
+                vscode.window.showInformationMessage(`SDK 目录已存在: ${targetPath}`);
+                return;
+            }
+
+            this._panel.webview.postMessage({
+                command: 'cloneProgress',
+                percent: 10,
+                text: '正在克隆 HoneyGUI SDK...'
+            });
+
+            // 使用 child_process 执行 git clone
+            const { spawn } = await import('child_process');
+            const gitProcess = spawn('git', ['clone', '--progress', url, targetPath]);
+
+            gitProcess.stderr.on('data', (data: Buffer) => {
+                const output = data.toString();
+                // 解析 git clone 进度
+                const match = output.match(/Receiving objects:\s+(\d+)%/);
+                if (match) {
+                    const percent = parseInt(match[1], 10);
+                    this._panel.webview.postMessage({
+                        command: 'cloneProgress',
+                        percent: Math.min(90, 10 + percent * 0.8),
+                        text: `正在克隆... ${percent}%`
+                    });
+                }
+            });
+
+            gitProcess.on('close', (code: number) => {
+                if (code === 0) {
+                    this._panel.webview.postMessage({
+                        command: 'cloneProgress',
+                        percent: 100,
+                        text: '克隆完成!'
+                    });
+                    setTimeout(() => {
+                        this._panel.webview.postMessage({
+                            command: 'cloneComplete',
+                            sdkPath: targetPath
+                        });
+                    }, 500);
+                    vscode.window.showInformationMessage(`SDK 克隆成功: ${targetPath}`);
+                } else {
+                    this._panel.webview.postMessage({
+                        command: 'cloneError',
+                        text: `克隆失败 (exit code: ${code})`
+                    });
+                }
+            });
+
+            gitProcess.on('error', (err: Error) => {
+                logger.error(`克隆 SDK 失败: ${err.message}`);
+                this._panel.webview.postMessage({
+                    command: 'cloneError',
+                    text: `克隆失败: ${err.message}\n\n请确保已安装 Git`
+                });
+            });
+
+        } catch (error) {
+            logger.error(`克隆 SDK 失败: ${error}`);
+            this._panel.webview.postMessage({
+                command: 'cloneError',
+                text: `克隆失败: ${error instanceof Error ? error.message : '未知错误'}`
+            });
         }
     }
 
