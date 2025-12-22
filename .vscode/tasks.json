@@ -20,6 +20,17 @@
 			"label": "compile-all",
 			"type": "shell",
 			"command": "npm run compile && npm run build:webview",
+			"windows": {
+				"options": {
+					"shell": {
+						"executable": "cmd.exe",
+						"args": [
+							"/d",
+							"/c"
+						]
+					}
+				}
+			},
 			"problemMatcher": [],
 			"presentation": {
 				"reveal": "always",
