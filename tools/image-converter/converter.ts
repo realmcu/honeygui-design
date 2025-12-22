@@ -40,6 +40,7 @@ export class ImageConverter {
         const buffer = fs.readFileSync(inputPath);
         const isPNG = buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47;
         const isJPEG = buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF;
+        const isBMP = buffer[0] === 0x42 && buffer[1] === 0x4D; // 'BM'
         
         let pixels: RGBA[];
         let width: number;
@@ -58,8 +59,14 @@ export class ImageConverter {
             width = result.width;
             height = result.height;
             hasAlpha = false;
+        } else if (isBMP) {
+            const result = await this.loadBMP(inputPath);
+            pixels = result.pixels;
+            width = result.width;
+            height = result.height;
+            hasAlpha = result.hasAlpha;
         } else {
-            throw new Error(`Unsupported image format (not PNG or JPEG)`);
+            throw new Error(`Unsupported image format (not PNG, JPEG or BMP)`);
         }
 
         // Auto-detect format
@@ -196,6 +203,66 @@ export class ImageConverter {
             width: rawImageData.width,
             height: rawImageData.height,
             hasAlpha: false,
+        };
+    }
+
+    private async loadBMP(filePath: string): Promise<{
+        pixels: RGBA[];
+        width: number;
+        height: number;
+        hasAlpha: boolean;
+    }> {
+        const buffer = fs.readFileSync(filePath);
+        
+        // BMP 文件头 (14 bytes)
+        const dataOffset = buffer.readUInt32LE(10);
+        
+        // DIB 头 (40 bytes for BITMAPINFOHEADER)
+        const width = buffer.readInt32LE(18);
+        const height = Math.abs(buffer.readInt32LE(22)); // 可能为负（自上而下）
+        const bitsPerPixel = buffer.readUInt16LE(28);
+        const compression = buffer.readUInt32LE(30);
+        
+        // 只支持未压缩的 24-bit 和 32-bit BMP
+        if (compression !== 0) {
+            throw new Error('Compressed BMP not supported');
+        }
+        
+        if (bitsPerPixel !== 24 && bitsPerPixel !== 32) {
+            throw new Error(`BMP with ${bitsPerPixel} bits per pixel not supported (only 24 and 32 bit)`);
+        }
+        
+        const pixels: RGBA[] = [];
+        const bytesPerPixel = bitsPerPixel / 8;
+        const rowSize = Math.floor((bitsPerPixel * width + 31) / 32) * 4; // 行对齐到 4 字节
+        const isTopDown = buffer.readInt32LE(22) < 0;
+        let hasAlpha = false;
+        
+        // BMP 通常是从下到上存储的
+        for (let y = 0; y < height; y++) {
+            const actualY = isTopDown ? y : (height - 1 - y);
+            const rowOffset = dataOffset + actualY * rowSize;
+            
+            for (let x = 0; x < width; x++) {
+                const pixelOffset = rowOffset + x * bytesPerPixel;
+                const b = buffer[pixelOffset];
+                const g = buffer[pixelOffset + 1];
+                const r = buffer[pixelOffset + 2];
+                const a = bytesPerPixel === 4 ? buffer[pixelOffset + 3] : 255;
+                
+                if (a < 255) {
+                    hasAlpha = true;
+                }
+                
+                pixels.push({ r, g, b, a });
+            }
+        }
+        
+        return {
+            pixels,
+            width,
+            height,
+            hasAlpha,
         };
     }
 }
