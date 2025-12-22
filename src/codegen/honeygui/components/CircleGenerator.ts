@@ -1,6 +1,5 @@
 /**
  * hg_circle 组件代码生成器
- * TODO: 实现圆形特定的代码生成逻辑
  */
 import { Component } from '../../../hml/types';
 import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';
@@ -9,19 +8,22 @@ export class CircleGenerator implements ComponentCodeGenerator {
   generateCreation(component: Component, indent: number, context: GeneratorContext): string {
     const indentStr = '    '.repeat(indent);
     const parentRef = context.getParentRef(component);
-    const { x, y, width, height } = component.position;
+    const { x, y } = component.position;
+    
+    // 从 style 中获取参数，设置默认值
+    const radius = component.style?.radius || 40;
+    const color = component.style?.fillColor || 'APP_COLOR_WHITE';
 
-    // TODO: 实现圆形创建逻辑
-    return `${indentStr}// TODO: ${component.id} = gui_circle_create(${parentRef}, "${component.name}", ${x}, ${y}, ${width}, ${height});\n`;
+    return `${indentStr}${component.id} = gui_circle_create(${parentRef}, "${component.name}", ${x}, ${y}, ${radius}, ${color});\n`;
   }
 
   generatePropertySetters(component: Component, indent: number, _context: GeneratorContext): string {
     const indentStr = '    '.repeat(indent);
     let code = '';
 
-    // TODO: 实现圆形属性设置
-    if (component.style?.radius) {
-      code += `${indentStr}// TODO: gui_circle_set_radius(${component.id}, ${component.style.radius});\n`;
+    // 透明度
+    if (component.style?.opacity !== undefined) {
+      code += `${indentStr}${component.id}->opacity_value = ${component.style.opacity};\n`;
     }
 
     return code;
