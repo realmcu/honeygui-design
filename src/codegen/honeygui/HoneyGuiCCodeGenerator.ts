@@ -14,6 +14,8 @@ import { HoneyGuiApiMapper } from './HoneyGuiApiMapper';
 import { Component } from '../../hml/types';
 import { SConscriptGenerator } from '../../simulation/SConscriptGenerator';
 import { ICodeGenerator, CodeGenOptions, CodeGenResult } from '../ICodeGenerator';
+import { EventGeneratorFactory } from './events';
+import { ComponentGeneratorFactory, GeneratorContext } from './components';
 
 // Re-export for backward compatibility
 export { Component } from '../../hml/types';
@@ -299,6 +301,9 @@ void ${baseName}_update_user(void) {
     // 生成属性设置代码
     code += this.generatePropertySetters(component, indent);
 
+    // 生成事件绑定代码
+    code += this.generateEventConfigBindings(component, indent);
+
     // 递归生成子组件
     if (component.children && component.children.length > 0) {
       component.children.forEach(childId => {
@@ -316,183 +321,9 @@ void ${baseName}_update_user(void) {
    * 生成组件创建代码（不包括 hg_view）
    */
   private generateComponentCreation(component: Component, indent: number): string {
-    const indentStr = '    '.repeat(indent);
-    const mapping = this.apiMapper.getMapping(component.type);
-
-    if (!mapping) {
-      return `${indentStr}// 警告: 未找到${component.type}的API映射\n`;
-    }
-
-    // 确定父组件引用
-    let parentRef = 'NULL';
-    if (component.parent) {
-      const parentComp = this.componentMap.get(component.parent);
-      if (parentComp) {
-        if (parentComp.type === 'hg_view') {
-          // 父组件是 view，使用 switch_in 函数的 view 参数
-          parentRef = '(gui_obj_t *)view';
-        } else {
-          parentRef = component.parent;
-        }
-      }
-    }
-
-    const { x, y, width, height } = component.position;
-
-    // 特殊处理图片组件，直接在创建时传入路径
-    if (component.type === 'hg_image') {
-        const src = component.data?.src || '';
-        // 将图片扩展名替换为 .bin
-        let binSrc = src.replace(/\.(png|jpe?g|bmp|gif|tiff?|webp)$/i, '.bin');
-        // 去掉 assets/ 前缀（因为 mkromfs 打包的是 assets 目录本身）
-        binSrc = binSrc.replace(/^assets\//, '');
-        // 确保路径以 / 开头（VFS 绝对路径）
-        if (!binSrc.startsWith('/')) {
-            binSrc = '/' + binSrc;
-        }
-        // gui_img_create_from_fs 返回 gui_img_t*，需要强制转换
-        return `${indentStr}${component.id} = (gui_obj_t *)gui_img_create_from_fs(${parentRef}, "${component.name}", "${binSrc}", ${x}, ${y}, ${width}, ${height});\n`;
-    }
-
-    // 特殊处理视频组件
-    if (component.type === 'hg_video') {
-        const src = component.data?.src || '';
-        const frameRate = component.data?.frameRate || 30;
-        const autoPlay = component.data?.autoPlay !== false; // 默认自动播放
-        const loop = component.data?.loop === true; // 循环播放，默认关闭
-        
-        // 将视频扩展名替换为转换后的格式
-        let videoSrc = src;
-        const format = component.data?.format || 'mjpeg';
-        
-        // 根据格式替换扩展名
-        if (format === 'mjpeg') {
-            videoSrc = src.replace(/\.[^.]+$/i, '.mjpeg');
-        } else if (format === 'avi') {
-            videoSrc = src.replace(/\.[^.]+$/i, '.avi');
-        } else if (format === 'h264') {
-            videoSrc = src.replace(/\.[^.]+$/i, '.h264');  // H.264 原始流格式
-        }
-        
-        // 去掉 assets/ 前缀（因为 mkromfs 打包的是 assets 目录本身）
-        videoSrc = videoSrc.replace(/^assets\//, '');
-        // 确保路径以 / 开头（VFS 绝对路径）
-        if (!videoSrc.startsWith('/')) {
-            videoSrc = '/' + videoSrc;
-        }
-        
-        // 生成视频组件创建代码
-        let code = `${indentStr}${component.id} = (gui_obj_t *)gui_video_create_from_fs(${parentRef}, "${component.name}", "${videoSrc}", ${x}, ${y}, ${width}, ${height});\n`;
-        
-        // 设置帧率
-        code += `${indentStr}gui_video_set_frame_rate((gui_video_t *)${component.id}, ${frameRate}.f);\n`;
-        
-        // 设置循环播放
-        if (loop) {
-            code += `${indentStr}gui_video_set_repeat_count((gui_video_t *)${component.id}, GUI_VIDEO_REPEAT_INFINITE);\n`;
-        }
-        
-        // 设置播放状态
-        if (autoPlay) {
-            code += `${indentStr}gui_video_set_state((gui_video_t *)${component.id}, GUI_VIDEO_STATE_PLAYING);\n`;
-        }
-        
-        return code;
-    }
-
-    // 特殊处理圆弧组件
-    if (component.type === 'hg_arc') {
-        const radius = component.style?.radius || 40;
-        const startAngle = component.style?.startAngle || 0;
-        const endAngle = component.style?.endAngle || 270;
-        const strokeWidth = component.style?.strokeWidth || 8;
-        const color = component.style?.color || '#007acc';
-        const opacity = component.style?.opacity !== undefined ? component.style.opacity : 255;
-        
-        // 使用 gui_rgba 宏，直接传入透明度（与 SDK 示例代码一致）
-        const guiColor = this.apiMapper.colorToGuiColor(color, opacity);
-        
-        // gui_arc_create 在创建时传入所有参数
-        return `${indentStr}${component.id} = (gui_obj_t *)gui_arc_create(${parentRef}, "${component.name}", ${x}, ${y}, ${radius}, ${startAngle}, ${endAngle}, ${strokeWidth}, ${guiColor});\n`;
-    }
-
-    // 特殊处理圆形组件
-    if (component.type === 'hg_circle') {
-        const radius = component.style?.radius || 40;
-        const fillColor = component.style?.fillColor || '#007acc';
-        const opacity = component.style?.opacity !== undefined ? component.style.opacity : 255;
-        
-        const guiColor = this.apiMapper.colorToGuiColor(fillColor, opacity);
-        
-        // gui_circle_create 在创建时传入所有参数
-        return `${indentStr}${component.id} = (gui_obj_t *)gui_circle_create(${parentRef}, "${component.name}", ${x}, ${y}, ${radius}, ${guiColor});\n`;
-    }
-
-    // 特殊处理矩形组件
-    if (component.type === 'hg_rect') {
-        const borderRadius = component.style?.borderRadius || 0;
-        const fillColor = component.style?.fillColor || '#007acc';
-        const opacity = component.style?.opacity !== undefined ? component.style.opacity : 255;
-        
-        const guiColor = this.apiMapper.colorToGuiColor(fillColor, opacity);
-        
-        // gui_rect_create 在创建时传入所有参数
-        return `${indentStr}${component.id} = (gui_obj_t *)gui_rect_create(${parentRef}, "${component.name}", ${x}, ${y}, ${width}, ${height}, ${borderRadius}, ${guiColor});\n`;
-    }
-
-    // 特殊处理3D模型组件
-    if (component.type === 'hg_3d') {
-        const modelPath = component.data?.modelPath || '';
-        const drawType = component.data?.drawType || 'L3_DRAW_FRONT_AND_SORT';
-        const ext = modelPath.split('.').pop()?.toLowerCase();
-        
-        // 去掉 assets/ 前缀
-        let vfsPath = modelPath.replace(/^assets\//, '');
-        // 确保路径以 / 开头（VFS 绝对路径）
-        if (!vfsPath.startsWith('/')) {
-            vfsPath = '/' + vfsPath;
-        }
-
-        let code = '';
-        
-        if (ext === 'obj' || ext === 'gltf') {
-            const callbackName = `${component.id}_global_cb`;
-            
-            // 将模型文件路径转换为 bin 文件路径
-            // OBJ: xxx.obj -> desc_xxx.bin
-            // GLTF: xxx.gltf -> gltf_desc_xxx.bin
-            const pathParts = vfsPath.split('/');
-            const fileName = pathParts[pathParts.length - 1];
-            const baseName = fileName.replace(/\.(obj|gltf)$/i, '');
-            const dirPath = pathParts.slice(0, -1).join('/');
-            
-            let binFileName: string;
-            if (ext === 'obj') {
-                binFileName = `desc_${baseName}.bin`;
-            } else {
-                binFileName = `gltf_desc_${baseName}.bin`;
-            }
-            
-            const binPath = dirPath ? `${dirPath}/${binFileName}` : `/${binFileName}`;
-            
-            // 通过 gui_vfs_get_file_address 获取文件地址
-            code += `${indentStr}void *${component.id}_addr = (void *)gui_vfs_get_file_address("${binPath}");\n`;
-
-            // 创建 l3_model_base_t（使用绘制类型）
-            code += `${indentStr}l3_model_base_t *${component.id}_model = l3_create_model(${component.id}_addr, ${drawType}, ${x}, ${y}, ${width}, ${height});\n`;
-            code += `${indentStr}l3_set_global_transform(${component.id}_model, (l3_global_transform_cb)${callbackName});\n`; 
-            // 创建 gui_lite3d 控件（局部变量）
-            code += `${indentStr}gui_lite3d_t *${component.id} = gui_lite3d_create(${parentRef}, "${component.name}", ${component.id}_model, ${x}, ${y}, ${width}, ${height});\n`;
-        } else {
-            code += `${indentStr}// 警告: 不支持的3D模型格式: ${ext}\n`;
-        }
-
-        return code;
-    }
-
-    return `${indentStr}${component.id} = ${mapping.createFunction}(${parentRef}, "${component.name}", ${x}, ${y}, ${width}, ${height});\n`;
+    const generator = ComponentGeneratorFactory.getGenerator(component.type);
+    return generator.generateCreation(component, indent, this.createGeneratorContext());
   }
-
   /**
    * 生成 hg_view 的 GUI_VIEW_INSTANCE 代码
    * 包括：
@@ -596,90 +427,8 @@ void ${baseName}_update_user(void) {
    * 生成属性设置代码
    */
   private generatePropertySetters(component: Component, indent: number): string {
-    let code = '';
-    const indentStr = '    '.repeat(indent);
-    const mapping = this.apiMapper.getMapping(component.type);
-
-    if (!mapping) return code;
-
-    // 圆弧和矩形已经在 generateComponentCreation 中特殊处理，不需要再设置属性
-    if (component.type === 'hg_arc' || component.type === 'hg_rect') {
-      return code;
-    }
-
-    // 特殊处理文本组件：fontFile 必须先设置
-    if (component.type === 'hg_label') {
-      const fontFile = component.data?.fontFile;
-      if (fontFile) {
-        code += `${indentStr}gui_text_type_set((gui_text_t *)${component.id}, (void *)"${fontFile}", FONT_SRC_FILESYS);\n`;
-      }
-      
-      // 设置字体大小
-      const fontSize = component.style?.fontSize || 16;
-      code += `${indentStr}gui_text_size_set((gui_text_t *)${component.id}, ${fontSize}, 0);\n`;
-      
-      // 设置文本内容
-      const text = component.data?.text || '';
-      const textLen = text.length;
-      code += `${indentStr}gui_text_content_set((gui_text_t *)${component.id}, (void *)"${text}", ${textLen});\n`;
-      
-      // 设置颜色
-      const color = component.style?.color;
-      if (color) {
-        const hexColor = this.apiMapper['colorToHex'](color);
-        code += `${indentStr}gui_text_color_set((gui_text_t *)${component.id}, ${hexColor});\n`;
-      }
-      
-      // 设置对齐方式
-      const align = component.style?.align || 'LEFT';
-      code += `${indentStr}gui_text_mode_set((gui_text_t *)${component.id}, ${align});\n`;
-      
-      // 设置字间距
-      const letterSpacing = component.style?.letterSpacing;
-      if (letterSpacing !== undefined && letterSpacing !== 0) {
-        code += `${indentStr}gui_text_extra_letter_spacing_set((gui_text_t *)${component.id}, ${letterSpacing});\n`;
-      }
-      
-      // 设置行间距
-      const lineSpacing = component.style?.lineSpacing;
-      if (lineSpacing !== undefined && lineSpacing !== 0) {
-        code += `${indentStr}gui_text_extra_line_spacing_set((gui_text_t *)${component.id}, ${lineSpacing});\n`;
-      }
-      
-      // 设置自动换行
-      const wordWrap = component.style?.wordWrap;
-      if (wordWrap) {
-        code += `${indentStr}gui_text_wordwrap_set((gui_text_t *)${component.id}, true);\n`;
-      }
-    } else {
-      // 其他组件：正常处理
-      mapping.propertySetters.forEach(setter => {
-        let value = null;
-
-        // 从style或data中获取值
-        if (component.style && setter.property in component.style) {
-          value = component.style[setter.property];
-        } else if (component.data && setter.property in component.data) {
-          value = component.data[setter.property];
-        }
-
-        if (value !== null && value !== undefined) {
-          // 应用值转换
-          const transformedValue = setter.valueTransform 
-            ? setter.valueTransform(value) 
-            : (typeof value === 'string' ? `"${value}"` : value);
-
-          code += `${indentStr}${setter.apiFunction}(${component.id}, ${transformedValue});\n`;
-        }
-      });
-    }
-
-    // 可见性
-    if (component.visible !== undefined) {
-      code += `${indentStr}gui_obj_show(${component.id}, ${component.visible ? 'true' : 'false'});\n`;
-    }
-
-    return code;
+    const generator = ComponentGeneratorFactory.getGenerator(component.type);
+    return generator.generatePropertySetters(component, indent, this.createGeneratorContext());
   }
 
   /**
@@ -700,6 +449,31 @@ void ${baseName}_update_user(void) {
     });
 
     return code;
+  }
+
+  /**
+   * 创建生成器上下文
+   */
+  private createGeneratorContext(): GeneratorContext {
+    return {
+      componentMap: this.componentMap,
+      getParentRef: (component: Component) => {
+        if (!component.parent) return 'NULL';
+        const parentComp = this.componentMap.get(component.parent);
+        if (parentComp?.type === 'hg_view') {
+          return '(gui_obj_t *)view';
+        }
+        return component.parent;
+      }
+    };
+  }
+
+  /**
+   * 生成事件配置绑定代码（基于 eventConfigs）
+   */
+  private generateEventConfigBindings(component: Component, indent: number): string {
+    const generator = EventGeneratorFactory.getGenerator(component.type);
+    return generator.generateEventBindings(component, indent, this.componentMap);
   }
 
   /**
@@ -736,7 +510,28 @@ void ${baseName}_update_user(void) {
 
 `;
 
-    // 不再生成回调函数模板（视图切换由 SDK 自动处理）
+    // 收集 switchView 回调实现
+    const switchViewImpls = this.collectSwitchViewCallbackImpls();
+    switchViewImpls.forEach(impl => {
+      code += impl + '\n\n';
+    });
+
+    // 生成普通回调函数模板（排除已生成的 switchView 回调）
+    const callbackFunctions = this.collectCallbackFunctions();
+    const switchViewFuncNames = new Set(this.collectSwitchViewCallbackNames());
+    
+    callbackFunctions.forEach(funcName => {
+      if (switchViewFuncNames.has(funcName)) return; // 跳过已生成的
+      
+      code += `void ${funcName}(void *obj, gui_event_t event, void *param)\n`;
+      code += `{\n`;
+      code += `    GUI_UNUSED(obj);\n`;
+      code += `    GUI_UNUSED(event);\n`;
+      code += `    GUI_UNUSED(param);\n`;
+      code += `    // TODO: 实现事件处理逻辑\n`;
+      code += `    printf("${funcName} triggered\\n");\n`;
+      code += `}\n\n`;
+    });
 
     code += `/* @protected start custom_functions */
 // 自定义函数
@@ -744,6 +539,58 @@ void ${baseName}_update_user(void) {
 `;
 
     return code;
+  }
+
+  /**
+   * 收集所有 switchView 回调实现
+   */
+  private collectSwitchViewCallbackImpls(): string[] {
+    const impls: string[] = [];
+
+    this.components.forEach(component => {
+      const generator = EventGeneratorFactory.getGenerator(component.type);
+      if (generator.getSwitchViewCallbackImpl) {
+        generator.getSwitchViewCallbackImpl(component, this.componentMap).forEach(impl => {
+          impls.push(impl);
+        });
+      }
+    });
+
+    return impls;
+  }
+
+  /**
+   * 收集所有 switchView 回调函数名
+   */
+  private collectSwitchViewCallbackNames(): string[] {
+    const names: string[] = [];
+
+    this.components.forEach(component => {
+      if (!component.eventConfigs) return;
+      component.eventConfigs.forEach(eventConfig => {
+        eventConfig.actions.forEach(action => {
+          if (action.type === 'switchView' && action.target) {
+            names.push(`${component.id}_switch_view_cb`);
+          }
+        });
+      });
+    });
+
+    return names;
+  }
+
+  /**
+   * 收集所有需要生成的回调函数名
+   */
+  private collectCallbackFunctions(): string[] {
+    const functions = new Set<string>();
+
+    this.components.forEach(component => {
+      const generator = EventGeneratorFactory.getGenerator(component.type);
+      generator.collectCallbackFunctions(component).forEach(fn => functions.add(fn));
+    });
+
+    return Array.from(functions).sort();
   }
 
   /**
