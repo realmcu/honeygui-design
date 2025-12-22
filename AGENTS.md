@@ -146,7 +146,7 @@ HmlEditorProvider.resolveCustomTextEditor()
    - 只有当用户明确说"提交"、"commit"、"push"、"提交到 gitee"等关键词时，才执行 git 操作
    - 如果不确定是否需要提交，先询问用户
 8. **SDK 目录**：`/home/howie_wang/.HoneyGUI-SDK` 为 SDK 目录
-9. **实验工程**：测试用的实验工程位于 `/home/howie_wang/NewProject` 目录
+9. **实验工程**：测试用的实验工程, 也是模板工程位于 `./template-projects/smartwatch` 目录
 
 ### 不要做的事
 - ❌ 不要修改单元测试（除非用户明确要求）

@@ -27,7 +27,7 @@
 
 ### 前置依赖（用于编译仿真）
 - **HoneyGUI SDK**：安装到 `~/.HoneyGUI-SDK`（或在设置中配置路径）
-- **SCons**：构建工具（`pip install scons`）
+- **SCons**：构建工具（`pip install scons==4.4.0`）
 - **GCC/MinGW**：C 编译器
 - **SDL2**：图形库（仅运行仿真时需要）
 

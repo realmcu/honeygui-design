@@ -283,13 +283,16 @@ export class HmlParser {
    * 解析事件配置 (Event-Action)
    */
   private _parseEventConfigs(element: any): EventConfig[] | undefined {
-    if (!element.events?.event) {
+    // 支持两种格式：events.event 和 eventConfigs.eventConfig
+    const eventsSource = element.events?.event || element.eventConfigs?.eventConfig;
+    
+    if (!eventsSource) {
       return undefined;
     }
 
-    const eventElements = Array.isArray(element.events.event)
-      ? element.events.event
-      : [element.events.event];
+    const eventElements = Array.isArray(eventsSource)
+      ? eventsSource
+      : [eventsSource];
 
     const eventConfigs: EventConfig[] = [];
 

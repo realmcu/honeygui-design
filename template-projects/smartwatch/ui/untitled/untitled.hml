@@ -3,13 +3,10 @@
     <meta>
     </meta>
     <view>
-        <hg_view id="untitledView" x="133" y="-98" width="410" height="502" backgroundColor="#000000" name="untitledView">
+        <hg_view id="untitledView" x="30" y="-181" width="410" height="502" backgroundColor="#000000" name="untitledView">
             <events>
                 <event type="onSwipeLeft">
                     <action type="switchView" target="hg_view_1766044593245_j9p2" />
-                </event>
-                <event type="onMessage">
-                    <action type="callFunction" />
                 </event>
             </events>
             <hg_image id="hg_image_1766027539313_cumd" x="177" y="105" width="100" height="100" src="assets/UI_app_list/app_mail_icon.png" name="image_9313" zIndex="1">
@@ -21,7 +18,7 @@
             </hg_image>
             <hg_image id="hg_image_1766027540528_yili" x="199" y="341" width="100" height="100" src="assets/UI_app_list/app_cycle_tracking_icon.png" name="image_0529" zIndex="1" />
         </hg_view>
-        <hg_view id="hg_view_1766044593245_j9p2" x="833" y="-5" width="410" height="502" backgroundColor="#000000" borderRadius="0" padding="12" overflow="auto" name="hg_view_label" zIndex="1">
+        <hg_view id="hg_view_1766044593245_j9p2" x="673" y="-129" width="410" height="502" backgroundColor="#000000" borderRadius="0" padding="12" overflow="auto" name="hg_view_label" zIndex="1">
             <events>
                 <event type="onSwipeLeft">
                     <action type="switchView" target="mainView" />

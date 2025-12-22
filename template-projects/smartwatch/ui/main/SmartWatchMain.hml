@@ -5,15 +5,21 @@
         <author name="HoneyGUI Design" />
     </meta>
     <view>
-        <hg_view id="mainView" x="-475" y="-380" width="410" height="502" backgroundColor="#000000" name="mainView">
+        <hg_view id="mainView" x="175" y="-68" width="410" height="502" backgroundColor="#000000" name="mainView">
             <events>
                 <event type="onSwipeLeft">
                     <action type="switchView" target="hg_view_1766022481486_seii" />
                 </event>
             </events>
-            <hg_image id="hg_image_1766123033044_7gh5" x="152" y="141" width="100" height="100" src="assets/UI_app_list/app_alarm_clock_icon.png" name="image_3044" zIndex="1" />
+            <hg_image id="hg_image_1766123033044_7gh5" x="152" y="141" width="100" height="100" src="assets/UI_app_list/app_alarm_clock_icon.png" name="image_3044" zIndex="1">
+                <events>
+                    <event type="onClick">
+                        <action type="switchView" target="hg_view_1766022481486_seii" />
+                    </event>
+                </events>
+            </hg_image>
         </hg_view>
-        <hg_view id="hg_view_1766022481486_seii" x="466" y="-195" width="410" height="502" backgroundColor="#000000" borderRadius="0" padding="12" overflow="auto" name="hg_view_1486" zIndex="1">
+        <hg_view id="hg_view_1766022481486_seii" x="750" y="-112" width="410" height="502" backgroundColor="#000000" borderRadius="0" padding="12" overflow="auto" name="hg_view_1486" zIndex="1">
             <events>
                 <event type="onSwipeLeft">
                     <action type="switchView" target="untitledView" />
