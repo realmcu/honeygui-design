@@ -156,6 +156,7 @@ HmlEditorProvider.resolveCustomTextEditor()
 - ❌ 不要修改 `*_ui.c/h` 的保护区标记
 - ❌ 不要添加网络依赖功能
 - ❌ 不要随意创建文档
+- ❌ **不要发布到插件市场**（必须用户明确允许才可以执行 `vsce publish`）
 
 
 

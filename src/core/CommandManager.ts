@@ -28,18 +28,7 @@ export class CommandManager {
         // 注册协同相关命令
         this.registerCollaborationCommands();
 
-        // 创建新项目（保持兼容别名）
-        this.registerCommand('honeygui.createProject', async () => {
-            try {
-                logger.info('执行命令: honeygui.createProject');
-                await CreateProjectPanel.createOrShow(this.context);
-            } catch (error) {
-                logger.error(`创建项目失败: ${error instanceof Error ? error.message : String(error)}`);
-                vscode.window.showErrorMessage(`创建项目失败: ${error instanceof Error ? error.message : '未知错误'}`);
-            }
-        });
-
-        // 兼容 package.json 的激活事件命令: honeygui.newProject
+        // 新建项目
         this.registerCommand('honeygui.newProject', async () => {
             try {
                 logger.info('执行命令: honeygui.newProject');

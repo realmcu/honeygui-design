@@ -81,6 +81,34 @@
             display: inline-block; background-color: #0e639c; color: #ffffff;
             padding: 2px 8px; border-radius: 3px; font-size: 11px;
         }
+        /* SDK 切换样式 */
+        .sdk-tabs { display: flex; gap: 0; margin-bottom: 10px; }
+        .sdk-tab {
+            padding: 6px 16px; background-color: #3c3c3c; border: 1px solid #3e3e42;
+            color: #969696; cursor: pointer; font-size: 13px; transition: all 0.2s;
+        }
+        .sdk-tab:first-child { border-radius: 3px 0 0 3px; }
+        .sdk-tab:last-child { border-radius: 0 3px 3px 0; border-left: none; }
+        .sdk-tab.active { background-color: #0e639c; border-color: #007acc; color: #fff; }
+        .sdk-tab:hover:not(.active) { background-color: #4a4a4a; }
+        .sdk-content { display: none; }
+        .sdk-content.active { display: block; }
+        .clone-source { margin-bottom: 10px; }
+        .radio-label { display: inline-flex; align-items: center; margin-right: 20px; cursor: pointer; font-size: 13px; }
+        .radio-label input { margin-right: 6px; }
+        .clone-target { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 13px; color: #969696; }
+        .clone-path { color: #d4d4d4; font-family: monospace; }
+        .btn-clone {
+            padding: 8px 16px; background-color: #0e639c; border: 1px solid #007acc;
+            border-radius: 3px; color: #fff; cursor: pointer; font-size: 13px;
+        }
+        .btn-clone:hover:not(:disabled) { background-color: #1177bb; }
+        .btn-clone:disabled { background-color: #3c3c3c; border-color: #3e3e42; cursor: not-allowed; }
+        .clone-progress { margin-top: 10px; }
+        .clone-progress.hidden { display: none; }
+        .progress-bar { height: 6px; background-color: #3c3c3c; border-radius: 3px; overflow: hidden; }
+        .progress-fill { height: 100%; width: 0%; background-color: #007acc; transition: width 0.3s; }
+        .progress-text { display: block; margin-top: 6px; font-size: 12px; color: #969696; }
     </style>
 </head>
 <body>
@@ -165,10 +193,35 @@
             </div>
             
             <div class="form-group">
-                <label for="honeyguiSdkPath">HoneyGUI SDK Path</label>
-                <div class="input-group">
-                    <input type="text" id="honeyguiSdkPath" class="form-control" placeholder="Default: ~/.HoneyGUI-SDK" />
-                    <button class="btn-icon" id="selectSdkButton">📁</button>
+                <label>HoneyGUI SDK</label>
+                <div class="sdk-tabs">
+                    <button type="button" class="sdk-tab active" data-sdk-tab="local">本地目录</button>
+                    <button type="button" class="sdk-tab" data-sdk-tab="clone">在线克隆</button>
+                </div>
+                <div id="sdk-local" class="sdk-content active">
+                    <div class="input-group">
+                        <input type="text" id="honeyguiSdkPath" class="form-control" placeholder="Default: ~/.HoneyGUI-SDK" />
+                        <button class="btn-icon" id="selectSdkButton">📁</button>
+                    </div>
+                </div>
+                <div id="sdk-clone" class="sdk-content">
+                    <div class="clone-source">
+                        <label class="radio-label">
+                            <input type="radio" name="cloneSource" value="gitee" checked /> Gitee (国内推荐)
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="cloneSource" value="github" /> GitHub
+                        </label>
+                    </div>
+                    <div class="clone-target">
+                        <span class="clone-label">克隆到:</span>
+                        <span class="clone-path">~/.HoneyGUI-SDK</span>
+                    </div>
+                    <button type="button" id="cloneSdkButton" class="btn-clone">开始克隆</button>
+                    <div id="cloneProgress" class="clone-progress hidden">
+                        <div class="progress-bar"><div class="progress-fill"></div></div>
+                        <span class="progress-text">准备中...</span>
+                    </div>
                 </div>
             </div>
             
@@ -419,6 +472,25 @@
                 }
             });
             
+            // SDK Tab 切换
+            document.querySelectorAll('.sdk-tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const tabId = this.dataset.sdkTab;
+                    document.querySelectorAll('.sdk-tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.sdk-content').forEach(c => c.classList.remove('active'));
+                    this.classList.add('active');
+                    document.getElementById('sdk-' + tabId)?.classList.add('active');
+                });
+            });
+            
+            // 克隆 SDK 按钮
+            document.getElementById('cloneSdkButton')?.addEventListener('click', function() {
+                const source = document.querySelector('input[name="cloneSource"]:checked')?.value || 'gitee';
+                this.disabled = true;
+                document.getElementById('cloneProgress').classList.remove('hidden');
+                vscode.postMessage({ command: 'cloneSdk', source: source });
+            });
+            
             // Request templates from extension
             vscode.postMessage({ command: 'getTemplates' });
             
@@ -441,6 +513,24 @@
                 document.getElementById('templateSdkPath').value = msg.sdkPath;
             } else if (msg.command === 'templatesLoaded') {
                 renderTemplates(msg.templates);
+            } else if (msg.command === 'cloneProgress') {
+                const progressFill = document.querySelector('.progress-fill');
+                const progressText = document.querySelector('.progress-text');
+                if (progressFill) progressFill.style.width = msg.percent + '%';
+                if (progressText) progressText.textContent = msg.text || '克隆中...';
+            } else if (msg.command === 'cloneComplete') {
+                document.getElementById('honeyguiSdkPath').value = msg.sdkPath;
+                document.getElementById('cloneProgress').classList.add('hidden');
+                document.getElementById('cloneSdkButton').disabled = false;
+                // 切换回本地目录 tab
+                document.querySelectorAll('.sdk-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.sdk-content').forEach(c => c.classList.remove('active'));
+                document.querySelector('.sdk-tab[data-sdk-tab="local"]')?.classList.add('active');
+                document.getElementById('sdk-local')?.classList.add('active');
+            } else if (msg.command === 'cloneError') {
+                document.getElementById('cloneProgress').classList.add('hidden');
+                document.getElementById('cloneSdkButton').disabled = false;
+                showError(msg.text);
             } else if (msg.command === 'error') {
                 showError(msg.text);
             }
