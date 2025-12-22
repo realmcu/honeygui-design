@@ -6,6 +6,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { PNG } from 'pngjs';
 import * as jpeg from 'jpeg-js';
+import * as bmp from 'bmp-js';
 import { PixelFormat, FORMAT_TO_PIXEL_BYTES, FORMAT_TO_BPP } from './types';
 import { RGBDataHeader, IMDCFileHeader } from './headers';
 import { convertPixels } from './pixel-converter';
@@ -213,55 +214,29 @@ export class ImageConverter {
         hasAlpha: boolean;
     }> {
         const buffer = fs.readFileSync(filePath);
-        
-        // BMP 文件头 (14 bytes)
-        const dataOffset = buffer.readUInt32LE(10);
-        
-        // DIB 头 (40 bytes for BITMAPINFOHEADER)
-        const width = buffer.readInt32LE(18);
-        const height = Math.abs(buffer.readInt32LE(22)); // 可能为负（自上而下）
-        const bitsPerPixel = buffer.readUInt16LE(28);
-        const compression = buffer.readUInt32LE(30);
-        
-        // 只支持未压缩的 24-bit 和 32-bit BMP
-        if (compression !== 0) {
-            throw new Error('Compressed BMP not supported');
-        }
-        
-        if (bitsPerPixel !== 24 && bitsPerPixel !== 32) {
-            throw new Error(`BMP with ${bitsPerPixel} bits per pixel not supported (only 24 and 32 bit)`);
-        }
+        const bmpData = bmp.decode(buffer);
         
         const pixels: RGBA[] = [];
-        const bytesPerPixel = bitsPerPixel / 8;
-        const rowSize = Math.floor((bitsPerPixel * width + 31) / 32) * 4; // 行对齐到 4 字节
-        const isTopDown = buffer.readInt32LE(22) < 0;
         let hasAlpha = false;
         
-        // BMP 通常是从下到上存储的
-        for (let y = 0; y < height; y++) {
-            const actualY = isTopDown ? y : (height - 1 - y);
-            const rowOffset = dataOffset + actualY * rowSize;
+        // bmp-js 返回的数据是 RGBA 格式，从上到下，从左到右
+        for (let i = 0; i < bmpData.data.length; i += 4) {
+            const r = bmpData.data[i];
+            const g = bmpData.data[i + 1];
+            const b = bmpData.data[i + 2];
+            const a = bmpData.data[i + 3];
             
-            for (let x = 0; x < width; x++) {
-                const pixelOffset = rowOffset + x * bytesPerPixel;
-                const b = buffer[pixelOffset];
-                const g = buffer[pixelOffset + 1];
-                const r = buffer[pixelOffset + 2];
-                const a = bytesPerPixel === 4 ? buffer[pixelOffset + 3] : 255;
-                
-                if (a < 255) {
-                    hasAlpha = true;
-                }
-                
-                pixels.push({ r, g, b, a });
+            if (a < 255) {
+                hasAlpha = true;
             }
+            
+            pixels.push({ r, g, b, a });
         }
         
         return {
             pixels,
-            width,
-            height,
+            width: bmpData.width,
+            height: bmpData.height,
             hasAlpha,
         };
     }
