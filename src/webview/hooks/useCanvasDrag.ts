@@ -17,6 +17,16 @@ export const useCanvasDrag = (
   // 监听 Ctrl 键
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // 如果焦点在输入框中，不影响 Ctrl 键状态（避免干扰输入）
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
       if (e.ctrlKey && !e.repeat) {
         setIsCtrlPressed(true);
       }
