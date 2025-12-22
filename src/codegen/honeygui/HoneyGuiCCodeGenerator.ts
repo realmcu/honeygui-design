@@ -16,6 +16,7 @@ import { SConscriptGenerator } from '../../simulation/SConscriptGenerator';
 import { ICodeGenerator, CodeGenOptions, CodeGenResult } from '../ICodeGenerator';
 import { EventGeneratorFactory } from './events';
 import { ComponentGeneratorFactory, GeneratorContext } from './components';
+import { CallbackFileGenerator, UserFileGenerator, ProtectedAreaMerger } from './files';
 
 // Re-export for backward compatibility
 export { Component } from '../../hml/types';
@@ -64,37 +65,39 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       files.push(uiImplFile);
 
       // === 回调代码（保护区）===
+      const callbackGenerator = new CallbackFileGenerator(this.components);
       const callbackHeaderFile = path.join(callbacksDir, `${designName}_callbacks.h`);
       const callbackImplFile = path.join(callbacksDir, `${designName}_callbacks.c`);
       
       // 回调头文件：只生成一次
       if (!fs.existsSync(callbackHeaderFile)) {
-        fs.writeFileSync(callbackHeaderFile, this.generateCallbackHeader(designName));
+        fs.writeFileSync(callbackHeaderFile, callbackGenerator.generateHeader(designName));
         files.push(callbackHeaderFile);
       }
       
       // 回调实现文件：保护区合并
       if (!fs.existsSync(callbackImplFile)) {
-        fs.writeFileSync(callbackImplFile, this.generateCallbackImplementation(designName));
+        fs.writeFileSync(callbackImplFile, callbackGenerator.generateImplementation(designName));
         files.push(callbackImplFile);
       } else if (this.options.enableProtectedAreas) {
         const existing = fs.readFileSync(callbackImplFile, 'utf-8');
-        const merged = this.mergeProtectedAreas(existing, this.generateCallbackImplementation(designName));
+        const merged = ProtectedAreaMerger.merge(existing, callbackGenerator.generateImplementation(designName));
         fs.writeFileSync(callbackImplFile, merged);
         files.push(callbackImplFile);
       }
 
       // === 用户代码（只生成一次）===
+      const userGenerator = new UserFileGenerator();
       const userHeaderFile = path.join(userDir, `${designName}_user.h`);
       const userImplFile = path.join(userDir, `${designName}_user.c`);
 
       if (!fs.existsSync(userHeaderFile)) {
-        fs.writeFileSync(userHeaderFile, this.generateUserHeader(designName));
+        fs.writeFileSync(userHeaderFile, userGenerator.generateHeader(designName));
         files.push(userHeaderFile);
       }
 
       if (!fs.existsSync(userImplFile)) {
-        fs.writeFileSync(userImplFile, this.generateUserImplementation(designName));
+        fs.writeFileSync(userImplFile, userGenerator.generateImplementation(designName));
         files.push(userImplFile);
       }
 
@@ -110,56 +113,6 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
         errors: [error instanceof Error ? error.message : String(error)]
       };
     }
-  }
-
-  /**
-   * 生成用户头文件模板
-   */
-  private generateUserHeader(baseName: string): string {
-    const guardName = `${baseName.toUpperCase()}_USER_H`;
-    return `#ifndef ${guardName}
-#define ${guardName}
-
-/**
- * ${baseName} 用户代码
- * 此文件只生成一次，后续不会被覆盖
- * 可以在此添加自定义逻辑、状态管理等
- */
-
-#include "../ui/${baseName}_ui.h"
-
-// 用户自定义函数声明
-void ${baseName}_init_user(void);
-void ${baseName}_update_user(void);
-
-#endif // ${guardName}
-`;
-  }
-
-  /**
-   * 生成用户实现文件模板
-   */
-  private generateUserImplementation(baseName: string): string {
-    return `#include "${baseName}_user.h"
-#include <stdio.h>
-
-/**
- * ${baseName} 用户代码实现
- * 此文件只生成一次，后续不会被覆盖
- */
-
-// 用户初始化（在UI创建后调用）
-void ${baseName}_init_user(void) {
-    // TODO: 添加初始化逻辑
-}
-
-// 用户更新（可用于周期性更新UI）
-void ${baseName}_update_user(void) {
-    // TODO: 添加更新逻辑
-}
-
-// 在下方添加更多自定义函数...
-`;
   }
 
   /**
@@ -289,9 +242,9 @@ void ${baseName}_update_user(void) {
     // 添加注释
     code += `\n${indentStr}// 创建${component.name} (${component.type})\n`;
 
-    // hg_view 使用 GUI_VIEW_INSTANCE 宏，子组件在 switch_in 中创建
-    if (component.type === 'hg_view') {
-      code += this.generateViewInstance(component, indent);
+    // hg_view/hg_window 使用 ViewGenerator
+    if (component.type === 'hg_view' || component.type === 'hg_window') {
+      code += this.generateViewComponent(component, indent);
       return code;
     }
 
@@ -324,103 +277,31 @@ void ${baseName}_update_user(void) {
     const generator = ComponentGeneratorFactory.getGenerator(component.type);
     return generator.generateCreation(component, indent, this.createGeneratorContext());
   }
-  /**
-   * 生成 hg_view 的 GUI_VIEW_INSTANCE 代码
-   * 包括：
-   * 1. switch_out 回调（空实现）
-   * 2. switch_in 回调（注册视图切换事件 + 创建子组件）
-   * 3. GUI_VIEW_INSTANCE 宏调用
-   */
-  private generateViewInstance(component: Component, indent: number): string {
-    const indentStr = '    '.repeat(indent);
-    const name = component.name;
 
-    let code = '';
+  /**
+   * 生成 hg_view/hg_window 组件代码
+   * 使用 ViewGenerator 生成，并处理子组件
+   */
+  private generateViewComponent(component: Component, indent: number): string {
+    const generator = ComponentGeneratorFactory.getGenerator(component.type);
+    let code = generator.generateCreation(component, indent, this.createGeneratorContext());
     
-    // 生成 switch_out 回调
-    code += `${indentStr}static void ${name}_switch_out(gui_view_t *view)\n`;
-    code += `${indentStr}{\n`;
-    code += `${indentStr}    GUI_UNUSED(view);\n`;
-    code += `${indentStr}}\n\n`;
-    
-    // 生成 switch_in 回调
-    code += `${indentStr}static void ${name}_switch_in(gui_view_t *view)\n`;
-    code += `${indentStr}{\n`;
-    
-    // 1. 注册视图切换事件 (从 eventConfigs 中提取 switchView 动作)
-    const switchViewEvents = this.extractSwitchViewEvents(component);
-    if (switchViewEvents.length > 0) {
-      switchViewEvents.forEach(({ guiEvent, targetName, switchOutStyle, switchInStyle }) => {
-        code += `${indentStr}    gui_view_switch_on_event(view, "${targetName}", ${switchOutStyle}, ${switchInStyle}, ${guiEvent});\n`;
-      });
-    } else {
-      code += `${indentStr}    GUI_UNUSED(view);\n`;
-    }
-    
-    // 2. 创建子组件
+    // 生成子组件代码
+    let childrenCode = '';
     if (component.children && component.children.length > 0) {
-      code += `\n`;
+      childrenCode += '\n';
       component.children.forEach(childId => {
         const child = this.componentMap.get(childId);
         if (child) {
-          code += this.generateComponentTree(child, indent + 1);
+          childrenCode += this.generateComponentTree(child, indent + 1);
         }
       });
     }
     
-    code += `${indentStr}}\n`;
+    // 替换占位符
+    code = code.replace('__CHILDREN_PLACEHOLDER__', childrenCode);
     
-    // 3. GUI_VIEW_INSTANCE 宏调用
-    code += `${indentStr}GUI_VIEW_INSTANCE("${name}", false, ${name}_switch_in, ${name}_switch_out);\n`;
-
     return code;
-  }
-
-  /**
-   * 从 eventConfigs 中提取 switchView 事件
-   */
-  private extractSwitchViewEvents(component: Component): Array<{
-    guiEvent: string;
-    targetName: string;
-    switchOutStyle: string;
-    switchInStyle: string;
-  }> {
-    const result: Array<{
-      guiEvent: string;
-      targetName: string;
-      switchOutStyle: string;
-      switchInStyle: string;
-    }> = [];
-
-    if (!component.eventConfigs) return result;
-
-    // 事件类型到 GUI_EVENT 的映射
-    const eventTypeToGuiEvent: Record<string, string> = {
-      'onSwipeLeft': 'GUI_EVENT_TOUCH_MOVE_LEFT',
-      'onSwipeRight': 'GUI_EVENT_TOUCH_MOVE_RIGHT',
-      'onSwipeUp': 'GUI_EVENT_TOUCH_MOVE_UP',
-      'onSwipeDown': 'GUI_EVENT_TOUCH_MOVE_DOWN',
-    };
-
-    component.eventConfigs.forEach(eventConfig => {
-      const guiEvent = eventTypeToGuiEvent[eventConfig.type];
-      if (!guiEvent) return;
-
-      eventConfig.actions.forEach(action => {
-        if (action.type === 'switchView' && action.target) {
-          const targetComponent = this.componentMap.get(action.target);
-          const targetName = targetComponent?.name || action.target;
-          result.push({
-            guiEvent,
-            targetName,
-            switchOutStyle: action.switchOutStyle || 'SWITCH_OUT_TO_LEFT_USE_TRANSLATION',
-            switchInStyle: action.switchInStyle || 'SWITCH_IN_FROM_RIGHT_USE_TRANSLATION',
-          });
-        }
-      });
-    });
-
-    return result;
   }
 
   /**

@@ -3,7 +3,21 @@
  */
 import { EventCodeGenerator } from './EventCodeGenerator';
 import { ViewEventGenerator } from './ViewEventGenerator';
+import { ButtonEventGenerator } from './ButtonEventGenerator';
+import { LabelEventGenerator } from './LabelEventGenerator';
 import { ImageEventGenerator } from './ImageEventGenerator';
+import { InputEventGenerator } from './InputEventGenerator';
+import { CheckboxEventGenerator } from './CheckboxEventGenerator';
+import { RadioEventGenerator } from './RadioEventGenerator';
+import { CanvasEventGenerator } from './CanvasEventGenerator';
+import { ListEventGenerator } from './ListEventGenerator';
+import { VideoEventGenerator } from './VideoEventGenerator';
+import { Model3DEventGenerator } from './Model3DEventGenerator';
+import { LottieEventGenerator } from './LottieEventGenerator';
+import { ArcEventGenerator } from './ArcEventGenerator';
+import { CircleEventGenerator } from './CircleEventGenerator';
+import { RectEventGenerator } from './RectEventGenerator';
+import { SvgEventGenerator } from './SvgEventGenerator';
 import { DefaultEventGenerator } from './DefaultEventGenerator';
 
 export class EventGeneratorFactory {
@@ -11,11 +25,32 @@ export class EventGeneratorFactory {
   private static defaultGenerator = new DefaultEventGenerator();
 
   static {
-    // 注册组件特定的事件生成器
+    // 容器组件
     this.generators.set('hg_view', new ViewEventGenerator());
     this.generators.set('hg_window', new ViewEventGenerator());
+    
+    // 基础控件
+    this.generators.set('hg_button', new ButtonEventGenerator());
+    this.generators.set('hg_label', new LabelEventGenerator());
     this.generators.set('hg_image', new ImageEventGenerator());
-    // 其他组件使用默认生成器
+    this.generators.set('hg_input', new InputEventGenerator());
+    this.generators.set('hg_checkbox', new CheckboxEventGenerator());
+    this.generators.set('hg_radio', new RadioEventGenerator());
+    
+    // 高级控件
+    this.generators.set('hg_canvas', new CanvasEventGenerator());
+    this.generators.set('hg_list', new ListEventGenerator());
+    
+    // 多媒体
+    this.generators.set('hg_video', new VideoEventGenerator());
+    this.generators.set('hg_3d', new Model3DEventGenerator());
+    this.generators.set('hg_lottie', new LottieEventGenerator());
+    
+    // 图形
+    this.generators.set('hg_arc', new ArcEventGenerator());
+    this.generators.set('hg_circle', new CircleEventGenerator());
+    this.generators.set('hg_rect', new RectEventGenerator());
+    this.generators.set('hg_svg', new SvgEventGenerator());
   }
 
   static getGenerator(componentType: string): EventCodeGenerator {
@@ -26,3 +61,5 @@ export class EventGeneratorFactory {
     return this.generators.get('hg_view') as ViewEventGenerator;
   }
 }
+
+export { EventCodeGenerator, EVENT_TYPE_TO_GUI_EVENT } from './EventCodeGenerator';
