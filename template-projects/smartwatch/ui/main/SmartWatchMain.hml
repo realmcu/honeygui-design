@@ -18,7 +18,7 @@
                     </event>
                 </events>
             </hg_image>
-            <hg_image id="hg_image_1766403734725_g6ba" x="141" y="85" width="256" height="313" src="assets/bmp-test.bmp" name="image_4726" zIndex="1" />
+            <hg_image id="hg_image_1766403734725_g6ba" x="141" y="85" width="256" height="313" src="assets/bmp-test.bmp" name="image_123" zIndex="1" />
             <hg_circle id="hg_circle_1766392198338_e1pl" x="48" y="284" width="100" height="100" radius="40" fillColor="#007acc" opacity="255" name="hg_circle_8338" zIndex="1" />
         </hg_view>
         <hg_view id="hg_view_1766022481486_seii" x="750" y="-112" width="410" height="502" backgroundColor="#000000" borderRadius="0" padding="12" overflow="auto" name="hg_view_1486" zIndex="1">

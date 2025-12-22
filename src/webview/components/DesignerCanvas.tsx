@@ -208,6 +208,16 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
   // 处理键盘事件，特别是delete键删除选中组件
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // 如果焦点在输入框、文本域或可编辑元素中，不处理快捷键
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
       // 当按下delete或backspace键，并且有选中的组件时，删除该组件
       if ((e.key === 'Delete' || e.key === 'Backspace') && (selectedComponent || (selectedComponents && selectedComponents.length > 0))) {
         // 阻止默认行为，避免在某些浏览器中可能的页面后退或其他默认操作
