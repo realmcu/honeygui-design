@@ -119,4 +119,5 @@ MIT License
 
 - **HoneyGUI SDK (GitHub)**：https://github.com/realmcu/HoneyGUI
 - **HoneyGUI SDK (Gitee)**：https://gitee.com/realmcu/HoneyGUI
-- **问题反馈**：https://github.com/realmcu/HoneyGUI/issues
+- **问题反馈(GitHub)**：https://github.com/realmcu/HoneyGUI/issues
+- **问题反馈(Gitee)**：https://gitee.com/realmcu/HoneyGUI/issues
