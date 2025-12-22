@@ -13,9 +13,11 @@ import './DesignerCanvas.css';
 
 interface DesignerCanvasProps {
   onComponentSelect: (id: string | null) => void;
+  onDrop?: (e: React.DragEvent) => void;
+  onDragOver?: (e: React.DragEvent) => void;
 }
 
-const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) => {
+const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDrop, onDragOver }) => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [pendingDragComponent, setPendingDragComponent] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -322,6 +324,8 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect }) =>
         onMouseDown={handleCanvasMouseDown}
         onMouseMove={handleComponentMouseMove}
         onMouseUp={handleComponentMouseUp}
+        onDrop={onDrop}
+        onDragOver={onDragOver}
         onWheel={(e) => {
           if (e.ctrlKey) {
             e.preventDefault();

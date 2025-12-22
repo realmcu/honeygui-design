@@ -35,6 +35,7 @@ export type ComponentType =
   | 'hg_video'
   | 'hg_3d'
   | 'hg_arc'
+  | 'hg_circle'
   | 'hg_rect'
   | 'hg_svg'
   | 'hg_lottie';

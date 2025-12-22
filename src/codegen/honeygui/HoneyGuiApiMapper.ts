@@ -140,6 +140,51 @@ export class HoneyGuiApiMapper {
       eventHandlers: [],
       includeHeader: 'gui_video.h'
     });
+
+    // 圆弧
+    this.mappings.set('hg_arc', {
+      componentType: 'hg_arc',
+      createFunction: 'gui_arc_create',
+      propertySetters: [
+        { property: 'radius', apiFunction: 'gui_arc_set_radius' },
+        { property: 'startAngle', apiFunction: 'gui_arc_set_start_angle' },
+        { property: 'endAngle', apiFunction: 'gui_arc_set_end_angle' },
+        { property: 'strokeWidth', apiFunction: 'gui_arc_set_line_width' },
+        { property: 'color', apiFunction: 'gui_arc_set_color', valueTransform: this.colorToGuiColor }
+      ],
+      eventHandlers: [
+        { event: 'onClick', apiFunction: 'gui_arc_on_click' }
+      ],
+      includeHeader: 'gui_arc.h'
+    });
+
+    // 圆形
+    this.mappings.set('hg_circle', {
+      componentType: 'hg_circle',
+      createFunction: 'gui_circle_create',
+      propertySetters: [
+        { property: 'radius', apiFunction: 'gui_circle_set_radius' },
+        { property: 'fillColor', apiFunction: 'gui_circle_set_color', valueTransform: this.colorToGuiColor }
+      ],
+      eventHandlers: [
+        { event: 'onClick', apiFunction: 'gui_circle_on_click' }
+      ],
+      includeHeader: 'gui_circle.h'
+    });
+
+    // 矩形
+    this.mappings.set('hg_rect', {
+      componentType: 'hg_rect',
+      createFunction: 'gui_rect_create',
+      propertySetters: [
+        { property: 'borderRadius', apiFunction: 'gui_rect_set_radius' },
+        { property: 'fillColor', apiFunction: 'gui_rect_set_color', valueTransform: this.colorToGuiColor }
+      ],
+      eventHandlers: [
+        { event: 'onClick', apiFunction: 'gui_rect_on_click' }
+      ],
+      includeHeader: 'gui_rect.h'
+    });
   }
 
   /**
@@ -180,6 +225,47 @@ export class HoneyGuiApiMapper {
       }
     }
     return '0x000000';
+  }
+
+  /**
+   * 颜色转换为 gui_rgba 宏调用（与 SDK 示例代码一致）
+   * @param color 颜色字符串
+   * @param opacity 可选的透明度覆盖值 (0-255)
+   */
+  public colorToGuiColor(color: string, opacity?: number): string {
+    let r = 0, g = 0, b = 0, a = 255;
+    
+    if (color.startsWith('#')) {
+      const hex = color.substring(1);
+      if (hex.length === 6) {
+        r = parseInt(hex.substring(0, 2), 16);
+        g = parseInt(hex.substring(2, 4), 16);
+        b = parseInt(hex.substring(4, 6), 16);
+      } else if (hex.length === 8) {
+        r = parseInt(hex.substring(0, 2), 16);
+        g = parseInt(hex.substring(2, 4), 16);
+        b = parseInt(hex.substring(4, 6), 16);
+        a = parseInt(hex.substring(6, 8), 16);
+      }
+    } else if (color.startsWith('rgb')) {
+      const match = color.match(/\d+/g);
+      if (match && match.length >= 3) {
+        r = parseInt(match[0]);
+        g = parseInt(match[1]);
+        b = parseInt(match[2]);
+        if (match.length >= 4) {
+          a = Math.round(parseFloat(match[3]) * 255);
+        }
+      }
+    }
+    
+    // 如果提供了 opacity 参数，使用它覆盖颜色中的 alpha 值
+    if (opacity !== undefined) {
+      a = Math.max(0, Math.min(255, Math.round(opacity)));
+    }
+    
+    // 使用 gui_rgba 宏（与 SDK 示例代码一致）
+    return `gui_rgba(${r}, ${g}, ${b}, ${a})`;
   }
 
   /**

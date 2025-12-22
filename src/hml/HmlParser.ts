@@ -208,7 +208,11 @@ export class HmlParser {
     const styleProps = new Set([
       'color', 'backgroundColor', 'fontSize', 'fontWeight',
       'border', 'borderRadius', 'padding', 'margin',
-      'opacity', 'overflow', 'title', 'titleBarHeight', 'titleBarColor'
+      'opacity', 'overflow', 'title', 'titleBarHeight', 'titleBarColor',
+      // 圆弧属性
+      'radius', 'startAngle', 'endAngle', 'strokeWidth',
+      // 矩形属性
+      'fillColor'
     ]);
 
     const dataProps = new Set([

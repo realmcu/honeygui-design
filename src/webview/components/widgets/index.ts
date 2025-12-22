@@ -15,6 +15,7 @@ import { ListItemWidget } from './ListItemWidget';
 import { VideoWidget } from './VideoWidget';
 import { Model3DWidget } from './Model3DWidget';
 import { ArcWidget } from './ArcWidget';
+import { CircleWidget } from './CircleWidget';
 import { RectWidget } from './RectWidget';
 import { SvgWidget } from './SvgWidget';
 import { LottieWidget } from './LottieWidget';
@@ -42,6 +43,7 @@ export const widgetRegistry: Record<string, React.FC<WidgetProps>> = {
   hg_video: VideoWidget,
   hg_3d: Model3DWidget,
   hg_arc: ArcWidget,
+  hg_circle: CircleWidget,
   hg_rect: RectWidget,
   hg_svg: SvgWidget,
   hg_lottie: LottieWidget,

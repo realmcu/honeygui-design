@@ -567,9 +567,23 @@ const App: React.FC = () => {
 
       const state = useDesignerStore.getState();
       const dpr = window.devicePixelRatio || 1;
+      
+      // 计算鼠标相对于 canvas 元素的坐标（不考虑 zoom 和 offset）
+      let relX = e.clientX - canvasRect.left;
+      let relY = e.clientY - canvasRect.top;
+      
+      // 处理 canvas 超出视口的情况
+      // 如果 canvas 的 left 或 top 是负数，说明 canvas 的一部分在视口外
+      if (canvasRect.left < 0) {
+        relX = e.clientX - canvasRect.left;
+      }
+      if (canvasRect.top < 0) {
+        relY = e.clientY - canvasRect.top;
+      }
+      
       // 将鼠标坐标转换为画布坐标系（考虑 canvasOffset 和 zoom）
-      const x = (e.clientX - canvasRect.left - state.canvasOffset.x) / (state.zoom / dpr);
-      const y = (e.clientY - canvasRect.top - state.canvasOffset.y) / (state.zoom / dpr);
+      const x = (relX - state.canvasOffset.x) / state.zoom;
+      const y = (relY - state.canvasOffset.y) / state.zoom;
 
       const api = useDesignerStore.getState().vscodeAPI;
       if (api) {
@@ -658,10 +672,20 @@ const App: React.FC = () => {
     }
 
     // 计算鼠标释放时的画布坐标位置
-    // 使用 currentTarget 而不是 target，确保获取的是画布容器而不是子元素
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const x = Math.max(0, Math.round(e.clientX - rect.left));
-    const y = Math.max(0, Math.round(e.clientY - rect.top));
+    const canvasRect = document.querySelector('.designer-canvas')?.getBoundingClientRect();
+    if (!canvasRect) return;
+
+    const state = useDesignerStore.getState();
+    const dpr = window.devicePixelRatio || 1;
+    
+    // 计算鼠标相对于 canvas 元素的坐标
+    const relX = e.clientX - canvasRect.left;
+    const relY = e.clientY - canvasRect.top;
+    
+    // 将鼠标坐标转换为画布坐标系
+    const actualScale = state.zoom / dpr;
+    const x = Math.max(0, Math.round((relX - state.canvasOffset.x) / actualScale));
+    const y = Math.max(0, Math.round((relY - state.canvasOffset.y) / actualScale));
 
     // 生成唯一组件ID
     const componentId = `${componentType}_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
@@ -939,11 +963,12 @@ const App: React.FC = () => {
         {/* Center - Canvas */}
         <div
           className="canvas-container"
-          onDrop={handleCanvasDrop}
-          onDragOver={handleCanvasDragOver}
-          onClick={handleCanvasClick}
         >
-          <DesignerCanvas onComponentSelect={handleComponentSelect} />
+          <DesignerCanvas 
+            onComponentSelect={handleComponentSelect}
+            onDrop={handleCanvasDrop}
+            onDragOver={handleCanvasDragOver}
+          />
         </div>
 
         {/* Right Panel Collapsed Button */}

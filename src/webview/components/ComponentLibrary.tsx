@@ -176,7 +176,18 @@ const componentDefinitions: ComponentDefinition[] = [
       { name: 'endAngle', label: '结束角度', type: 'number', defaultValue: 270, group: 'style' },
       { name: 'strokeWidth', label: '线宽', type: 'number', defaultValue: 8, group: 'style' },
       { name: 'color', label: '颜色', type: 'color', defaultValue: '#007acc', group: 'style' },
-      { name: 'cap', label: '端点样式', type: 'select', defaultValue: 'BUTT', options: ['BUTT', 'ROUND', 'SQUARE'], group: 'style' },
+      { name: 'opacity', label: '透明度', type: 'number', defaultValue: 255, group: 'style' },
+    ],
+  },
+  {
+    type: 'hg_circle',
+    name: '圆形',
+    icon: '🔵',
+    defaultSize: { width: 100, height: 100 },
+    properties: [
+      { name: 'radius', label: '半径', type: 'number', defaultValue: 40, group: 'style' },
+      { name: 'fillColor', label: '填充颜色', type: 'color', defaultValue: '#007acc', group: 'style' },
+      { name: 'opacity', label: '透明度', type: 'number', defaultValue: 255, group: 'style' },
     ],
   },
   {
@@ -185,7 +196,7 @@ const componentDefinitions: ComponentDefinition[] = [
     icon: '▭',
     defaultSize: { width: 120, height: 80 },
     properties: [
-      { name: 'borderRadius', label: '圆角', type: 'number', defaultValue: 0, group: 'style' },
+      { name: 'borderRadius', label: '圆角半径', type: 'number', defaultValue: 0, group: 'style' },
       { name: 'fillColor', label: '填充颜色', type: 'color', defaultValue: '#007acc', group: 'style' },
       { name: 'opacity', label: '透明度', type: 'number', defaultValue: 255, group: 'style' },
     ],
@@ -228,7 +239,7 @@ const componentCategories = [
   },
   {
     name: '图形',
-    types: ['hg_arc', 'hg_rect', 'hg_svg']
+    types: ['hg_arc', 'hg_circle', 'hg_rect', 'hg_svg']
   },
   {
     name: '多媒体',

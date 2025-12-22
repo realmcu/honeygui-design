@@ -400,6 +400,46 @@ void ${baseName}_update_user(void) {
         return code;
     }
 
+    // 特殊处理圆弧组件
+    if (component.type === 'hg_arc') {
+        const radius = component.style?.radius || 40;
+        const startAngle = component.style?.startAngle || 0;
+        const endAngle = component.style?.endAngle || 270;
+        const strokeWidth = component.style?.strokeWidth || 8;
+        const color = component.style?.color || '#007acc';
+        const opacity = component.style?.opacity !== undefined ? component.style.opacity : 255;
+        
+        // 使用 gui_rgba 宏，直接传入透明度（与 SDK 示例代码一致）
+        const guiColor = this.apiMapper.colorToGuiColor(color, opacity);
+        
+        // gui_arc_create 在创建时传入所有参数
+        return `${indentStr}${component.id} = (gui_obj_t *)gui_arc_create(${parentRef}, "${component.name}", ${x}, ${y}, ${radius}, ${startAngle}, ${endAngle}, ${strokeWidth}, ${guiColor});\n`;
+    }
+
+    // 特殊处理圆形组件
+    if (component.type === 'hg_circle') {
+        const radius = component.style?.radius || 40;
+        const fillColor = component.style?.fillColor || '#007acc';
+        const opacity = component.style?.opacity !== undefined ? component.style.opacity : 255;
+        
+        const guiColor = this.apiMapper.colorToGuiColor(fillColor, opacity);
+        
+        // gui_circle_create 在创建时传入所有参数
+        return `${indentStr}${component.id} = (gui_obj_t *)gui_circle_create(${parentRef}, "${component.name}", ${x}, ${y}, ${radius}, ${guiColor});\n`;
+    }
+
+    // 特殊处理矩形组件
+    if (component.type === 'hg_rect') {
+        const borderRadius = component.style?.borderRadius || 0;
+        const fillColor = component.style?.fillColor || '#007acc';
+        const opacity = component.style?.opacity !== undefined ? component.style.opacity : 255;
+        
+        const guiColor = this.apiMapper.colorToGuiColor(fillColor, opacity);
+        
+        // gui_rect_create 在创建时传入所有参数
+        return `${indentStr}${component.id} = (gui_obj_t *)gui_rect_create(${parentRef}, "${component.name}", ${x}, ${y}, ${width}, ${height}, ${borderRadius}, ${guiColor});\n`;
+    }
+
     // 特殊处理3D模型组件
     if (component.type === 'hg_3d') {
         const modelPath = component.data?.modelPath || '';
@@ -561,6 +601,11 @@ void ${baseName}_update_user(void) {
     const mapping = this.apiMapper.getMapping(component.type);
 
     if (!mapping) return code;
+
+    // 圆弧和矩形已经在 generateComponentCreation 中特殊处理，不需要再设置属性
+    if (component.type === 'hg_arc' || component.type === 'hg_rect') {
+      return code;
+    }
 
     // 特殊处理文本组件：fontFile 必须先设置
     if (component.type === 'hg_label') {

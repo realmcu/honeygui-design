@@ -25,6 +25,7 @@ export const propertyPanelRegistry: Record<ComponentType, React.FC<PropertyPanel
   hg_video: HgVideoProperties,
   hg_3d: Hg3DProperties,
   hg_arc: DefaultProperties,
+  hg_circle: DefaultProperties,
   hg_rect: DefaultProperties,
   hg_svg: DefaultProperties,
   hg_lottie: DefaultProperties,

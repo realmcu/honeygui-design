@@ -41,10 +41,20 @@ export const calculateComponentStyle = (
     borderRadiusValue = `${borderRadius}px`;
   }
 
+  // 几何控件的坐标是圆心，需要转换为左上角
+  let left = component.position.x;
+  let top = component.position.y;
+  const isGeometryWidget = ['hg_arc', 'hg_circle', 'hg_rect'].includes(component.type);
+  if (isGeometryWidget) {
+    const radius = component.style?.radius || 40;
+    left = left - radius;  // 左上角 X = 圆心 X - 半径
+    top = top - radius;    // 左上角 Y = 圆心 Y - 半径
+  }
+
   return {
     position: 'absolute',
-    left: component.position.x,
-    top: component.position.y,
+    left,
+    top,
     width: component.position.width,
     height: component.position.height,
     display: component.visible ? 'flex' : 'none',
