@@ -9,6 +9,8 @@ import { widgetRegistry } from './widgets';
 import { ContextMenu } from './ContextMenu';
 import { executeMenuAction, MenuActionHelpers } from '../services/contextMenuActions';
 import { ViewConnectionLayer } from './ViewConnectionLayer';
+import { AlignmentGuides, AlignmentLine } from './AlignmentGuides';
+import { calculateAlignment } from '../utils/alignmentHelper';
 import './DesignerCanvas.css';
 
 interface DesignerCanvasProps {
@@ -22,6 +24,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
   const [pendingDragComponent, setPendingDragComponent] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 }); // 组件拖拽起始位置
+  const [alignmentLines, setAlignmentLines] = useState<AlignmentLine[]>([]); // 对齐辅助线
 
   const {
     components,
@@ -214,14 +217,24 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
 
       const component = components.find(c => c.id === draggedComponent);
       if (component) {
-        x = Math.round(x);
-        y = Math.round(y);
+        // 计算对齐辅助线和吸附位置
+        const alignment = calculateAlignment(
+          component,
+          x,
+          y,
+          components,
+          canvasSize
+        );
         
+        // 更新辅助线
+        setAlignmentLines(alignment.lines);
+        
+        // 使用吸附后的位置
         updateComponent(component.id, {
           position: {
             ...component.position,
-            x: x,
-            y: y,
+            x: alignment.x,
+            y: alignment.y,
           },
         });
       }
@@ -232,6 +245,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
     handleCanvasMouseUp();
     setPendingDragComponent(null);
     setDraggedComponent(null);
+    setAlignmentLines([]); // 清除辅助线
   };
 
   // 处理键盘事件，特别是delete键删除选中组件
@@ -431,6 +445,13 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
           zoom={zoom / (window.devicePixelRatio || 1)}
           offset={canvasOffset}
           visible={showViewConnections}
+        />
+
+        {/* 对齐辅助线 */}
+        <AlignmentGuides
+          lines={alignmentLines}
+          zoom={zoom / (window.devicePixelRatio || 1)}
+          offset={canvasOffset}
         />
 
         {/* Zoom indicator */}
