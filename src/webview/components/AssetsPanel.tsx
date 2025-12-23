@@ -119,10 +119,20 @@ const Model3DPreview: React.FC<{ modelPath: string }> = ({ modelPath }) => {
     const ext = modelPath.split('.').pop()?.toLowerCase();
 
     const onLoadSuccess = (model: THREE.Object3D) => {
+      // 先重置骨骼到初始姿态（修复带骨骼动画的模型）
+      model.traverse((child: any) => {
+        if (child.isSkinnedMesh && child.skeleton) {
+          child.skeleton.pose();
+        }
+      });
+      
       // 调整坐标系：正X向右，正Y向下，正Z向里（与设计窗口一致）
       model.rotation.x = Math.PI;
       
       scene.add(model);
+      
+      // 强制更新世界矩阵（确保骨骼变换生效）
+      model.updateMatrixWorld(true);
       
       // 计算模型边界并居中
       const box = new THREE.Box3().setFromObject(model);

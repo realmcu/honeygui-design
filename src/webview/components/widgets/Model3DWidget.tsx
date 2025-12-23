@@ -106,12 +106,18 @@ export const Model3DWidget: React.FC<WidgetProps> = ({ component, style, handler
     const ext = modelPath?.split('.').pop()?.toLowerCase();
     
     const onLoadSuccess = (model: THREE.Object3D, modelType: 'obj' | 'gltf') => {
+      // 先更新骨骼（如果有）到初始姿态
+      model.traverse((child: any) => {
+        if (child.isSkinnedMesh && child.skeleton) {
+          // 确保骨骼在初始状态
+          child.skeleton.pose();
+        }
+      });
+      
       // 直接应用用户设置的缩放值
-      // OBJ和GLTF统一处理，不做归一化
       model.scale.set(scale, scale, scale);
       
       // 坐标系转换：X轴旋转180度，实现 Y上→Y下，Z外→Z里
-      // 得到 HoneyGUI 坐标系：X右，Y下，Z里
       model.rotation.x = Math.PI;
       
       // 应用用户旋转（叠加在坐标系转换之上）
@@ -154,12 +160,31 @@ export const Model3DWidget: React.FC<WidgetProps> = ({ component, style, handler
               if (Array.isArray(child.material)) {
                 child.material.forEach((mat: any) => {
                   mat.side = THREE.DoubleSide;
+                  // 禁用透明度（除非明确需要）
+                  if (mat.transparent && mat.opacity >= 0.99) {
+                    mat.transparent = false;
+                    mat.alphaTest = 0;
+                  }
+                  // 确保深度写入
+                  mat.depthWrite = true;
+                  mat.depthTest = true;
                   mat.needsUpdate = true;
                 });
               } else {
                 child.material.side = THREE.DoubleSide;
+                // 禁用透明度（除非明确需要）
+                if (child.material.transparent && child.material.opacity >= 0.99) {
+                  child.material.transparent = false;
+                  child.material.alphaTest = 0;
+                }
+                // 确保深度写入
+                child.material.depthWrite = true;
+                child.material.depthTest = true;
                 child.material.needsUpdate = true;
               }
+              // 确保 mesh 可见
+              child.visible = true;
+              child.frustumCulled = false; // 禁用视锥体剔除，确保显示
             }
           });
           
@@ -298,6 +323,16 @@ export const Model3DWidget: React.FC<WidgetProps> = ({ component, style, handler
     // 动画循环
     const animate = () => {
       animationIdRef.current = requestAnimationFrame(animate);
+      
+      // 更新骨骼动画（如果有）
+      if (modelRef.current) {
+        modelRef.current.traverse((child: any) => {
+          if (child.isSkinnedMesh && child.skeleton) {
+            child.skeleton.update();
+          }
+        });
+      }
+      
       if (rendererRef.current && sceneRef.current && cameraRef.current) {
         rendererRef.current.render(sceneRef.current, cameraRef.current);
       }

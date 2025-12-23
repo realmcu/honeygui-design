@@ -80,8 +80,13 @@ export class AssetManager {
                 const imageExts = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg', '.webp'];
                 const videoExts = ['.mp4', '.avi', '.mov', '.mkv', '.webm'];
                 const modelExts = ['.gltf', '.glb', '.obj'];
-                const modelDepExts = ['.mtl', '.bin'];  // 3D 模型依赖文件
+                const modelDepExts = ['.mtl', '.bin'];  // 3D 模型依赖文件（不显示在资源栏）
                 const fontExts = ['.ttf', '.otf', '.woff', '.woff2'];
+                
+                // 跳过 3D 模型依赖文件，不显示在资源栏
+                if (modelDepExts.includes(ext)) {
+                    continue;
+                }
                 
                 let assetType: string | null = null;
                 if (imageExts.includes(ext)) {
@@ -90,8 +95,6 @@ export class AssetManager {
                     assetType = 'video';
                 } else if (modelExts.includes(ext)) {
                     assetType = 'model3d';
-                } else if (modelDepExts.includes(ext)) {
-                    assetType = 'model3d';  // 依赖文件也归类为 model3d
                 } else if (fontExts.includes(ext)) {
                     assetType = 'font';
                 }

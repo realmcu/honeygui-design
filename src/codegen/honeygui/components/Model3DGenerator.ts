@@ -47,6 +47,14 @@ export class Model3DGenerator implements ComponentCodeGenerator {
   }
 
   generatePropertySetters(component: Component, indent: number, context: GeneratorContext): string {
-    return '';
+    const indentStr = '    '.repeat(indent);
+    let code = '';
+
+    // 可见性
+    if (component.visible !== undefined) {
+      code += `${indentStr}gui_obj_show((gui_obj_t *)${component.id}, ${component.visible ? 'true' : 'false'});\n`;
+    }
+
+    return code;
   }
 }
