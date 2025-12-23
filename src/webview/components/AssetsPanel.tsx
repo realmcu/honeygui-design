@@ -11,9 +11,9 @@ import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js';
 // 文件类型分类
 const IMAGE_EXTS = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'webp'];
 const VIDEO_EXTS = ['mp4', 'avi', 'mov', 'mkv', 'webm'];
-const MODEL_EXTS = ['gltf', 'glb', 'obj'];
-const FONT_EXTS = ['ttf', 'otf', 'woff', 'woff2', 'bin'];  // 字体文件
-const MODEL_DEP_EXTS = ['mtl'];  // 3D 模型依赖文件
+const MODEL_EXTS = ['gltf', 'glb', 'obj'];  // 3D 模型主文件
+const FONT_EXTS = ['ttf', 'otf', 'woff', 'woff2'];  // 字体文件
+const MODEL_DEP_EXTS = ['mtl', 'bin'];  // 3D 模型依赖文件（材质文件、二进制数据）
 
 type AssetCategory = 'all' | 'images' | 'videos' | 'models' | 'fonts';
 
@@ -321,7 +321,7 @@ const getAssetCategory = (name: string): AssetCategory | null => {
   return null;
 };
 
-// 判断是否是 3D 模型依赖文件
+// 判断是否是 3D 模型依赖文件（用于统计到 models 分类）
 const isModelDependency = (name: string): boolean => {
   const ext = getFileExt(name);
   return MODEL_DEP_EXTS.includes(ext);
@@ -461,7 +461,7 @@ const AssetsPanel: React.FC = () => {
     const isVideo = VIDEO_EXTS.includes(ext);
     const isModel = MODEL_EXTS.includes(ext);
     const isFont = FONT_EXTS.includes(ext);
-    const isMtl = MODEL_DEP_EXTS.includes(ext);
+    const isModelDep = MODEL_DEP_EXTS.includes(ext);  // 模型依赖文件（.mtl, .bin）
     
     return (
       <div 
@@ -486,7 +486,7 @@ const AssetsPanel: React.FC = () => {
           {isModel && <Model3DPreview modelPath={asset.path} />}
           {isVideo && <VideoPreview videoPath={asset.path} />}
           {isFont && <div className="file-icon" style={{ fontSize: '48px' }}>🔤</div>}
-          {isMtl && <div className="file-icon" style={{ fontSize: '48px' }}>📄</div>}
+          {isModelDep && <div className="file-icon" style={{ fontSize: '48px' }}>📄</div>}
         </div>
         <div className="asset-info">
           {editingAsset === asset.path ? (
@@ -663,7 +663,7 @@ const AssetsPanel: React.FC = () => {
           ref={fileInputRef}
           type="file"
           multiple
-          accept=".png,.jpg,.jpeg,.gif,.bmp,.svg,.webp,.mp4,.avi,.mov,.mkv,.webm,.gltf,.glb,.obj,.mtl,.ttf,.otf,.woff,.woff2,.bin"
+          accept=".png,.jpg,.jpeg,.gif,.bmp,.svg,.webp,.mp4,.avi,.mov,.mkv,.webm,.gltf,.glb,.obj,.mtl,.bin,.ttf,.otf,.woff,.woff2"
           style={{ display: 'none' }}
           onChange={handleFileSelect}
         />

@@ -72,8 +72,7 @@ export const Model3DWidget: React.FC<WidgetProps> = ({ component, style, handler
     const width = component.position.width;
     const height = component.position.height;
     const camera = new THREE.PerspectiveCamera(cameraFov, width / height, 1, 32767);
-    // 相机位置和朝向直接使用用户输入
-    // 因为模型通过X轴旋转180度已经转换到HoneyGUI坐标系，相机也在同一坐标系中
+
     camera.position.set(cameraPosX, -cameraPosY, -cameraPosZ);
     camera.lookAt(cameraLookX, -cameraLookY, -cameraLookZ);
     cameraRef.current = camera;
