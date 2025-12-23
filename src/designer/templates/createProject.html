@@ -148,7 +148,15 @@
                         <option value="800X480">800X480</option>
                         <option value="1024X600">1024X600</option>
                         <option value="1280X720">1280X720</option>
+                        <option value="custom">Custom...</option>
                     </select>
+                    <div id="customResolution" style="display: none; margin-top: 8px;">
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <input type="number" id="customWidth" class="form-control" placeholder="Width" min="1" style="flex: 1;" />
+                            <span style="color: #969696;">×</span>
+                            <input type="number" id="customHeight" class="form-control" placeholder="Height" min="1" style="flex: 1;" />
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -267,7 +275,15 @@
                         <option value="800X480">800X480</option>
                         <option value="1024X600">1024X600</option>
                         <option value="1280X720">1280X720</option>
+                        <option value="custom">Custom...</option>
                     </select>
+                    <div id="templateCustomResolution" style="display: none; margin-top: 8px;">
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <input type="number" id="templateCustomWidth" class="form-control" placeholder="Width" min="1" style="flex: 1;" />
+                            <span style="color: #969696;">×</span>
+                            <input type="number" id="templateCustomHeight" class="form-control" placeholder="Height" min="1" style="flex: 1;" />
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -348,13 +364,25 @@
                 return;
             }
             
+            // 获取分辨率
+            let resolution = document.getElementById('resolution').value;
+            if (resolution === 'custom') {
+                const width = document.getElementById('customWidth').value.trim();
+                const height = document.getElementById('customHeight').value.trim();
+                if (!width || !height || width <= 0 || height <= 0) {
+                    showError('Please enter valid width and height for custom resolution');
+                    return;
+                }
+                resolution = `${width}X${height}`;
+            }
+            
             vscode.postMessage({
                 command: 'createProject',
                 config: {
                     projectName: document.getElementById('projectName').value.trim(),
                     saveLocation: document.getElementById('saveLocation').value.trim(),
                     appId: document.getElementById('appId').value.trim(),
-                    resolution: document.getElementById('resolution').value,
+                    resolution: resolution,
                     cornerRadius: parseInt(document.getElementById('cornerRadius').value, 10),
                     targetEngine: document.getElementById('targetEngine').value,
                     minSdk: document.getElementById('minSdk').value,
@@ -370,6 +398,19 @@
                 showError('Please select a template');
                 return;
             }
+            
+            // 获取分辨率
+            let resolution = document.getElementById('templateResolution').value;
+            if (resolution === 'custom') {
+                const width = document.getElementById('templateCustomWidth').value.trim();
+                const height = document.getElementById('templateCustomHeight').value.trim();
+                if (!width || !height || width <= 0 || height <= 0) {
+                    showError('Please enter valid width and height for custom resolution');
+                    return;
+                }
+                resolution = `${width}X${height}`;
+            }
+            
             vscode.postMessage({
                 command: 'createTemplateProject',
                 config: {
@@ -377,7 +418,7 @@
                     projectName: document.getElementById('templateProjectName').value.trim(),
                     saveLocation: document.getElementById('templateSaveLocation').value.trim(),
                     appId: document.getElementById('templateAppId').value.trim(),
-                    resolution: document.getElementById('templateResolution').value,
+                    resolution: resolution,
                     targetEngine: 'honeygui',
                     minSdk: document.getElementById('templateMinSdk').value,
                     pixelMode: document.getElementById('templatePixelMode').value,
@@ -447,6 +488,25 @@
             });
             ['resolution', 'minSdk', 'pixelMode'].forEach(id => {
                 document.getElementById(id)?.addEventListener('change', validateForm);
+            });
+            
+            // 监听分辨率选择变化
+            document.getElementById('resolution')?.addEventListener('change', function() {
+                const customDiv = document.getElementById('customResolution');
+                if (this.value === 'custom') {
+                    customDiv.style.display = 'block';
+                } else {
+                    customDiv.style.display = 'none';
+                }
+            });
+            
+            document.getElementById('templateResolution')?.addEventListener('change', function() {
+                const customDiv = document.getElementById('templateCustomResolution');
+                if (this.value === 'custom') {
+                    customDiv.style.display = 'block';
+                } else {
+                    customDiv.style.display = 'none';
+                }
             });
             
             ['templateSaveLocation', 'templateAppId', 'templateProjectName'].forEach(id => {

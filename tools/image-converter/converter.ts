@@ -214,19 +214,22 @@ export class ImageConverter {
         hasAlpha: boolean;
     }> {
         const buffer = fs.readFileSync(filePath);
-        const bmpData = bmp.decode(buffer);
+        const bmpData = bmp.decode(buffer) as any;
         
         const pixels: RGBA[] = [];
         let hasAlpha = false;
         
-        // bmp-js 返回的数据是 RGBA 格式，从上到下，从左到右
+        // bmp-js 返回的数据是 ABGR 格式
         for (let i = 0; i < bmpData.data.length; i += 4) {
-            const r = bmpData.data[i];
-            const g = bmpData.data[i + 1];
-            const b = bmpData.data[i + 2];
-            const a = bmpData.data[i + 3];
+            let a = bmpData.data[i];
+            const b = bmpData.data[i + 1];
+            const g = bmpData.data[i + 2];
+            const r = bmpData.data[i + 3];
             
-            if (a < 255) {
+            // 24 位 BMP 没有 Alpha 通道，bmp-js 会填 0，需要改为 255
+            if (!bmpData.is_with_alpha) {
+                a = 255;
+            } else if (a < 255) {
                 hasAlpha = true;
             }
             

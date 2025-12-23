@@ -273,10 +273,10 @@ export class BuildCore {
                     // 过滤掉不需要的日志
                     if (trimmed.includes('Warning: Command is too long')) continue;
                     
-                    // 只显示关键信息
+                    // 显示所有编译信息
                     if (trimmed.startsWith('CC ') || trimmed.startsWith('Compiling ')) {
-                        // 编译文件，统计数量，不逐条输出
                         compiledCount++;
+                        this.logger.log(trimmed);  // 显示每个文件的编译信息
                     } else if (trimmed.startsWith('LINK ') || trimmed.includes('Linking')) {
                         this.logger.log(`链接中... (已编译 ${compiledCount} 个文件)`);
                     } else if (trimmed.includes('error:') || trimmed.includes('Error:') ||
@@ -292,6 +292,9 @@ export class BuildCore {
                             this.logger.log(trimmed);
                         }
                     } else if (trimmed.startsWith('scons:')) {
+                        this.logger.log(trimmed);
+                    } else {
+                        // 显示其他所有输出
                         this.logger.log(trimmed);
                     }
                 }
