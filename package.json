@@ -2,7 +2,7 @@
   "name": "honeygui-visual-designer",
   "displayName": "HoneyGUI Visual Designer",
   "description": "VS Code 插件，提供 HoneyGUI 可视化界面设计、HML 编辑、C 代码生成与实时仿真功能。",
-  "version": "1.4.3",
+  "version": "1.4.4",
   "license": "MIT",
   "repository": {
     "type": "git",

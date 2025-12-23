@@ -11,7 +11,8 @@ export const calculateComponentStyle = (
   isHovered: boolean,
   editingMode: 'select' | 'move' | 'resize',
   isListItem: boolean = false,
-  projectConfig?: any
+  projectConfig?: any,
+  allComponents?: Component[]
 ): React.CSSProperties => {
   // List 容器不显示边框
   let border = '1px solid transparent';
@@ -51,11 +52,16 @@ export const calculateComponentStyle = (
     top = top - radius;    // 左上角 Y = 圆心 Y - 半径
   }
 
-  // 容器组件的 overflow 处理：根据 showOverflow 属性决定
+  // 容器组件的 overflow 处理
   const isContainer = ['hg_view', 'hg_window', 'hg_canvas', 'hg_list', 'hg_list_item'].includes(component.type);
   let overflowValue: string | undefined;
+  
   if (isContainer) {
-    overflowValue = component.showOverflow ? 'visible' : 'hidden';
+    // 检查是否有子组件设置了 showOverflow
+    const hasChildWithOverflow = allComponents?.some(
+      c => c.parent === component.id && c.showOverflow
+    );
+    overflowValue = hasChildWithOverflow ? 'visible' : 'hidden';
   } else if (borderRadiusValue) {
     overflowValue = 'hidden';
   }

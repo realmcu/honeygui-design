@@ -188,10 +188,11 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
           </div>
         </div>
 
-        {isContainerType(component.type) && (
+        {/* 只为非顶层容器（hg_list、hg_canvas、hg_list_item）显示超出父容器开关 */}
+        {['hg_list', 'hg_canvas', 'hg_list_item'].includes(component.type) && (
           <div className="property-item">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <label>显示溢出</label>
+              <label>超出父容器</label>
               <PropertyEditor
                 type="boolean"
                 value={component.showOverflow ?? false}

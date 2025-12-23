@@ -805,6 +805,29 @@ const App: React.FC = () => {
         defaultStyle[prop.name] = prop.defaultValue;
       });
 
+    // hg_list 特殊处理：根据项目分辨率计算默认项尺寸
+    if (componentType === 'hg_list') {
+      const projectConfig = useDesignerStore.getState().projectConfig;
+      const resolution = projectConfig?.resolution || '480X272';
+      const [resWidth, resHeight] = resolution.split('X').map(Number);
+      
+      // 默认垂直列表，项宽度=屏幕宽度，项高度=屏幕高度/5
+      defaultStyle.itemWidth = resWidth;
+      defaultStyle.itemHeight = Math.round(resHeight / 5);
+    }
+
+    // 应用默认数据
+    const defaultData: Record<string, any> = {
+      text: componentType === 'hg_button' ? 'Button' :
+            componentType === 'hg_label' ? 'Label' :
+            componentType === 'hg_text' ? 'Text' : '',
+    };
+    componentDef.properties
+      .filter(prop => prop.group === 'data' && prop.defaultValue !== undefined)
+      .forEach(prop => {
+        defaultData[prop.name] = prop.defaultValue;
+      });
+
     // 创建新组件对象
     const newComponent: Component = {
       id: componentId,
@@ -819,15 +842,12 @@ const App: React.FC = () => {
       visible: true,
       enabled: true,
       locked: false,
+      showOverflow: componentType === 'hg_list', // hg_list 默认勾选超出父容器
       zIndex: 1,
       children: [],
       parent,
       style: defaultStyle,
-      data: {
-        text: componentType === 'hg_button' ? 'Button' :
-              componentType === 'hg_label' ? 'Label' :
-              componentType === 'hg_text' ? 'Text' : '',
-      },
+      data: defaultData,
     };
 
     addComponent(newComponent);

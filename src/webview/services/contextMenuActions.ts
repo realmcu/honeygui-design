@@ -32,7 +32,16 @@ const actionHandlers: Record<string, MenuActionHandler> = {
     });
   },
 
-  delete: (component, { removeComponent, selectComponent }) => {
+  delete: (component, { removeComponent, selectComponent, postMessage }) => {
+    // 禁止删除列表项
+    if (component.type === 'hg_list_item') {
+      postMessage({
+        command: 'showInfo',
+        text: '列表项由父列表自动管理，请调整父列表的"项数量"属性'
+      });
+      return;
+    }
+    
     removeComponent(component.id);
     selectComponent(null);
   },

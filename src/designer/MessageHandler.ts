@@ -186,6 +186,10 @@ export class MessageHandler {
                 vscode.window.showInformationMessage(message.text);
                 break;
 
+            case 'showInfo':
+                vscode.window.showInformationMessage(message.text);
+                break;
+
             case 'error':
                 vscode.window.showErrorMessage(message.text);
                 break;

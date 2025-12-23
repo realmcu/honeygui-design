@@ -271,7 +271,8 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
       isHovered,
       editingMode,
       isListItem,
-      projectConfig
+      projectConfig,
+      components
     );
 
     const handleMouseEnter = () => {

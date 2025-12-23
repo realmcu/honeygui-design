@@ -36,6 +36,16 @@ azure.png
 fail.log
 
 # ========================================
+# 模板项目 - 排除编译产物和大文件
+# ========================================
+template-projects/**/build/**
+template-projects/**/node_modules/**
+template-projects/**/.vscode/**
+template-projects/**/*.exe
+template-projects/**/*.o
+template-projects/**/*.a
+
+# ========================================
 # Node Modules - 只保留运行时依赖
 # ========================================
 node_modules/**

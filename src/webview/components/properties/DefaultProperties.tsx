@@ -204,25 +204,71 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
       <div className="properties-content">
         {activeTab === 'properties' && (
           <>
-            <BaseProperties component={component} onUpdate={onUpdate} components={components} />
+            <BaseProperties 
+              component={component} 
+              onUpdate={onUpdate} 
+              components={components}
+              disableSize={component.type === 'hg_list'}
+              sizeTooltip={component.type === 'hg_list' ? '列表尺寸由项数量、项长度和间距自动计算' : undefined}
+            />
 
             {/* Style Properties */}
             {definition && definition.properties.filter(p => p.group === 'style').length > 0 && (
               <div className="property-group">
                 <div className="property-group-title">样式</div>
-                {definition.properties
-                  .filter(p => p.group === 'style')
-                  .map((property) => (
-                    <div key={property.name} className="property-item">
-                      <label>{property.label}</label>
-                      <PropertyEditor
-                        type={property.type as any}
-                        value={(component.style as any)?.[property.name]}
-                        onChange={(value) => handleStyleChange(property.name, value)}
-                        options={property.options as string[]}
-                      />
+                {/* hg_list 特殊处理：项宽度和项高度在一行 */}
+                {component.type === 'hg_list' ? (
+                  <>
+                    <div className="property-item">
+                      <label>项尺寸</label>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
+                        <div>
+                          <label style={{ fontSize: '12px' }}>宽度</label>
+                          <PropertyEditor
+                            type="number"
+                            value={(component.style as any)?.itemWidth}
+                            onChange={(value) => handleStyleChange('itemWidth', value)}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '12px' }}>高度</label>
+                          <PropertyEditor
+                            type="number"
+                            value={(component.style as any)?.itemHeight}
+                            onChange={(value) => handleStyleChange('itemHeight', value)}
+                          />
+                        </div>
+                      </div>
                     </div>
-                  ))}
+                    {definition.properties
+                      .filter(p => p.group === 'style' && p.name !== 'itemWidth' && p.name !== 'itemHeight')
+                      .map((property) => (
+                        <div key={property.name} className="property-item">
+                          <label>{property.label}</label>
+                          <PropertyEditor
+                            type={property.type as any}
+                            value={(component.style as any)?.[property.name]}
+                            onChange={(value) => handleStyleChange(property.name, value)}
+                            options={property.options as string[]}
+                          />
+                        </div>
+                      ))}
+                  </>
+                ) : (
+                  definition.properties
+                    .filter(p => p.group === 'style')
+                    .map((property) => (
+                      <div key={property.name} className="property-item">
+                        <label>{property.label}</label>
+                        <PropertyEditor
+                          type={property.type as any}
+                          value={(component.style as any)?.[property.name]}
+                          onChange={(value) => handleStyleChange(property.name, value)}
+                          options={property.options as string[]}
+                        />
+                      </div>
+                    ))
+                )}
               </div>
             )}
 

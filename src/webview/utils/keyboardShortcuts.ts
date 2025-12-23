@@ -20,7 +20,7 @@ export const useKeyboardShortcuts = () => {
       }
 
       // 直接从 store 获取最新状态，避免闭包问题
-      const { selectedComponent, removeComponent, duplicateComponent } = useDesignerStore.getState();
+      const { selectedComponent, removeComponent, duplicateComponent, components } = useDesignerStore.getState();
 
       const isModKey = e.ctrlKey || e.metaKey; // Ctrl on Windows/Linux, Command on Mac
       const isShift = e.shiftKey;
@@ -74,6 +74,21 @@ export const useKeyboardShortcuts = () => {
         case 'Delete':
           if (selectedComponent) {
             e.preventDefault();
+            const component = components.find(c => c.id === selectedComponent);
+            
+            // 禁止删除列表项
+            if (component?.type === 'hg_list_item') {
+              console.log('[键盘快捷键] 禁止删除列表项');
+              // 发送提示消息
+              if (window.vscodeAPI) {
+                window.vscodeAPI.postMessage({
+                  command: 'showInfo',
+                  text: '列表项由父列表自动管理，请调整父列表的"项数量"属性'
+                });
+              }
+              return;
+            }
+            
             console.log('[键盘快捷键] 删除组件:', selectedComponent);
             removeComponent(selectedComponent);
           }
