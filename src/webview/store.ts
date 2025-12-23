@@ -683,6 +683,19 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     }
     
     const selected = components.filter((c) => selectedComponents.includes(c.id));
+    
+    // 检查是否所有组件都在同一父容器
+    const parents = new Set(selected.map((c) => c.parent));
+    if (parents.size > 1) {
+      if (vscodeAPI) {
+        vscodeAPI.postMessage({
+          command: 'showInfo',
+          text: '只能对齐同一容器内的组件'
+        });
+      }
+      return;
+    }
+    
     const updates = alignComponents(selected, type);
     
     updates.forEach(({ id, position }) => {
@@ -710,6 +723,19 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     }
     
     const selected = components.filter((c) => selectedComponents.includes(c.id));
+    
+    // 检查是否所有组件都在同一父容器
+    const parents = new Set(selected.map((c) => c.parent));
+    if (parents.size > 1) {
+      if (vscodeAPI) {
+        vscodeAPI.postMessage({
+          command: 'showInfo',
+          text: '只能分布同一容器内的组件'
+        });
+      }
+      return;
+    }
+    
     const updates = distributeComponents(selected, type);
     
     updates.forEach(({ id, position }) => {
@@ -737,6 +763,8 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     }
     
     const selected = components.filter((c) => selectedComponents.includes(c.id));
+    
+    // 尺寸调整不需要同一父容器限制
     const updates = resizeComponents(selected, type, 'first');
     
     updates.forEach(({ id, position }) => {
