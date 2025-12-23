@@ -5,7 +5,7 @@
         <author name="HoneyGUI Design" />
     </meta>
     <view>
-        <hg_view id="mainView" x="175" y="-68" width="410" height="502" backgroundColor="#000000" name="mainView">
+        <hg_view id="mainView" x="-102" y="20" width="410" height="502" backgroundColor="#000000" name="mainView">
             <events>
                 <event type="onSwipeLeft">
                     <action type="switchView" target="hg_view_1766022481486_seii" />
@@ -21,13 +21,19 @@
             <hg_image id="hg_image_1766403734725_g6ba" x="141" y="85" width="256" height="313" src="assets/bmp-test.bmp" name="image_123" zIndex="1" />
             <hg_circle id="hg_circle_1766392198338_e1pl" x="48" y="284" width="100" height="100" radius="40" fillColor="#007acc" opacity="255" name="hg_circle_8338" zIndex="1" />
         </hg_view>
-        <hg_view id="hg_view_1766022481486_seii" x="750" y="-112" width="410" height="502" backgroundColor="#000000" borderRadius="0" padding="12" overflow="auto" name="hg_view_1486" zIndex="1">
+        <hg_view id="hg_view_1766022481486_seii" x="439" y="64" width="410" height="502" backgroundColor="#000000" borderRadius="0" padding="12" overflow="auto" name="hg_view_1486" zIndex="1">
             <events>
                 <event type="onSwipeLeft">
                     <action type="switchView" target="untitledView" />
                 </event>
             </events>
-            <hg_image id="hg_image_1766022491405_3gr8" x="193" y="244" width="100" height="106" src="assets/UI_app_list/app_activity_icon.png" name="image_1405" zIndex="1" />
+            <hg_list id="hg_list_1766459021565_bd8n" x="81" y="24" width="300" height="400" noteLength="100" space="0" direction="VERTICAL" style="LIST_CLASSIC" name="hg_list_1565" zIndex="1">
+                <hg_list_item id="hg_list_1766459021565_bd8n_item_1" x="0" y="0" width="300" height="100" index="0" name="列表项 1" locked="true" zIndex="1" />
+                <hg_list_item id="hg_list_1766459021565_bd8n_item_2" x="0" y="100" width="300" height="100" index="1" name="列表项 2" locked="true" zIndex="1" />
+                <hg_list_item id="hg_list_1766459021565_bd8n_item_3" x="0" y="200" width="300" height="100" index="2" name="列表项 3" locked="true" zIndex="1" />
+                <hg_list_item id="hg_list_1766459021565_bd8n_item_4" x="0" y="300" width="300" height="100" index="3" name="列表项 4" locked="true" zIndex="1" />
+                <hg_list_item id="hg_list_1766459021565_bd8n_item_5" x="0" y="400" width="300" height="100" index="4" name="列表项 5" locked="true" zIndex="1" />
+            </hg_list>
         </hg_view>
     </view>
 </hml>

@@ -187,6 +187,19 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
             />
           </div>
         </div>
+
+        {isContainerType(component.type) && (
+          <div className="property-item">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label>显示溢出</label>
+              <PropertyEditor
+                type="boolean"
+                value={component.showOverflow ?? false}
+                onChange={(value) => onUpdate({ showOverflow: value })}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

@@ -51,6 +51,15 @@ export const calculateComponentStyle = (
     top = top - radius;    // 左上角 Y = 圆心 Y - 半径
   }
 
+  // 容器组件的 overflow 处理：根据 showOverflow 属性决定
+  const isContainer = ['hg_view', 'hg_window', 'hg_canvas', 'hg_list', 'hg_list_item'].includes(component.type);
+  let overflowValue: string | undefined;
+  if (isContainer) {
+    overflowValue = component.showOverflow ? 'visible' : 'hidden';
+  } else if (borderRadiusValue) {
+    overflowValue = 'hidden';
+  }
+
   return {
     position: 'absolute',
     left,
@@ -62,7 +71,7 @@ export const calculateComponentStyle = (
     cursor: editingMode === 'move' ? 'move' : 'pointer',
     border,
     borderRadius: borderRadiusValue,
-    overflow: borderRadiusValue ? 'hidden' : undefined,
+    overflow: overflowValue,
     background: component.style?.backgroundColor || 'transparent',
     color: component.style?.color || 'inherit',
     fontSize: component.style?.fontSize ? `${component.style.fontSize}px` : undefined,

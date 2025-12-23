@@ -71,6 +71,7 @@ export interface Component {
   visible: boolean;
   enabled: boolean;
   locked: boolean;
+  showOverflow?: boolean;  // 在设计器中显示溢出内容
   zIndex: number;
 }
 

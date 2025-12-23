@@ -111,8 +111,17 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
   const handleComponentMouseDown = (e: React.MouseEvent, componentId: string) => {
     e.stopPropagation();
     
-    const component = components.find(c => c.id === componentId);
+    let component = components.find(c => c.id === componentId);
     if (!component) return;
+    
+    // Alt + 点击：选中父容器
+    if (e.altKey && component.parent) {
+      const parentComponent = components.find(c => c.id === component!.parent);
+      if (parentComponent) {
+        component = parentComponent;
+        componentId = parentComponent.id;
+      }
+    }
     
     // 选中当前组件（允许选中 locked 组件）
     const multi = e.ctrlKey || e.metaKey || e.shiftKey;
