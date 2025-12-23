@@ -55,34 +55,28 @@ export const useKeyboardShortcuts = () => {
           }
           break;
 
-        // Undo (Ctrl+Z or Command+Z) - TODO: Implement command manager
-        // case 'z':
-        // case 'Z':
-        //   if (isModKey && !isShift) {
-        //     e.preventDefault();
-        //     if (commandManager.canUndo()) {
-        //       commandManager.undo();
-        //     }
-        //   }
-        //   // Redo (Ctrl+Shift+Z or Command+Shift+Z)
-        //   else if (isModKey && isShift) {
-        //     e.preventDefault();
-        //     if (commandManager.canRedo()) {
-        //       commandManager.redo();
-        //     }
-        //   }
-        //   break;
+        // Undo (Ctrl+Z)
+        case 'z':
+        case 'Z':
+          if (isModKey && !isShift) {
+            e.preventDefault();
+            window.vscodeAPI?.postMessage({ command: 'undo' });
+          }
+          // Redo (Ctrl+Shift+Z)
+          else if (isModKey && isShift) {
+            e.preventDefault();
+            window.vscodeAPI?.postMessage({ command: 'redo' });
+          }
+          break;
 
-        // Redo (Ctrl+Y or Command+Y) - TODO: Implement command manager
-        // case 'y':
-        // case 'Y':
-        //   if (isModKey) {
-        //     e.preventDefault();
-        //     if (commandManager.canRedo()) {
-        //       commandManager.redo();
-        //     }
-        //   }
-        //   break;
+        // Redo (Ctrl+Y)
+        case 'y':
+        case 'Y':
+          if (isModKey) {
+            e.preventDefault();
+            window.vscodeAPI?.postMessage({ command: 'redo' });
+          }
+          break;
 
         // Delete (Delete key only, Backspace is reserved for text input)
         case 'Delete':

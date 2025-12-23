@@ -172,3 +172,78 @@
   border-radius: 2px;
   flex-shrink: 0;
 }
+
+
+/* 对齐菜单 */
+.align-menu-container {
+  position: relative;
+}
+
+.selection-badge {
+  background: var(--vscode-badge-background, #4d4d4d);
+  color: var(--vscode-badge-foreground, #fff);
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 8px;
+  margin-left: 4px;
+}
+
+.align-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  background-color: var(--vscode-menu-background, #252526);
+  border: 1px solid var(--vscode-menu-border, #454545);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  min-width: 200px;
+  padding: 4px 0;
+}
+
+.align-menu-section {
+  padding: 4px 0;
+}
+
+.align-menu-title {
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--vscode-descriptionForeground, #8c8c8c);
+  text-transform: uppercase;
+}
+
+.align-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 6px 12px;
+  background: transparent;
+  border: none;
+  color: var(--vscode-menu-foreground, #cccccc);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.align-menu-item:hover:not(.disabled) {
+  background: var(--vscode-menu-selectionBackground, #094771);
+  color: var(--vscode-menu-selectionForeground, #ffffff);
+}
+
+.align-menu-item.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.align-menu-item .shortcut {
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+.align-menu-divider {
+  height: 1px;
+  background: var(--vscode-menu-separatorBackground, #454545);
+  margin: 4px 0;
+}

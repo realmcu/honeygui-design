@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useDesignerStore } from '../store';
-import { Save, Code, Play, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, GitBranch, Palette } from 'lucide-react';
+import { Save, Code, Play, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, GitBranch, Palette, AlignLeft } from 'lucide-react';
+import { AlignType, DistributeType, ResizeType, getAlignmentConfigsByCategory } from '../utils/alignmentUtils';
 import './Toolbar.css';
 
 const Toolbar: React.FC = () => {
@@ -13,24 +14,37 @@ const Toolbar: React.FC = () => {
     setShowViewRelationModal,
     canvasBackgroundColor,
     setCanvasBackgroundColor,
+    selectedComponents,
+    alignSelectedComponents,
+    distributeSelectedComponents,
+    resizeSelectedComponents,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
   } = useDesignerStore();
 
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showAlignMenu, setShowAlignMenu] = useState(false);
+  const alignMenuRef = useRef<HTMLDivElement>(null);
 
   // 点击外部关闭颜色选择器
   React.useEffect(() => {
-    if (!showColorPicker) return;
+    if (!showColorPicker && !showAlignMenu) return;
 
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      if (!target.closest('.background-color-picker')) {
+      if (showColorPicker && !target.closest('.background-color-picker')) {
         setShowColorPicker(false);
+      }
+      if (showAlignMenu && alignMenuRef.current && !alignMenuRef.current.contains(target)) {
+        setShowAlignMenu(false);
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showColorPicker]);
+  }, [showColorPicker, showAlignMenu]);
 
   const handleZoomIn = () => {
     setZoom(Math.min(zoom * 1.2, 8));
@@ -79,11 +93,11 @@ const Toolbar: React.FC = () => {
   };
 
   const handleUndo = () => {
-    // Implement undo logic
+    undo();
   };
 
   const handleRedo = () => {
-    // Implement redo logic
+    redo();
   };
 
   return (
@@ -106,7 +120,7 @@ const Toolbar: React.FC = () => {
           className="toolbar-button"
           onClick={handleUndo}
           title="撤销 (Ctrl+Z)"
-          disabled
+          disabled={!canUndo()}
         >
           <RotateCcw size={16} />
           <span>撤销</span>
@@ -115,7 +129,7 @@ const Toolbar: React.FC = () => {
           className="toolbar-button"
           onClick={handleRedo}
           title="重做 (Ctrl+Y)"
-          disabled
+          disabled={!canRedo()}
         >
           <RotateCw size={16} />
           <span>重做</span>
@@ -135,6 +149,80 @@ const Toolbar: React.FC = () => {
           <GitBranch size={16} />
           <span>关系图</span>
         </button>
+        
+        {/* 对齐按钮 - 多选时启用 */}
+        <div className="align-menu-container" ref={alignMenuRef}>
+          <button
+            className={`toolbar-button ${selectedComponents.length < 2 ? 'disabled' : ''}`}
+            onClick={() => selectedComponents.length >= 2 && setShowAlignMenu(!showAlignMenu)}
+            title={selectedComponents.length < 2 ? '请选择至少2个组件' : '对齐和分布'}
+            disabled={selectedComponents.length < 2}
+          >
+            <AlignLeft size={16} />
+            <span>对齐</span>
+            {selectedComponents.length >= 2 && (
+              <span className="selection-badge">{selectedComponents.length}</span>
+            )}
+          </button>
+          {showAlignMenu && selectedComponents.length >= 2 && (
+            <div className="align-dropdown-menu">
+              <div className="align-menu-section">
+                <div className="align-menu-title">对齐</div>
+                {getAlignmentConfigsByCategory('align').map(config => (
+                  <button
+                    key={config.type}
+                    className="align-menu-item"
+                    onClick={() => {
+                      alignSelectedComponents(config.type as AlignType);
+                      setShowAlignMenu(false);
+                    }}
+                  >
+                    <span>{config.label}</span>
+                    {config.shortcut && <span className="shortcut">{config.shortcut}</span>}
+                  </button>
+                ))}
+              </div>
+              <div className="align-menu-divider" />
+              <div className="align-menu-section">
+                <div className="align-menu-title">分布</div>
+                {getAlignmentConfigsByCategory('distribute').map(config => (
+                  <button
+                    key={config.type}
+                    className={`align-menu-item ${selectedComponents.length < config.minComponents ? 'disabled' : ''}`}
+                    onClick={() => {
+                      if (selectedComponents.length >= config.minComponents) {
+                        distributeSelectedComponents(config.type as DistributeType);
+                        setShowAlignMenu(false);
+                      }
+                    }}
+                    disabled={selectedComponents.length < config.minComponents}
+                    title={selectedComponents.length < config.minComponents ? `需要至少${config.minComponents}个组件` : ''}
+                  >
+                    <span>{config.label}</span>
+                    {config.shortcut && <span className="shortcut">{config.shortcut}</span>}
+                  </button>
+                ))}
+              </div>
+              <div className="align-menu-divider" />
+              <div className="align-menu-section">
+                <div className="align-menu-title">尺寸</div>
+                {getAlignmentConfigsByCategory('resize').map(config => (
+                  <button
+                    key={config.type}
+                    className="align-menu-item"
+                    onClick={() => {
+                      resizeSelectedComponents(config.type as ResizeType);
+                      setShowAlignMenu(false);
+                    }}
+                  >
+                    <span>{config.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        
         <div className="background-color-picker">
           <button
             className="toolbar-button"

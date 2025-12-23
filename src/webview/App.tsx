@@ -6,7 +6,6 @@ import PropertiesPanel from './components/PropertiesPanel';
 import ComponentTree from './components/ComponentTree';
 import AssetsPanel from './components/AssetsPanel';
 import Toolbar from './components/Toolbar';
-import AlignmentToolbar from './components/AlignmentToolbar';
 import { ViewRelationModal } from './components/ViewRelationModal';
 import { Component, ComponentType } from './types';
 import useKeyboardShortcuts from './utils/keyboardShortcuts';
@@ -930,9 +929,6 @@ const App: React.FC = () => {
     <div className="app">
       {/* Toolbar */}
       <Toolbar />
-      
-      {/* Alignment Toolbar - 多选时显示 */}
-      <AlignmentToolbar />
 
       {/* Main Content */}
       <div className="main-content">

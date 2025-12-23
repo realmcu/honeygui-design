@@ -18,6 +18,11 @@ export class FileManager {
     private _filePath: string | undefined;
     private _lastSerializedSnapshot: string | null = null;
     
+    // 撤销/重做历史栈
+    private _undoStack: string[] = [];
+    private _redoStack: string[] = [];
+    private readonly _maxHistorySize = 50;
+    
     // 事件发射器
     private readonly _onDidUpdateTitle = new vscode.EventEmitter<string>();
     
@@ -36,6 +41,130 @@ export class FileManager {
 
     public set currentFilePath(path: string | undefined) {
         this._filePath = path;
+    }
+    
+    /**
+     * 记录当前状态到撤销栈（在保存前调用）
+     */
+    public pushUndoState(hmlContent: string): void {
+        // 避免重复记录相同内容
+        if (this._undoStack.length > 0 && this._undoStack[this._undoStack.length - 1] === hmlContent) {
+            return;
+        }
+        
+        this._undoStack.push(hmlContent);
+        
+        // 限制栈大小
+        if (this._undoStack.length > this._maxHistorySize) {
+            this._undoStack.shift();
+        }
+        
+        // 新操作清空重做栈
+        this._redoStack = [];
+        
+        logger.debug(`[FileManager] 记录撤销状态，当前栈深度: ${this._undoStack.length}`);
+    }
+    
+    /**
+     * 撤销
+     */
+    public async undo(): Promise<boolean> {
+        if (this._undoStack.length === 0 || !this._filePath) {
+            logger.debug('[FileManager] 无法撤销：栈为空或无文件');
+            return false;
+        }
+        
+        // 获取当前内容作为重做状态
+        const document = await vscode.workspace.openTextDocument(this._filePath);
+        const currentContent = document.getText();
+        this._redoStack.push(currentContent);
+        
+        // 弹出上一个状态
+        const previousContent = this._undoStack.pop()!;
+        
+        // 写入文件
+        const edit = new vscode.WorkspaceEdit();
+        edit.replace(
+            document.uri,
+            new vscode.Range(0, 0, document.lineCount, 0),
+            previousContent
+        );
+        await vscode.workspace.applyEdit(edit);
+        await document.save();
+        
+        // 重新加载到前端
+        await this.reloadCurrentDocument();
+        
+        logger.info(`[FileManager] 撤销成功，剩余撤销栈: ${this._undoStack.length}`);
+        return true;
+    }
+    
+    /**
+     * 重做
+     */
+    public async redo(): Promise<boolean> {
+        if (this._redoStack.length === 0 || !this._filePath) {
+            logger.debug('[FileManager] 无法重做：栈为空或无文件');
+            return false;
+        }
+        
+        // 获取当前内容作为撤销状态
+        const document = await vscode.workspace.openTextDocument(this._filePath);
+        const currentContent = document.getText();
+        this._undoStack.push(currentContent);
+        
+        // 弹出重做状态
+        const nextContent = this._redoStack.pop()!;
+        
+        // 写入文件
+        const edit = new vscode.WorkspaceEdit();
+        edit.replace(
+            document.uri,
+            new vscode.Range(0, 0, document.lineCount, 0),
+            nextContent
+        );
+        await vscode.workspace.applyEdit(edit);
+        await document.save();
+        
+        // 重新加载到前端
+        await this.reloadCurrentDocument();
+        
+        logger.info(`[FileManager] 重做成功，剩余重做栈: ${this._redoStack.length}`);
+        return true;
+    }
+    
+    /**
+     * 检查是否可以撤销
+     */
+    public canUndo(): boolean {
+        return this._undoStack.length > 0;
+    }
+    
+    /**
+     * 检查是否可以重做
+     */
+    public canRedo(): boolean {
+        return this._redoStack.length > 0;
+    }
+    
+    /**
+     * 清空历史（切换文件时调用）
+     */
+    public clearHistory(): void {
+        this._undoStack = [];
+        this._redoStack = [];
+        logger.debug('[FileManager] 清空撤销/重做历史');
+    }
+    
+    /**
+     * 发送撤销/重做状态到前端
+     */
+    public sendUndoRedoState(): void {
+        this._panel.webview.postMessage({
+            command: 'undoRedoState',
+            canUndo: this.canUndo(),
+            canRedo: this.canRedo()
+        });
     }
 
     /**

@@ -77,6 +77,18 @@ export class MessageHandler {
             case 'save':
                 logger.debug(`[MessageHandler] 收到保存请求，组件数量: ${message?.content?.components?.length || 0}`);
                 try {
+                    // 保存前记录当前状态到撤销栈
+                    const currentFilePath = this._fileManager.currentFilePath;
+                    if (currentFilePath) {
+                        try {
+                            const document = await vscode.workspace.openTextDocument(currentFilePath);
+                            const currentContent = document.getText();
+                            this._fileManager.pushUndoState(currentContent);
+                        } catch (e) {
+                            logger.warn(`[MessageHandler] 记录撤销状态失败: ${e}`);
+                        }
+                    }
+                    
                     if (message?.content?.components && Array.isArray(message.content.components)) {
                         logger.debug('[MessageHandler] 更新组件到HmlController...');
                         this._hmlController.updateFromFrontendComponents(message.content.components);
@@ -89,8 +101,29 @@ export class MessageHandler {
                 logger.debug(`[MessageHandler] 序列化完成，内容长度: ${serializedContent.length}`);
                 await this._fileManager.saveHml(message.content?.raw ?? serializedContent);
                 
+                // 保存后通知前端更新撤销/重做状态
+                this._fileManager.sendUndoRedoState();
+                
                 // 触发自动代码生成（带防抖）
                 this._scheduleAutoCodeGeneration();
+                break;
+
+            case 'undo':
+                logger.debug('[MessageHandler] 收到撤销请求');
+                const undoSuccess = await this._fileManager.undo();
+                this._fileManager.sendUndoRedoState();
+                if (!undoSuccess) {
+                    vscode.window.showInformationMessage('没有可撤销的操作');
+                }
+                break;
+
+            case 'redo':
+                logger.debug('[MessageHandler] 收到重做请求');
+                const redoSuccess = await this._fileManager.redo();
+                this._fileManager.sendUndoRedoState();
+                if (!redoSuccess) {
+                    vscode.window.showInformationMessage('没有可重做的操作');
+                }
                 break;
 
             case 'selectImagePath':

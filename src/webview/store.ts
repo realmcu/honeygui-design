@@ -449,21 +449,19 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     set({ draggedComponent: null });
   },
 
-  // Undo/Redo
+  // Undo/Redo (由后端管理)
   undo: () => {
-    // TODO: 实现撤销功能
-    console.log('撤销功能待实现');
+    window.vscodeAPI?.postMessage({ command: 'undo' });
   },
 
   redo: () => {
-    // TODO: 实现重做功能
-    console.log('重做功能待实现');
+    window.vscodeAPI?.postMessage({ command: 'redo' });
   },
 
-  canUndo: () => false,
-  canRedo: () => false,
-  getUndoLabel: () => null,
-  getRedoLabel: () => null,
+  canUndo: () => get().undoStack.length > 0,
+  canRedo: () => get().redoStack.length > 0,
+  getUndoLabel: () => get().canUndo() ? '撤销' : null,
+  getRedoLabel: () => get().canRedo() ? '重做' : null,
 
   // VSCode communication
   setVSCodeAPI: (api) => {
