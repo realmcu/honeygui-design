@@ -5,6 +5,14 @@
 
 import { create } from 'zustand';
 import { Component, ComponentType, DesignerState, VSCodeAPI } from './types';
+import { 
+  alignComponents, 
+  distributeComponents, 
+  resizeComponents,
+  AlignType,
+  DistributeType,
+  ResizeType
+} from './utils/alignmentUtils';
 
 // ============ 层级调整辅助函数 ============
 
@@ -120,6 +128,20 @@ export interface DesignerStore extends DesignerState {
   moveComponent: (id: string, newParent: string | null) => void;
   reorderComponent: (id: string, newIndex: number) => void;
   moveComponentLayer: (id: string, direction: 'up' | 'down' | 'top' | 'bottom') => void;
+  
+  // Clipboard operations
+  clipboard: Component | null;
+  clipboardMultiple: Component[];
+  copyComponent: (id: string) => void;
+  cutComponent: (id: string) => void;
+  pasteComponent: (position?: { x: number; y: number }) => void;
+  copySelectedComponents: () => void;
+  cutSelectedComponents: () => void;
+
+  // Alignment operations
+  alignSelectedComponents: (type: import('./utils/alignmentUtils').AlignType) => void;
+  distributeSelectedComponents: (type: import('./utils/alignmentUtils').DistributeType) => void;
+  resizeSelectedComponents: (type: import('./utils/alignmentUtils').ResizeType) => void;
 
   // Selection
   getSelectedComponent: () => Component | undefined;
@@ -165,6 +187,8 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   redoStack: [],
   vscodeAPI: null,
   assetCategory: 'all' as 'all' | 'images' | 'videos' | 'models' | 'fonts', // 资源面板分类
+  clipboard: null, // 剪贴板
+  clipboardMultiple: [], // 多选剪贴板
 
   // Actions
   setComponents: (components) => {
@@ -488,6 +512,245 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     };
 
     get().addComponent(newComponent);
+  },
+
+  // Clipboard operations
+  copyComponent: (id) => {
+    const component = get().components.find((c) => c.id === id);
+    if (!component) return;
+    
+    // 禁止复制列表项
+    if (component.type === 'hg_list_item') {
+      if (vscodeAPI) {
+        vscodeAPI.postMessage({
+          command: 'showInfo',
+          text: '列表项由父列表自动管理，无法复制'
+        });
+      }
+      return;
+    }
+    
+    set({ clipboard: component });
+  },
+
+  cutComponent: (id) => {
+    const component = get().components.find((c) => c.id === id);
+    if (!component) return;
+    
+    // 禁止剪切列表项
+    if (component.type === 'hg_list_item') {
+      if (vscodeAPI) {
+        vscodeAPI.postMessage({
+          command: 'showInfo',
+          text: '列表项由父列表自动管理，无法剪切'
+        });
+      }
+      return;
+    }
+    
+    get().copyComponent(id);
+    get().removeComponent(id);
+  },
+
+  pasteComponent: (position) => {
+    const { clipboard, clipboardMultiple, components } = get();
+    
+    // 多选粘贴
+    if (clipboardMultiple.length > 0) {
+      const newIds: string[] = [];
+      const timestamp = Date.now();
+      
+      // 计算所有组件的边界框
+      const minX = Math.min(...clipboardMultiple.map(c => c.position.x));
+      const minY = Math.min(...clipboardMultiple.map(c => c.position.y));
+      
+      clipboardMultiple.forEach((comp, index) => {
+        const parentExists = comp.parent 
+          ? components.some((c) => c.id === comp.parent)
+          : true;
+        
+        const offsetX = comp.position.x - minX;
+        const offsetY = comp.position.y - minY;
+        
+        const newComponent: Component = {
+          ...comp,
+          id: `${comp.id}_copy_${timestamp}_${index}`,
+          name: `${comp.name}_copy`,
+          parent: parentExists ? comp.parent : null,
+          position: position ? {
+            x: position.x + offsetX,
+            y: position.y + offsetY,
+            width: comp.position.width,
+            height: comp.position.height,
+          } : {
+            x: comp.position.x + 20,
+            y: comp.position.y + 20,
+            width: comp.position.width,
+            height: comp.position.height,
+          },
+        };
+        
+        get().addComponent(newComponent);
+        newIds.push(newComponent.id);
+      });
+      
+      get().setSelectedComponents(newIds);
+      return;
+    }
+    
+    // 单选粘贴
+    if (!clipboard) return;
+    
+    const parentExists = clipboard.parent 
+      ? components.some((c) => c.id === clipboard.parent)
+      : true;
+    
+    const newComponent: Component = {
+      ...clipboard,
+      id: `${clipboard.id}_copy_${Date.now()}`,
+      name: `${clipboard.name}_copy`,
+      parent: parentExists ? clipboard.parent : null,
+      position: position ? {
+        x: position.x,
+        y: position.y,
+        width: clipboard.position.width,
+        height: clipboard.position.height,
+      } : {
+        x: clipboard.position.x + 20,
+        y: clipboard.position.y + 20,
+        width: clipboard.position.width,
+        height: clipboard.position.height,
+      },
+    };
+    
+    get().addComponent(newComponent);
+    get().selectComponent(newComponent.id);
+  },
+
+  copySelectedComponents: () => {
+    const { selectedComponents, components } = get();
+    if (!selectedComponents.length) return;
+    
+    const componentsToCopy = components.filter((c) => 
+      selectedComponents.includes(c.id) && c.type !== 'hg_list_item'
+    );
+    
+    if (componentsToCopy.length === 0) {
+      if (vscodeAPI) {
+        vscodeAPI.postMessage({
+          command: 'showInfo',
+          text: '列表项无法复制'
+        });
+      }
+      return;
+    }
+    
+    set({ clipboardMultiple: componentsToCopy, clipboard: null });
+  },
+
+  cutSelectedComponents: () => {
+    const { selectedComponents, components } = get();
+    if (!selectedComponents.length) return;
+    
+    const componentsToCut = components.filter((c) => 
+      selectedComponents.includes(c.id) && c.type !== 'hg_list_item'
+    );
+    
+    if (componentsToCut.length === 0) {
+      if (vscodeAPI) {
+        vscodeAPI.postMessage({
+          command: 'showInfo',
+          text: '列表项无法剪切'
+        });
+      }
+      return;
+    }
+    
+    get().copySelectedComponents();
+    componentsToCut.forEach((c) => get().removeComponent(c.id));
+  },
+
+  // ============ 对齐操作 ============
+  
+  alignSelectedComponents: (type: AlignType) => {
+    const { selectedComponents, components, updateComponent } = get();
+    if (selectedComponents.length < 2) {
+      if (vscodeAPI) {
+        vscodeAPI.postMessage({
+          command: 'showInfo',
+          text: '请至少选择 2 个组件进行对齐'
+        });
+      }
+      return;
+    }
+    
+    const selected = components.filter((c) => selectedComponents.includes(c.id));
+    const updates = alignComponents(selected, type);
+    
+    updates.forEach(({ id, position }) => {
+      if (Object.keys(position).length > 0) {
+        const comp = components.find((c) => c.id === id);
+        if (comp) {
+          updateComponent(id, {
+            position: { ...comp.position, ...position }
+          });
+        }
+      }
+    });
+  },
+
+  distributeSelectedComponents: (type: DistributeType) => {
+    const { selectedComponents, components, updateComponent } = get();
+    if (selectedComponents.length < 3) {
+      if (vscodeAPI) {
+        vscodeAPI.postMessage({
+          command: 'showInfo',
+          text: '请至少选择 3 个组件进行分布'
+        });
+      }
+      return;
+    }
+    
+    const selected = components.filter((c) => selectedComponents.includes(c.id));
+    const updates = distributeComponents(selected, type);
+    
+    updates.forEach(({ id, position }) => {
+      if (Object.keys(position).length > 0) {
+        const comp = components.find((c) => c.id === id);
+        if (comp) {
+          updateComponent(id, {
+            position: { ...comp.position, ...position }
+          });
+        }
+      }
+    });
+  },
+
+  resizeSelectedComponents: (type: ResizeType) => {
+    const { selectedComponents, components, updateComponent } = get();
+    if (selectedComponents.length < 2) {
+      if (vscodeAPI) {
+        vscodeAPI.postMessage({
+          command: 'showInfo',
+          text: '请至少选择 2 个组件进行尺寸调整'
+        });
+      }
+      return;
+    }
+    
+    const selected = components.filter((c) => selectedComponents.includes(c.id));
+    const updates = resizeComponents(selected, type, 'first');
+    
+    updates.forEach(({ id, position }) => {
+      if (Object.keys(position).length > 0) {
+        const comp = components.find((c) => c.id === id);
+        if (comp) {
+          updateComponent(id, {
+            position: { ...comp.position, ...position }
+          });
+        }
+      }
+    });
   },
 
   moveComponent: (id, newParent) => {

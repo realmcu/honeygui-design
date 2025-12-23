@@ -20,10 +20,24 @@ export const useKeyboardShortcuts = () => {
       }
 
       // 直接从 store 获取最新状态，避免闭包问题
-      const { selectedComponent, removeComponent, duplicateComponent, components } = useDesignerStore.getState();
+      const { 
+        selectedComponent, 
+        selectedComponents,
+        removeComponent, 
+        duplicateComponent, 
+        components,
+        copyComponent,
+        cutComponent,
+        copySelectedComponents,
+        cutSelectedComponents,
+        pasteComponent,
+        alignSelectedComponents,
+        distributeSelectedComponents
+      } = useDesignerStore.getState();
 
       const isModKey = e.ctrlKey || e.metaKey; // Ctrl on Windows/Linux, Command on Mac
       const isShift = e.shiftKey;
+      const isAlt = e.altKey;
 
       // Prevent default behavior for our shortcuts
       let handled = true;
@@ -99,8 +113,24 @@ export const useKeyboardShortcuts = () => {
         case 'C':
           if (isModKey) {
             e.preventDefault();
-            // TODO: Implement copy to clipboard
-            console.log('Copy component:', selectedComponent);
+            if (selectedComponents.length > 1) {
+              copySelectedComponents();
+            } else if (selectedComponent) {
+              copyComponent(selectedComponent);
+            }
+          }
+          break;
+
+        // Cut (Ctrl+X)
+        case 'x':
+        case 'X':
+          if (isModKey) {
+            e.preventDefault();
+            if (selectedComponents.length > 1) {
+              cutSelectedComponents();
+            } else if (selectedComponent) {
+              cutComponent(selectedComponent);
+            }
           }
           break;
 
@@ -109,8 +139,7 @@ export const useKeyboardShortcuts = () => {
         case 'V':
           if (isModKey) {
             e.preventDefault();
-            // TODO: Implement paste from clipboard
-            console.log('Paste component');
+            pasteComponent();
           }
           break;
 
@@ -122,6 +151,57 @@ export const useKeyboardShortcuts = () => {
             if (selectedComponent) {
               duplicateComponent(selectedComponent);
             }
+          }
+          // Ctrl+Shift+D: 水平分布
+          else if (isModKey && isShift && selectedComponents.length >= 3) {
+            e.preventDefault();
+            distributeSelectedComponents('horizontal');
+          }
+          // Ctrl+Alt+D: 垂直分布
+          else if (isModKey && isAlt && selectedComponents.length >= 3) {
+            e.preventDefault();
+            distributeSelectedComponents('vertical');
+          }
+          break;
+
+        // Alignment shortcuts (Ctrl+Shift+L/R/T/B/H/V)
+        case 'l':
+        case 'L':
+          if (isModKey && isShift && selectedComponents.length >= 2) {
+            e.preventDefault();
+            alignSelectedComponents('left');
+          }
+          break;
+
+        case 'r':
+        case 'R':
+          if (isModKey && isShift && selectedComponents.length >= 2) {
+            e.preventDefault();
+            alignSelectedComponents('right');
+          }
+          break;
+
+        case 't':
+        case 'T':
+          if (isModKey && isShift && selectedComponents.length >= 2) {
+            e.preventDefault();
+            alignSelectedComponents('top');
+          }
+          break;
+
+        case 'b':
+        case 'B':
+          if (isModKey && isShift && selectedComponents.length >= 2) {
+            e.preventDefault();
+            alignSelectedComponents('bottom');
+          }
+          break;
+
+        case 'h':
+        case 'H':
+          if (isModKey && isShift && selectedComponents.length >= 2) {
+            e.preventDefault();
+            alignSelectedComponents('centerH');
           }
           break;
 

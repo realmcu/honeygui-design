@@ -69,14 +69,34 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
     removeComponent,
     selectComponent: onComponentSelect,
     moveComponentLayer: useDesignerStore.getState().moveComponentLayer,
+    copyComponent: useDesignerStore.getState().copyComponent,
+    cutComponent: useDesignerStore.getState().cutComponent,
+    pasteComponent: useDesignerStore.getState().pasteComponent,
+    duplicateComponent: useDesignerStore.getState().duplicateComponent,
+    copySelectedComponents: useDesignerStore.getState().copySelectedComponents,
+    cutSelectedComponents: useDesignerStore.getState().cutSelectedComponents,
+    alignSelectedComponents: useDesignerStore.getState().alignSelectedComponents,
     postMessage: (msg) => window.vscodeAPI?.postMessage(msg),
   };
   
   // 处理菜单动作
   const handleMenuAction = useCallback((actionId: string, component: Component) => {
+    // 多选时的特殊处理
+    if (selectedComponents.length > 1) {
+      if (actionId === 'copy') {
+        menuActionHelpers.copySelectedComponents();
+        hideMenu();
+        return;
+      }
+      if (actionId === 'cut') {
+        menuActionHelpers.cutSelectedComponents();
+        hideMenu();
+        return;
+      }
+    }
     executeMenuAction(actionId, component, menuActionHelpers);
     hideMenu();
-  }, [hideMenu, updateComponent, removeComponent, onComponentSelect]);
+  }, [hideMenu, updateComponent, removeComponent, onComponentSelect, selectedComponents]);
   
   // 处理组件右键菜单
   const handleComponentContextMenu = useCallback((e: React.MouseEvent, componentId: string) => {
@@ -425,6 +445,8 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
         x={menuState.x}
         y={menuState.y}
         component={menuState.component}
+        hasClipboard={!!useDesignerStore.getState().clipboard || useDesignerStore.getState().clipboardMultiple.length > 0}
+        multiSelectCount={selectedComponents.length}
         onAction={handleMenuAction}
       />
     </div>

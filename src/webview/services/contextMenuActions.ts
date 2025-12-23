@@ -16,6 +16,13 @@ export interface MenuActionHelpers {
   removeComponent: (id: string) => void;
   selectComponent: (id: string | null) => void;
   moveComponentLayer: (id: string, direction: 'up' | 'down' | 'top' | 'bottom') => void;
+  copyComponent: (id: string) => void;
+  cutComponent: (id: string) => void;
+  pasteComponent: (position?: { x: number; y: number }) => void;
+  duplicateComponent: (id: string) => void;
+  copySelectedComponents: () => void;
+  cutSelectedComponents: () => void;
+  alignSelectedComponents: (type: 'left' | 'right' | 'top' | 'bottom' | 'centerH' | 'centerV') => void;
   postMessage: (message: any) => void;
 }
 
@@ -46,6 +53,22 @@ const actionHandlers: Record<string, MenuActionHandler> = {
     selectComponent(null);
   },
 
+  copy: (component, { copyComponent }) => {
+    copyComponent(component.id);
+  },
+
+  cut: (component, { cutComponent }) => {
+    cutComponent(component.id);
+  },
+
+  paste: (component, { pasteComponent }) => {
+    pasteComponent();
+  },
+
+  duplicate: (component, { duplicateComponent }) => {
+    duplicateComponent(component.id);
+  },
+
   lock: (component, { updateComponent }) => {
     updateComponent(component.id, { locked: !component.locked });
   },
@@ -66,9 +89,29 @@ const actionHandlers: Record<string, MenuActionHandler> = {
     moveComponentLayer(component.id, 'down');
   },
 
-  duplicate: (component, helpers) => {
-    // TODO: 实现复制功能
-    console.log('Duplicate not implemented yet', component.id);
+  // 对齐操作
+  alignLeft: (_, { alignSelectedComponents }) => {
+    alignSelectedComponents('left');
+  },
+
+  alignRight: (_, { alignSelectedComponents }) => {
+    alignSelectedComponents('right');
+  },
+
+  alignTop: (_, { alignSelectedComponents }) => {
+    alignSelectedComponents('top');
+  },
+
+  alignBottom: (_, { alignSelectedComponents }) => {
+    alignSelectedComponents('bottom');
+  },
+
+  alignCenterH: (_, { alignSelectedComponents }) => {
+    alignSelectedComponents('centerH');
+  },
+
+  alignCenterV: (_, { alignSelectedComponents }) => {
+    alignSelectedComponents('centerV');
   },
 };
 

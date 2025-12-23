@@ -7,6 +7,8 @@ interface ContextMenuProps {
   x: number;
   y: number;
   component: Component | null;
+  hasClipboard?: boolean;
+  multiSelectCount?: number;
   onAction: (actionId: string, component: Component) => void;
 }
 
@@ -50,11 +52,23 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   x,
   y,
   component,
+  hasClipboard = false,
+  multiSelectCount = 0,
   onAction,
 }) => {
   if (!visible || !component) return null;
 
-  const menuItems = getMenuItems(component.type);
+  const menuItems = getMenuItems(component.type, hasClipboard, multiSelectCount);
+  
+  // 多选时修改菜单项文本
+  const getItemLabel = (item: MenuItem) => {
+    const label = getMenuItemLabel(item, component);
+    if (multiSelectCount > 1) {
+      if (item.id === 'copy') return `复制 ${multiSelectCount} 个组件 (Ctrl+C)`;
+      if (item.id === 'cut') return `剪切 ${multiSelectCount} 个组件 (Ctrl+X)`;
+    }
+    return label;
+  };
 
   return (
     <div
@@ -75,7 +89,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
       {menuItems.map((item) => (
         <MenuItemComponent
           key={item.id}
-          item={item}
+          item={{ ...item, label: getItemLabel(item) }}
           component={component}
           onClick={() => onAction(item.id, component)}
         />
