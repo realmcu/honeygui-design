@@ -3,6 +3,7 @@ import { logger } from '../utils/Logger';
 import { DesignerPanel } from '../designer/DesignerPanel';
 import { DesignerPanelFactory } from '../designer/DesignerPanelFactory';
 import { CreateProjectPanel } from '../designer/CreateProjectPanel';
+import { ToolsPanel } from '../tools/ToolsPanel';
 import * as path from 'path';
 import * as fs from 'fs';
 import { CollaborationService } from './CollaborationService';
@@ -36,6 +37,17 @@ export class CommandManager {
             } catch (error) {
                 logger.error(`新建项目失败: ${error instanceof Error ? error.message : String(error)}`);
                 vscode.window.showErrorMessage(`新建项目失败: ${error instanceof Error ? error.message : '未知错误'}`);
+            }
+        });
+
+        // 资源转换工具
+        this.registerCommand('honeygui.tools', async () => {
+            try {
+                logger.info('执行命令: honeygui.tools');
+                ToolsPanel.createOrShow(this.context.extensionUri);
+            } catch (error) {
+                logger.error(`打开资源转换工具失败: ${error instanceof Error ? error.message : String(error)}`);
+                vscode.window.showErrorMessage(`打开资源转换工具失败: ${error instanceof Error ? error.message : '未知错误'}`);
             }
         });
 
