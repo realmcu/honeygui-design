@@ -14,10 +14,14 @@ export const calculateComponentStyle = (
   projectConfig?: any,
   allComponents?: Component[]
 ): React.CSSProperties => {
-  // List 容器不显示边框
+  // List 容器不显示边框（除非选中）
   let border = '1px solid transparent';
   if (component.type === 'hg_list') {
-    border = 'none';
+    if (isSelected || isMultiSelected) {
+      border = '2px solid #007ACC';
+    } else {
+      border = 'none';
+    }
   } else if (isListItem && !isSelected && !isMultiSelected) {
     border = '1px dashed rgba(150, 150, 150, 0.5)';
   } else if (isSelected || isMultiSelected) {

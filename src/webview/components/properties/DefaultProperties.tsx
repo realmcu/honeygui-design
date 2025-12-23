@@ -226,7 +226,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                           <label style={{ fontSize: '12px' }}>宽度</label>
                           <PropertyEditor
                             type="number"
-                            value={(component.style as any)?.itemWidth}
+                            value={(component.style as any)?.itemWidth ?? 100}
                             onChange={(value) => handleStyleChange('itemWidth', value)}
                           />
                         </div>
@@ -234,7 +234,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                           <label style={{ fontSize: '12px' }}>高度</label>
                           <PropertyEditor
                             type="number"
-                            value={(component.style as any)?.itemHeight}
+                            value={(component.style as any)?.itemHeight ?? 100}
                             onChange={(value) => handleStyleChange('itemHeight', value)}
                           />
                         </div>

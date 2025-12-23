@@ -212,7 +212,16 @@ export class HmlParser {
       // 圆弧属性
       'radius', 'startAngle', 'endAngle', 'strokeWidth',
       // 矩形属性
-      'fillColor'
+      'fillColor',
+      // 列表属性
+      'itemWidth', 'itemHeight', 'direction', 'style'
+    ]);
+
+    // 需要转换为数字的属性
+    const numericProps = new Set([
+      'fontSize', 'borderRadius', 'padding', 'margin', 'opacity',
+      'titleBarHeight', 'radius', 'startAngle', 'endAngle', 'strokeWidth',
+      'itemWidth', 'itemHeight'
     ]);
 
     const dataProps = new Set([
@@ -238,7 +247,13 @@ export class HmlParser {
       if (key.startsWith('on')) {
         events[key] = attributes[key];
       } else if (styleProps.has(key)) {
-        style[key] = attributes[key];
+        // 数字类型属性需要转换
+        let value = attributes[key];
+        if (numericProps.has(key) && typeof value === 'string') {
+          const num = parseFloat(value);
+          value = isNaN(num) ? value : num;
+        }
+        style[key] = value;
       } else if (dataProps.has(key)) {
         data[key] = attributes[key];
       } else {
