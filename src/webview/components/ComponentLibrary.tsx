@@ -169,7 +169,7 @@ const componentDefinitions: ComponentDefinition[] = [
     type: 'hg_arc',
     name: '弧形',
     icon: '🌙',
-    defaultSize: { width: 100, height: 100 },
+    defaultSize: { width: 96, height: 96 }, // 2 * (radius + strokeWidth) = 2 * (40 + 8) = 96
     properties: [
       { name: 'radius', label: '半径', type: 'number', defaultValue: 40, group: 'style' },
       { name: 'startAngle', label: '起始角度', type: 'number', defaultValue: 0, group: 'style' },
@@ -183,7 +183,7 @@ const componentDefinitions: ComponentDefinition[] = [
     type: 'hg_circle',
     name: '圆形',
     icon: '🔵',
-    defaultSize: { width: 100, height: 100 },
+    defaultSize: { width: 80, height: 80 }, // 2 * radius = 2 * 40 = 80
     properties: [
       { name: 'radius', label: '半径', type: 'number', defaultValue: 40, group: 'style' },
       { name: 'fillColor', label: '填充颜色', type: 'color', defaultValue: '#007acc', group: 'style' },

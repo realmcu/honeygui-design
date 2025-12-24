@@ -50,6 +50,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
     addToSelection,
     setSelectedComponents,
     showViewConnections,
+    showAlignmentGuides,
     projectConfig,
     allViews,
     moveComponent,
@@ -141,6 +142,57 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
     let component = components.find(c => c.id === componentId);
     if (!component) return;
     
+    // Ctrl + 点击：穿透选中内层控件（只在同级组件之间循环，不包括父容器）
+    if (e.ctrlKey && !e.shiftKey && !e.metaKey) {
+      // 获取鼠标在画布中的位置
+      if (canvasRef.current) {
+        const rect = canvasRef.current.getBoundingClientRect();
+        const effectiveZoom = zoom / (window.devicePixelRatio || 1);
+        const mouseX = (e.clientX - rect.left - canvasOffset.x) / effectiveZoom;
+        const mouseY = (e.clientY - rect.top - canvasOffset.y) / effectiveZoom;
+        
+        // 查找当前点击位置的所有同级组件（不包括父容器）
+        const clickedComponents: Component[] = [];
+        const currentParent = component.parent;
+        
+        // 获取同级组件列表
+        const siblings = components.filter(c => c.parent === currentParent);
+        
+        // 检查每个同级组件是否在点击位置
+        siblings.forEach(sibling => {
+          // 计算组件的绝对位置
+          let absX = sibling.position.x;
+          let absY = sibling.position.y;
+          
+          // 如果有父容器，需要加上父容器的位置
+          if (currentParent) {
+            const parent = components.find(c => c.id === currentParent);
+            if (parent) {
+              absX += parent.position.x;
+              absY += parent.position.y;
+            }
+          }
+          
+          const compLeft = absX;
+          const compTop = absY;
+          const compRight = compLeft + sibling.position.width;
+          const compBottom = compTop + sibling.position.height;
+          
+          if (mouseX >= compLeft && mouseX <= compRight && mouseY >= compTop && mouseY <= compBottom) {
+            clickedComponents.push(sibling);
+          }
+        });
+        
+        // 如果找到多个同级组件，选择下一个（循环选择）
+        if (clickedComponents.length > 1) {
+          const currentIndex = clickedComponents.findIndex(c => c.id === selectedComponent);
+          const nextIndex = (currentIndex + 1) % clickedComponents.length;
+          component = clickedComponents[nextIndex];
+          componentId = component.id;
+        }
+      }
+    }
+    
     // Alt + 点击：选中父容器
     if (e.altKey && component.parent) {
       const parentComponent = components.find(c => c.id === component!.parent);
@@ -151,7 +203,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
     }
     
     // 选中当前组件（允许选中 locked 组件）
-    const multi = e.ctrlKey || e.metaKey || e.shiftKey;
+    const multi = (e.ctrlKey || e.metaKey || e.shiftKey) && !e.altKey;
     if (multi) {
       addToSelection(componentId);
     } else {
@@ -603,11 +655,13 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
         />
 
         {/* 对齐辅助线 */}
-        <AlignmentGuides
-          lines={alignmentLines}
-          zoom={zoom / (window.devicePixelRatio || 1)}
-          offset={canvasOffset}
-        />
+        {showAlignmentGuides && (
+          <AlignmentGuides
+            lines={alignmentLines}
+            zoom={zoom / (window.devicePixelRatio || 1)}
+            offset={canvasOffset}
+          />
+        )}
 
         {/* Zoom indicator */}
         <div className="zoom-indicator">

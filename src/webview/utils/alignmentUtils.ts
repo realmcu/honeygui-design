@@ -63,37 +63,20 @@ interface BoundingBox {
  */
 function getBoundingBox(component: Component): BoundingBox {
   const { x, y, width, height } = component.position;
+  
+  // 使用矩形框中心作为对齐参考点
+  const centerX = x + width / 2;
+  const centerY = y + height / 2;
+  
   return {
     left: x,
     right: x + width,
     top: y,
     bottom: y + height,
-    centerX: x + width / 2,
-    centerY: y + height / 2,
+    centerX,
+    centerY,
     width,
     height,
-  };
-}
-
-/**
- * 计算多个组件的整体边界框
- */
-function getGroupBoundingBox(components: Component[]): BoundingBox {
-  const boxes = components.map(getBoundingBox);
-  const left = Math.min(...boxes.map(b => b.left));
-  const right = Math.max(...boxes.map(b => b.right));
-  const top = Math.min(...boxes.map(b => b.top));
-  const bottom = Math.max(...boxes.map(b => b.bottom));
-  
-  return {
-    left,
-    right,
-    top,
-    bottom,
-    centerX: (left + right) / 2,
-    centerY: (top + bottom) / 2,
-    width: right - left,
-    height: bottom - top,
   };
 }
 
@@ -112,39 +95,59 @@ export function alignComponents(
     return [];
   }
 
-  const groupBox = getGroupBoundingBox(components);
+  // 使用第一个组件作为对齐参考
+  const refComp = components[0];
+  const referenceBox = getBoundingBox(refComp);
   
-  return components.map(component => {
+  return components.map((component, index) => {
+    // 第一个组件不动
+    if (index === 0) {
+      return { id: component.id, position: {} };
+    }
+    
     const box = getBoundingBox(component);
-    let newX = component.position.x;
-    let newY = component.position.y;
+    const oldX = component.position.x;
+    const oldY = component.position.y;
+    let newX = oldX;
+    let newY = oldY;
 
     switch (type) {
       case 'left':
-        newX = groupBox.left;
+        newX = referenceBox.left;
         break;
       case 'right':
-        newX = groupBox.right - box.width;
+        newX = referenceBox.right - box.width;
         break;
       case 'top':
-        newY = groupBox.top;
+        newY = referenceBox.top;
         break;
       case 'bottom':
-        newY = groupBox.bottom - box.height;
+        newY = referenceBox.bottom - box.height;
         break;
       case 'centerH':
-        newX = groupBox.centerX - box.width / 2;
+        // 对齐到参考组件的中心 X
+        newX = referenceBox.centerX - box.width / 2;
         break;
       case 'centerV':
-        newY = groupBox.centerY - box.height / 2;
+        // 对齐到参考组件的中心 Y
+        newY = referenceBox.centerY - box.height / 2;
         break;
     }
 
+    // 只返回需要修改的属性
+    const position: Partial<ComponentPosition> = {};
+    if (Math.round(newX) !== oldX) {
+      position.x = Math.round(newX);
+    }
+    if (Math.round(newY) !== oldY) {
+      position.y = Math.round(newY);
+    }
+    
     return {
       id: component.id,
-      position: { x: Math.round(newX), y: Math.round(newY) },
+      position,
     };
-  });
+  }).filter(update => Object.keys(update.position).length > 0);
 }
 
 /**
@@ -278,8 +281,8 @@ export const ALIGNMENT_CONFIGS: AlignmentConfig[] = [
   { type: 'right', label: '右对齐', shortcut: 'Ctrl+Shift+R', minComponents: 2, category: 'align' },
   { type: 'top', label: '顶对齐', shortcut: 'Ctrl+Shift+T', minComponents: 2, category: 'align' },
   { type: 'bottom', label: '底对齐', shortcut: 'Ctrl+Shift+B', minComponents: 2, category: 'align' },
-  { type: 'centerH', label: '水平居中', shortcut: 'Ctrl+Shift+H', minComponents: 2, category: 'align' },
-  { type: 'centerV', label: '垂直居中', shortcut: 'Ctrl+Shift+V', minComponents: 2, category: 'align' },
+  { type: 'centerH', label: '左右居中', shortcut: 'Ctrl+Shift+H', minComponents: 2, category: 'align' },
+  { type: 'centerV', label: '上下居中', shortcut: 'Ctrl+Shift+V', minComponents: 2, category: 'align' },
   // 分布
   { type: 'horizontal', label: '水平分布', shortcut: 'Ctrl+Shift+D', minComponents: 3, category: 'distribute' },
   { type: 'vertical', label: '垂直分布', shortcut: 'Ctrl+Alt+D', minComponents: 3, category: 'distribute' },

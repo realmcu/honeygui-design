@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useDesignerStore } from '../store';
-import { Save, Code, Play, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, GitBranch, Palette, AlignLeft } from 'lucide-react';
+import { Save, Code, Play, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, GitBranch, Palette, AlignLeft, Grid } from 'lucide-react';
 import { AlignType, DistributeType, ResizeType, getAlignmentConfigsByCategory } from '../utils/alignmentUtils';
 import './Toolbar.css';
 
@@ -14,6 +14,8 @@ const Toolbar: React.FC = () => {
     setShowViewRelationModal,
     canvasBackgroundColor,
     setCanvasBackgroundColor,
+    showAlignmentGuides,
+    setShowAlignmentGuides,
     selectedComponents,
     alignSelectedComponents,
     distributeSelectedComponents,
@@ -148,6 +150,15 @@ const Toolbar: React.FC = () => {
         >
           <GitBranch size={16} />
           <span>关系图</span>
+        </button>
+        
+        <button
+          className={`toolbar-button ${showAlignmentGuides ? 'active' : ''}`}
+          onClick={() => setShowAlignmentGuides(!showAlignmentGuides)}
+          title={showAlignmentGuides ? '隐藏智能辅助线' : '显示智能辅助线'}
+        >
+          <Grid size={16} />
+          <span>辅助线</span>
         </button>
         
         {/* 对齐按钮 - 多选时启用 */}

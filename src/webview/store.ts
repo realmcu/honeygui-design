@@ -101,6 +101,10 @@ export interface DesignerStore extends DesignerState {
   setShowViewConnections: (show: boolean) => void;
   showViewRelationModal: boolean;
   setShowViewRelationModal: (show: boolean) => void;
+  
+  // Alignment guides
+  showAlignmentGuides: boolean;
+  setShowAlignmentGuides: (show: boolean) => void;
 
   // Assets
   setAssetCategory: (category: 'all' | 'images' | 'videos' | 'models' | 'fonts') => void;
@@ -183,6 +187,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   editingMode: 'select',
   showViewConnections: true, // 默认显示视图连接
   showViewRelationModal: false,
+  showAlignmentGuides: true, // 默认显示智能辅助线
   undoStack: [],
   redoStack: [],
   vscodeAPI: null,
@@ -233,9 +238,45 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     const before = state.components.find(c => c.id === id);
     if (!before) return;
     
+    // 对于几何控件，如果修改了半径或线宽，自动调整 width 和 height
+    let finalUpdates = { ...updates };
+    
+    if (before.type === 'hg_arc' && updates.style) {
+      const currentStyle = before.style || {};
+      const newStyle = { ...currentStyle, ...updates.style };
+      const radius = newStyle.radius ?? 40;
+      const strokeWidth = newStyle.strokeWidth ?? 8;
+      
+      // 自动调整尺寸：width = height = 2 * (radius + strokeWidth)
+      const newSize = 2 * (radius + strokeWidth);
+      
+      finalUpdates.position = {
+        ...before.position,
+        ...finalUpdates.position,
+        width: newSize,
+        height: newSize,
+      };
+    }
+    
+    if (before.type === 'hg_circle' && updates.style) {
+      const currentStyle = before.style || {};
+      const newStyle = { ...currentStyle, ...updates.style };
+      const radius = newStyle.radius ?? 40;
+      
+      // 自动调整尺寸：width = height = 2 * radius
+      const newSize = 2 * radius;
+      
+      finalUpdates.position = {
+        ...before.position,
+        ...finalUpdates.position,
+        width: newSize,
+        height: newSize,
+      };
+    }
+    
     set((state) => ({
       components: state.components.map((comp) =>
-        comp.id === id ? { ...comp, ...updates } : comp
+        comp.id === id ? { ...comp, ...finalUpdates } : comp
       ),
     }));
     get().saveToFile();
@@ -393,6 +434,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   setCanvasBackgroundColor: (color) => set({ canvasBackgroundColor: color }),
   setShowViewConnections: (show) => set({ showViewConnections: show }),
   setShowViewRelationModal: (show) => set({ showViewRelationModal: show }),
+  setShowAlignmentGuides: (show) => set({ showAlignmentGuides: show }),
   setAssetCategory: (category) => set({ assetCategory: category }),
   
   // 将指定组件居中显示在画布上
@@ -672,6 +714,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   
   alignSelectedComponents: (type: AlignType) => {
     const { selectedComponents, components, updateComponent } = get();
+    
     if (selectedComponents.length < 2) {
       if (vscodeAPI) {
         vscodeAPI.postMessage({
@@ -696,18 +739,32 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       return;
     }
     
-    const updates = alignComponents(selected, type);
+    // 重新排序：将最后选中的组件放在第一位（作为参考）
+    const lastSelectedId = selectedComponents[selectedComponents.length - 1];
+    const reordered = [
+      ...selected.filter(c => c.id === lastSelectedId),
+      ...selected.filter(c => c.id !== lastSelectedId)
+    ];
     
-    updates.forEach(({ id, position }) => {
-      if (Object.keys(position).length > 0) {
-        const comp = components.find((c) => c.id === id);
-        if (comp) {
-          updateComponent(id, {
-            position: { ...comp.position, ...position }
-          });
+    const updates = alignComponents(reordered, type);
+    
+    // 直接批量更新组件位置，避免触发几何控件的尺寸自动调整
+    set((state) => {
+      const newComponents = state.components.map((comp) => {
+        const update = updates.find(u => u.id === comp.id);
+        if (update && Object.keys(update.position).length > 0) {
+          return {
+            ...comp,
+            position: { ...comp.position, ...update.position }
+          };
         }
-      }
+        return comp;
+      });
+      return { components: newComponents };
     });
+    
+    // 保存到文件
+    get().saveToFile();
   },
 
   distributeSelectedComponents: (type: DistributeType) => {

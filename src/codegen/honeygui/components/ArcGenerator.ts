@@ -8,7 +8,7 @@ export class ArcGenerator implements ComponentCodeGenerator {
   generateCreation(component: Component, indent: number, context: GeneratorContext): string {
     const indentStr = '    '.repeat(indent);
     const parentRef = context.getParentRef(component);
-    const { x, y } = component.position;
+    const { x, y, width, height } = component.position;
     
     // 从 style 中获取参数，设置默认值
     const radius = component.style?.radius || 40;
@@ -17,7 +17,13 @@ export class ArcGenerator implements ComponentCodeGenerator {
     const strokeWidth = component.style?.strokeWidth || 8;
     const color = this.convertColor(component.style?.color);
 
-    return `${indentStr}${component.id} = gui_arc_create(${parentRef}, "${component.name}", ${x}, ${y}, ${radius}, ${startAngle}, ${endAngle}, ${strokeWidth}, ${color});\n`;
+    // 重要：gui_arc_create 的 x, y 参数是圆心坐标，不是矩形框左上角
+    // 设计器中存储的是矩形框左上角，需要转换为圆心坐标
+    // 矩形框中心 = 左上角 + 宽度/2
+    const centerX = x + width / 2;
+    const centerY = y + height / 2;
+
+    return `${indentStr}${component.id} = gui_arc_create(${parentRef}, "${component.name}", ${centerX}, ${centerY}, ${radius}, ${startAngle}, ${endAngle}, ${strokeWidth}, ${color});\n`;
   }
 
   generatePropertySetters(component: Component, indent: number, _context: GeneratorContext): string {

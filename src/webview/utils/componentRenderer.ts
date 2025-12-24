@@ -47,18 +47,9 @@ export const calculateComponentStyle = (
     borderRadiusValue = `${borderRadius}px`;
   }
 
-  // 几何控件的坐标是圆心，需要转换为左上角
-  let left = component.position.x;
-  let top = component.position.y;
-  const isGeometryWidget = ['hg_arc', 'hg_circle', 'hg_rect'].includes(component.type);
-  if (isGeometryWidget) {
-    const radius = component.style?.radius || 40;
-    left = left - radius;  // 左上角 X = 圆心 X - 半径
-    top = top - radius;    // 左上角 Y = 圆心 Y - 半径
-  }
-
   // 容器组件的 overflow 处理
   const isContainer = ['hg_view', 'hg_window', 'hg_canvas', 'hg_list', 'hg_list_item'].includes(component.type);
+  const isGeometryWidget = ['hg_arc', 'hg_circle', 'hg_rect'].includes(component.type);
   let overflowValue: string | undefined;
   
   if (isContainer) {
@@ -80,14 +71,15 @@ export const calculateComponentStyle = (
 
   return {
     position: 'absolute',
-    left,
-    top,
+    left: component.position.x,
+    top: component.position.y,
     width: component.position.width,
     height: component.position.height,
     display: component.visible ? 'flex' : 'none',
     opacity: isDragging ? 0 : (component.enabled ? 1 : 0.6),
     cursor: editingMode === 'move' ? 'move' : 'pointer',
-    border,
+    outline: border, // 使用 outline 不占用空间
+    outlineOffset: '-1px',
     borderRadius: borderRadiusValue,
     overflow: overflowValue,
     background: component.style?.backgroundColor || 'transparent',
@@ -95,6 +87,7 @@ export const calculateComponentStyle = (
     fontSize: component.style?.fontSize ? `${component.style.fontSize}px` : undefined,
     zIndex: component.zIndex,
     userSelect: 'none',
+    boxSizing: 'border-box',
   };
 };
 
