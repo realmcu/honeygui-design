@@ -25,6 +25,8 @@ const componentDefinitions: ComponentDefinition[] = [
     properties: [
       { name: 'text', label: '文本', type: 'string', defaultValue: 'Label', group: 'data' },
       { name: 'fontFile', label: '字体文件', type: 'string', defaultValue: '', group: 'data' },
+      { name: 'timeFormat', label: '时间格式', type: 'select', defaultValue: '', 
+        options: ['', 'HH:mm:ss', 'HH:mm', 'YYYY-MM-DD', 'YYYY-MM-DD HH:mm:ss', 'MM-DD HH:mm'], group: 'data' },
       { name: 'align', label: '对齐方式', type: 'select', defaultValue: 'LEFT', 
         options: ['LEFT', 'CENTER', 'RIGHT', 'MID_LEFT', 'MID_CENTER', 'MID_RIGHT'], group: 'style' },
       { name: 'fontSize', label: '字体大小', type: 'number', defaultValue: 16, group: 'style' },

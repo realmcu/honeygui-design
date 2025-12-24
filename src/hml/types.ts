@@ -41,6 +41,7 @@ export interface ComponentData {
   value?: string | number | boolean;
   placeholder?: string;
   options?: string[];
+  timeFormat?: string;  // 时间格式（用于 label 组件自动更新时间）
   [key: string]: any;  // 允许其他数据属性
 }
 

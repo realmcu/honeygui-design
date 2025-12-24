@@ -44,6 +44,17 @@ export class ViewGenerator implements ComponentCodeGenerator {
     // 子组件创建代码由主生成器处理（通过 childrenCode 回调）
     code += `__CHILDREN_PLACEHOLDER__`;
     
+    // 为所有带时间格式的 label 创建定时器
+    const timeLabels = this.collectTimeLabels(component, context);
+    if (timeLabels.length > 0) {
+      code += `\n${indentStr}    // 创建时间更新定时器\n`;
+      timeLabels.forEach(labelId => {
+        const labelComp = context.componentMap.get(labelId);
+        const interval = this.getTimerInterval(labelComp?.data?.timeFormat);
+        code += `${indentStr}    gui_obj_create_timer(GUI_BASE(${labelId}), ${interval}, true, ${labelId}_time_update_cb);\n`;
+      });
+    }
+    
     code += `${indentStr}}\n`;
     
     // GUI_VIEW_INSTANCE 宏调用
@@ -94,5 +105,52 @@ export class ViewGenerator implements ComponentCodeGenerator {
     });
 
     return result;
+  }
+
+  /**
+   * 收集当前 view 下所有带时间格式的 label 组件
+   */
+  private collectTimeLabels(component: Component, context: GeneratorContext): string[] {
+    const timeLabels: string[] = [];
+    
+    const collectRecursive = (comp: Component) => {
+      // 检查当前组件是否是带时间格式的 label
+      if (comp.type === 'hg_label' && comp.data?.timeFormat) {
+        timeLabels.push(comp.id);
+      }
+      
+      // 递归检查子组件
+      if (comp.children) {
+        comp.children.forEach(childId => {
+          const child = context.componentMap.get(childId);
+          if (child) {
+            collectRecursive(child);
+          }
+        });
+      }
+    };
+    
+    collectRecursive(component);
+    return timeLabels;
+  }
+
+  /**
+   * 根据时间格式获取定时器间隔（毫秒）
+   */
+  private getTimerInterval(timeFormat?: string): number {
+    if (!timeFormat) return 1000;
+    
+    switch (timeFormat) {
+      case 'HH:mm:ss':
+      case 'YYYY-MM-DD HH:mm:ss':
+        return 1000; // 1 秒
+      case 'HH:mm':
+      case 'MM-DD HH:mm':
+        return 1000; // 1 秒（虽然只显示分钟，但保持 1 秒更新以便及时切换）
+      case 'YYYY-MM-DD':
+        return 60000; // 60 秒（日期变化慢，可以降低更新频率）
+      default:
+        return 1000;
+    }
   }
 }

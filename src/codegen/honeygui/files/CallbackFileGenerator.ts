@@ -32,6 +32,12 @@ export class CallbackFileGenerator {
       code += `void ${funcName}(void *obj, gui_event_t event, void *param);\n`;
     });
 
+    // 添加时间更新回调声明
+    const timeUpdateFuncNames = this.collectTimeUpdateCallbackNames();
+    timeUpdateFuncNames.forEach(funcName => {
+      code += `void ${funcName}(void *p);\n`;
+    });
+
     code += `
 #endif // ${guardName}
 `;
@@ -46,6 +52,7 @@ export class CallbackFileGenerator {
     let code = `#include "${baseName}_callbacks.h"
 #include "../ui/${baseName}_ui.h"
 #include <stdio.h>
+#include <time.h>
 
 // 事件回调函数实现
 
@@ -57,12 +64,19 @@ export class CallbackFileGenerator {
       code += impl + '\n\n';
     });
 
+    // 生成时间更新回调
+    const timeUpdateImpls = this.collectTimeUpdateCallbackImpls();
+    timeUpdateImpls.forEach(impl => {
+      code += impl + '\n\n';
+    });
+
     // 生成普通回调函数模板
     const callbackFunctions = this.collectCallbackFunctions();
     const switchViewFuncNames = new Set(this.collectSwitchViewCallbackNames());
+    const timeUpdateFuncNames = new Set(this.collectTimeUpdateCallbackNames());
     
     callbackFunctions.forEach(funcName => {
-      if (switchViewFuncNames.has(funcName)) return;
+      if (switchViewFuncNames.has(funcName) || timeUpdateFuncNames.has(funcName)) return;
       
       code += `void ${funcName}(void *obj, gui_event_t event, void *param)\n`;
       code += `{\n`;
@@ -132,5 +146,99 @@ export class CallbackFileGenerator {
     });
 
     return names;
+  }
+
+  /**
+   * 收集所有时间更新回调实现
+   */
+  private collectTimeUpdateCallbackImpls(): string[] {
+    const impls: string[] = [];
+
+    this.components.forEach(component => {
+      if (component.type === 'hg_label' && component.data?.timeFormat) {
+        const timeFormat = component.data.timeFormat;
+        const impl = this.generateTimeUpdateCallback(component.id, timeFormat);
+        impls.push(impl);
+      }
+    });
+
+    return impls;
+  }
+
+  /**
+   * 收集所有时间更新回调函数名
+   */
+  private collectTimeUpdateCallbackNames(): string[] {
+    const names: string[] = [];
+
+    this.components.forEach(component => {
+      if (component.type === 'hg_label' && component.data?.timeFormat) {
+        names.push(`${component.id}_time_update_cb`);
+      }
+    });
+
+    return names;
+  }
+
+  /**
+   * 生成时间更新回调函数
+   */
+  private generateTimeUpdateCallback(componentId: string, timeFormat: string): string {
+    let formatStr = '';
+    let bufferSize = 32;
+
+    switch (timeFormat) {
+      case 'HH:mm:ss':
+        formatStr = '%02d:%02d:%02d';
+        bufferSize = 9;
+        break;
+      case 'HH:mm':
+        formatStr = '%02d:%02d';
+        bufferSize = 6;
+        break;
+      case 'YYYY-MM-DD':
+        formatStr = '%04d-%02d-%02d';
+        bufferSize = 11;
+        break;
+      case 'YYYY-MM-DD HH:mm:ss':
+        formatStr = '%04d-%02d-%02d %02d:%02d:%02d';
+        bufferSize = 20;
+        break;
+      case 'MM-DD HH:mm':
+        formatStr = '%02d-%02d %02d:%02d';
+        bufferSize = 15;
+        break;
+      default:
+        formatStr = '%02d:%02d:%02d';
+        bufferSize = 9;
+    }
+
+    let code = `void ${componentId}_time_update_cb(void *p)\n`;
+    code += `{\n`;
+    code += `    GUI_UNUSED(p);\n`;
+    code += `    \n`;
+    code += `    time_t now = time(NULL);\n`;
+    code += `    struct tm *t = localtime(&now);\n`;
+    code += `    static char time_str[${bufferSize}];\n`;
+    code += `    \n`;
+
+    // 根据格式生成不同的 sprintf 调用
+    if (timeFormat === 'HH:mm:ss') {
+      code += `    sprintf(time_str, "${formatStr}", t->tm_hour, t->tm_min, t->tm_sec);\n`;
+    } else if (timeFormat === 'HH:mm') {
+      code += `    sprintf(time_str, "${formatStr}", t->tm_hour, t->tm_min);\n`;
+    } else if (timeFormat === 'YYYY-MM-DD') {
+      code += `    sprintf(time_str, "${formatStr}", t->tm_year + 1900, t->tm_mon + 1, t->tm_mday);\n`;
+    } else if (timeFormat === 'YYYY-MM-DD HH:mm:ss') {
+      code += `    sprintf(time_str, "${formatStr}", t->tm_year + 1900, t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);\n`;
+    } else if (timeFormat === 'MM-DD HH:mm') {
+      code += `    sprintf(time_str, "${formatStr}", t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min);\n`;
+    }
+
+    code += `    \n`;
+    code += `    gui_text_content_set((gui_text_t *)${componentId}, (void *)time_str, strlen(time_str));\n`;
+    code += `}`;
+
+    return code;
   }
 }

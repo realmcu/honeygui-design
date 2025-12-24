@@ -35,8 +35,9 @@ export class LabelGenerator implements ComponentCodeGenerator {
     const fontSize = component.style?.fontSize || 16;
     code += `${indentStr}gui_text_size_set((gui_text_t *)${component.id}, ${fontSize}, 0);\n`;
 
-    // 文本内容
-    const text = component.data?.text || '';
+    // 文本内容（如果有时间格式，使用占位符）
+    const timeFormat = component.data?.timeFormat;
+    const text = timeFormat ? this.getTimeFormatPlaceholder(timeFormat) : (component.data?.text || '');
     code += `${indentStr}gui_text_content_set((gui_text_t *)${component.id}, (void *)"${text}", ${text.length});\n`;
 
     // 颜色
@@ -67,12 +68,28 @@ export class LabelGenerator implements ComponentCodeGenerator {
       code += `${indentStr}gui_text_wordwrap_set((gui_text_t *)${component.id}, true);\n`;
     }
 
+    // 时间格式的 label 不需要在这里注册事件，由 view 的 switch_in 创建定时器
+
     // 可见性
     if (component.visible !== undefined) {
       code += `${indentStr}gui_obj_show(${component.id}, ${component.visible ? 'true' : 'false'});\n`;
     }
 
     return code;
+  }
+
+  /**
+   * 获取时间格式的占位符
+   */
+  private getTimeFormatPlaceholder(format: string): string {
+    switch (format) {
+      case 'HH:mm:ss': return '00:00:00';
+      case 'HH:mm': return '00:00';
+      case 'YYYY-MM-DD': return '2024-01-01';
+      case 'YYYY-MM-DD HH:mm:ss': return '2024-01-01 00:00:00';
+      case 'MM-DD HH:mm': return '01-01 00:00';
+      default: return '00:00:00';
+    }
   }
 
   private colorToHex(color: string): string {
