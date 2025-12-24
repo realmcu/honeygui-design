@@ -27,6 +27,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 }); // 组件拖拽起始位置
   const [alignmentLines, setAlignmentLines] = useState<AlignmentLine[]>([]); // 对齐辅助线
   const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 }); // 最后鼠标位置（画布坐标）
+  const [multiDragOffsets, setMultiDragOffsets] = useState<Map<string, { x: number; y: number }>>(new Map()); // 多选拖拽偏移量
 
   const {
     components,
@@ -179,6 +180,23 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
         x: mouseX - draggableComponent.position.x,
         y: mouseY - draggableComponent.position.y,
       });
+      
+      // 多选拖拽：记录所有选中组件的偏移量
+      if (selectedComponents.length > 1 && selectedComponents.includes(componentId)) {
+        const offsets = new Map<string, { x: number; y: number }>();
+        selectedComponents.forEach(id => {
+          const comp = components.find(c => c.id === id);
+          if (comp && !comp.locked) {
+            offsets.set(id, {
+              x: mouseX - comp.position.x,
+              y: mouseY - comp.position.y,
+            });
+          }
+        });
+        setMultiDragOffsets(offsets);
+      } else {
+        setMultiDragOffsets(new Map());
+      }
     }
 
     // 记录待拖动的组件（是可拖拽的父组件，不是选中的组件）
@@ -216,9 +234,25 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
       // 记录最后鼠标位置（用于 mouseUp 时判断目标容器）
       setLastMousePos({ x: mouseX, y: mouseY });
       
-      // 减去偏移量得到组件左上角的位置
-      let x = mouseX - dragOffset.x;
-      let y = mouseY - dragOffset.y;
+      // 多选拖拽
+      if (multiDragOffsets.size > 1) {
+        multiDragOffsets.forEach((offset, id) => {
+          const comp = components.find(c => c.id === id);
+          if (comp) {
+            const newX = Math.round(mouseX - offset.x);
+            const newY = Math.round(mouseY - offset.y);
+            updateComponent(id, {
+              position: { ...comp.position, x: newX, y: newY },
+            });
+          }
+        });
+        setAlignmentLines([]); // 多选时不显示辅助线
+        return;
+      }
+      
+      // 单选拖拽
+      const x = mouseX - dragOffset.x;
+      const y = mouseY - dragOffset.y;
 
       const component = components.find(c => c.id === draggedComponent);
       if (component) {
@@ -234,12 +268,11 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
         if (effectiveParent !== component.parent && targetContainer) {
           const targetAbsPos = getAbsolutePosition(targetContainer, components);
           const componentAbsPos = getAbsolutePosition(component, components);
-          // 计算组件在目标容器中的相对位置
           relativeX = (componentAbsPos.x - targetAbsPos.x) + (x - component.position.x);
           relativeY = (componentAbsPos.y - targetAbsPos.y) + (y - component.position.y);
         }
         
-        // 创建临时组件用于辅助线计算（使用目标容器作为父级）
+        // 创建临时组件用于辅助线计算
         const tempComponent = effectiveParent !== component.parent
           ? { ...component, parent: effectiveParent }
           : component;
@@ -253,12 +286,10 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
           canvasSize
         );
         
-        // 更新辅助线
         setAlignmentLines(alignment.lines);
         
-        // 使用吸附后的位置（保持在原父容器的坐标系中）
+        // 使用吸附后的位置
         if (effectiveParent !== component.parent && targetContainer) {
-          // 跨容器时，需要将吸附位置转换回原坐标系
           const targetAbsPos = getAbsolutePosition(targetContainer, components);
           const parentAbsPos = component.parent 
             ? getAbsolutePosition(components.find(c => c.id === component.parent)!, components)
@@ -266,19 +297,11 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
           const snappedAbsX = targetAbsPos.x + alignment.x;
           const snappedAbsY = targetAbsPos.y + alignment.y;
           updateComponent(component.id, {
-            position: {
-              ...component.position,
-              x: snappedAbsX - parentAbsPos.x,
-              y: snappedAbsY - parentAbsPos.y,
-            },
+            position: { ...component.position, x: snappedAbsX - parentAbsPos.x, y: snappedAbsY - parentAbsPos.y },
           });
         } else {
           updateComponent(component.id, {
-            position: {
-              ...component.position,
-              x: alignment.x,
-              y: alignment.y,
-            },
+            position: { ...component.position, x: alignment.x, y: alignment.y },
           });
         }
       }
@@ -288,35 +311,47 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
   const handleComponentMouseUp = () => {
     // 处理跨容器拖拽
     if (draggedComponent) {
-      const component = components.find(c => c.id === draggedComponent);
-      
-      if (component && !isContainerType(component.type)) {
-        // 查找鼠标位置下的目标容器
+      // 多选跨容器拖拽
+      if (multiDragOffsets.size > 1) {
         const targetContainer = findComponentAtPosition(lastMousePos.x, lastMousePos.y, components);
-        
-        if (targetContainer && targetContainer.id !== component.parent && targetContainer.id !== component.id) {
-          // 目标容器与当前父容器不同，执行跨容器移动
-          const oldParent = component.parent;
-          const targetAbsPos = getAbsolutePosition(targetContainer, components);
-          const componentAbsPos = getAbsolutePosition(component, components);
-          
-          // 计算相对于新父容器的坐标
-          const newX = Math.round(componentAbsPos.x - targetAbsPos.x);
-          const newY = Math.round(componentAbsPos.y - targetAbsPos.y);
-          
-          console.log(`[跨容器拖拽] ${component.id}: ${oldParent || '顶层'} → ${targetContainer.id}, 坐标: (${newX}, ${newY})`);
-          
-          // 先更新位置，再更新父级
-          updateComponent(component.id, {
-            position: {
-              ...component.position,
-              x: newX,
-              y: newY,
-            },
+        if (targetContainer) {
+          multiDragOffsets.forEach((_, id) => {
+            const comp = components.find(c => c.id === id);
+            if (comp && !isContainerType(comp.type) && targetContainer.id !== comp.parent && targetContainer.id !== comp.id) {
+              const targetAbsPos = getAbsolutePosition(targetContainer, components);
+              const compAbsPos = getAbsolutePosition(comp, components);
+              const newX = Math.round(compAbsPos.x - targetAbsPos.x);
+              const newY = Math.round(compAbsPos.y - targetAbsPos.y);
+              
+              updateComponent(comp.id, {
+                position: { ...comp.position, x: newX, y: newY },
+              });
+              moveComponent(comp.id, targetContainer.id);
+            }
           });
+        }
+      } else {
+        // 单选跨容器拖拽
+        const component = components.find(c => c.id === draggedComponent);
+        
+        if (component && !isContainerType(component.type)) {
+          const targetContainer = findComponentAtPosition(lastMousePos.x, lastMousePos.y, components);
           
-          // 更新父级关系
-          moveComponent(component.id, targetContainer.id);
+          if (targetContainer && targetContainer.id !== component.parent && targetContainer.id !== component.id) {
+            const oldParent = component.parent;
+            const targetAbsPos = getAbsolutePosition(targetContainer, components);
+            const componentAbsPos = getAbsolutePosition(component, components);
+            
+            const newX = Math.round(componentAbsPos.x - targetAbsPos.x);
+            const newY = Math.round(componentAbsPos.y - targetAbsPos.y);
+            
+            console.log(`[跨容器拖拽] ${component.id}: ${oldParent || '顶层'} → ${targetContainer.id}, 坐标: (${newX}, ${newY})`);
+            
+            updateComponent(component.id, {
+              position: { ...component.position, x: newX, y: newY },
+            });
+            moveComponent(component.id, targetContainer.id);
+          }
         }
       }
     }
@@ -324,7 +359,8 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
     handleCanvasMouseUp();
     setPendingDragComponent(null);
     setDraggedComponent(null);
-    setAlignmentLines([]); // 清除辅助线
+    setAlignmentLines([]);
+    setMultiDragOffsets(new Map());
   };
 
   // 处理键盘事件，特别是delete键删除选中组件
@@ -519,35 +555,41 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
           
           {/* 拖拽中的组件 - 渲染到顶层（仅非容器组件） */}
           {draggedComponent && (() => {
-            const comp = components.find(c => c.id === draggedComponent);
-            if (!comp) return null;
+            // 多选拖拽：渲染所有选中的非容器组件
+            const dragIds = multiDragOffsets.size > 1 
+              ? Array.from(multiDragOffsets.keys())
+              : [draggedComponent];
             
-            // 容器组件不渲染顶层副本
-            const isContainer = ['hg_view', 'hg_window', 'hg_canvas', 'hg_list', 'hg_list_item'].includes(comp.type);
-            if (isContainer) return null;
-            
-            // 计算绝对位置
-            const absPos = getAbsolutePosition(comp, components);
-            const Widget = widgetRegistry[comp.type];
-            if (!Widget) return null;
-            
-            const dragStyle: React.CSSProperties = {
-              position: 'absolute',
-              left: absPos.x,
-              top: absPos.y,
-              width: comp.position.width,
-              height: comp.position.height,
-              zIndex: 9999,
-              pointerEvents: 'none',
-            };
-            
-            const emptyHandlers = {
-              onMouseDown: () => {},
-              onMouseEnter: () => {},
-              onMouseLeave: () => {},
-            };
-            
-            return <Widget key={`drag-${comp.id}`} component={comp} style={dragStyle} handlers={emptyHandlers} />;
+            return dragIds.map(id => {
+              const comp = components.find(c => c.id === id);
+              if (!comp) return null;
+              
+              // 容器组件不渲染顶层副本
+              const isContainer = ['hg_view', 'hg_window', 'hg_canvas', 'hg_list', 'hg_list_item'].includes(comp.type);
+              if (isContainer) return null;
+              
+              const absPos = getAbsolutePosition(comp, components);
+              const Widget = widgetRegistry[comp.type];
+              if (!Widget) return null;
+              
+              const dragStyle: React.CSSProperties = {
+                position: 'absolute',
+                left: absPos.x,
+                top: absPos.y,
+                width: comp.position.width,
+                height: comp.position.height,
+                zIndex: 9999,
+                pointerEvents: 'none',
+              };
+              
+              const emptyHandlers = {
+                onMouseDown: () => {},
+                onMouseEnter: () => {},
+                onMouseLeave: () => {},
+              };
+              
+              return <Widget key={`drag-${comp.id}`} component={comp} style={dragStyle} handlers={emptyHandlers} />;
+            });
           })()}
         </div>
 
