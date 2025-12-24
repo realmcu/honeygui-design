@@ -1,11 +1,27 @@
 import { Component, ComponentType } from '../types';
 
 /**
- * 判断组件类型是否为容器
- * hg_view, hg_window, hg_list_item 可以包含子组件
+ * 可包含子组件的容器类型
  */
-export function isContainerType(type: ComponentType): boolean {
-  return type === 'hg_view' || type === 'hg_window' || type === 'hg_list_item';
+const CONTAINER_TYPES: ComponentType[] = ['hg_view', 'hg_window', 'hg_canvas', 'hg_list', 'hg_list_item'];
+
+/**
+ * 可作为拖放目标的容器类型（用户可拖入子组件）
+ */
+const DROP_TARGET_TYPES: ComponentType[] = ['hg_view', 'hg_window', 'hg_list_item'];
+
+/**
+ * 判断组件类型是否为容器（可包含子组件）
+ */
+export function isContainerType(type: ComponentType | string): boolean {
+  return CONTAINER_TYPES.includes(type as ComponentType);
+}
+
+/**
+ * 判断组件类型是否可作为拖放目标
+ */
+export function isDropTargetType(type: ComponentType | string): boolean {
+  return DROP_TARGET_TYPES.includes(type as ComponentType);
 }
 
 /**

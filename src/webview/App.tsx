@@ -9,7 +9,7 @@ import Toolbar from './components/Toolbar';
 import { ViewRelationModal } from './components/ViewRelationModal';
 import { Component, ComponentType } from './types';
 import useKeyboardShortcuts from './utils/keyboardShortcuts';
-import { getAbsolutePosition, findComponentAtPosition } from './utils/componentUtils';
+import { getAbsolutePosition, findComponentAtPosition, isDropTargetType } from './utils/componentUtils';
 import { createImageComponentAtPosition, create3DComponentAtPosition, createVideoComponentAtPosition } from './services/messageHandler';
 import { processImageFiles } from './utils/fileUtils';
 import { parseObjDependencies, parseMtlDependencies, findDependencyFiles } from './utils/objDependencyParser';
@@ -19,7 +19,9 @@ import './App.css';
 import './types';
 
 // 调试开关 - 生产环境应设为false
-const DEBUG_DROP = true;
+const DEBUG_DROP = false;
+
+import { usePanelResize, usePanelShortcuts } from './hooks/usePanelResize';
 
 const App: React.FC = () => {
   const {
@@ -38,79 +40,15 @@ const App: React.FC = () => {
   // Tab 切换状态
   const [activeTab, setActiveTab] = React.useState<'components' | 'assets' | 'tree'>('components');
 
-  // 左侧面板宽度调整
-  const [leftPanelWidth, setLeftPanelWidth] = React.useState(280);
-  const [isResizingLeft, setIsResizingLeft] = React.useState(false);
-  const minLeftPanelWidth = 200;
-  const maxLeftPanelWidth = 500;
-
-  // 右侧面板宽度调整
-  const [rightPanelWidth, setRightPanelWidth] = React.useState(300);
-  const [isResizingRight, setIsResizingRight] = React.useState(false);
-  const minRightPanelWidth = 250;
-  const maxRightPanelWidth = 500;
-
-  // 面板折叠状态
-  const [leftPanelCollapsed, setLeftPanelCollapsed] = React.useState(false);
-  const [rightPanelCollapsed, setRightPanelCollapsed] = React.useState(false);
-  const [savedLeftPanelWidth, setSavedLeftPanelWidth] = React.useState(280);
-  const [savedRightPanelWidth, setSavedRightPanelWidth] = React.useState(300);
-
-  // 切换左侧面板
-  const toggleLeftPanel = () => {
-    if (leftPanelCollapsed) {
-      setLeftPanelWidth(savedLeftPanelWidth);
-      setLeftPanelCollapsed(false);
-    } else {
-      setSavedLeftPanelWidth(leftPanelWidth);
-      setLeftPanelWidth(0);
-      setLeftPanelCollapsed(true);
-    }
-  };
-
-  // 切换右侧面板
-  const toggleRightPanel = () => {
-    if (rightPanelCollapsed) {
-      setRightPanelWidth(savedRightPanelWidth);
-      setRightPanelCollapsed(false);
-    } else {
-      setSavedRightPanelWidth(rightPanelWidth);
-      setRightPanelWidth(0);
-      setRightPanelCollapsed(true);
-    }
-  };
+  // 面板状态管理
+  const leftPanel = usePanelResize({ defaultWidth: 280, minWidth: 200, maxWidth: 500 });
+  const rightPanel = usePanelResize({ defaultWidth: 300, minWidth: 250, maxWidth: 500 });
+  
+  // 面板快捷键
+  usePanelShortcuts(leftPanel.toggle, rightPanel.toggle);
 
   // Initialize keyboard shortcuts
   useKeyboardShortcuts();
-
-  // 快捷键：切换面板
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // 如果焦点在输入框、文本域或可编辑元素中，不处理快捷键
-      const target = e.target as HTMLElement;
-      if (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.isContentEditable
-      ) {
-        return;
-      }
-
-      // Ctrl+B: 切换左侧面板
-      if (e.ctrlKey && e.key === 'b' && !e.shiftKey) {
-        e.preventDefault();
-        toggleLeftPanel();
-      }
-      // Ctrl+Shift+B: 切换右侧面板
-      if (e.ctrlKey && e.shiftKey && e.key === 'B') {
-        e.preventDefault();
-        toggleRightPanel();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [leftPanelCollapsed, rightPanelCollapsed, leftPanelWidth, rightPanelWidth, savedLeftPanelWidth, savedRightPanelWidth]);
 
   // 安全初始化VSCode API（确保只使用已有的实例）
   useEffect(() => {
@@ -152,67 +90,40 @@ const App: React.FC = () => {
 
       switch (message.command) {
         case 'loadHml':
-          console.log('========== [Webview App] loadHml 消息处理开始 ==========');
-          console.log('[Webview App] 接收到的组件数量:', message.components?.length || 0);
-          if (message.components) {
-            console.log('[Webview App] 接收到的组件详情:',
-              message.components.map((c: any) => `${c.type}(id=${c.id})`).join(', '));
-          }
-
           // 直接使用store方法，避免闭包问题
           const store = useDesignerStore.getState();
           
-          console.log('[Webview App] 设置配置前，当前组件数:', store.components.length);
-          
           store.setProjectConfig(message.projectConfig || null);
-          console.log('[Webview App] 配置已设置');
           
           if (message.designerConfig?.canvasBackgroundColor) {
             store.setCanvasBackgroundColor(message.designerConfig.canvasBackgroundColor);
-            console.log('[Webview App] 背景色已设置');
           }
 
           // 设置所有 view 列表
           if (message.allViews) {
             useDesignerStore.setState({ allViews: message.allViews });
-            console.log('[Webview App] 所有 view 列表已设置:', message.allViews.length);
           }
 
           // 设置所有 HML 文件列表
           if (message.allHmlFiles) {
             useDesignerStore.setState({ allHmlFiles: message.allHmlFiles });
-            console.log('[Webview App] 所有 HML 文件列表已设置:', message.allHmlFiles.length);
           }
 
           // 设置当前文件路径
           if (message.currentFilePath) {
             useDesignerStore.setState({ currentFilePath: message.currentFilePath });
-            console.log('[Webview App] 当前文件路径已设置:', message.currentFilePath);
           }
           
           if (message.components) {
-            console.log('[Webview App] 准备设置组件...');
             store.setComponents(message.components);
-            console.log('[Webview App] setComponents 调用完成');
             
-            // 立即验证
+            // 自动居中第一个 hg_view
             const currentComponents = useDesignerStore.getState().components;
-            console.log('[Webview App] 验证：当前store中的组件数量:', currentComponents.length);
-            if (currentComponents.length > 0) {
-              console.log('[Webview App] 验证：组件列表:', 
-                currentComponents.map(c => `${c.type}(id=${c.id})`).join(', '));
-              
-              // 自动居中第一个 hg_view
-              const firstView = currentComponents.find(c => c.type === 'hg_view');
-              if (firstView) {
-                console.log('[Webview App] 自动居中第一个 view:', firstView.id);
-                store.centerViewOnCanvas(firstView.id);
-              }
-            } else {
-              console.error('[Webview App] ❌ 警告：setComponents后组件列表仍为空！');
+            const firstView = currentComponents.find(c => c.type === 'hg_view');
+            if (firstView) {
+              store.centerViewOnCanvas(firstView.id);
             }
           }
-          console.log('========== [Webview App] loadHml 消息处理完成 ==========');
           break;
 
         case 'showMessage':
@@ -720,7 +631,7 @@ const App: React.FC = () => {
     
     let parent: string | null = null;
 
-    // 判断是否为容器组件（只有 hg_view 和 hg_window 可以包含子组件）
+    // 判断是否为容器组件
     const isContainer = componentType === 'hg_view' || componentType === 'hg_window';
 
     if (isContainer) {
@@ -740,8 +651,8 @@ const App: React.FC = () => {
       
       // 遍历所有组件，找到鼠标位置下的最内层容器
       for (const comp of components) {
-        // 只有容器类型才能作为目标
-        if (comp.type !== 'hg_view' && comp.type !== 'hg_window' && comp.type !== 'hg_list_item') {
+        // 只有可作为拖放目标的容器类型才能作为目标
+        if (!isDropTargetType(comp.type)) {
           continue;
         }
         
@@ -884,39 +795,28 @@ const App: React.FC = () => {
     window.dispatchEvent(event);
   };
 
-  // 处理左侧面板宽度调整
-  const handleLeftMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsResizingLeft(true);
-  };
-
-  // 处理右侧面板宽度调整
-  const handleRightMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsResizingRight(true);
-  };
-
+  // 处理面板宽度调整
   React.useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (isResizingLeft) {
+      if (leftPanel.isResizing) {
         const newWidth = e.clientX;
-        if (newWidth >= minLeftPanelWidth && newWidth <= maxLeftPanelWidth) {
-          setLeftPanelWidth(newWidth);
+        if (newWidth >= 200 && newWidth <= 500) {
+          leftPanel.setWidth(newWidth);
         }
-      } else if (isResizingRight) {
+      } else if (rightPanel.isResizing) {
         const newWidth = window.innerWidth - e.clientX;
-        if (newWidth >= minRightPanelWidth && newWidth <= maxRightPanelWidth) {
-          setRightPanelWidth(newWidth);
+        if (newWidth >= 250 && newWidth <= 500) {
+          rightPanel.setWidth(newWidth);
         }
       }
     };
 
     const handleMouseUp = () => {
-      setIsResizingLeft(false);
-      setIsResizingRight(false);
+      leftPanel.stopResize();
+      rightPanel.stopResize();
     };
 
-    if (isResizingLeft || isResizingRight) {
+    if (leftPanel.isResizing || rightPanel.isResizing) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
       document.body.style.cursor = 'col-resize';
@@ -929,7 +829,7 @@ const App: React.FC = () => {
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     };
-  }, [isResizingLeft, isResizingRight]);
+  }, [leftPanel.isResizing, rightPanel.isResizing]);
 
   return (
     <div className="app">
@@ -939,7 +839,7 @@ const App: React.FC = () => {
       {/* Main Content */}
       <div className="main-content">
         {/* Left Panel - Tabbed */}
-        <div className="left-panel" style={{ width: `${leftPanelWidth}px`, display: leftPanelCollapsed ? 'none' : 'flex' }}>
+        <div className="left-panel" style={{ width: `${leftPanel.width}px`, display: leftPanel.isCollapsed ? 'none' : 'flex' }}>
           {/* Tab Headers */}
           <div className="tab-headers">
             <button 
@@ -972,13 +872,13 @@ const App: React.FC = () => {
 
         {/* Resizer for left panel */}
         <div 
-          className={`panel-resizer ${isResizingLeft ? 'resizing' : ''}`}
-          onMouseDown={handleLeftMouseDown}
-          style={{ display: leftPanelCollapsed ? 'none' : 'block' }}
+          className={`panel-resizer ${leftPanel.isResizing ? 'resizing' : ''}`}
+          onMouseDown={(e) => { e.preventDefault(); leftPanel.startResize(); }}
+          style={{ display: leftPanel.isCollapsed ? 'none' : 'block' }}
         >
           <button 
             className="collapse-button left"
-            onClick={toggleLeftPanel}
+            onClick={leftPanel.toggle}
             title="收起左侧面板 (Ctrl+B)"
           >
             ◀
@@ -986,10 +886,10 @@ const App: React.FC = () => {
         </div>
 
         {/* Left Panel Collapsed Button */}
-        {leftPanelCollapsed && (
+        {leftPanel.isCollapsed && (
           <button 
             className="expand-button left"
-            onClick={toggleLeftPanel}
+            onClick={leftPanel.toggle}
             title="展开左侧面板 (Ctrl+B)"
           >
             ▶
@@ -1008,10 +908,10 @@ const App: React.FC = () => {
         </div>
 
         {/* Right Panel Collapsed Button */}
-        {rightPanelCollapsed && (
+        {rightPanel.isCollapsed && (
           <button 
             className="expand-button right"
-            onClick={toggleRightPanel}
+            onClick={rightPanel.toggle}
             title="展开右侧面板 (Ctrl+Shift+B)"
           >
             ◀
@@ -1020,13 +920,13 @@ const App: React.FC = () => {
 
         {/* Resizer for right panel */}
         <div 
-          className={`panel-resizer ${isResizingRight ? 'resizing' : ''}`}
-          onMouseDown={handleRightMouseDown}
-          style={{ display: rightPanelCollapsed ? 'none' : 'block' }}
+          className={`panel-resizer ${rightPanel.isResizing ? 'resizing' : ''}`}
+          onMouseDown={(e) => { e.preventDefault(); rightPanel.startResize(); }}
+          style={{ display: rightPanel.isCollapsed ? 'none' : 'block' }}
         >
           <button 
             className="collapse-button right"
-            onClick={toggleRightPanel}
+            onClick={rightPanel.toggle}
             title="收起右侧面板 (Ctrl+Shift+B)"
           >
             ▶
@@ -1034,7 +934,7 @@ const App: React.FC = () => {
         </div>
 
         {/* Right Panel - Properties */}
-        <div className="right-panel" style={{ width: `${rightPanelWidth}px`, display: rightPanelCollapsed ? 'none' : 'flex' }}>
+        <div className="right-panel" style={{ width: `${rightPanel.width}px`, display: rightPanel.isCollapsed ? 'none' : 'flex' }}>
           <PropertiesPanel />
         </div>
       </div>

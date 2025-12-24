@@ -515,16 +515,6 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     const state = get();
     if (!vscodeAPI) return;
 
-    console.log('[Webview Store] 准备保存到文件');
-    console.log('[Webview Store] 当前组件数量:', state.components.length);
-    
-    // 调试：打印所有 eventConfigs
-    state.components.forEach(c => {
-      if (c.eventConfigs && c.eventConfigs.length > 0) {
-        console.log(`[Webview Store] ${c.id} 的 eventConfigs:`, JSON.stringify(c.eventConfigs));
-      }
-    });
-
     vscodeAPI.postMessage({
       command: 'save',
       content: {

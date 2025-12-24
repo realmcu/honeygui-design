@@ -510,7 +510,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
     }
 
     // 容器组件需要渲染子组件
-    const isContainer = ['hg_view', 'hg_window', 'hg_canvas', 'hg_list', 'hg_list_item'].includes(component.type);
+    const isContainer = isContainerType(component.type);
     
     if (isContainer) {
       // 正常渲染所有子组件
@@ -617,7 +617,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
               if (!comp) return null;
               
               // 容器组件不渲染顶层副本
-              const isContainer = ['hg_view', 'hg_window', 'hg_canvas', 'hg_list', 'hg_list_item'].includes(comp.type);
+              const isContainer = isContainerType(comp.type);
               if (isContainer) return null;
               
               const absPos = getAbsolutePosition(comp, components);

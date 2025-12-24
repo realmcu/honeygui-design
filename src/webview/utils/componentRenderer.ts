@@ -1,4 +1,5 @@
 import { Component } from '../types';
+import { isContainerType } from './componentUtils';
 
 /**
  * 计算组件样式
@@ -48,7 +49,7 @@ export const calculateComponentStyle = (
   }
 
   // 容器组件的 overflow 处理
-  const isContainer = ['hg_view', 'hg_window', 'hg_canvas', 'hg_list', 'hg_list_item'].includes(component.type);
+  const isContainer = isContainerType(component.type);
   const isGeometryWidget = ['hg_arc', 'hg_circle', 'hg_rect'].includes(component.type);
   let overflowValue: string | undefined;
   
