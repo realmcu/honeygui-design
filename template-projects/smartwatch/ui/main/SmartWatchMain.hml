@@ -11,15 +11,14 @@
                     <action type="switchView" target="hg_view_1766022481486_seii" />
                 </event>
             </events>
-            <hg_circle id="hg_circle_1766543347308_yt84" x="79" y="298" width="100" height="100" radius="40" fillColor="#007acc" opacity="255" name="hg_circle_7308" zIndex="1" />
+            <hg_3d id="hg_3d_1766547310275_ti5p" x="10" y="62" width="100" height="400" modelPath="assets/3D/face/face.obj" worldX="0" worldY="0" worldZ="30" rotationX="0" rotationY="0" rotationZ="0" scale="5" cameraPosX="0" cameraPosY="0" cameraPosZ="0" cameraLookX="0" cameraLookY="0" cameraLookZ="1" name="model_0275" zIndex="1" />
         </hg_view>
-        <hg_view id="hg_view_1766022481486_seii" x="-2724" y="-833" width="410" height="502" backgroundColor="#000000" borderRadius="0" padding="12" overflow="auto" name="hg_view_1486" zIndex="1">
+        <hg_view id="hg_view_1766022481486_seii" x="-3102" y="-911" width="410" height="502" backgroundColor="#000000" borderRadius="0" padding="12" overflow="auto" name="hg_view_1486" zIndex="1">
             <events>
                 <event type="onSwipeLeft">
                     <action type="switchView" target="untitledView" />
                 </event>
             </events>
-            <hg_3d id="hg_3d_1766544824523_azs4" x="-102" y="69" width="400" height="400" modelPath="assets/3D/butterfly/butterfly.obj" worldX="0" worldY="0" worldZ="30" rotationX="0" rotationY="0" rotationZ="0" scale="5" cameraPosX="0" cameraPosY="0" cameraPosZ="0" cameraLookX="0" cameraLookY="0" cameraLookZ="1" name="model_4523" zIndex="1" />
             <hg_image id="hg_image_1766123033044_7gh5" x="176" y="73" width="100" height="100" src="assets/UI_app_list/app_alarm_clock_icon.png" name="image_3044" zIndex="1">
                 <events>
                     <event type="onClick">

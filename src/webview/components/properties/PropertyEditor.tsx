@@ -41,7 +41,8 @@ export const PropertyEditor: React.FC<PropertyEditorProps> = ({
           onChange={(e) => {
             const val = e.target.value;
             if (val === '' || val === '-') {
-              onChange(0);
+              // 允许暂时为空，方便用户重新输入
+              onChange(val === '-' ? 0 : '');
             } else {
               const num = parseFloat(val);
               onChange(isNaN(num) ? 0 : num);
@@ -50,7 +51,7 @@ export const PropertyEditor: React.FC<PropertyEditorProps> = ({
           onBlur={(e) => {
             // 失焦时确保是有效数字
             const val = e.target.value;
-            if (val === '' || val === '-') {
+            if (val === '' || val === '-' || value === '') {
               onChange(0);
             }
           }}
