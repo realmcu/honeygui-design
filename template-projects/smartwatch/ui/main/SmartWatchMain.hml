@@ -5,35 +5,30 @@
         <author name="HoneyGUI Design" />
     </meta>
     <view>
-        <hg_view id="mainView" x="-691" y="-5" width="410" height="502" backgroundColor="#000000" name="mainView">
+        <hg_view id="mainView" x="-3028" y="-742" width="410" height="502" backgroundColor="#000000" name="mainView">
             <events>
                 <event type="onSwipeLeft">
                     <action type="switchView" target="hg_view_1766022481486_seii" />
                 </event>
             </events>
-            <hg_image id="hg_image_1766123033044_7gh5" x="18" y="26" width="100" height="100" src="assets/UI_app_list/app_alarm_clock_icon.png" name="image_3044" zIndex="1">
+            <hg_image id="hg_image_1766487258446_5ckq" x="202" y="102" width="100" height="100" src="assets/UI_app_list/app_compass_icon.png" name="image_8446" zIndex="1" />
+            <hg_image id="hg_image_1766487405785_tkxn" x="77" y="157" width="100" height="106" src="assets/UI_app_list/app_activity_icon.png" name="image_5785" zIndex="1" />
+            <hg_circle id="hg_circle_1766543347308_yt84" x="176" y="332" width="100" height="100" radius="40" fillColor="#007acc" opacity="255" name="hg_circle_7308" zIndex="1" />
+        </hg_view>
+        <hg_view id="hg_view_1766022481486_seii" x="-2537" y="-877" width="410" height="502" backgroundColor="#000000" borderRadius="0" padding="12" overflow="auto" name="hg_view_1486" zIndex="1">
+            <events>
+                <event type="onSwipeLeft">
+                    <action type="switchView" target="untitledView" />
+                </event>
+            </events>
+            <hg_image id="hg_image_1766123033044_7gh5" x="69" y="92" width="100" height="100" src="assets/UI_app_list/app_alarm_clock_icon.png" name="image_3044" zIndex="1">
                 <events>
                     <event type="onClick">
                         <action type="switchView" target="hg_view_1766022481486_seii" />
                     </event>
                 </events>
             </hg_image>
-            <hg_image id="hg_image_1766403734725_g6ba" x="141" y="85" width="256" height="313" src="assets/bmp-test.bmp" name="image_123" zIndex="1" />
-            <hg_circle id="hg_circle_1766392198338_e1pl" x="48" y="284" width="100" height="100" radius="40" fillColor="#007acc" opacity="255" name="hg_circle_8338" zIndex="1" />
-        </hg_view>
-        <hg_view id="hg_view_1766022481486_seii" x="-150" y="-149" width="410" height="502" backgroundColor="#000000" borderRadius="0" padding="12" overflow="auto" name="hg_view_1486" zIndex="1">
-            <events>
-                <event type="onSwipeLeft">
-                    <action type="switchView" target="untitledView" />
-                </event>
-            </events>
-            <hg_list id="hg_list_1766477886677_mux4" x="-1" y="-1" width="410" height="500" itemWidth="410" itemHeight="100" direction="VERTICAL" style="LIST_CLASSIC" noteNum="5" name="hg_list_6677" zIndex="1">
-                <hg_list_item id="hg_list_1766477886677_mux4_item_1" x="0" y="0" width="410" height="100" index="0" name="列表项 1" locked="true" zIndex="1" />
-                <hg_list_item id="hg_list_1766477886677_mux4_item_2" x="0" y="100" width="410" height="100" index="1" name="列表项 2" locked="true" zIndex="1" />
-                <hg_list_item id="hg_list_1766477886677_mux4_item_3" x="0" y="200" width="410" height="100" index="2" name="列表项 3" locked="true" zIndex="1" />
-                <hg_list_item id="hg_list_1766477886677_mux4_item_4" x="0" y="300" width="410" height="100" index="3" name="列表项 4" locked="true" zIndex="1" />
-                <hg_list_item id="hg_list_1766477886677_mux4_item_5" x="0" y="400" width="410" height="100" index="4" name="列表项 5" locked="true" zIndex="1" />
-            </hg_list>
+            <hg_image id="hg_image_1766485021368_l76l" x="171" y="158" width="100" height="106" src="assets/UI_app_list/app_activity_icon.png" name="image_1368" zIndex="1" />
         </hg_view>
     </view>
 </hml>

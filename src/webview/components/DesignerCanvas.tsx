@@ -11,6 +11,7 @@ import { executeMenuAction, MenuActionHelpers } from '../services/contextMenuAct
 import { ViewConnectionLayer } from './ViewConnectionLayer';
 import { AlignmentGuides, AlignmentLine } from './AlignmentGuides';
 import { calculateAlignment } from '../utils/alignmentHelper';
+import { getAbsolutePosition, findComponentAtPosition, isContainerType } from '../utils/componentUtils';
 import './DesignerCanvas.css';
 
 interface DesignerCanvasProps {
@@ -25,6 +26,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 }); // 组件拖拽起始位置
   const [alignmentLines, setAlignmentLines] = useState<AlignmentLine[]>([]); // 对齐辅助线
+  const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 }); // 最后鼠标位置（画布坐标）
 
   const {
     components,
@@ -49,6 +51,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
     showViewConnections,
     projectConfig,
     allViews,
+    moveComponent,
   } = useDesignerStore();
   
   // 使用画布缩放 Hook
@@ -206,10 +209,12 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
       const rect = canvasRef.current?.getBoundingClientRect();
       if (!rect) return;
 
-      // 计算鼠标在画布中的位置
-      const effectiveZoom = zoom / (window.devicePixelRatio || 1);
-      const mouseX = (e.clientX - rect.left - canvasOffset.x) / effectiveZoom;
-      const mouseY = (e.clientY - rect.top - canvasOffset.y) / effectiveZoom;
+      // 计算鼠标在画布中的位置（统一使用 zoom，不用 dpr）
+      const mouseX = (e.clientX - rect.left - canvasOffset.x) / zoom;
+      const mouseY = (e.clientY - rect.top - canvasOffset.y) / zoom;
+      
+      // 记录最后鼠标位置（用于 mouseUp 时判断目标容器）
+      setLastMousePos({ x: mouseX, y: mouseY });
       
       // 减去偏移量得到组件左上角的位置
       let x = mouseX - dragOffset.x;
@@ -242,6 +247,41 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
   };
 
   const handleComponentMouseUp = () => {
+    // 处理跨容器拖拽
+    if (draggedComponent) {
+      const component = components.find(c => c.id === draggedComponent);
+      
+      if (component && !isContainerType(component.type)) {
+        // 查找鼠标位置下的目标容器
+        const targetContainer = findComponentAtPosition(lastMousePos.x, lastMousePos.y, components);
+        
+        if (targetContainer && targetContainer.id !== component.parent && targetContainer.id !== component.id) {
+          // 目标容器与当前父容器不同，执行跨容器移动
+          const oldParent = component.parent;
+          const targetAbsPos = getAbsolutePosition(targetContainer, components);
+          const componentAbsPos = getAbsolutePosition(component, components);
+          
+          // 计算相对于新父容器的坐标
+          const newX = Math.round(componentAbsPos.x - targetAbsPos.x);
+          const newY = Math.round(componentAbsPos.y - targetAbsPos.y);
+          
+          console.log(`[跨容器拖拽] ${component.id}: ${oldParent || '顶层'} → ${targetContainer.id}, 坐标: (${newX}, ${newY})`);
+          
+          // 先更新位置，再更新父级
+          updateComponent(component.id, {
+            position: {
+              ...component.position,
+              x: newX,
+              y: newY,
+            },
+          });
+          
+          // 更新父级关系
+          moveComponent(component.id, targetContainer.id);
+        }
+      }
+    }
+    
     handleCanvasMouseUp();
     setPendingDragComponent(null);
     setDraggedComponent(null);
@@ -306,7 +346,8 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
       editingMode,
       isListItem,
       projectConfig,
-      components
+      components,
+      draggedComponent
     );
 
     const handleMouseEnter = () => {
@@ -436,6 +477,39 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
           {components
             .filter((c) => c.parent === null)
             .map((component) => renderComponent(component))}
+          
+          {/* 拖拽中的组件 - 渲染到顶层（仅非容器组件） */}
+          {draggedComponent && (() => {
+            const comp = components.find(c => c.id === draggedComponent);
+            if (!comp) return null;
+            
+            // 容器组件不渲染顶层副本
+            const isContainer = ['hg_view', 'hg_window', 'hg_canvas', 'hg_list', 'hg_list_item'].includes(comp.type);
+            if (isContainer) return null;
+            
+            // 计算绝对位置
+            const absPos = getAbsolutePosition(comp, components);
+            const Widget = widgetRegistry[comp.type];
+            if (!Widget) return null;
+            
+            const dragStyle: React.CSSProperties = {
+              position: 'absolute',
+              left: absPos.x,
+              top: absPos.y,
+              width: comp.position.width,
+              height: comp.position.height,
+              zIndex: 9999,
+              pointerEvents: 'none',
+            };
+            
+            const emptyHandlers = {
+              onMouseDown: () => {},
+              onMouseEnter: () => {},
+              onMouseLeave: () => {},
+            };
+            
+            return <Widget key={`drag-${comp.id}`} component={comp} style={dragStyle} handlers={emptyHandlers} />;
+          })()}
         </div>
 
         {/* 视图连接层 - 独立于组件层 */}

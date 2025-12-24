@@ -12,7 +12,8 @@ export const calculateComponentStyle = (
   editingMode: 'select' | 'move' | 'resize',
   isListItem: boolean = false,
   projectConfig?: any,
-  allComponents?: Component[]
+  allComponents?: Component[],
+  draggedComponentId?: string | null
 ): React.CSSProperties => {
   // List 容器不显示边框（除非选中）
   let border = '1px solid transparent';
@@ -61,14 +62,21 @@ export const calculateComponentStyle = (
   let overflowValue: string | undefined;
   
   if (isContainer) {
+    // 拖拽时：如果被拖拽的组件是当前容器的子组件，则 overflow: visible
+    const isDraggingChild = draggedComponentId && allComponents?.some(
+      c => c.id === draggedComponentId && c.parent === component.id
+    );
     // 检查是否有子组件设置了 showOverflow
     const hasChildWithOverflow = allComponents?.some(
       c => c.parent === component.id && c.showOverflow
     );
-    overflowValue = hasChildWithOverflow ? 'visible' : 'hidden';
+    overflowValue = (isDraggingChild || hasChildWithOverflow) ? 'visible' : 'hidden';
   } else if (borderRadiusValue) {
     overflowValue = 'hidden';
   }
+
+  // 拖拽时隐藏原组件（仅非容器组件，顶层会渲染副本）
+  const isDragging = draggedComponentId === component.id && !isContainer;
 
   return {
     position: 'absolute',
@@ -77,7 +85,7 @@ export const calculateComponentStyle = (
     width: component.position.width,
     height: component.position.height,
     display: component.visible ? 'flex' : 'none',
-    opacity: component.enabled ? 1 : 0.6,
+    opacity: isDragging ? 0 : (component.enabled ? 1 : 0.6),
     cursor: editingMode === 'move' ? 'move' : 'pointer',
     border,
     borderRadius: borderRadiusValue,
