@@ -222,11 +222,33 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
 
       const component = components.find(c => c.id === draggedComponent);
       if (component) {
+        // 实时检测目标容器（用于跨容器拖拽时的辅助线计算）
+        const targetContainer = findComponentAtPosition(mouseX, mouseY, components);
+        const effectiveParent = (targetContainer && targetContainer.id !== component.id) 
+          ? targetContainer.id 
+          : component.parent;
+        
+        // 如果目标容器与当前父容器不同，需要转换坐标到目标容器的相对坐标系
+        let relativeX = x;
+        let relativeY = y;
+        if (effectiveParent !== component.parent && targetContainer) {
+          const targetAbsPos = getAbsolutePosition(targetContainer, components);
+          const componentAbsPos = getAbsolutePosition(component, components);
+          // 计算组件在目标容器中的相对位置
+          relativeX = (componentAbsPos.x - targetAbsPos.x) + (x - component.position.x);
+          relativeY = (componentAbsPos.y - targetAbsPos.y) + (y - component.position.y);
+        }
+        
+        // 创建临时组件用于辅助线计算（使用目标容器作为父级）
+        const tempComponent = effectiveParent !== component.parent
+          ? { ...component, parent: effectiveParent }
+          : component;
+        
         // 计算对齐辅助线和吸附位置
         const alignment = calculateAlignment(
-          component,
-          x,
-          y,
+          tempComponent,
+          effectiveParent !== component.parent ? relativeX : x,
+          effectiveParent !== component.parent ? relativeY : y,
           components,
           canvasSize
         );
@@ -234,14 +256,31 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
         // 更新辅助线
         setAlignmentLines(alignment.lines);
         
-        // 使用吸附后的位置
-        updateComponent(component.id, {
-          position: {
-            ...component.position,
-            x: alignment.x,
-            y: alignment.y,
-          },
-        });
+        // 使用吸附后的位置（保持在原父容器的坐标系中）
+        if (effectiveParent !== component.parent && targetContainer) {
+          // 跨容器时，需要将吸附位置转换回原坐标系
+          const targetAbsPos = getAbsolutePosition(targetContainer, components);
+          const parentAbsPos = component.parent 
+            ? getAbsolutePosition(components.find(c => c.id === component.parent)!, components)
+            : { x: 0, y: 0 };
+          const snappedAbsX = targetAbsPos.x + alignment.x;
+          const snappedAbsY = targetAbsPos.y + alignment.y;
+          updateComponent(component.id, {
+            position: {
+              ...component.position,
+              x: snappedAbsX - parentAbsPos.x,
+              y: snappedAbsY - parentAbsPos.y,
+            },
+          });
+        } else {
+          updateComponent(component.id, {
+            position: {
+              ...component.position,
+              x: alignment.x,
+              y: alignment.y,
+            },
+          });
+        }
       }
     }
   };

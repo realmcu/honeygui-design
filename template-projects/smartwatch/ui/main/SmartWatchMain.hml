@@ -5,30 +5,30 @@
         <author name="HoneyGUI Design" />
     </meta>
     <view>
-        <hg_view id="mainView" x="-3028" y="-742" width="410" height="502" backgroundColor="#000000" name="mainView">
+        <hg_view id="mainView" x="-3297" y="-860" width="410" height="502" backgroundColor="#000000" name="mainView">
             <events>
                 <event type="onSwipeLeft">
                     <action type="switchView" target="hg_view_1766022481486_seii" />
                 </event>
             </events>
-            <hg_image id="hg_image_1766487258446_5ckq" x="202" y="102" width="100" height="100" src="assets/UI_app_list/app_compass_icon.png" name="image_8446" zIndex="1" />
-            <hg_image id="hg_image_1766487405785_tkxn" x="77" y="157" width="100" height="106" src="assets/UI_app_list/app_activity_icon.png" name="image_5785" zIndex="1" />
-            <hg_circle id="hg_circle_1766543347308_yt84" x="176" y="332" width="100" height="100" radius="40" fillColor="#007acc" opacity="255" name="hg_circle_7308" zIndex="1" />
-        </hg_view>
-        <hg_view id="hg_view_1766022481486_seii" x="-2537" y="-877" width="410" height="502" backgroundColor="#000000" borderRadius="0" padding="12" overflow="auto" name="hg_view_1486" zIndex="1">
-            <events>
-                <event type="onSwipeLeft">
-                    <action type="switchView" target="untitledView" />
-                </event>
-            </events>
-            <hg_image id="hg_image_1766123033044_7gh5" x="69" y="92" width="100" height="100" src="assets/UI_app_list/app_alarm_clock_icon.png" name="image_3044" zIndex="1">
+            <hg_image id="hg_image_1766487405785_tkxn" x="54" y="122" width="100" height="106" src="assets/UI_app_list/app_activity_icon.png" name="image_5785" zIndex="1" />
+            <hg_image id="hg_image_1766123033044_7gh5" x="184" y="70" width="100" height="100" src="assets/UI_app_list/app_alarm_clock_icon.png" name="image_3044" zIndex="1">
                 <events>
                     <event type="onClick">
                         <action type="switchView" target="hg_view_1766022481486_seii" />
                     </event>
                 </events>
             </hg_image>
-            <hg_image id="hg_image_1766485021368_l76l" x="171" y="158" width="100" height="106" src="assets/UI_app_list/app_activity_icon.png" name="image_1368" zIndex="1" />
+            <hg_image id="hg_image_1766485021368_l76l" x="283" y="183" width="100" height="106" src="assets/UI_app_list/app_activity_icon.png" name="image_1368" zIndex="1" />
+            <hg_image id="hg_image_1766487258446_5ckq" x="184" y="247" width="100" height="100" src="assets/UI_app_list/app_compass_icon.png" name="image_8446" zIndex="1" />
+            <hg_circle id="hg_circle_1766543347308_yt84" x="78" y="306" width="100" height="100" radius="40" fillColor="#007acc" opacity="255" name="hg_circle_7308" zIndex="1" />
+        </hg_view>
+        <hg_view id="hg_view_1766022481486_seii" x="-2724" y="-833" width="410" height="502" backgroundColor="#000000" borderRadius="0" padding="12" overflow="auto" name="hg_view_1486" zIndex="1">
+            <events>
+                <event type="onSwipeLeft">
+                    <action type="switchView" target="untitledView" />
+                </event>
+            </events>
         </hg_view>
     </view>
 </hml>
