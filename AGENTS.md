@@ -191,3 +191,16 @@ HmlEditorProvider.resolveCustomTextEditor()
 - **主要贡献者**: howie_wang
 
 
+
+
+## VSCode 插件市场发布
+
+### Personal Access Token (PAT)
+```
+CuT7hD8aC69at2EinhwraWti5mCAdt6GSwzsemav8drRUfxJF2LFJQQJ99BLACAAAAAAAAAAAAASAZDO2sRc
+```
+
+### 发布命令
+```bash
+vsce publish -p CuT7hD8aC69at2EinhwraWti5mCAdt6GSwzsemav8drRUfxJF2LFJQQJ99BLACAAAAAAAAAAAAASAZDO2sRc
+```
