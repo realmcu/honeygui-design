@@ -5,15 +5,15 @@
         <author name="HoneyGUI Design" />
     </meta>
     <view>
-        <hg_view id="mainView" x="-3569" y="-850" width="410" height="502" backgroundColor="#000000" name="mainView">
+        <hg_view id="mainView" x="-3776" y="-887" width="410" height="502" backgroundColor="#000000" name="mainView">
             <events>
                 <event type="onSwipeLeft">
                     <action type="switchView" target="hg_view_1766022481486_seii" />
                 </event>
             </events>
-            <hg_3d id="hg_3d_1766547310275_ti5p" x="10" y="62" width="100" height="400" modelPath="assets/3D/face/face.obj" worldX="0" worldY="0" worldZ="30" rotationX="0" rotationY="0" rotationZ="0" scale="5" cameraPosX="0" cameraPosY="0" cameraPosZ="0" cameraLookX="0" cameraLookY="0" cameraLookZ="1" name="model_0275" zIndex="1" />
+            <hg_3d id="hg_3d_1766547310275_ti5p" x="0" y="62" width="400" height="400" modelPath="assets/3D/face/face.obj" worldX="0" worldY="0" worldZ="30" rotationX="0" rotationY="0" rotationZ="0" scale="5" cameraPosX="0" cameraPosY="0" cameraPosZ="0" cameraLookX="0" cameraLookY="0" cameraLookZ="1" name="model_0275" zIndex="1" />
         </hg_view>
-        <hg_view id="hg_view_1766022481486_seii" x="-3102" y="-911" width="410" height="502" backgroundColor="#000000" borderRadius="0" padding="12" overflow="auto" name="hg_view_1486" zIndex="1">
+        <hg_view id="hg_view_1766022481486_seii" x="-3191" y="-874" width="410" height="502" backgroundColor="#000000" borderRadius="0" padding="12" overflow="auto" name="hg_view_1486" zIndex="1">
             <events>
                 <event type="onSwipeLeft">
                     <action type="switchView" target="untitledView" />
@@ -26,7 +26,7 @@
                     </event>
                 </events>
             </hg_image>
-            <hg_image id="hg_image_1766487405785_tkxn" x="46" y="125" width="100" height="106" src="assets/UI_app_list/app_activity_icon.png" name="image_5785" zIndex="1" />
+            <hg_image id="hg_image_1766487405785_tkxn" x="54" y="113" width="100" height="106" src="assets/UI_app_list/app_activity_icon.png" name="image_5785" zIndex="1" />
             <hg_image id="hg_image_1766485021368_l76l" x="281" y="212" width="100" height="106" src="assets/UI_app_list/app_activity_icon.png" name="image_1368" zIndex="1" />
             <hg_image id="hg_image_1766487258446_5ckq" x="206" y="299" width="100" height="100" src="assets/UI_app_list/app_compass_icon.png" name="image_8446" zIndex="1" />
         </hg_view>
