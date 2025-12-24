@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hml>
+    <meta>
+    </meta>
+    <view>
+        <hg_view id="sportView" x="0" y="0" width="410" height="502" backgroundColor="#000000" name="sportView">
+            <hg_image id="hg_image_1766555010304_99ja" x="20" y="16" width="80" height="80" src="assets/UI_app_list/app_weather_icon.png" name="image_0304" zIndex="1" />
+            <hg_image id="hg_image_1766555014041_zggx" x="312" y="16" width="80" height="80" src="assets/UI_app_list/app_workout_icon.png" name="image_4041" zIndex="1">
+                <events>
+                    <event type="onClick" />
+                </events>
+            </hg_image>
+            <hg_image id="hg_image_1766555023329_izzj" x="35" y="425" width="60" height="60" src="assets/UI_app_list/app_heart_rate_icon.png" name="image_3329" zIndex="1" />
+            <hg_arc id="hg_arc_1766555327383_kikf" x="10" y="162" width="250" height="250" radius="105" startAngle="0" endAngle="360" strokeWidth="20" color="#3a171d" opacity="255" name="hg_arc_7383" zIndex="1" />
+            <hg_arc id="hg_arc_1766555341316_qd5r" x="60" y="212" width="150" height="150" radius="55" startAngle="0" endAngle="360" strokeWidth="20" color="#16322f" opacity="255" name="hg_arc_1316" zIndex="1" />
+            <hg_arc id="hg_arc_1766555343134_ku6q" x="35" y="187" width="200" height="200" radius="80" startAngle="0" endAngle="360" strokeWidth="20" color="#1e3719" opacity="255" name="hg_arc_3135" zIndex="1" />
+            <hg_arc id="hg_arc_1766556753455_tg7q" x="10" y="162" width="250" height="250" radius="105" startAngle="270" endAngle="226" strokeWidth="20" color="#e6404a" opacity="255" name="hg_arc_3456" zIndex="1">
+                <events>
+                    <event type="onMessage" message="sport_move">
+                        <action type="switchView" />
+                    </event>
+                </events>
+            </hg_arc>
+            <hg_arc id="hg_arc_1766556813443_1zka" x="35" y="187" width="200" height="200" radius="80" startAngle="270" endAngle="310" strokeWidth="20" color="#bdfe4a" opacity="255" name="hg_arc_3443" zIndex="1" />
+            <hg_arc id="hg_arc_1766556869456_faq0" x="60" y="212" width="150" height="150" radius="55" startAngle="270" endAngle="270" strokeWidth="20" color="#73e6e6" opacity="255" name="hg_arc_9457" zIndex="1" />
+            <hg_label id="hg_label_1766558002262_3ych" x="312" y="187" width="80" height="50" fontSize="40" color="#e6404a" align="LEFT" letterSpacing="0" lineSpacing="0" wordWrap="false" text="439" fontFile="/Poppins-Medium.ttf" name="hg_label_2263" zIndex="1" />
+            <hg_label id="hg_label_1766558226116_kswi" x="330" y="301" width="80" height="50" fontSize="38" color="#73e6e6" align="LEFT" letterSpacing="0" lineSpacing="0" wordWrap="false" text="7" name="hg_label_6116" zIndex="1" />
+            <hg_label id="hg_label_1766558284986_myaw" x="330" y="239" width="80" height="50" fontSize="40" color="#bdfe4a" align="LEFT" letterSpacing="0" lineSpacing="0" wordWrap="false" text="2" name="hg_label_4986" zIndex="1" />
+            <hg_label id="hg_label_1766558608627_zo66" x="107" y="435" width="250" height="50" fontSize="32" align="LEFT" letterSpacing="0" lineSpacing="0" wordWrap="false" text="80 bpm,1m ago" name="hg_label_8627" zIndex="1" />
+            <hg_label id="hg_label_1766558904986_enlc" x="160" y="99" width="220" height="70" fontSize="60" align="LEFT" letterSpacing="0" lineSpacing="0" wordWrap="false" text="14:49:11" timeFormat="HH:mm:ss" name="hg_test_time" zIndex="1" />
+        </hg_view>
+    </view>
+</hml>
