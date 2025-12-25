@@ -527,10 +527,17 @@ export class CreateProjectPanel {
         );
 
         // 创建 VSCode 工作区文件
+        // 创建 VSCode 工作区文件
+        const sdkRealguiPath = honeyguiSdkPath ? path.join(honeyguiSdkPath, 'realgui') : null;
+        const workspaceFolders: Array<{path: string, name?: string}> = [
+            { path: '.' }
+        ];
+        if (sdkRealguiPath && fs.existsSync(sdkRealguiPath)) {
+            workspaceFolders.push({ path: sdkRealguiPath, name: 'HoneyGUI-SDK' });
+        }
+        
         const workspaceConfig = {
-            folders: [
-                { path: '.' }
-            ],
+            folders: workspaceFolders,
             settings: {
                 'files.associations': {
                     '*.hml': 'xml'
@@ -622,10 +629,16 @@ export class CreateProjectPanel {
                 }
 
                 // 创建 VSCode 工作区文件
+                const sdkRealguiPath = sdkPath ? path.join(sdkPath, 'realgui') : null;
+                const workspaceFolders: Array<{path: string, name?: string}> = [
+                    { path: '.' }
+                ];
+                if (sdkRealguiPath && fs.existsSync(sdkRealguiPath)) {
+                    workspaceFolders.push({ path: sdkRealguiPath, name: 'HoneyGUI-SDK' });
+                }
+                
                 const workspaceConfig = {
-                    folders: [
-                        { path: '.' }
-                    ],
+                    folders: workspaceFolders,
                     settings: {
                         'files.associations': {
                             '*.hml': 'xml'
