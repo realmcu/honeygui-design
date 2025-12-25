@@ -195,81 +195,94 @@ export const Model3DWidget: React.FC<WidgetProps> = ({ component, style, handler
       );
     } else if (ext === 'obj') {
       
-      // 尝试加载同名MTL文件
-      if (mtlUri && (mtlUri.startsWith('http') || mtlUri.startsWith('vscode-webview'))) {
-        // 先加载 MTL 材质
-        const mtlLoader = new MTLLoader();
-        const texturePath = mtlUri.substring(0, mtlUri.lastIndexOf('/') + 1);
-        const mtlFileName = mtlUri.substring(mtlUri.lastIndexOf('/') + 1);
-        
-        mtlLoader.setPath(texturePath);
-        
-        mtlLoader.load(
-          mtlFileName,
-          (materials: any) => {
-            materials.preload();
+      // 先读取 OBJ 文件，检查是否引用了 MTL 文件
+      fetch(modelUri)
+        .then(response => response.text())
+        .then(objContent => {
+          // 检查 OBJ 文件中是否有 mtllib 声明
+          const mtllibMatch = objContent.match(/^mtllib\s+(.+)$/m);
+          const hasMtllib = !!mtllibMatch;
+          
+          if (hasMtllib && mtlUri && (mtlUri.startsWith('http') || mtlUri.startsWith('vscode-webview'))) {
+            // OBJ 文件声明了 MTL，尝试加载
+            const mtlLoader = new MTLLoader();
+            const texturePath = mtlUri.substring(0, mtlUri.lastIndexOf('/') + 1);
+            const mtlFileName = mtlUri.substring(mtlUri.lastIndexOf('/') + 1);
             
-            // 修复材质
-            Object.keys(materials.materials).forEach((key) => {
-              const mat = materials.materials[key];
-              mat.side = THREE.DoubleSide;
-              mat.flatShading = false;
-              
-              if (mat.opacity < 1.0 || mat.transparent) {
-                mat.transparent = true;
-                mat.alphaTest = 0.5;
-              }
-              
-              if (mat.map) {
-                mat.map.needsUpdate = true;
-                mat.map.minFilter = THREE.LinearFilter;
-                mat.map.magFilter = THREE.LinearFilter;
-                mat.map.anisotropy = 16;
+            mtlLoader.setPath(texturePath);
+            
+            mtlLoader.load(
+              mtlFileName,
+              (materials: any) => {
+                materials.preload();
                 
-                if (mat.map.format === THREE.RGBAFormat) {
-                  mat.transparent = true;
-                  mat.alphaTest = 0.5;
-                }
-              }
-              
-              mat.needsUpdate = true;
-            });
-            
-            // 使用材质加载 OBJ
-            const objLoader = new OBJLoader();
-            const objPath = modelUri.substring(0, modelUri.lastIndexOf('/') + 1);
-            const objFileName = modelUri.substring(modelUri.lastIndexOf('/') + 1);
-            
-            objLoader.setPath(objPath);
-            objLoader.setMaterials(materials);
-            objLoader.load(
-              objFileName,
-              (obj: any) => {
-                // 确保材质正确应用
-                obj.traverse((child: any) => {
-                  if (child.isMesh && child.material) {
-                    if (Array.isArray(child.material)) {
-                      child.material.forEach((mat: any) => {
-                        if (mat.type === 'MeshPhongMaterial') {
-                          mat.side = THREE.DoubleSide;
-                          mat.needsUpdate = true;
-                        }
-                      });
-                    } else if (child.material.type === 'MeshPhongMaterial') {
-                      child.material.side = THREE.DoubleSide;
-                      child.material.needsUpdate = true;
+                // 修复材质
+                Object.keys(materials.materials).forEach((key) => {
+                  const mat = materials.materials[key];
+                  mat.side = THREE.DoubleSide;
+                  mat.flatShading = false;
+                  
+                  if (mat.opacity < 1.0 || mat.transparent) {
+                    mat.transparent = true;
+                    mat.alphaTest = 0.5;
+                  }
+                  
+                  if (mat.map) {
+                    mat.map.needsUpdate = true;
+                    mat.map.minFilter = THREE.LinearFilter;
+                    mat.map.magFilter = THREE.LinearFilter;
+                    mat.map.anisotropy = 16;
+                    
+                    if (mat.map.format === THREE.RGBAFormat) {
+                      mat.transparent = true;
+                      mat.alphaTest = 0.5;
                     }
                   }
+                  
+                  mat.needsUpdate = true;
                 });
-                onLoadSuccess(obj, 'obj');
+                
+                // 使用材质加载 OBJ
+                const objLoader = new OBJLoader();
+                const objPath = modelUri.substring(0, modelUri.lastIndexOf('/') + 1);
+                const objFileName = modelUri.substring(modelUri.lastIndexOf('/') + 1);
+                
+                objLoader.setPath(objPath);
+                objLoader.setMaterials(materials);
+                objLoader.load(
+                  objFileName,
+                  (obj: any) => {
+                    // 确保材质正确应用
+                    obj.traverse((child: any) => {
+                      if (child.isMesh && child.material) {
+                        if (Array.isArray(child.material)) {
+                          child.material.forEach((mat: any) => {
+                            if (mat.type === 'MeshPhongMaterial') {
+                              mat.side = THREE.DoubleSide;
+                              mat.needsUpdate = true;
+                            }
+                          });
+                        } else if (child.material.type === 'MeshPhongMaterial') {
+                          child.material.side = THREE.DoubleSide;
+                          child.material.needsUpdate = true;
+                        }
+                      }
+                    });
+                    onLoadSuccess(obj, 'obj');
+                  },
+                  undefined,
+                  onLoadError
+                );
               },
               undefined,
-              onLoadError
+              (error: any) => {
+                // MTL 加载失败，但 OBJ 声明了需要它，报告错误
+                console.error('[3D模型] MTL 文件加载失败:', error);
+                onLoadError(error);
+              }
             );
-          },
-          undefined,
-          (error: any) => {
-            // MTL 加载失败，使用默认材质加载 OBJ
+          } else {
+            // OBJ 文件没有声明 MTL，直接使用默认材质加载
             const objLoader = new OBJLoader();
             const objPath = modelUri.substring(0, modelUri.lastIndexOf('/') + 1);
             const objFileName = modelUri.substring(modelUri.lastIndexOf('/') + 1);
@@ -291,30 +304,11 @@ export const Model3DWidget: React.FC<WidgetProps> = ({ component, style, handler
               onLoadError
             );
           }
-        );
-      } else {
-        // 没有MTL文件，使用默认材质
-        const loader = new OBJLoader();
-        const objPath = modelUri.substring(0, modelUri.lastIndexOf('/') + 1);
-        const objFileName = modelUri.substring(modelUri.lastIndexOf('/') + 1);
-        loader.setPath(objPath);
-        loader.load(
-          objFileName,
-          (obj: any) => {
-            obj.traverse((child: any) => {
-              if (child.isMesh) {
-                child.material = new THREE.MeshStandardMaterial({
-                  color: 0xcccccc,
-                  side: THREE.DoubleSide
-                });
-              }
-            });
-            onLoadSuccess(obj, 'obj');
-          },
-          undefined,
-          onLoadError
-        );
-      }
+        })
+        .catch((error) => {
+          console.error('[3D模型] OBJ 文件读取失败:', error);
+          onLoadError(error);
+        });
     } else {
       setLoadError(`不支持的文件格式: ${ext}`);
       setIsLoading(false);

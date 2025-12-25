@@ -244,9 +244,10 @@ export class GLTFParser {
                         let binPath = imagePath.replace(/\.(png|jpg|jpeg)$/i, '.bin');
                         console.log(`[GLTF Parser] Initial bin path: ${binPath}`);
 
+                        // 如果提供了 outputDir，直接在 build/assets 根目录查找纹理bin（不保持子目录结构）
                         if (outputDir) {
-                            const relativePath = path.relative(baseDir, imagePath);
-                            const outputBinPath = path.join(outputDir, relativePath).replace(/\.(png|jpg|jpeg)$/i, '.bin');
+                            const textureFileName = path.basename(image.uri).replace(/\.(png|jpg|jpeg)$/i, '.bin');
+                            const outputBinPath = path.join(outputDir, textureFileName);
                             console.log(`[GLTF Parser] Checking output bin path: ${outputBinPath}`);
                             if (fs.existsSync(outputBinPath)) {
                                 binPath = outputBinPath;

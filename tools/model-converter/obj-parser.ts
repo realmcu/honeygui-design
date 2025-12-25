@@ -122,10 +122,10 @@ export class OBJParser {
                 const fullPath = path.join(dir, texturePath);
                 let binPath = fullPath.replace(/\.(png|jpe?g|bmp)$/i, '.bin');
                 
-                // 如果提供了 outputDir，优先在输出目录查找（图片已转换到输出目录）
+                // 如果提供了 outputDir，直接在 build/assets 根目录查找纹理bin（不保持子目录结构）
                 if (outputDir) {
-                    const relativePath = path.relative(path.dirname(filePath), fullPath);
-                    const outputBinPath = path.join(outputDir, relativePath).replace(/\.(png|jpe?g|bmp)$/i, '.bin');
+                    const textureFileName = path.basename(texturePath).replace(/\.(png|jpe?g|bmp)$/i, '.bin');
+                    const outputBinPath = path.join(outputDir, textureFileName);
                     if (fs.existsSync(outputBinPath)) {
                         binPath = outputBinPath;
                     }
