@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { PropertyPanelProps } from './types';
 import { PropertyEditor } from './PropertyEditor';
 import { isContainerType } from '../../utils/componentUtils';
+import { validateComponentId } from '../../utils/validation';
+import { useDesignerStore } from '../../store';
 
 interface BasePropertiesProps extends PropertyPanelProps {
   disableSize?: boolean;
@@ -87,27 +89,75 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
   const availableParents = getAvailableParents();
   const currentParent = components.find(c => c.id === component.parent);
 
+  // ID 编辑状态
+  const [editingId, setEditingId] = useState(component.id);
+  const [idError, setIdError] = useState<string | null>(null);
+  const renameComponent = useDesignerStore(state => state.renameComponent);
+
+  // 组件切换时重置编辑状态
+  useEffect(() => {
+    setEditingId(component.id);
+    setIdError(null);
+  }, [component.id]);
+
+  const handleIdChange = (value: string) => {
+    setEditingId(value);
+    // 实时校验
+    const allIds = components.map(c => c.id);
+    const result = validateComponentId(value, allIds, component.id);
+    setIdError(result.valid ? null : result.error || null);
+  };
+
+  const handleIdBlur = () => {
+    if (editingId === component.id) return; // 没有变化
+    if (idError) {
+      // 校验失败，恢复原值
+      setEditingId(component.id);
+      setIdError(null);
+      return;
+    }
+    // 执行重命名
+    const success = renameComponent(component.id, editingId);
+    if (!success) {
+      setEditingId(component.id);
+      setIdError('重命名失败');
+    }
+  };
+
   return (
     <>
-      {/* Name and ID */}
+      {/* 名称（即 ID） */}
       <div className="property-group">
         <div className="property-item">
           <label>名称</label>
-          <PropertyEditor
-            type="string"
-            value={component.name}
-            onChange={(value) => onUpdate({ name: value })}
+          <input
+            type="text"
+            value={editingId}
+            onChange={(e) => handleIdChange(e.target.value)}
+            onBlur={handleIdBlur}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleIdBlur(); }}
+            style={{
+              width: '100%',
+              padding: '4px 8px',
+              backgroundColor: 'var(--vscode-input-background)',
+              color: 'var(--vscode-input-foreground)',
+              border: idError 
+                ? '1px solid var(--vscode-inputValidation-errorBorder, #f44)' 
+                : '1px solid var(--vscode-input-border)',
+              borderRadius: '2px',
+              fontFamily: 'monospace',
+              fontSize: '13px',
+            }}
           />
-        </div>
-
-        <div className="property-item">
-          <label>ID</label>
-          <PropertyEditor
-            type="string"
-            value={component.id}
-            onChange={() => {}}
-            disabled
-          />
+          {idError && (
+            <div style={{ 
+              color: 'var(--vscode-inputValidation-errorForeground, #f44)', 
+              fontSize: '11px', 
+              marginTop: '4px' 
+            }}>
+              {idError}
+            </div>
+          )}
         </div>
 
         {/* 父对象选择 */}

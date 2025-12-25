@@ -257,7 +257,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
     }
 
     // 添加注释
-    code += `\n${indentStr}// 创建${component.name} (${component.type})\n`;
+    code += `\n${indentStr}// 创建 ${component.id} (${component.type})\n`;
 
     // hg_view/hg_window 使用 ViewGenerator
     if (component.type === 'hg_view' || component.type === 'hg_window') {

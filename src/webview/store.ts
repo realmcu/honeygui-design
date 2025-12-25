@@ -124,6 +124,7 @@ export interface DesignerStore extends DesignerState {
   setComponents: (components: Component[]) => void;
   addComponent: (component: Component, options?: { save?: boolean }) => void;
   updateComponent: (id: string, updates: Partial<Component>) => void;
+  renameComponent: (oldId: string, newId: string) => boolean;
   removeComponent: (id: string) => void;
   removeComponents: (ids: string[]) => void;
   selectComponent: (id: string | null) => void;
@@ -410,6 +411,50 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       ),
     }));
     get().saveToFile();
+  },
+
+  renameComponent: (oldId, newId) => {
+    const state = get();
+    
+    // 检查新 ID 是否已存在
+    if (state.components.some(c => c.id === newId)) {
+      return false;
+    }
+    
+    // 更新组件 ID 和所有引用
+    set((state) => ({
+      // 更新选中状态
+      selectedComponent: state.selectedComponent === oldId ? newId : state.selectedComponent,
+      selectedComponents: state.selectedComponents.map(id => id === oldId ? newId : id),
+      // 更新组件列表
+      components: state.components.map((comp) => {
+        if (comp.id === oldId) {
+          // 更新组件自身的 id 和 name
+          return { ...comp, id: newId, name: newId };
+        }
+        if (comp.parent === oldId) {
+          // 更新子组件的 parent 引用
+          return { ...comp, parent: newId };
+        }
+        if (comp.children?.includes(oldId)) {
+          // 更新父组件的 children 数组
+          return { ...comp, children: comp.children.map(c => c === oldId ? newId : c) };
+        }
+        // 更新事件配置中的 target 引用
+        if (comp.eventConfigs) {
+          const updatedConfigs = comp.eventConfigs.map(ec => ({
+            ...ec,
+            actions: ec.actions.map(action => 
+              action.target === oldId ? { ...action, target: newId } : action
+            )
+          }));
+          return { ...comp, eventConfigs: updatedConfigs };
+        }
+        return comp;
+      }),
+    }));
+    get().saveToFile();
+    return true;
   },
 
   removeComponent: (id) => {

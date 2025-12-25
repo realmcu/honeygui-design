@@ -380,9 +380,8 @@ export class MessageHandler {
                 return;
             }
 
-            // 获取设计稿名称（从HML文件路径提取）
-            const hmlDir = path.dirname(currentFile);
-            const designName = path.basename(hmlDir);
+            // 获取设计稿名称（从HML文件名提取，不含扩展名）
+            const designName = path.basename(currentFile, '.hml');
 
             // 构建回调文件路径
             const callbackFile = path.join(projectRoot, 'src', 'callbacks', `${designName}_callbacks.c`);

@@ -87,8 +87,11 @@ export class SimulationService {
 
             // 获取 SDK 路径
             let sdkPath = this.getSdkPath(projectRoot);
-            if (!sdkPath) {
-                sdkPath = await this.promptForSdkPath(projectRoot);
+            
+            // 如果没有配置或路径无效，提示用户选择
+            if (!sdkPath || !this.isValidSdkPath(sdkPath)) {
+                const reason = !sdkPath ? '未配置' : '路径无效';
+                sdkPath = await this.promptForSdkPath(projectRoot, reason);
                 if (!sdkPath) {
                     return;
                 }
@@ -213,11 +216,20 @@ export class SimulationService {
     }
 
     /**
+     * 检查 SDK 路径是否有效
+     */
+    private isValidSdkPath(sdkPath: string): boolean {
+        // 检查目录是否存在，以及是否包含 win32_sim 子目录
+        const win32SimPath = path.join(sdkPath, 'win32_sim');
+        return fs.existsSync(sdkPath) && fs.existsSync(win32SimPath);
+    }
+
+    /**
      * 提示用户选择 SDK 路径
      */
-    private async promptForSdkPath(projectRoot: string): Promise<string | undefined> {
+    private async promptForSdkPath(projectRoot: string, reason: string = '未配置'): Promise<string | undefined> {
         const choice = await vscode.window.showErrorMessage(
-            '未配置 HoneyGUI SDK 路径',
+            `HoneyGUI SDK ${reason}，请选择 SDK 目录`,
             '选择 SDK 目录',
             '取消'
         );
@@ -238,6 +250,12 @@ export class SimulationService {
         }
 
         const sdkPath = uris[0].fsPath;
+
+        // 验证选择的路径
+        if (!this.isValidSdkPath(sdkPath)) {
+            vscode.window.showErrorMessage('所选目录不是有效的 HoneyGUI SDK（缺少 win32_sim 目录）');
+            return undefined;
+        }
 
         // 保存到 project.json
         const configPath = path.join(projectRoot, 'project.json');

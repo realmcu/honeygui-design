@@ -7,7 +7,7 @@
   "targetEngine": "honeygui",
   "minSdk": "API 2: HoneyGUI V1.1.0",
   "pixelMode": "ARGB8888",
-  "mainHmlFile": "ui/main/ChatBotMain.hml",
+  "mainHmlFile": "ui/ChatBotMain.hml",
   "template": "chatbot",
   "created": "2025-12-11"
 }

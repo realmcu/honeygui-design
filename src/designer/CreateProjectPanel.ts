@@ -482,12 +482,11 @@ export class CreateProjectPanel {
         // 创建目录结构
         fs.mkdirSync(projectPath, { recursive: true });
         fs.mkdirSync(path.join(projectPath, 'ui'), { recursive: true });
-        fs.mkdirSync(path.join(projectPath, 'ui', 'main'), { recursive: true }); // 创建 ui/main 目录
         fs.mkdirSync(path.join(projectPath, 'src'), { recursive: true });
         fs.mkdirSync(path.join(projectPath, 'assets'), { recursive: true });
 
         // 使用HmlTemplateManager生成文件内容
-        // 创建 {ProjectName}Main.hml 文件（包含 screen 容器）
+        // 创建 {ProjectName}Main.hml 文件（直接放在 ui/ 下）
         const hmlFileName = `${projectName}Main.hml`;
         const mainHmlContent = HmlTemplateManager.generateMainHml(
             projectName,
@@ -496,7 +495,7 @@ export class CreateProjectPanel {
             minSdk,
             pixelMode
         );
-        fs.writeFileSync(path.join(projectPath, 'ui', 'main', hmlFileName), mainHmlContent, 'utf8');
+        fs.writeFileSync(path.join(projectPath, 'ui', hmlFileName), mainHmlContent, 'utf8');
 
         // 创建README文件
         const readmeContent = HmlTemplateManager.generateReadme(
@@ -516,7 +515,7 @@ export class CreateProjectPanel {
             targetEngine: targetEngine,  // 添加目标引擎配置
             minSdk: minSdk,
             pixelMode: pixelMode,
-            mainHmlFile: `ui/main/${hmlFileName}`, // 使用新的文件名
+            mainHmlFile: `ui/${hmlFileName}`,
             honeyguiSdkPath: honeyguiSdkPath || ProjectUtils.getDefaultSdkPath(),
             romfsBaseAddr: romfsBaseAddr || '0x04400000',
             created: new Date().toISOString()
@@ -658,7 +657,7 @@ export class CreateProjectPanel {
             throw new Error(`Template not found: ${templateId}`);
         }
 
-        // 使用模板生成 HML 文件
+        // 使用模板生成 HML 文件（直接放在 ui/ 下）
         const hmlFileName = `${projectName}Main.hml`;
         const mainHmlContent = template.generateHml({
             projectName,
@@ -667,7 +666,7 @@ export class CreateProjectPanel {
             minSdk,
             pixelMode
         });
-        fs.writeFileSync(path.join(projectPath, 'ui', 'main', hmlFileName), mainHmlContent, 'utf8');
+        fs.writeFileSync(path.join(projectPath, 'ui', hmlFileName), mainHmlContent, 'utf8');
 
         // 拷贝模板资源
         await template.copyAssets(projectPath);
@@ -688,7 +687,7 @@ ${template.description}
 
 ## Getting Started
 
-1. Open the HML file in \`ui/main/${hmlFileName}\`
+1. Open the HML file in \`ui/${hmlFileName}\`
 2. Design your UI in the visual designer
 3. Generate code and compile
 
@@ -705,7 +704,7 @@ Created: ${new Date().toLocaleString()}
             targetEngine: targetEngine,
             minSdk: minSdk,
             pixelMode: pixelMode,
-            mainHmlFile: `ui/main/${hmlFileName}`,
+            mainHmlFile: `ui/${hmlFileName}`,
             honeyguiSdkPath: honeyguiSdkPath || ProjectUtils.getDefaultSdkPath(),
             template: templateId,
             created: new Date().toISOString()

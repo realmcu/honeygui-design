@@ -127,7 +127,7 @@ export abstract class BaseTemplate implements ITemplate {
      * 重命名 HML 文件
      */
     private renameHmlFile(projectPath: string, projectName: string): void {
-        const hmlDir = path.join(projectPath, 'ui', 'main');
+        const hmlDir = path.join(projectPath, 'ui');
         if (!fs.existsSync(hmlDir)) return;
         
         const files = fs.readdirSync(hmlDir);

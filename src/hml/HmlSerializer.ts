@@ -217,10 +217,8 @@ export class HmlSerializer {
             });
         }
 
-        // 序列化元属性（name, visible, enabled, locked, zIndex）
-        if (component.name) {
-            attributesStr += ' name="' + this._escapeXmlValue(component.name) + '"';
-        }
+        // 序列化元属性（visible, enabled, locked, zIndex）
+        // 注意：name 不再单独输出，统一使用 id 作为标识
         if (component.visible === false) {
             attributesStr += ' visible="false"';
         }

@@ -84,7 +84,8 @@ export class CodeGenerator {
 
         for (let i = 0; i < hmlFiles.length; i++) {
             const hmlFile = hmlFiles[i];
-            const designName = path.basename(path.dirname(hmlFile));
+            // 使用 HML 文件名（不含扩展名）作为 designName
+            const designName = path.basename(hmlFile, '.hml');
 
             onProgress?.({
                 current: i + 1,
