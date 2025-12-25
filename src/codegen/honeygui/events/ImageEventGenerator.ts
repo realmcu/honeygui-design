@@ -2,7 +2,7 @@
  * hg_image 事件代码生成器
  */
 import { Component } from '../../../hml/types';
-import { EventCodeGenerator, EVENT_TYPE_TO_GUI_EVENT } from './EventCodeGenerator';
+import { EventCodeGenerator, EVENT_TYPE_TO_GUI_EVENT, generateMessageCallbackImpl } from './EventCodeGenerator';
 
 export class ImageEventGenerator implements EventCodeGenerator {
 
@@ -15,6 +15,13 @@ export class ImageEventGenerator implements EventCodeGenerator {
     const indentStr = '    '.repeat(indent);
 
     component.eventConfigs.forEach((eventConfig) => {
+      // 处理 onMessage 事件
+      if (eventConfig.type === 'onMessage' && eventConfig.message) {
+        const callbackName = `${component.id}_on_msg_${eventConfig.message.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        code += `${indentStr}gui_msg_subscribe(${component.id}, "${eventConfig.message}", ${callbackName});\n`;
+        return;
+      }
+
       const guiEvent = EVENT_TYPE_TO_GUI_EVENT[eventConfig.type];
       if (!guiEvent) return;
 
@@ -22,7 +29,6 @@ export class ImageEventGenerator implements EventCodeGenerator {
         if (action.type === 'callFunction' && action.functionName) {
           code += `${indentStr}gui_obj_add_event_cb(${component.id}, (gui_event_cb_t)${action.functionName}, ${guiEvent}, NULL);\n`;
         } else if (action.type === 'switchView' && action.target) {
-          // switchView 也通过回调实现
           const callbackName = `${component.id}_switch_view_cb`;
           code += `${indentStr}gui_obj_add_event_cb(${component.id}, (gui_event_cb_t)${callbackName}, ${guiEvent}, NULL);\n`;
         }
@@ -37,11 +43,16 @@ export class ImageEventGenerator implements EventCodeGenerator {
     if (!component.eventConfigs) return functions;
 
     component.eventConfigs.forEach(eventConfig => {
+      // onMessage 生成统一回调名
+      if (eventConfig.type === 'onMessage' && eventConfig.message) {
+        functions.push(`${component.id}_on_msg_${eventConfig.message.replace(/[^a-zA-Z0-9]/g, '_')}`);
+        return;
+      }
+
       eventConfig.actions.forEach(action => {
         if (action.type === 'callFunction' && action.functionName) {
           functions.push(action.functionName);
         } else if (action.type === 'switchView' && action.target) {
-          // switchView 需要生成回调函数
           functions.push(`${component.id}_switch_view_cb`);
         }
       });
@@ -58,6 +69,9 @@ export class ImageEventGenerator implements EventCodeGenerator {
     if (!component.eventConfigs) return callbacks;
 
     component.eventConfigs.forEach(eventConfig => {
+      // onMessage 的 switchView 在 getMessageCallbackImpl 中处理
+      if (eventConfig.type === 'onMessage') return;
+
       eventConfig.actions.forEach(action => {
         if (action.type === 'switchView' && action.target) {
           const targetComponent = componentMap.get(action.target);
@@ -79,5 +93,9 @@ export class ImageEventGenerator implements EventCodeGenerator {
     });
 
     return callbacks;
+  }
+
+  getMessageCallbackImpl(component: Component, componentMap: Map<string, Component>): string[] {
+    return generateMessageCallbackImpl(component, componentMap);
   }
 }

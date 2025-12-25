@@ -28,8 +28,15 @@ export class CallbackFileGenerator {
 `;
 
     const callbackFunctions = this.collectCallbackFunctions();
+    const msgCallbackNames = new Set(this.collectMessageCallbackNames());
+    
     callbackFunctions.forEach(funcName => {
-      code += `void ${funcName}(void *obj, gui_event_t event, void *param);\n`;
+      if (msgCallbackNames.has(funcName)) {
+        // onMessage 回调签名不同
+        code += `void ${funcName}(gui_obj_t *obj, const char *topic, void *data, uint16_t len);\n`;
+      } else {
+        code += `void ${funcName}(void *obj, gui_event_t event, void *param);\n`;
+      }
     });
 
     // 添加时间更新回调声明
@@ -64,6 +71,12 @@ export class CallbackFileGenerator {
       code += impl + '\n\n';
     });
 
+    // 收集 onMessage 回调实现
+    const messageImpls = this.collectMessageCallbackImpls();
+    messageImpls.forEach(impl => {
+      code += impl + '\n\n';
+    });
+
     // 生成时间更新回调
     const timeUpdateImpls = this.collectTimeUpdateCallbackImpls();
     timeUpdateImpls.forEach(impl => {
@@ -74,9 +87,10 @@ export class CallbackFileGenerator {
     const callbackFunctions = this.collectCallbackFunctions();
     const switchViewFuncNames = new Set(this.collectSwitchViewCallbackNames());
     const timeUpdateFuncNames = new Set(this.collectTimeUpdateCallbackNames());
+    const msgCallbackNames = new Set(this.collectMessageCallbackNames());
     
     callbackFunctions.forEach(funcName => {
-      if (switchViewFuncNames.has(funcName) || timeUpdateFuncNames.has(funcName)) return;
+      if (switchViewFuncNames.has(funcName) || timeUpdateFuncNames.has(funcName) || msgCallbackNames.has(funcName)) return;
       
       code += `void ${funcName}(void *obj, gui_event_t event, void *param)\n`;
       code += `{\n`;
@@ -137,11 +151,48 @@ export class CallbackFileGenerator {
     this.components.forEach(component => {
       if (!component.eventConfigs) return;
       component.eventConfigs.forEach(eventConfig => {
+        if (eventConfig.type === 'onMessage') return; // onMessage 单独处理
         eventConfig.actions.forEach(action => {
           if (action.type === 'switchView' && action.target) {
             names.push(`${component.id}_switch_view_cb`);
           }
         });
+      });
+    });
+
+    return names;
+  }
+
+  /**
+   * 收集所有 onMessage 回调实现
+   */
+  private collectMessageCallbackImpls(): string[] {
+    const impls: string[] = [];
+
+    this.components.forEach(component => {
+      const generator = EventGeneratorFactory.getGenerator(component.type);
+      if (generator.getMessageCallbackImpl) {
+        generator.getMessageCallbackImpl(component, this.componentMap).forEach(impl => {
+          impls.push(impl);
+        });
+      }
+    });
+
+    return impls;
+  }
+
+  /**
+   * 收集所有 onMessage 回调函数名
+   */
+  private collectMessageCallbackNames(): string[] {
+    const names: string[] = [];
+
+    this.components.forEach(component => {
+      if (!component.eventConfigs) return;
+      component.eventConfigs.forEach(eventConfig => {
+        if (eventConfig.type === 'onMessage' && eventConfig.message) {
+          names.push(`${component.id}_on_msg_${eventConfig.message.replace(/[^a-zA-Z0-9]/g, '_')}`);
+        }
       });
     });
 

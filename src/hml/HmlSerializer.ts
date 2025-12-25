@@ -262,8 +262,10 @@ export class HmlSerializer {
                             if (action.target) actionAttrs += ' target="' + this._escapeXmlValue(action.target) + '"';
                             if (action.message) actionAttrs += ' message="' + this._escapeXmlValue(action.message) + '"';
                             if (action.functionName) actionAttrs += ' functionName="' + this._escapeXmlValue(action.functionName) + '"';
-                            if (action.switchOutStyle) actionAttrs += ' switchOutStyle="' + action.switchOutStyle + '"';
-                            if (action.switchInStyle) actionAttrs += ' switchInStyle="' + action.switchInStyle + '"';
+                            if (action.type === 'switchView') {
+                                actionAttrs += ' switchOutStyle="' + (action.switchOutStyle || 'SWITCH_OUT_TO_LEFT_USE_TRANSLATION') + '"';
+                                actionAttrs += ' switchInStyle="' + (action.switchInStyle || 'SWITCH_IN_FROM_RIGHT_USE_TRANSLATION') + '"';
+                            }
                             componentContent += actionIndent + '<action ' + actionAttrs + ' />\n';
                         });
                         componentContent += eventIndent + '</event>\n';
