@@ -57,7 +57,18 @@ export class SimulationService {
         // 清理编译产物
         this.context.subscriptions.push(
             vscode.commands.registerCommand('honeygui.simulation.clean', async () => {
-                await this.cleanSimulation();
+                const choice = await vscode.window.showInformationMessage(
+                    '选择清理方式',
+                    { modal: true },
+                    '普通清理',
+                    '深度清理'
+                );
+                
+                if (choice === '普通清理') {
+                    await this.cleanSimulation(false);
+                } else if (choice === '深度清理') {
+                    await this.cleanSimulation(true);
+                }
             })
         );
     }
@@ -118,8 +129,9 @@ export class SimulationService {
 
     /**
      * 清理编译产物
+     * @param deep 是否深度清理
      */
-    async cleanSimulation(): Promise<void> {
+    async cleanSimulation(deep: boolean = false): Promise<void> {
         // 查找项目根目录
         let projectRoot: string | undefined;
 
@@ -149,8 +161,8 @@ export class SimulationService {
                 this.outputChannel.appendLine(message);
             }
         });
-        await runner.clean();
-        vscode.window.showInformationMessage('清理完成');
+        await runner.clean(deep);
+        vscode.window.showInformationMessage(deep ? '深度清理完成' : '清理完成');
     }
 
     /**

@@ -265,9 +265,10 @@ export class SimulationRunner {
 
     /**
      * 清理编译产物
+     * @param deep 是否深度清理
      */
-    async clean(): Promise<void> {
-        this.log('开始清理编译产物...');
+    async clean(deep: boolean = false): Promise<void> {
+        this.log(deep ? '开始深度清理...' : '开始清理编译产物...');
 
         // 清理 build 目录（包含所有编译产物和转换后的资源）
         const buildDir = path.join(this.projectRoot, 'build');
@@ -276,11 +277,20 @@ export class SimulationRunner {
             await fs.promises.rm(buildDir, { recursive: true, force: true });
         }
 
-        // 清理 src/ui 目录（自动生成的 UI 代码）
-        const uiDir = path.join(this.projectRoot, 'src', 'ui');
-        if (fs.existsSync(uiDir)) {
-            this.log(`清理 src/ui 目录: ${uiDir}`);
-            await fs.promises.rm(uiDir, { recursive: true, force: true });
+        if (deep) {
+            // 深度清理：清理整个 src 目录
+            const srcDir = path.join(this.projectRoot, 'src');
+            if (fs.existsSync(srcDir)) {
+                this.log(`清理 src 目录: ${srcDir}`);
+                await fs.promises.rm(srcDir, { recursive: true, force: true });
+            }
+        } else {
+            // 普通清理：只清理 src/ui 目录
+            const uiDir = path.join(this.projectRoot, 'src', 'ui');
+            if (fs.existsSync(uiDir)) {
+                this.log(`清理 src/ui 目录: ${uiDir}`);
+                await fs.promises.rm(uiDir, { recursive: true, force: true });
+            }
         }
 
         this.log('清理完成');
