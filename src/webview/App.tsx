@@ -269,9 +269,10 @@ const App: React.FC = () => {
   const findDropTarget = (e: React.DragEvent): Component | null => {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const state = useDesignerStore.getState();
-    // 将鼠标坐标转换为画布坐标系（与资源面板拖拽保持一致）
-    const x = Math.round((e.clientX - rect.left - state.canvasOffset.x) / state.zoom);
-    const y = Math.round((e.clientY - rect.top - state.canvasOffset.y) / state.zoom);
+    // 使用 effectiveZoom 以匹配画布的 transform scale
+    const effectiveZoom = state.zoom / (window.devicePixelRatio || 1);
+    const x = Math.round((e.clientX - rect.left - state.canvasOffset.x) / effectiveZoom);
+    const y = Math.round((e.clientY - rect.top - state.canvasOffset.y) / effectiveZoom);
 
     return findComponentAtPosition(x, y, state.components);
   };
@@ -279,9 +280,10 @@ const App: React.FC = () => {
   const handleImageFileDrop = async (e: React.DragEvent, files: FileList, createComponent: boolean = true) => {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const state = useDesignerStore.getState();
-    // 将鼠标坐标转换为画布坐标系（统一使用 state.zoom，不用 dpr）
-    const x = Math.round((e.clientX - rect.left - state.canvasOffset.x) / state.zoom);
-    const y = Math.round((e.clientY - rect.top - state.canvasOffset.y) / state.zoom);
+    // 使用 effectiveZoom 以匹配画布的 transform scale
+    const effectiveZoom = state.zoom / (window.devicePixelRatio || 1);
+    const x = Math.round((e.clientX - rect.left - state.canvasOffset.x) / effectiveZoom);
+    const y = Math.round((e.clientY - rect.top - state.canvasOffset.y) / effectiveZoom);
 
     let targetContainer: Component | null = null;
 
@@ -318,9 +320,10 @@ const App: React.FC = () => {
   const handleModelFileDrop = async (e: React.DragEvent, files: FileList) => {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const state = useDesignerStore.getState();
-    // 将鼠标坐标转换为画布坐标系（统一使用 state.zoom，不用 dpr）
-    const x = Math.round((e.clientX - rect.left - state.canvasOffset.x) / state.zoom);
-    const y = Math.round((e.clientY - rect.top - state.canvasOffset.y) / state.zoom);
+    // 使用 effectiveZoom 以匹配画布的 transform scale
+    const effectiveZoom = state.zoom / (window.devicePixelRatio || 1);
+    const x = Math.round((e.clientX - rect.left - state.canvasOffset.x) / effectiveZoom);
+    const y = Math.round((e.clientY - rect.top - state.canvasOffset.y) / effectiveZoom);
 
     const targetContainer = findDropTarget(e);
     if (!targetContainer) {
@@ -484,24 +487,13 @@ const App: React.FC = () => {
       if (!canvasRect) return;
 
       const state = useDesignerStore.getState();
-      const dpr = window.devicePixelRatio || 1;
       
-      // 计算鼠标相对于 canvas 元素的坐标（不考虑 zoom 和 offset）
-      let relX = e.clientX - canvasRect.left;
-      let relY = e.clientY - canvasRect.top;
+      // 使用 effectiveZoom 以匹配画布的 transform scale
+      const effectiveZoom = state.zoom / (window.devicePixelRatio || 1);
       
-      // 处理 canvas 超出视口的情况
-      // 如果 canvas 的 left 或 top 是负数，说明 canvas 的一部分在视口外
-      if (canvasRect.left < 0) {
-        relX = e.clientX - canvasRect.left;
-      }
-      if (canvasRect.top < 0) {
-        relY = e.clientY - canvasRect.top;
-      }
-      
-      // 将鼠标坐标转换为画布坐标系（考虑 canvasOffset 和 zoom）
-      const x = (relX - state.canvasOffset.x) / state.zoom;
-      const y = (relY - state.canvasOffset.y) / state.zoom;
+      // 将鼠标坐标转换为画布坐标系（考虑 canvasOffset 和 effectiveZoom）
+      const x = (e.clientX - canvasRect.left - state.canvasOffset.x) / effectiveZoom;
+      const y = (e.clientY - canvasRect.top - state.canvasOffset.y) / effectiveZoom;
 
       const api = useDesignerStore.getState().vscodeAPI;
       if (api) {
@@ -595,22 +587,20 @@ const App: React.FC = () => {
 
     const state = useDesignerStore.getState();
     
-    // 计算鼠标相对于 canvas 元素的坐标
-    const relX = e.clientX - canvasRect.left;
-    const relY = e.clientY - canvasRect.top;
+    // 使用 effectiveZoom 以匹配画布的 transform scale
+    const effectiveZoom = state.zoom / (window.devicePixelRatio || 1);
     
-    // 将鼠标坐标转换为画布坐标系（统一使用 state.zoom，不用 dpr）
+    // 将鼠标坐标转换为画布坐标系
     // 注意：不能用 Math.max(0, ...) 截断，因为画布可能被拖动到负坐标区域
-    const x = Math.round((relX - state.canvasOffset.x) / state.zoom);
-    const y = Math.round((relY - state.canvasOffset.y) / state.zoom);
+    const x = Math.round((e.clientX - canvasRect.left - state.canvasOffset.x) / effectiveZoom);
+    const y = Math.round((e.clientY - canvasRect.top - state.canvasOffset.y) / effectiveZoom);
 
     if (DEBUG_DROP) {
       console.log(`[拖放] ========== 坐标计算 ==========`);
       console.log(`[拖放] e.clientX: ${e.clientX}, e.clientY: ${e.clientY}`);
       console.log(`[拖放] canvasRect: left=${canvasRect.left}, top=${canvasRect.top}`);
-      console.log(`[拖放] relX: ${relX}, relY: ${relY}`);
       console.log(`[拖放] canvasOffset: x=${state.canvasOffset.x}, y=${state.canvasOffset.y}`);
-      console.log(`[拖放] zoom: ${state.zoom}`);
+      console.log(`[拖放] zoom: ${state.zoom}, effectiveZoom: ${effectiveZoom}`);
       console.log(`[拖放] 最终画布坐标: x=${x}, y=${y}`);
     }
 

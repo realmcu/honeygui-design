@@ -279,9 +279,10 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
       const rect = canvasRef.current?.getBoundingClientRect();
       if (!rect) return;
 
-      // 计算鼠标在画布中的位置（统一使用 zoom，不用 dpr）
-      const mouseX = (e.clientX - rect.left - canvasOffset.x) / zoom;
-      const mouseY = (e.clientY - rect.top - canvasOffset.y) / zoom;
+      // 计算鼠标在画布中的位置（使用 effectiveZoom 以匹配画布的 transform scale）
+      const effectiveZoom = zoom / (window.devicePixelRatio || 1);
+      const mouseX = (e.clientX - rect.left - canvasOffset.x) / effectiveZoom;
+      const mouseY = (e.clientY - rect.top - canvasOffset.y) / effectiveZoom;
       
       // 记录最后鼠标位置（用于 mouseUp 时判断目标容器）
       setLastMousePos({ x: mouseX, y: mouseY });
