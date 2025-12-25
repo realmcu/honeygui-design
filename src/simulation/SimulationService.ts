@@ -75,15 +75,12 @@ export class SimulationService {
             }
 
             // 获取 SDK 路径
-            const sdkPath = this.getSdkPath(projectRoot);
+            let sdkPath = this.getSdkPath(projectRoot);
             if (!sdkPath) {
-                vscode.window.showErrorMessage(
-                    '未配置 HoneyGUI SDK 路径\n\n' +
-                    '请在以下位置之一配置：\n' +
-                    '1. 项目配置 (project.json)\n' +
-                    '2. VSCode 设置 (honeygui.sdk.path)'
-                );
-                return;
+                sdkPath = await this.promptForSdkPath(projectRoot);
+                if (!sdkPath) {
+                    return;
+                }
             }
 
             // 停止现有的仿真
@@ -196,29 +193,48 @@ export class SimulationService {
     }
 
     /**
-     * 获取 SDK 路径（优先级）
+     * 获取 SDK 路径（仅从项目配置读取）
      */
     private getSdkPath(projectRoot: string): string | undefined {
-        // 1. 项目配置
         const projectConfig = ProjectUtils.loadProjectConfig(projectRoot);
-        if (projectConfig.honeyguiSdkPath) {
-            return projectConfig.honeyguiSdkPath;
+        return projectConfig.honeyguiSdkPath;
+    }
+
+    /**
+     * 提示用户选择 SDK 路径
+     */
+    private async promptForSdkPath(projectRoot: string): Promise<string | undefined> {
+        const choice = await vscode.window.showErrorMessage(
+            '未配置 HoneyGUI SDK 路径',
+            '选择 SDK 目录',
+            '取消'
+        );
+
+        if (choice !== '选择 SDK 目录') {
+            return undefined;
         }
 
-        // 2. VSCode 设置
-        const config = vscode.workspace.getConfiguration('honeygui');
-        const settingSdkPath = config.get<string>('sdk.path');
-        if (settingSdkPath && fs.existsSync(settingSdkPath)) {
-            return settingSdkPath;
+        const uris = await vscode.window.showOpenDialog({
+            canSelectFiles: false,
+            canSelectFolders: true,
+            canSelectMany: false,
+            title: '选择 HoneyGUI SDK 目录'
+        });
+
+        if (!uris || uris.length === 0) {
+            return undefined;
         }
 
-        // 3. 默认路径
-        const defaultPath = ProjectUtils.getDefaultSdkPath();
-        if (fs.existsSync(defaultPath)) {
-            return defaultPath;
-        }
+        const sdkPath = uris[0].fsPath;
 
-        return undefined;
+        // 保存到 project.json
+        const configPath = path.join(projectRoot, 'project.json');
+        const config = ProjectUtils.loadProjectConfig(projectRoot);
+        config.honeyguiSdkPath = sdkPath;
+        fs.writeFileSync(configPath, JSON.stringify(config, null, 4));
+        vscode.window.showInformationMessage('SDK 路径已保存到项目配置');
+
+        return sdkPath;
     }
 
     /**
