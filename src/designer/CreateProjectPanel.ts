@@ -377,13 +377,12 @@ export class CreateProjectPanel {
                 return;
             }
 
-            // 验证项目名称格式
-            const invalidChars = /[<>:*"?|\\/]/;
-            if (invalidChars.test(projectName)) {
+            // 验证项目名称格式（必须是合法的 C 变量名）
+            if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(projectName)) {
                 logger.error(`[CreateProjectPanel] Invalid project name: ${projectName}`);
                 this._panel.webview.postMessage({
                     command: 'error',
-                    text: '项目名称包含非法字符，不能包含: < > : * " ? | \\ /'
+                    text: '项目名称只能包含字母、数字、下划线，且必须以字母或下划线开头'
                 });
                 return;
             }
@@ -550,13 +549,12 @@ export class CreateProjectPanel {
                 return;
             }
 
-            // 验证项目名称格式
-            const invalidChars = /[<>:*"?|\\/]/;
-            if (invalidChars.test(projectName)) {
+            // 验证项目名称格式（必须是合法的 C 变量名）
+            if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(projectName)) {
                 logger.error(`[CreateProjectPanel] Invalid project name: ${projectName}`);
                 this._panel.webview.postMessage({
                     command: 'error',
-                    text: '项目名称包含非法字符，不能包含: < > : * " ? | \\ /'
+                    text: '项目名称只能包含字母、数字、下划线，且必须以字母或下划线开头'
                 });
                 return;
             }
