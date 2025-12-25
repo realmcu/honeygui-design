@@ -28,7 +28,7 @@ const helpTextStyle: React.CSSProperties = {
   color: 'var(--vscode-descriptionForeground)',
 };
 
-export const HgVideoProperties: React.FC<PropertyPanelProps> = ({ component, onUpdate }) => {
+export const HgVideoProperties: React.FC<PropertyPanelProps> = ({ component, onUpdate, components }) => {
   const [activeTab, setActiveTab] = useState<'properties' | 'events'>('properties');
 
   const handlePropertyChange = (property: string, value: any) => {
@@ -86,7 +86,7 @@ export const HgVideoProperties: React.FC<PropertyPanelProps> = ({ component, onU
           <>
             <h3 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 600 }}>视频属性</h3>
             
-            <BaseProperties component={component} onUpdate={onUpdate} />
+            <BaseProperties component={component} onUpdate={onUpdate} components={components} />
             
             {/* 视频设置 */}
             <div style={{ marginTop: '16px' }}>

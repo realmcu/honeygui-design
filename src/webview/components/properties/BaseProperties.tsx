@@ -34,8 +34,25 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
     });
   };
 
-  // 获取可选的父容器列表（排除自己和自己的子孙）
+  // 获取当前组件所属的根 hg_view
+  const getRootView = (comp: typeof component): typeof component | null => {
+    if (comp.type === 'hg_view' || comp.type === 'hg_window') {
+      return comp;
+    }
+    if (comp.parent) {
+      const parent = components.find(c => c.id === comp.parent);
+      if (parent) {
+        return getRootView(parent);
+      }
+    }
+    return null;
+  };
+
+  // 获取可选的父容器列表（只限当前 hg_view 内的容器，排除自己和自己的子孙）
   const getAvailableParents = () => {
+    const rootView = getRootView(component);
+    if (!rootView) return [];
+
     const descendants = new Set<string>();
     const findDescendants = (id: string) => {
       components.forEach(c => {
@@ -47,9 +64,22 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
     };
     findDescendants(component.id);
 
+    // 获取当前 view 下的所有组件
+    const viewComponents = new Set<string>();
+    const collectViewComponents = (id: string) => {
+      viewComponents.add(id);
+      components.forEach(c => {
+        if (c.parent === id) {
+          collectViewComponents(c.id);
+        }
+      });
+    };
+    collectViewComponents(rootView.id);
+
     return components.filter(c => 
       c.id !== component.id && 
       !descendants.has(c.id) &&
+      viewComponents.has(c.id) &&
       isContainerType(c.type)
     );
   };

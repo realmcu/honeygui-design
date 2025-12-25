@@ -145,8 +145,14 @@ HmlEditorProvider.resolveCustomTextEditor()
    - 默认情况下，只修改代码，不执行 git 操作
    - 只有当用户明确说"提交"、"commit"、"push"、"提交到 gitee"等关键词时，才执行 git 操作
    - 如果不确定是否需要提交，先询问用户
-8. **SDK 目录**：`/home/howie_wang/.HoneyGUI-SDK` 为 SDK 目录
-9. **实验工程**：测试用的实验工程, 也是模板工程位于 `./template-projects/smartwatch` 目录
+8. **发布版本**：
+   - 当用户说"发布版本"或"publish"时，执行以下流程：
+     1. 更新版本号（递增 patch 版本，如 1.4.9 → 1.4.10，或使用用户指定的版本）
+     2. Commit: `chore: bump version to x.x.x`
+     3. Push to Gitee
+     4. 执行 `vsce publish` 发布到 VSCode 插件市场
+9. **SDK 目录**：`/home/howie_wang/.HoneyGUI-SDK` 为 SDK 目录
+10. **实验工程**：测试用的实验工程, 也是模板工程位于 `./template-projects/smartwatch` 目录
 
 ### 不要做的事
 - ❌ 不要修改单元测试（除非用户明确要求）

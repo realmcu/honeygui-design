@@ -3,16 +3,16 @@
     <meta>
     </meta>
     <view>
-        <hg_view id="untitledView" x="30" y="-181" width="410" height="502" backgroundColor="#000000" name="untitledView">
+        <hg_view id="untitledView" x="30" y="-181" width="410" height="502" backgroundColor="#000000" name="demo-3d">
             <events>
                 <event type="onSwipeLeft">
-                    <action type="switchView" target="hg_view_1766044593245_j9p2" />
+                    <action type="switchView" target="hg_view_1766044593245_j9p2" switchOutStyle="SWITCH_OUT_TO_LEFT_USE_TRANSLATION" switchInStyle="SWITCH_IN_FROM_RIGHT_USE_TRANSLATION" />
                 </event>
             </events>
             <hg_image id="hg_image_1766027539313_cumd" x="177" y="105" width="100" height="100" src="assets/UI_app_list/app_mail_icon.png" name="image_9313" zIndex="1">
                 <events>
                     <event type="onMessage">
-                        <action type="switchView" />
+                        <action type="switchView" switchOutStyle="SWITCH_OUT_TO_LEFT_USE_TRANSLATION" switchInStyle="SWITCH_IN_FROM_RIGHT_USE_TRANSLATION" />
                     </event>
                 </events>
             </hg_image>
@@ -21,11 +21,18 @@
         <hg_view id="hg_view_1766044593245_j9p2" x="673" y="-129" width="410" height="502" backgroundColor="#000000" borderRadius="0" padding="12" overflow="auto" name="hg_view_label" zIndex="1">
             <events>
                 <event type="onSwipeLeft">
-                    <action type="switchView" target="mainView" />
+                    <action type="switchView" target="mainView" switchOutStyle="SWITCH_OUT_TO_LEFT_USE_TRANSLATION" switchInStyle="SWITCH_IN_FROM_RIGHT_USE_TRANSLATION" />
                 </event>
             </events>
             <hg_label id="hg_label_1766044605026_tgpz" x="156" y="33" width="100" height="50" fontSize="32" align="LEFT" letterSpacing="0" lineSpacing="0" wordWrap="false" text="测试你好" fontFile="/NotoSansSC-Bold.ttf" name="hg_label_5026" zIndex="1" />
             <hg_image id="hg_image_1766058060432_ikyt" x="37" y="132" width="300" height="300" src="assets/app_music/Rectangle86.png" name="image_0432" zIndex="1" />
+            <hg_image id="hg_image_1766027539313_cumd" x="177" y="105" width="100" height="100" src="assets/UI_app_list/app_mail_icon.png" name="image_9313" zIndex="1">
+                <events>
+                    <event type="onMessage">
+                        <action type="switchView" switchOutStyle="SWITCH_OUT_TO_LEFT_USE_TRANSLATION" switchInStyle="SWITCH_IN_FROM_RIGHT_USE_TRANSLATION" />
+                    </event>
+                </events>
+            </hg_image>
         </hg_view>
     </view>
 </hml>
