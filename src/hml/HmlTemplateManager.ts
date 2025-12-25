@@ -44,7 +44,7 @@ export class HmlTemplateManager {
         <author name="Anonymous" />
     </meta>
     <view>
-        <hg_view id="mainView" x="0" y="0" width="${width}" height="${height}" name="mainView" backgroundColor="#000000" />
+        <hg_view id="${projectName}View" x="0" y="0" width="${width}" height="${height}" backgroundColor="#000000" />
     </view>
 </hml>`;
     }

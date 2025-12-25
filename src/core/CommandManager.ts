@@ -246,7 +246,10 @@ export class CommandManager {
                     value: 'untitled',
                     validateInput: (value) => {
                         if (!value.trim()) return '设计稿名称不能为空';
-                        if (!/^[a-zA-Z0-9_-]+$/.test(value)) return '设计稿名称只能包含字母、数字、下划线和连字符';
+                        // 必须是合法的 C 变量名（字母或下划线开头）
+                        if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(value)) {
+                            return '名称只能包含字母、数字、下划线，且必须以字母或下划线开头';
+                        }
                         const targetFile = path.join(uiDir, `${value}.hml`);
                         if (fs.existsSync(targetFile)) return '设计稿文件已存在';
                         return null;
