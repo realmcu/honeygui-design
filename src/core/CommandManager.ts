@@ -246,28 +246,31 @@ export class CommandManager {
                     validateInput: (value) => {
                         if (!value.trim()) return '设计稿名称不能为空';
                         if (!/^[a-zA-Z0-9_-]+$/.test(value)) return '设计稿名称只能包含字母、数字、下划线和连字符';
-                        const targetDir = path.join(uiDir, value);
-                        if (fs.existsSync(targetDir)) return '设计稿目录已存在';
+                        const targetFile = path.join(uiDir, `${value}.hml`);
+                        if (fs.existsSync(targetFile)) return '设计稿文件已存在';
                         return null;
                     }
                 });
                 
                 if (designName) {
-                    // 创建设计稿目录
-                    const designDir = path.join(uiDir, designName);
-                    fs.mkdirSync(designDir, { recursive: true });
-                    
                     // 读取项目配置获取分辨率
                     const projectConfig = ProjectUtils.loadProjectConfig(workspaceRoot);
                     const { width, height } = ProjectUtils.parseResolution(projectConfig.resolution);
                     
-                    // 创建HML文件
-                    const hmlFilePath = path.join(designDir, `${designName}.hml`);
+                    // 创建HML文件（直接放在 ui/ 目录下）
+                    const hmlFilePath = path.join(uiDir, `${designName}.hml`);
+                    
+                    // 检查文件是否已存在
+                    if (fs.existsSync(hmlFilePath)) {
+                        vscode.window.showErrorMessage(`文件已存在: ${designName}.hml`);
+                        return;
+                    }
+                    
                     const viewName = `${designName}View`;
                     const defaultContent = `<?xml version="1.0" encoding="UTF-8"?>
 <hml version="1.0">
     <view id="main" width="${width}" height="${height}" background-color="#f0f0f0">
-        <hg_view id="${viewName}" x="0" y="0" width="${width}" height="${height}" name="${viewName}" backgroundColor="#000000">
+        <hg_view id="${viewName}" x="0" y="0" width="${width}" height="${height}" backgroundColor="#000000">
             <!-- 在这里添加您的组件 -->
         </hg_view>
     </view>

@@ -5,15 +5,15 @@
         <author name="HoneyGUI Design" />
     </meta>
     <view>
-        <hg_view id="mainView" x="-3776" y="-887" width="410" height="502" backgroundColor="#000000" name="mainView">
+        <hg_view id="mainView" x="-3776" y="-887" width="410" height="502" backgroundColor="#000000">
             <events>
                 <event type="onSwipeLeft">
                     <action type="switchView" target="hg_view_1766022481486_seii" switchOutStyle="SWITCH_OUT_TO_LEFT_USE_TRANSLATION" switchInStyle="SWITCH_IN_FROM_RIGHT_USE_TRANSLATION" />
                 </event>
             </events>
-            <hg_list id="hg_list_1766663103528_tlot" x="8" y="37" width="410" height="500" itemWidth="410" itemHeight="100" space="0" direction="VERTICAL" style="LIST_CLASSIC" noteNum="5" offset="0" outScope="0" autoAlign="true" inertia="true" loop="false" createBar="false" name="hg_list_3528" zIndex="1">
-                <hg_list_item id="hg_list_1766663103528_tlot_item_1" x="0" y="0" width="410" height="100" name="List Item 1" locked="true" zIndex="1">
-                    <hg_image id="hg_image_1766123033044_7gh5" x="79" y="0" width="100" height="100" src="assets/UI_app_list/app_alarm_clock_icon.png" name="image_3044" zIndex="1">
+            <hg_list id="hg_list_1766663103528_tlot" x="8" y="37" width="410" height="500" itemWidth="410" itemHeight="100" space="0" direction="VERTICAL" style="LIST_CLASSIC" noteNum="5" offset="0" outScope="0" autoAlign="true" inertia="true" loop="false" createBar="false" zIndex="1">
+                <hg_list_item id="hg_list_1766663103528_tlot_item_1" x="0" y="0" width="410" height="100" locked="true" zIndex="1">
+                    <hg_image id="hg_image_1766123033044_7gh5" x="79" y="0" width="100" height="100" src="assets/UI_app_list/app_alarm_clock_icon.png" zIndex="1">
                         <events>
                             <event type="onClick">
                                 <action type="switchView" target="hg_view_1766022481486_seii" switchOutStyle="SWITCH_OUT_TO_LEFT_USE_TRANSLATION" switchInStyle="SWITCH_IN_FROM_RIGHT_USE_TRANSLATION" />
@@ -21,21 +21,21 @@
                         </events>
                     </hg_image>
                 </hg_list_item>
-                <hg_list_item id="hg_list_1766663103528_tlot_item_2" x="0" y="100" width="410" height="100" name="List Item 2" locked="true" zIndex="1" />
-                <hg_list_item id="hg_list_1766663103528_tlot_item_3" x="0" y="200" width="410" height="100" name="List Item 3" locked="true" zIndex="1" />
-                <hg_list_item id="hg_list_1766663103528_tlot_item_4" x="0" y="300" width="410" height="100" name="List Item 4" locked="true" zIndex="1" />
-                <hg_list_item id="hg_list_1766663103528_tlot_item_5" x="0" y="400" width="410" height="100" name="List Item 5" locked="true" zIndex="1" />
+                <hg_list_item id="hg_list_1766663103528_tlot_item_2" x="0" y="100" width="410" height="100" locked="true" zIndex="1" />
+                <hg_list_item id="hg_list_1766663103528_tlot_item_3" x="0" y="200" width="410" height="100" locked="true" zIndex="1" />
+                <hg_list_item id="hg_list_1766663103528_tlot_item_4" x="0" y="300" width="410" height="100" locked="true" zIndex="1" />
+                <hg_list_item id="hg_list_1766663103528_tlot_item_5" x="0" y="400" width="410" height="100" locked="true" zIndex="1" />
             </hg_list>
         </hg_view>
-        <hg_view id="hg_view_1766022481486_seii" x="-3191" y="-874" width="410" height="502" backgroundColor="#000000" borderRadius="0" padding="12" overflow="auto" name="hg_view_1486" zIndex="1">
+        <hg_view id="hg_view_1766022481486_seii" x="-3191" y="-874" width="410" height="502" backgroundColor="#000000" borderRadius="0" padding="12" overflow="auto" zIndex="1">
             <events>
                 <event type="onSwipeLeft">
                     <action type="switchView" target="untitledView" switchOutStyle="SWITCH_OUT_TO_LEFT_USE_TRANSLATION" switchInStyle="SWITCH_IN_FROM_RIGHT_USE_TRANSLATION" />
                 </event>
             </events>
-            <hg_image id="hg_image_1766487405785_tkxn" x="54" y="113" width="100" height="106" src="assets/UI_app_list/app_activity_icon.png" name="image_5785" zIndex="1" />
-            <hg_image id="hg_image_1766485021368_l76l" x="281" y="212" width="100" height="106" src="assets/UI_app_list/app_activity_icon.png" name="image_1368" zIndex="1" />
-            <hg_image id="hg_image_1766487258446_5ckq" x="206" y="299" width="100" height="100" src="assets/UI_app_list/app_compass_icon.png" name="image_8446" zIndex="1" />
+            <hg_image id="hg_image_1766487405785_tkxn" x="54" y="113" width="100" height="106" src="assets/UI_app_list/app_activity_icon.png" zIndex="1" />
+            <hg_image id="hg_image_1766485021368_l76l" x="281" y="212" width="100" height="106" src="assets/UI_app_list/app_activity_icon.png" zIndex="1" />
+            <hg_image id="hg_image_1766487258446_5ckq" x="206" y="299" width="100" height="100" src="assets/UI_app_list/app_compass_icon.png" zIndex="1" />
         </hg_view>
     </view>
 </hml>
