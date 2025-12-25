@@ -308,11 +308,41 @@
             </div>
             
             <div class="form-group">
-                <label for="templateSdkPath">HoneyGUI SDK Path</label>
-                <div class="input-group">
-                    <input type="text" id="templateSdkPath" class="form-control" placeholder="Default: ~/.HoneyGUI-SDK" />
-                    <button class="btn-icon" id="selectTemplateSdkButton">📁</button>
+                <label>HoneyGUI SDK</label>
+                <div class="sdk-tabs">
+                    <button type="button" class="sdk-tab active" data-sdk-tab="template-local">本地目录</button>
+                    <button type="button" class="sdk-tab" data-sdk-tab="template-clone">在线克隆</button>
                 </div>
+                <div id="sdk-template-local" class="sdk-content active">
+                    <div class="input-group">
+                        <input type="text" id="templateSdkPath" class="form-control" placeholder="Default: ~/.HoneyGUI-SDK" />
+                        <button class="btn-icon" id="selectTemplateSdkButton">📁</button>
+                    </div>
+                </div>
+                <div id="sdk-template-clone" class="sdk-content">
+                    <div class="clone-source">
+                        <label class="radio-label">
+                            <input type="radio" name="templateCloneSource" value="gitee" checked /> Gitee (国内推荐)
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="templateCloneSource" value="github" /> GitHub
+                        </label>
+                    </div>
+                    <div class="clone-target">
+                        <span class="clone-label">克隆到:</span>
+                        <span class="clone-path">~/.HoneyGUI-SDK</span>
+                    </div>
+                    <button type="button" id="cloneTemplateSdkButton" class="btn-clone">开始克隆</button>
+                    <div id="templateCloneProgress" class="clone-progress hidden">
+                        <div class="progress-bar"><div class="progress-fill"></div></div>
+                        <span class="progress-text">准备中...</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="templateRomfsBaseAddr">Romfs Base Address (for embedded flash)</label>
+                <input type="text" id="templateRomfsBaseAddr" class="form-control" value="0x04400000" placeholder="0x04400000" />
             </div>
             
             <button id="createTemplateButton" class="btn-create" disabled>Create from Template</button>
@@ -399,6 +429,14 @@
                 return;
             }
             
+            const romfsAddr = document.getElementById('templateRomfsBaseAddr').value.trim();
+            
+            // 验证地址格式
+            if (romfsAddr && !/^0x[0-9A-Fa-f]+$/.test(romfsAddr)) {
+                showError('Invalid romfs base address. Please use hexadecimal format (e.g., 0x04400000)');
+                return;
+            }
+            
             // 获取分辨率
             let resolution = document.getElementById('templateResolution').value;
             if (resolution === 'custom') {
@@ -422,7 +460,8 @@
                     targetEngine: 'honeygui',
                     minSdk: document.getElementById('templateMinSdk').value,
                     pixelMode: document.getElementById('templatePixelMode').value,
-                    honeyguiSdkPath: document.getElementById('templateSdkPath').value.trim() || ''
+                    honeyguiSdkPath: document.getElementById('templateSdkPath').value.trim() || '',
+                    romfsBaseAddr: romfsAddr || '0x04400000'
                 }
             });
         }
@@ -536,19 +575,36 @@
             document.querySelectorAll('.sdk-tab').forEach(tab => {
                 tab.addEventListener('click', function() {
                     const tabId = this.dataset.sdkTab;
-                    document.querySelectorAll('.sdk-tab').forEach(t => t.classList.remove('active'));
-                    document.querySelectorAll('.sdk-content').forEach(c => c.classList.remove('active'));
+                    const isTemplate = tabId.startsWith('template-');
+                    const prefix = isTemplate ? 'template-' : '';
+                    
+                    // 只切换同一组的 tabs
+                    const group = isTemplate ? '[data-sdk-tab^="template-"]' : '[data-sdk-tab]:not([data-sdk-tab^="template-"])';
+                    document.querySelectorAll(`.sdk-tab${group}`).forEach(t => t.classList.remove('active'));
+                    
+                    const contentId = isTemplate ? tabId.replace('template-', '') : tabId;
+                    const contentPrefix = isTemplate ? 'sdk-template-' : 'sdk-';
+                    document.querySelectorAll(`[id^="${contentPrefix}"]`).forEach(c => c.classList.remove('active'));
+                    
                     this.classList.add('active');
-                    document.getElementById('sdk-' + tabId)?.classList.add('active');
+                    document.getElementById(contentPrefix + contentId)?.classList.add('active');
                 });
             });
             
-            // 克隆 SDK 按钮
+            // 克隆 SDK 按钮（空项目）
             document.getElementById('cloneSdkButton')?.addEventListener('click', function() {
                 const source = document.querySelector('input[name="cloneSource"]:checked')?.value || 'gitee';
                 this.disabled = true;
                 document.getElementById('cloneProgress').classList.remove('hidden');
-                vscode.postMessage({ command: 'cloneSdk', source: source });
+                vscode.postMessage({ command: 'cloneSdk', source: source, target: 'empty' });
+            });
+            
+            // 克隆 SDK 按钮（模板项目）
+            document.getElementById('cloneTemplateSdkButton')?.addEventListener('click', function() {
+                const source = document.querySelector('input[name="templateCloneSource"]:checked')?.value || 'gitee';
+                this.disabled = true;
+                document.getElementById('templateCloneProgress').classList.remove('hidden');
+                vscode.postMessage({ command: 'cloneSdk', source: source, target: 'template' });
             });
             
             // Request templates from extension
@@ -579,17 +635,35 @@
                 if (progressFill) progressFill.style.width = msg.percent + '%';
                 if (progressText) progressText.textContent = msg.text || '克隆中...';
             } else if (msg.command === 'cloneComplete') {
-                document.getElementById('honeyguiSdkPath').value = msg.sdkPath;
-                document.getElementById('cloneProgress').classList.add('hidden');
-                document.getElementById('cloneSdkButton').disabled = false;
-                // 切换回本地目录 tab
-                document.querySelectorAll('.sdk-tab').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.sdk-content').forEach(c => c.classList.remove('active'));
-                document.querySelector('.sdk-tab[data-sdk-tab="local"]')?.classList.add('active');
-                document.getElementById('sdk-local')?.classList.add('active');
+                const target = msg.target || 'empty';
+                if (target === 'template') {
+                    document.getElementById('templateSdkPath').value = msg.sdkPath;
+                    document.getElementById('templateCloneProgress').classList.add('hidden');
+                    document.getElementById('cloneTemplateSdkButton').disabled = false;
+                    // 切换回本地目录 tab
+                    document.querySelectorAll('.sdk-tab[data-sdk-tab^="template-"]').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('[id^="sdk-template-"]').forEach(c => c.classList.remove('active'));
+                    document.querySelector('.sdk-tab[data-sdk-tab="template-local"]')?.classList.add('active');
+                    document.getElementById('sdk-template-local')?.classList.add('active');
+                } else {
+                    document.getElementById('honeyguiSdkPath').value = msg.sdkPath;
+                    document.getElementById('cloneProgress').classList.add('hidden');
+                    document.getElementById('cloneSdkButton').disabled = false;
+                    // 切换回本地目录 tab
+                    document.querySelectorAll('.sdk-tab:not([data-sdk-tab^="template-"])').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('[id^="sdk-"]:not([id^="sdk-template-"])').forEach(c => c.classList.remove('active'));
+                    document.querySelector('.sdk-tab[data-sdk-tab="local"]')?.classList.add('active');
+                    document.getElementById('sdk-local')?.classList.add('active');
+                }
             } else if (msg.command === 'cloneError') {
-                document.getElementById('cloneProgress').classList.add('hidden');
-                document.getElementById('cloneSdkButton').disabled = false;
+                const target = msg.target || 'empty';
+                if (target === 'template') {
+                    document.getElementById('templateCloneProgress').classList.add('hidden');
+                    document.getElementById('cloneTemplateSdkButton').disabled = false;
+                } else {
+                    document.getElementById('cloneProgress').classList.add('hidden');
+                    document.getElementById('cloneSdkButton').disabled = false;
+                }
                 showError(msg.text);
             } else if (msg.command === 'error') {
                 showError(msg.text);

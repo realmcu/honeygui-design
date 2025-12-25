@@ -103,7 +103,7 @@ export class CreateProjectPanel {
                         await this._createTemplateProject(message.config);
                         break;
                     case 'cloneSdk':
-                        await this._cloneSdk(message.source);
+                        await this._cloneSdk(message.source, message.target);
                         break;
                     case 'notify':
                         vscode.window.showInformationMessage(message.text);
@@ -256,7 +256,7 @@ export class CreateProjectPanel {
     /**
      * 克隆 HoneyGUI SDK
      */
-    private async _cloneSdk(source: 'github' | 'gitee'): Promise<void> {
+    private async _cloneSdk(source: 'github' | 'gitee', target: 'empty' | 'template' = 'empty'): Promise<void> {
         const urls = {
             github: 'https://github.com/realmcu/HoneyGUI.git',
             gitee: 'https://gitee.com/realmcu/HoneyGUI.git'
@@ -269,7 +269,8 @@ export class CreateProjectPanel {
             if (fs.existsSync(targetPath)) {
                 this._panel.webview.postMessage({
                     command: 'cloneComplete',
-                    sdkPath: targetPath
+                    sdkPath: targetPath,
+                    target: target
                 });
                 vscode.window.showInformationMessage(`SDK 目录已存在: ${targetPath}`);
                 return;
@@ -309,14 +310,16 @@ export class CreateProjectPanel {
                     setTimeout(() => {
                         this._panel.webview.postMessage({
                             command: 'cloneComplete',
-                            sdkPath: targetPath
+                            sdkPath: targetPath,
+                            target: target
                         });
                     }, 500);
                     vscode.window.showInformationMessage(`SDK 克隆成功: ${targetPath}`);
                 } else {
                     this._panel.webview.postMessage({
                         command: 'cloneError',
-                        text: `克隆失败 (exit code: ${code})`
+                        text: `克隆失败 (exit code: ${code})`,
+                        target: target
                     });
                 }
             });
@@ -325,7 +328,8 @@ export class CreateProjectPanel {
                 logger.error(`克隆 SDK 失败: ${err.message}`);
                 this._panel.webview.postMessage({
                     command: 'cloneError',
-                    text: `克隆失败: ${err.message}\n\n请确保已安装 Git`
+                    text: `克隆失败: ${err.message}\n\n请确保已安装 Git`,
+                    target: target
                 });
             });
 
@@ -333,7 +337,8 @@ export class CreateProjectPanel {
             logger.error(`克隆 SDK 失败: ${error}`);
             this._panel.webview.postMessage({
                 command: 'cloneError',
-                text: `克隆失败: ${error instanceof Error ? error.message : '未知错误'}`
+                text: `克隆失败: ${error instanceof Error ? error.message : '未知错误'}`,
+                target: target
             });
         }
     }
@@ -532,7 +537,7 @@ export class CreateProjectPanel {
      */
     private async _createTemplateProject(config: any): Promise<void> {
         try {
-            const { templateId, projectName, saveLocation, appId, honeyguiSdkPath } = config;
+            const { templateId, projectName, saveLocation, appId, honeyguiSdkPath, romfsBaseAddr } = config;
 
             logger.info(`[CreateProjectPanel] Creating template project: templateId=${templateId}, projectName=${projectName}`);
 
@@ -586,6 +591,16 @@ export class CreateProjectPanel {
             }, async () => {
                 // 使用模板创建项目（拷贝完整项目）
                 await template.createProject(projectPath, projectName, appId, sdkPath);
+                
+                // 创建完成后，更新 project.json 添加 SDK 路径和 romfs 地址
+                const projectJsonPath = path.join(projectPath, 'project.json');
+                if (fs.existsSync(projectJsonPath)) {
+                    const projectConfig = JSON.parse(fs.readFileSync(projectJsonPath, 'utf8'));
+                    projectConfig.honeyguiSdkPath = sdkPath;
+                    projectConfig.romfsBaseAddr = romfsBaseAddr || '0x04400000';
+                    fs.writeFileSync(projectJsonPath, JSON.stringify(projectConfig, null, 2), 'utf8');
+                    logger.info(`[CreateProjectPanel] SDK path and romfs address added to project.json: ${sdkPath}, ${projectConfig.romfsBaseAddr}`);
+                }
             });
 
             // 显示成功消息
