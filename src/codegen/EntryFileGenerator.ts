@@ -26,6 +26,7 @@ export class EntryFileGenerator {
         }
 
         const romfsRootName = RomfsConfig.getRootName();
+        const mainViewId = `${projectName}View`;
         const content = `#include "gui_api.h"
 #include "gui_view.h"
 #include "gui_components_init.h"
@@ -39,7 +40,7 @@ static int app_init(void)
     // Mount romfs from embedded data
     gui_vfs_mount_romfs("/", &${romfsRootName}, 0);
 
-    gui_view_create(gui_obj_get_root(), "mainView", 0, 0, 0, 0);
+    gui_view_create(gui_obj_get_root(), "${mainViewId}", 0, 0, 0, 0);
     return 0;
 }
 
