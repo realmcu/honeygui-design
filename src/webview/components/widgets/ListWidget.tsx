@@ -5,16 +5,18 @@ import { Component } from '../../types';
 
 /**
  * 计算列表项的位置
+ * 根据 direction、itemWidth、itemHeight 和 space 计算每个 list_item 的位置
  */
 const calculateItemPosition = (
   index: number,
   itemWidth: number,
   itemHeight: number,
+  space: number,
   isVertical: boolean
 ) => {
   return {
-    x: isVertical ? 0 : index * itemWidth,
-    y: isVertical ? index * itemHeight : 0,
+    x: isVertical ? 0 : index * (itemWidth + space),
+    y: isVertical ? index * (itemHeight + space) : 0,
     width: itemWidth,
     height: itemHeight,
   };
@@ -31,13 +33,14 @@ export const ListWidget: React.FC<WidgetProps> = ({ component, style, handlers, 
     const noteNum = (component.data?.noteNum as number) || 5;
     const itemWidth = (component.style?.itemWidth as number) || 100;
     const itemHeight = (component.style?.itemHeight as number) || 100;
+    const space = (component.style?.space as number) || 0;
     const direction = (component.style?.direction as string) || 'VERTICAL';
     const isVertical = direction === 'VERTICAL';
     const currentChildren = component.children || [];
     
-    // 计算列表的总尺寸
-    const newWidth = isVertical ? itemWidth : noteNum * itemWidth;
-    const newHeight = isVertical ? noteNum * itemHeight : itemHeight;
+    // 计算列表的总尺寸（包含间距）
+    const newWidth = isVertical ? itemWidth : noteNum * itemWidth + (noteNum - 1) * space;
+    const newHeight = isVertical ? noteNum * itemHeight + (noteNum - 1) * space : itemHeight;
     
     // 如果尺寸变化，更新列表尺寸
     if (component.position.width !== newWidth || component.position.height !== newHeight) {
@@ -58,7 +61,7 @@ export const ListWidget: React.FC<WidgetProps> = ({ component, style, handlers, 
       targetChildren.push(itemId);
       
       const position = calculateItemPosition(
-        i, itemWidth, itemHeight, isVertical
+        i, itemWidth, itemHeight, space, isVertical
       );
       
       const existingItem = components.find(c => c.id === itemId);
@@ -68,7 +71,7 @@ export const ListWidget: React.FC<WidgetProps> = ({ component, style, handlers, 
         const newItem: Component = {
           id: itemId,
           type: 'hg_list_item',
-          name: `列表项 ${i + 1}`,
+          name: `List Item ${i + 1}`,
           position,
           visible: true,
           enabled: true,
@@ -105,6 +108,7 @@ export const ListWidget: React.FC<WidgetProps> = ({ component, style, handlers, 
     component.data?.noteNum,
     component.style?.itemWidth,
     component.style?.itemHeight,
+    component.style?.space,
     component.style?.direction
   ]);
   

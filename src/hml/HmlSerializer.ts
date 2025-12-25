@@ -206,6 +206,10 @@ export class HmlSerializer {
                 if (propName === 'interactions' || propName === 'view_switch' || propName === 'events') {
                     return;
                 }
+                // 跳过 list_item 的 index 属性（它会在解析时自动生成）
+                if (component.type === 'hg_list_item' && propName === 'index') {
+                    return;
+                }
                 const value = component.data![propName];
                 if (value !== undefined && value !== null && value !== '') {
                     attributesStr += ' ' + propName + '="' + this._escapeXmlValue(this._convertToString(value)) + '"';

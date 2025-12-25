@@ -623,6 +623,8 @@ const App: React.FC = () => {
 
     // 判断是否为容器组件
     const isContainer = componentType === 'hg_view' || componentType === 'hg_window';
+    // hg_list 是特殊的容器组件，但必须放在 hg_view 或 hg_window 内
+    const isListComponent = componentType === 'hg_list';
 
     if (isContainer) {
       // 容器组件：作为顶级组件
@@ -695,9 +697,13 @@ const App: React.FC = () => {
         console.error('[拖放] 鼠标位置下没有容器组件');
         const api = useDesignerStore.getState().vscodeAPI;
         if (api) {
+          // 针对 hg_list 提供特定的错误提示
+          const errorMessage = isListComponent
+            ? 'List 控件只能放置在容器组件（hg_view 或 hg_window）内'
+            : '请将组件拖放到容器内（View/Panel/Window）';
           api.postMessage({
             command: 'error',
-            text: '请将组件拖放到容器内（View/Panel/Window）'
+            text: errorMessage
           });
         }
         return;
@@ -731,6 +737,13 @@ const App: React.FC = () => {
     };
     componentDef.properties
       .filter(prop => prop.group === 'data' && prop.defaultValue !== undefined)
+      .forEach(prop => {
+        defaultData[prop.name] = prop.defaultValue;
+      });
+
+    // 应用默认通用属性（general group）
+    componentDef.properties
+      .filter(prop => prop.group === 'general' && prop.defaultValue !== undefined)
       .forEach(prop => {
         defaultData[prop.name] = prop.defaultValue;
       });

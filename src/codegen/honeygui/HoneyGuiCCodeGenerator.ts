@@ -16,6 +16,7 @@ import { SConscriptGenerator } from '../../simulation/SConscriptGenerator';
 import { ICodeGenerator, CodeGenOptions, CodeGenResult } from '../ICodeGenerator';
 import { EventGeneratorFactory } from './events';
 import { ComponentGeneratorFactory, GeneratorContext } from './components';
+import { ListGenerator } from './components/ListGenerator';
 import { CallbackFileGenerator, UserFileGenerator, ProtectedAreaMerger } from './files';
 
 // Re-export for backward compatibility
@@ -156,7 +157,8 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
     code += `\n// 组件句柄声明\n`;
 
     this.components.forEach(comp => {
-      if (comp.type !== 'hg_view' && comp.type !== 'hg_3d') {
+      // 跳过 hg_view、hg_3d 和 hg_list_item（list_item 由 note_design 回调处理）
+      if (comp.type !== 'hg_view' && comp.type !== 'hg_3d' && comp.type !== 'hg_list_item') {
         code += `extern gui_obj_t *${comp.id};\n`;
       }
     });
@@ -184,7 +186,8 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
 `;
 
     this.components.forEach(comp => {
-      if (comp.type !== 'hg_view' && comp.type !== 'hg_3d') {
+      // 跳过 hg_view、hg_3d 和 hg_list_item（list_item 由 note_design 回调处理）
+      if (comp.type !== 'hg_view' && comp.type !== 'hg_3d' && comp.type !== 'hg_list_item') {
         code += `gui_obj_t *${comp.id} = NULL;\n`;
       }
     });
@@ -222,6 +225,24 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
 
     // 不再生成独立的 on_switch_in 回调函数，直接在 GUI_VIEW_INSTANCE 的 switch_in 中处理
 
+    // 生成所有 list 组件的 note_design 回调函数
+    const hasListComponents = this.components.some(c => c.type === 'hg_list');
+    if (hasListComponents) {
+      code += `// List 组件的 note_design 回调函数\n`;
+      this.components.forEach(comp => {
+        if (comp.type === 'hg_list') {
+          const generator = ComponentGeneratorFactory.getGenerator('hg_list');
+          if (generator instanceof ListGenerator) {
+            code += generator.generateNoteDesignCallback(
+              comp, 
+              this.createGeneratorContext(),
+              (type: string) => ComponentGeneratorFactory.getGenerator(type)
+            );
+          }
+        }
+      });
+    }
+
     const rootComponents = this.components.filter(c => c.parent === null);
     rootComponents.forEach(comp => {
       code += this.generateComponentTree(comp, 0);
@@ -236,6 +257,11 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
   private generateComponentTree(component: Component, indent: number): string {
     let code = '';
     const indentStr = '    '.repeat(indent);
+
+    // 跳过 hg_list_item 组件的生成（它们由 note_design 回调处理）
+    if (component.type === 'hg_list_item') {
+      return code;
+    }
 
     // 添加注释
     code += `\n${indentStr}// 创建${component.name} (${component.type})\n`;

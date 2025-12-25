@@ -4,6 +4,7 @@ import { PropertyEditor } from './PropertyEditor';
 import { BaseProperties } from './BaseProperties';
 import { EventsPanel } from './EventsPanel';
 import { componentDefinitions } from '../ComponentLibrary';
+import { useDesignerStore } from '../../store';
 
 // 字体文件扩展名
 const FONT_EXTS = ['ttf', 'otf', 'woff', 'woff2', 'bin'];
@@ -13,6 +14,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
   const [showFontPicker, setShowFontPicker] = useState(false);
   const [fontFiles, setFontFiles] = useState<string[]>([]);
   const definition = componentDefinitions.find((d) => d.type === component.type);
+  const syncListItems = useDesignerStore((state) => state.syncListItems);
 
   const handleStyleChange = (property: string, value: any) => {
     onUpdate({
@@ -24,6 +26,23 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
   };
 
   const handleDataChange = (property: string, value: any) => {
+    onUpdate({
+      data: {
+        ...component.data,
+        [property]: value,
+      },
+    });
+    
+    // 如果是 list 控件的 noteNum 属性被修改，触发 syncListItems
+    if (component.type === 'hg_list' && property === 'noteNum') {
+      // 使用 setTimeout 确保状态更新后再同步
+      setTimeout(() => {
+        syncListItems(component.id);
+      }, 0);
+    }
+  };
+
+  const handleGeneralChange = (property: string, value: any) => {
     onUpdate({
       data: {
         ...component.data,
@@ -299,6 +318,26 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                           options={property.options as string[]}
                         />
                       )}
+                    </div>
+                  ))}
+              </div>
+            )}
+
+            {/* General Properties */}
+            {definition && definition.properties.filter(p => p.group === 'general').length > 0 && (
+              <div className="property-group">
+                <div className="property-group-title">通用</div>
+                {definition.properties
+                  .filter(p => p.group === 'general')
+                  .map((property) => (
+                    <div key={property.name} className="property-item">
+                      <label>{property.label}</label>
+                      <PropertyEditor
+                        type={property.type as any}
+                        value={(component.data as any)?.[property.name]}
+                        onChange={(value) => handleGeneralChange(property.name, value)}
+                        options={property.options as string[]}
+                      />
                     </div>
                   ))}
               </div>

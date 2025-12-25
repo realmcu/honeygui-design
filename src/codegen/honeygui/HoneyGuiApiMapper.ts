@@ -185,6 +185,15 @@ export class HoneyGuiApiMapper {
       ],
       includeHeader: 'gui_rect.h'
     });
+
+    // 列表控件
+    this.mappings.set('hg_list', {
+      componentType: 'hg_list',
+      createFunction: 'gui_list_create',
+      propertySetters: [],  // 属性设置在 ListGenerator 中专门处理
+      eventHandlers: [],
+      includeHeader: 'gui_list.h'
+    });
   }
 
   /**

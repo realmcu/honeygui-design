@@ -72,6 +72,51 @@ function rebuildComponentsArray(
   return result;
 }
 
+// ============ 辅助函数：深度克隆组件 ============
+
+/**
+ * 深度克隆组件及其子组件
+ * @param component 要克隆的组件
+ * @param newIdSuffix 新ID的后缀
+ * @returns 克隆后的组件
+ */
+function cloneComponent(component: Component, newIdSuffix: string): Component {
+  const newId = `${component.id}_${newIdSuffix}`;
+  return {
+    ...component,
+    id: newId,
+    name: `${component.name}_copy`,
+    // 如果有子组件ID数组，也需要更新
+    children: component.children?.map(childId => `${childId}_${newIdSuffix}`)
+  };
+}
+
+/**
+ * 递归克隆组件树（包括所有子组件）
+ * @param components 所有组件数组
+ * @param rootComponent 要克隆的根组件
+ * @param newIdSuffix 新ID的后缀
+ * @returns 克隆后的组件数组（包括根组件和所有子组件）
+ */
+function cloneComponentTree(components: Component[], rootComponent: Component, newIdSuffix: string): Component[] {
+  const clonedComponents: Component[] = [];
+  const clonedRoot = cloneComponent(rootComponent, newIdSuffix);
+  clonedComponents.push(clonedRoot);
+  
+  // 递归克隆所有子组件
+  if (rootComponent.children && rootComponent.children.length > 0) {
+    rootComponent.children.forEach(childId => {
+      const childComponent = components.find(c => c.id === childId);
+      if (childComponent) {
+        const clonedChildren = cloneComponentTree(components, childComponent, newIdSuffix);
+        clonedComponents.push(...clonedChildren);
+      }
+    });
+  }
+  
+  return clonedComponents;
+}
+
 // ============ Store 定义 ============
 
 export interface DesignerStore extends DesignerState {
@@ -152,6 +197,9 @@ export interface DesignerStore extends DesignerState {
   getSelectedComponents: () => Component[];
   getComponentById: (id: string) => Component | undefined;
 
+  // List Item management
+  syncListItems: (listId: string) => void;
+
   // Project configuration
   setProjectConfig: (config: any) => void;
   initializeWithProjectConfig: (config: any) => void;
@@ -227,6 +275,15 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
 
       return { components: newComponents };
     });
+    
+    // 如果是 list 控件，自动初始化 list_item 子组件
+    if (component.type === 'hg_list') {
+      // 使用 setTimeout 确保组件已经添加到 state 中
+      setTimeout(() => {
+        get().syncListItems(component.id);
+      }, 0);
+    }
+    
     // 根据选项决定是否保存
     if (shouldSave) {
       get().saveToFile();
@@ -238,9 +295,82 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     const before = state.components.find(c => c.id === id);
     if (!before) return;
     
-    // 对于几何控件，如果修改了半径或线宽，自动调整 width 和 height
+    // 对于 list 控件，验证属性值
     let finalUpdates = { ...updates };
     
+    if (before.type === 'hg_list') {
+      // 验证 data 属性
+      if (updates.data) {
+        const validatedData = { ...updates.data };
+        
+        // 验证 noteNum >= 1
+        if ('noteNum' in validatedData) {
+          const noteNum = validatedData.noteNum as number;
+          if (noteNum < 1) {
+            validatedData.noteNum = 1;
+            if (vscodeAPI) {
+              vscodeAPI.postMessage({
+                command: 'showError',
+                text: '项数量必须大于等于 1'
+              });
+            }
+          }
+        }
+        
+        finalUpdates.data = validatedData;
+      }
+      
+      // 验证 style 属性
+      if (updates.style) {
+        const validatedStyle = { ...updates.style };
+        
+        // 验证 itemWidth >= 10
+        if ('itemWidth' in validatedStyle) {
+          const itemWidth = validatedStyle.itemWidth as number;
+          if (itemWidth < 10) {
+            validatedStyle.itemWidth = 10;
+            if (vscodeAPI) {
+              vscodeAPI.postMessage({
+                command: 'showError',
+                text: '项宽度必须大于等于 10'
+              });
+            }
+          }
+        }
+        
+        // 验证 itemHeight >= 10
+        if ('itemHeight' in validatedStyle) {
+          const itemHeight = validatedStyle.itemHeight as number;
+          if (itemHeight < 10) {
+            validatedStyle.itemHeight = 10;
+            if (vscodeAPI) {
+              vscodeAPI.postMessage({
+                command: 'showError',
+                text: '项高度必须大于等于 10'
+              });
+            }
+          }
+        }
+        
+        // 验证 space >= 0
+        if ('space' in validatedStyle) {
+          const space = validatedStyle.space as number;
+          if (space < 0) {
+            validatedStyle.space = 0;
+            if (vscodeAPI) {
+              vscodeAPI.postMessage({
+                command: 'showError',
+                text: '项间距必须大于等于 0'
+              });
+            }
+          }
+        }
+        
+        finalUpdates.style = validatedStyle;
+      }
+    }
+    
+    // 对于几何控件，如果修改了半径或线宽，自动调整 width 和 height
     if (before.type === 'hg_arc' && updates.style) {
       const currentStyle = before.style || {};
       const newStyle = { ...currentStyle, ...updates.style };
@@ -291,6 +421,17 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     if (id === 'mainView') {
       if (vscodeAPI) {
         vscodeAPI.postMessage({ command: 'notify', text: '主视图 mainView 不可删除' });
+      }
+      return;
+    }
+
+    // 禁止删除列表项
+    if (component.type === 'hg_list_item') {
+      if (vscodeAPI) {
+        vscodeAPI.postMessage({
+          command: 'showInfo',
+          text: '列表项由 list 控件自动管理，请修改 noteNum 属性来调整数量'
+        });
       }
       return;
     }
@@ -554,7 +695,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       if (vscodeAPI) {
         vscodeAPI.postMessage({
           command: 'showInfo',
-          text: '列表项由父列表自动管理，无法复制'
+          text: '列表项不支持复制或剪切操作'
         });
       }
       return;
@@ -572,7 +713,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       if (vscodeAPI) {
         vscodeAPI.postMessage({
           command: 'showInfo',
-          text: '列表项由父列表自动管理，无法剪切'
+          text: '列表项不支持复制或剪切操作'
         });
       }
       return;
@@ -669,7 +810,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       if (vscodeAPI) {
         vscodeAPI.postMessage({
           command: 'showInfo',
-          text: '列表项无法复制'
+          text: '列表项不支持复制或剪切操作'
         });
       }
       return;
@@ -690,7 +831,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       if (vscodeAPI) {
         vscodeAPI.postMessage({
           command: 'showInfo',
-          text: '列表项无法剪切'
+          text: '列表项不支持复制或剪切操作'
         });
       }
       return;
@@ -718,15 +859,41 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     const selected = components.filter((c) => selectedComponents.includes(c.id));
     
     // 检查是否所有组件都在同一父容器
-    const parents = new Set(selected.map((c) => c.parent));
-    if (parents.size > 1) {
-      if (vscodeAPI) {
-        vscodeAPI.postMessage({
-          command: 'showInfo',
-          text: '只能对齐同一容器内的组件'
-        });
+    // 特殊处理：如果父容器都是 list_item，检查它们是否属于同一个 list
+    const parents = selected.map((c) => c.parent);
+    const uniqueParents = new Set(parents);
+    
+    if (uniqueParents.size > 1) {
+      // 检查是否所有父容器都是 list_item，且属于同一个 list
+      const parentComponents = parents
+        .map(parentId => components.find(c => c.id === parentId))
+        .filter(p => p !== undefined) as Component[];
+      
+      const allParentsAreListItems = parentComponents.every(p => p.type === 'hg_list_item');
+      
+      if (allParentsAreListItems) {
+        // 检查所有 list_item 是否属于同一个 list
+        const listParents = new Set(parentComponents.map(p => p.parent));
+        if (listParents.size !== 1) {
+          if (vscodeAPI) {
+            vscodeAPI.postMessage({
+              command: 'showInfo',
+              text: '只能对齐同一 list 控件内的组件'
+            });
+          }
+          return;
+        }
+        // 属于同一个 list，允许对齐
+      } else {
+        // 不是 list_item 的情况，必须在同一父容器
+        if (vscodeAPI) {
+          vscodeAPI.postMessage({
+            command: 'showInfo',
+            text: '只能对齐同一容器内的组件'
+          });
+        }
+        return;
       }
-      return;
     }
     
     // 重新排序：将最后选中的组件放在第一位（作为参考）
@@ -873,6 +1040,145 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
 
   getComponentById: (id) => {
     return get().components.find((c) => c.id === id);
+  },
+
+  // ============ List Item 管理 ============
+  
+  /**
+   * 同步 list 控件的 list_item 子组件数量
+   * @param listId list 控件的 ID
+   */
+  syncListItems: (listId: string) => {
+    set((state) => {
+      const listComponent = state.components.find(c => c.id === listId);
+      if (!listComponent || listComponent.type !== 'hg_list') {
+        return state;
+      }
+      
+      // 获取 noteNum 属性（默认为 5）
+      const noteNum = (listComponent.data?.noteNum as number) || 5;
+      
+      // 获取当前所有 list_item 子组件，并按 index 排序
+      const currentItems = state.components
+        .filter(c => c.type === 'hg_list_item' && c.parent === listId)
+        .sort((a, b) => {
+          const indexA = (a.data?.index as number) ?? 0;
+          const indexB = (b.data?.index as number) ?? 0;
+          return indexA - indexB;
+        });
+      const currentCount = currentItems.length;
+      
+      // 如果数量已经匹配，不需要调整
+      if (currentCount === noteNum) {
+        return state;
+      }
+      
+      let newComponents = [...state.components];
+      
+      if (noteNum > currentCount) {
+        // 需要添加新的 list_item
+        const firstItem = currentItems[0];
+        
+        for (let i = currentCount; i < noteNum; i++) {
+          const newItemId = `${listId}_item_${i}`;
+          const newItem: Component = {
+            id: newItemId,
+            name: `hg_list_item${i}`,
+            type: 'hg_list_item',
+            parent: listId,
+            position: { x: 0, y: 0, width: 0, height: 0 },
+            data: { index: i },
+            children: [],
+            visible: true,
+            enabled: true,
+            locked: false,
+            zIndex: 0
+          };
+          
+          // 如果存在第一个 item 且不是第一个新 item，复制第一个 item 的子组件作为模板
+          if (i > 0 && firstItem && firstItem.children && firstItem.children.length > 0) {
+            const clonedChildren: Component[] = [];
+            
+            // 递归克隆第一个 item 的所有子组件
+            firstItem.children.forEach(childId => {
+              const childComponent = state.components.find(c => c.id === childId);
+              if (childComponent) {
+                const suffix = `item${i}`;
+                const clonedTree = cloneComponentTree(state.components, childComponent, suffix);
+                
+                // 更新克隆组件的 parent 为新的 list_item
+                clonedTree.forEach((clonedComp, index) => {
+                  if (index === 0) {
+                    // 根组件的 parent 是新的 list_item
+                    clonedComp.parent = newItemId;
+                  }
+                });
+                
+                clonedChildren.push(...clonedTree);
+                newItem.children!.push(clonedTree[0].id);
+              }
+            });
+            
+            // 将克隆的子组件添加到 components 数组
+            newComponents.push(...clonedChildren);
+          }
+          
+          // 添加新的 list_item
+          newComponents.push(newItem);
+          
+          // 更新 list 组件的 children 数组
+          const listIndex = newComponents.findIndex(c => c.id === listId);
+          if (listIndex !== -1) {
+            const updatedList = { ...newComponents[listIndex] };
+            if (!updatedList.children) {
+              updatedList.children = [];
+            }
+            if (!updatedList.children.includes(newItemId)) {
+              updatedList.children.push(newItemId);
+            }
+            newComponents[listIndex] = updatedList;
+          }
+        }
+      } else if (noteNum < currentCount) {
+        // 需要删除多余的 list_item
+        const itemsToRemove = currentItems.slice(noteNum);
+        const idsToRemove = new Set<string>();
+        
+        // 收集要删除的 list_item 及其所有子组件的 ID
+        itemsToRemove.forEach(item => {
+          idsToRemove.add(item.id);
+          
+          // 递归收集所有子组件 ID
+          const collectChildIds = (parentId: string) => {
+            const children = newComponents.filter(c => c.parent === parentId);
+            children.forEach(child => {
+              idsToRemove.add(child.id);
+              collectChildIds(child.id);
+            });
+          };
+          
+          collectChildIds(item.id);
+        });
+        
+        // 过滤掉要删除的组件
+        newComponents = newComponents.filter(c => !idsToRemove.has(c.id));
+        
+        // 更新 list 组件的 children 数组
+        const listIndex = newComponents.findIndex(c => c.id === listId);
+        if (listIndex !== -1) {
+          const updatedList = { ...newComponents[listIndex] };
+          updatedList.children = updatedList.children?.filter(
+            childId => !idsToRemove.has(childId)
+          ) || [];
+          newComponents[listIndex] = updatedList;
+        }
+      }
+      
+      return { components: newComponents };
+    });
+    
+    // 保存到文件
+    get().saveToFile();
   },
 
   // 调整组件层级

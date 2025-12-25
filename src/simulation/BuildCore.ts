@@ -209,9 +209,9 @@ export class BuildCore {
             
             let pythonCmd = pythonCandidates[0];
             
-            // 在 Windows 上，优先尝试 py launcher
+            // 在 Windows 上，优先使用 python（而不是 py launcher）
             if (process.platform === 'win32') {
-                pythonCmd = 'py';
+                pythonCmd = 'python';
             }
 
             const args = [script, '-i', inputDir, '-o', outputFile, '-a', baseAddr];

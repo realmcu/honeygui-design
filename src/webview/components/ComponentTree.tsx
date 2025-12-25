@@ -72,6 +72,25 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
 
   const isSelected = selectedComponent === componentId;
 
+  // 获取组件图标
+  const getComponentIcon = () => {
+    if (component.type === 'hg_list') {
+      return '📋';
+    } else if (component.type === 'hg_list_item') {
+      return '📄';
+    }
+    return '📦';
+  };
+
+  // 获取组件显示名称
+  const getComponentDisplayName = () => {
+    // 对于 list_item，显示索引编号
+    if (component.type === 'hg_list_item' && component.data?.index !== undefined) {
+      return `List Item ${component.data.index}`;
+    }
+    return component.name;
+  };
+
   return (
     <div className={`tree-node ${isSelected ? 'selected' : ''}`}>
       <div
@@ -87,9 +106,9 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
         )}
         {!hasChildren && <div className="tree-spacer" />}
 
-        <div className="tree-node-icon">📦</div>
+        <div className="tree-node-icon">{getComponentIcon()}</div>
 
-        <div className="tree-node-label">{component.name}</div>
+        <div className="tree-node-label">{getComponentDisplayName()}</div>
 
         <div className="tree-node-actions">
           <div

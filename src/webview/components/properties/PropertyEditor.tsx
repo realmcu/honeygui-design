@@ -55,6 +55,10 @@ export const PropertyEditor: React.FC<PropertyEditorProps> = ({
               onChange(0);
             }
           }}
+          onFocus={(e) => {
+            // 聚焦时选中所有文本，方便用户直接输入新值
+            e.target.select();
+          }}
           disabled={disabled}
           title={title}
           style={{ ...inputStyle, ...disabledStyle }}

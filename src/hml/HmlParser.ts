@@ -16,7 +16,7 @@ class ComponentRegistry {
     // HoneyGUI标准组件 (hg_前缀)
     'hg_button', 'hg_text', 'hg_image', 'hg_input',
     'hg_checkbox', 'hg_radio', 'hg_progressbar', 'hg_slider',
-    'hg_switch', 'hg_canvas', 'hg_list', 'hg_grid', 'hg_tab',
+    'hg_switch', 'hg_canvas', 'hg_list', 'hg_list_item', 'hg_grid', 'hg_tab',
     'hg_label',
     
     // 容器组件
@@ -163,6 +163,11 @@ export class HmlParser {
     // 分离属性
     const { style, data, events } = this._categorizeAttributes(attributes);
 
+    // 应用默认值（针对 list 控件）
+    if (normalizedType === 'hg_list') {
+      this._applyListDefaults(style, data);
+    }
+
     // 解析事件配置
     const eventConfigs = this._parseEventConfigs(element);
 
@@ -194,6 +199,27 @@ export class HmlParser {
   }
 
   /**
+   * 应用 list 控件的默认值
+   */
+  private _applyListDefaults(style: Record<string, any>, data: Record<string, any>): void {
+    // 样式默认值
+    if (style.itemWidth === undefined) style.itemWidth = 100;
+    if (style.itemHeight === undefined) style.itemHeight = 100;
+    if (style.space === undefined) style.space = 0;
+    if (style.direction === undefined) style.direction = 'VERTICAL';
+    if (style.style === undefined) style.style = 'LIST_CLASSIC';
+
+    // 数据默认值
+    if (data.noteNum === undefined) data.noteNum = 5;
+
+    // 通用属性默认值
+    if (data.autoAlign === undefined) data.autoAlign = true;
+    if (data.inertia === undefined) data.inertia = true;
+    if (data.loop === undefined) data.loop = false;
+    if (data.createBar === undefined) data.createBar = false;
+  }
+
+  /**
    * 分类属性到style、data、events
    */
   private _categorizeAttributes(attributes: any): {
@@ -214,7 +240,7 @@ export class HmlParser {
       // 矩形属性
       'fillColor',
       // 列表属性
-      'itemWidth', 'itemHeight', 'direction', 'style'
+      'itemWidth', 'itemHeight', 'direction', 'style', 'space'
     ]);
 
     // 需要转换为数字的属性
@@ -226,7 +252,11 @@ export class HmlParser {
 
     const dataProps = new Set([
       'text', 'src', 'value', 'placeholder', 'options',
-      'min', 'max', 'step', 'checked', 'selected'
+      'min', 'max', 'step', 'checked', 'selected',
+      // 列表数据属性
+      'noteNum',
+      // 列表通用属性
+      'autoAlign', 'inertia', 'loop', 'createBar', 'offset', 'outScope', 'cardStackLocation'
     ]);
 
     const metaProps = new Set([

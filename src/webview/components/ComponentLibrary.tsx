@@ -123,6 +123,7 @@ const componentDefinitions: ComponentDefinition[] = [
     properties: [
       { name: 'itemWidth', label: '项宽度', type: 'number', defaultValue: 100, group: 'style' },
       { name: 'itemHeight', label: '项高度', type: 'number', defaultValue: 100, group: 'style' },
+      { name: 'space', label: '项间距', type: 'number', defaultValue: 0, group: 'style' },
       { name: 'direction', label: '方向', type: 'select', defaultValue: 'VERTICAL', options: ['VERTICAL', 'HORIZONTAL'], group: 'style' },
       { name: 'style', label: '样式', type: 'select', defaultValue: 'LIST_CLASSIC', options: ['LIST_CLASSIC', 'LIST_CIRCLE', 'LIST_ZOOM', 'LIST_CARD', 'LIST_FADE', 'LIST_FAN', 'LIST_HELIX', 'LIST_CURL'], group: 'style' },
       { name: 'noteNum', label: '项数量', type: 'number', defaultValue: 5, group: 'data' },
@@ -130,6 +131,8 @@ const componentDefinitions: ComponentDefinition[] = [
       { name: 'inertia', label: '惯性滚动', type: 'boolean', defaultValue: true, group: 'general' },
       { name: 'loop', label: '循环滚动', type: 'boolean', defaultValue: false, group: 'general' },
       { name: 'createBar', label: '显示滚动条', type: 'boolean', defaultValue: false, group: 'general' },
+      { name: 'offset', label: '初始偏移', type: 'number', defaultValue: 0, group: 'data' },
+      { name: 'outScope', label: '超出范围', type: 'number', defaultValue: 0, group: 'data' },
     ],
   },
   {

@@ -612,9 +612,14 @@ export class VideoConverterService {
 
     /**
      * 获取 Python 命令
+     * 优先尝试 python，如果不存在则尝试 py（Python Launcher）
      */
     private getPythonCommand(): string {
-        return process.platform === 'win32' ? 'py' : 'python3';
+        if (process.platform === 'win32') {
+            // Windows: 优先使用 python，如果不存在则使用 py
+            return 'python';
+        }
+        return 'python3';
     }
 
     /**
