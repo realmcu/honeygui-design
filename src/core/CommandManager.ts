@@ -305,7 +305,16 @@ export class CommandManager {
                 
                 const folderUri = await vscode.window.showOpenDialog(options);
                 if (folderUri && folderUri.length > 0) {
-                    logger.info(`打开项目文件夹: ${folderUri[0].fsPath}`);
+                    const projectPath = folderUri[0].fsPath;
+                    logger.info(`打开项目文件夹: ${projectPath}`);
+                    
+                    // 设置待激活标记，以便重新加载后打开主 HML 文件
+                    await this.context.globalState.update('pendingProjectActivation', {
+                        projectPath: projectPath,
+                        projectName: path.basename(projectPath),
+                        timestamp: Date.now()
+                    });
+                    
                     await vscode.commands.executeCommand('vscode.openFolder', folderUri[0]);
                 }
             } catch (error) {
