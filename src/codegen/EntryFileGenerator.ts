@@ -26,7 +26,7 @@ export class EntryFileGenerator {
         }
 
         const romfsRootName = RomfsConfig.getRootName();
-        const mainViewId = `${projectName}View`;
+        const mainViewId = `${projectName}MainView`;
         const content = `#include "gui_api.h"
 #include "gui_view.h"
 #include "gui_components_init.h"
