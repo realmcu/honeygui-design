@@ -51,6 +51,7 @@ template-projects/**/*.a
 node_modules/**
 
 # 核心依赖
+!node_modules/bmp-js/**
 !node_modules/chokidar/**
 !node_modules/fast-xml-parser/**
 !node_modules/jpeg-js/**
