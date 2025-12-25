@@ -9,6 +9,7 @@ import * as fs from 'fs';
 import { CollaborationService } from './CollaborationService';
 import { StatusBarManager } from '../ui/StatusBarManager';
 import { ProjectUtils } from '../utils/ProjectUtils';
+import { HmlTemplateManager } from '../hml/HmlTemplateManager';
 
 /**
  * HoneyGUI命令管理器
@@ -253,9 +254,9 @@ export class CommandManager {
                 });
                 
                 if (designName) {
-                    // 读取项目配置获取分辨率
+                    // 读取项目配置
                     const projectConfig = ProjectUtils.loadProjectConfig(workspaceRoot);
-                    const { width, height } = ProjectUtils.parseResolution(projectConfig.resolution);
+                    const resolution = projectConfig.resolution || '480X272';
                     
                     // 创建HML文件（直接放在 ui/ 目录下）
                     const hmlFilePath = path.join(uiDir, `${designName}.hml`);
@@ -266,18 +267,14 @@ export class CommandManager {
                         return;
                     }
                     
-                    const viewName = `${designName}View`;
-                    const defaultContent = `<?xml version="1.0" encoding="UTF-8"?>
-<hml>
-    <meta>
-        <project name="${designName}" resolution="${width}X${height}" />
-    </meta>
-    <view>
-        <hg_view id="${viewName}" x="0" y="0" width="${width}" height="${height}" backgroundColor="#000000">
-            <!-- 在这里添加您的组件 -->
-        </hg_view>
-    </view>
-</hml>`;
+                    // 使用 HmlTemplateManager 生成内容
+                    const defaultContent = HmlTemplateManager.generateMainHml(
+                        designName,
+                        resolution,
+                        projectConfig.appId,
+                        projectConfig.minSdk,
+                        projectConfig.pixelMode
+                    );
                     
                     fs.writeFileSync(hmlFilePath, defaultContent, 'utf8');
                     
