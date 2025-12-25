@@ -276,9 +276,12 @@
   "scripts": {
     "test": "npm run test:templates",
     "test:templates": "npm run compile && node ./out/test/templates/run-templates-tests.js",
+    "check:deps": "node scripts/check-dependencies.js",
+    "update:deps": "node scripts/update-vscodeignore.js",
+    "prepackage": "npm run check:deps",
     "test:video-formats": "npx ts-node scripts/test-three-formats.ts",
     "test:video-formats:quick": "node test-formats-quick.js",
-    "vscode:prepublish": "npm run compile && npm run build:webview",
+    "vscode:prepublish": "npm run update:deps && npm run compile && npm run build:webview",
     "compile": "npm run clean:src && tsc -p ./",
     "watch": "tsc -watch -p ./",
     "lint": "eslint . --ext .ts,.tsx",
