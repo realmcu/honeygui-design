@@ -144,6 +144,14 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
     if (has3D) {
       code += `#include "gui_lite3d.h"\n`;
       code += `#include "gui_vfs.h"\n`;
+      
+      // 检查是否有启用触摸交互的 3D 模型
+      const hasTouchRotation = this.components.some(c => 
+        c.type === 'hg_3d' && (c.data?.touchRotationEnabled as boolean)
+      );
+      if (hasTouchRotation) {
+        code += `#include "tp_algo.h"\n`;
+      }
     }
 
     headers.forEach(header => {
@@ -194,31 +202,16 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
 
     code += `\n`;
 
-    // 生成所有 3D 模型的全局变换回调函数
+    // 生成所有 3D 模型的回调函数（包括动画）
     const has3DComponents = this.components.some(c => c.type === 'hg_3d');
     if (has3DComponents) {
-      code += `// 3D 模型全局变换回调函数\n`;
+      code += `// 3D 模型回调函数\n`;
       this.components.forEach(comp => {
         if (comp.type === 'hg_3d') {
-          const worldX = comp.data?.worldX ?? 0;
-          const worldY = comp.data?.worldY ?? 0;
-          const worldZ = comp.data?.worldZ ?? 30;
-          const rotationX = comp.data?.rotationX ?? 0;
-          const rotationY = comp.data?.rotationY ?? 0;
-          const rotationZ = comp.data?.rotationZ ?? 0;
-          const scale = comp.data?.scale ?? 5;
-          const cameraPosX = comp.data?.cameraPosX ?? 0;
-          const cameraPosY = comp.data?.cameraPosY ?? 0;
-          const cameraPosZ = comp.data?.cameraPosZ ?? 0;
-          const cameraLookX = comp.data?.cameraLookX ?? 0;
-          const cameraLookY = comp.data?.cameraLookY ?? 0;
-          const cameraLookZ = comp.data?.cameraLookZ ?? 1;
-          
-          code += `static void ${comp.id}_global_cb(l3_model_base_t *this)\n`;
-          code += `{\n`;
-          code += `    l3_camera_UVN_initialize(&this->camera, l3_4d_point(${cameraPosX}, ${cameraPosY}, ${cameraPosZ}), l3_4d_point(${cameraLookX}, ${cameraLookY}, ${cameraLookZ}), 1, 32767, 90, this->viewPortWidth, this->viewPortHeight);\n`;
-          code += `    l3_world_initialize(&this->world, ${worldX}, ${worldY}, ${worldZ}, ${rotationX}, ${rotationY}, ${rotationZ}, ${scale});\n`;
-          code += `}\n\n`;
+          const generator = ComponentGeneratorFactory.getGenerator('hg_3d');
+          if ('generateCallbacks' in generator) {
+            code += (generator as any).generateCallbacks(comp);
+          }
         }
       });
     }

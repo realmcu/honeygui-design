@@ -62,7 +62,20 @@ export const calculateComponentStyle = (
     const hasChildWithOverflow = allComponents?.some(
       c => c.parent === component.id && c.showOverflow
     );
-    overflowValue = (isDraggingChild || hasChildWithOverflow) ? 'visible' : 'hidden';
+    // 检查是否有子组件超出容器范围
+    const hasOverflowingChild = allComponents?.some(c => {
+      if (c.parent !== component.id) return false;
+      const childRight = c.position.x + c.position.width;
+      const childBottom = c.position.y + c.position.height;
+      return c.position.x < 0 || c.position.y < 0 || 
+             childRight > component.position.width || 
+             childBottom > component.position.height;
+    });
+    
+    // 如果有溢出的子组件，在选中模式下显示溢出内容，方便用户操作
+    overflowValue = (isDraggingChild || hasChildWithOverflow || (hasOverflowingChild && editingMode === 'select')) 
+      ? 'visible' 
+      : 'hidden';
   } else if (borderRadiusValue) {
     overflowValue = 'hidden';
   }
@@ -102,7 +115,12 @@ export const createComponentHandlers = (
   onMouseLeave: () => void,
   onContextMenu?: (e: React.MouseEvent, id: string) => void
 ) => ({
-  onMouseDown: (e: React.MouseEvent) => onMouseDown(e, componentId),
+  onMouseDown: (e: React.MouseEvent) => {
+    // 只响应鼠标左键
+    if (e.button === 0) {
+      onMouseDown(e, componentId);
+    }
+  },
   onMouseEnter,
   onMouseLeave,
   onContextMenu: onContextMenu ? (e: React.MouseEvent) => onContextMenu(e, componentId) : undefined,

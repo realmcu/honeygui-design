@@ -227,6 +227,89 @@ export const Hg3DProperties: React.FC<PropertyPanelProps> = ({ component, onUpda
                 />
               </div>
             </div>
+
+            <div className="property-section">
+              <h4>交互动画</h4>
+
+              <div className="property-item">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={component.data?.touchRotationEnabled ?? false}
+                    onChange={(e) => onUpdate({ data: { ...component.data, touchRotationEnabled: e.target.checked } })}
+                    style={{ marginRight: '8px' }}
+                  />
+                  启用触摸旋转
+                </label>
+                <div style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '2px' }}>
+                  在设计器中可用鼠标中键拖拽预览，在设备上响应触摸
+                </div>
+              </div>
+
+              {component.data?.touchRotationEnabled && (
+                <>
+                  <div className="property-item">
+                    <label>旋转轴</label>
+                    <PropertyEditor
+                      type="select"
+                      value={component.data?.touchRotationAxis ?? 'y'}
+                      onChange={(value) => onUpdate({ data: { ...component.data, touchRotationAxis: value } })}
+                      options={['x', 'y', 'z']}
+                    />
+                  </div>
+
+                  <div className="property-item">
+                    <label>灵敏度</label>
+                    <PropertyEditor
+                      type="number"
+                      value={component.data?.touchRotationSensitivity ?? 5.0}
+                      onChange={(value) => onUpdate({ data: { ...component.data, touchRotationSensitivity: value } })}
+                    />
+                    <div style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '2px' }}>
+                      值越大旋转越慢（默认 5.0）
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <div className="property-item" style={{ marginTop: '16px' }}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={component.data?.autoRotationEnabled ?? false}
+                    onChange={(e) => onUpdate({ data: { ...component.data, autoRotationEnabled: e.target.checked } })}
+                    style={{ marginRight: '8px' }}
+                  />
+                  启用自动旋转
+                </label>
+              </div>
+
+              {component.data?.autoRotationEnabled && (
+                <>
+                  <div className="property-item">
+                    <label>旋转轴</label>
+                    <PropertyEditor
+                      type="select"
+                      value={component.data?.autoRotationAxis ?? 'y'}
+                      onChange={(value) => onUpdate({ data: { ...component.data, autoRotationAxis: value } })}
+                      options={['x', 'y', 'z']}
+                    />
+                  </div>
+
+                  <div className="property-item">
+                    <label>旋转速度</label>
+                    <PropertyEditor
+                      type="number"
+                      value={component.data?.autoRotationSpeed ?? 1.0}
+                      onChange={(value) => onUpdate({ data: { ...component.data, autoRotationSpeed: value } })}
+                    />
+                    <div style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '2px' }}>
+                      每帧旋转的角度，正值逆时针（默认 1.0）
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </>
         )}
 

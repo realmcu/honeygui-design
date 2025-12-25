@@ -16,6 +16,11 @@ export const Model3DWidget: React.FC<WidgetProps> = ({ component, style, handler
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   
+  // 交互动画状态
+  const isDraggingRef = useRef(false);
+  const lastMousePosRef = useRef({ x: 0, y: 0 });
+  const rotationAngleRef = useRef({ x: 0, y: 0, z: 0 });
+  
   const modelPath = component.data?.modelPath as string;
   
   // 自动查找同名MTL文件（将 .obj 替换为 .mtl）
@@ -41,6 +46,21 @@ export const Model3DWidget: React.FC<WidgetProps> = ({ component, style, handler
   const cameraLookY = (component.data?.cameraLookY as number) ?? 0;
   const cameraLookZ = (component.data?.cameraLookZ as number) ?? 1;
   const cameraFov = 90; // 固定90度，与GUI引擎一致
+  
+  // 交互动画配置
+  const touchRotationEnabled = component.data?.touchRotationEnabled as boolean ?? false;
+  const touchRotationAxis = (component.data?.touchRotationAxis as string) ?? 'y';
+  const touchRotationSensitivity = (component.data?.touchRotationSensitivity as number) ?? 5.0;
+  const autoRotationEnabled = component.data?.autoRotationEnabled as boolean ?? false;
+  const autoRotationAxis = (component.data?.autoRotationAxis as string) ?? 'y';
+  const autoRotationSpeed = (component.data?.autoRotationSpeed as number) ?? 1.0; // 角度/帧
+
+  // 当动画被禁用时，重置旋转角度
+  useEffect(() => {
+    if (!touchRotationEnabled && !autoRotationEnabled) {
+      rotationAngleRef.current = { x: 0, y: 0, z: 0 };
+    }
+  }, [touchRotationEnabled, autoRotationEnabled]);
 
   // 监听宽高变化，更新渲染器和相机
   useEffect(() => {
@@ -318,6 +338,25 @@ export const Model3DWidget: React.FC<WidgetProps> = ({ component, style, handler
     const animate = () => {
       animationIdRef.current = requestAnimationFrame(animate);
       
+      // 自动旋转动画（角度制，正值逆时针，Three.js 需要取反）
+      if (autoRotationEnabled && modelRef.current) {
+        const speedInRadians = (autoRotationSpeed * Math.PI) / 180; // 转换为弧度
+        if (autoRotationAxis === 'x') {
+          rotationAngleRef.current.x -= speedInRadians; // 取反以匹配设备旋转方向
+        } else if (autoRotationAxis === 'y') {
+          rotationAngleRef.current.y -= speedInRadians; // 取反以匹配设备旋转方向
+        } else if (autoRotationAxis === 'z') {
+          rotationAngleRef.current.z -= speedInRadians; // 取反以匹配设备旋转方向
+        }
+      }
+      
+      // 应用旋转（叠加在初始旋转之上）
+      if (modelRef.current) {
+        modelRef.current.rotation.x = Math.PI + rotationX + rotationAngleRef.current.x;
+        modelRef.current.rotation.y = rotationY + rotationAngleRef.current.y;
+        modelRef.current.rotation.z = rotationZ + rotationAngleRef.current.z;
+      }
+      
       // 更新骨骼动画（如果有）
       if (modelRef.current) {
         modelRef.current.traverse((child: any) => {
@@ -348,10 +387,66 @@ export const Model3DWidget: React.FC<WidgetProps> = ({ component, style, handler
         sceneRef.current.clear();
       }
     };
-  }, [modelUri, mtlUri, worldX, worldY, worldZ, rotationX, rotationY, rotationZ, scale, cameraPosX, cameraPosY, cameraPosZ, cameraLookX, cameraLookY, cameraLookZ]);
+  }, [modelUri, mtlUri, worldX, worldY, worldZ, rotationX, rotationY, rotationZ, scale, cameraPosX, cameraPosY, cameraPosZ, cameraLookX, cameraLookY, cameraLookZ, autoRotationEnabled, autoRotationAxis, autoRotationSpeed]);
+
+  // 触摸旋转交互
+  const handleMouseDown = (e: React.MouseEvent) => {
+    handlers.onMouseDown(e);
+    // 只响应鼠标中键（滚轮按下）
+    if (touchRotationEnabled && e.button === 1) {
+      isDraggingRef.current = true;
+      lastMousePosRef.current = { x: e.clientX, y: e.clientY };
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (touchRotationEnabled && isDraggingRef.current) {
+      const deltaX = e.clientX - lastMousePosRef.current.x;
+      const deltaY = e.clientY - lastMousePosRef.current.y;
+      
+      // 取反以匹配设备旋转方向（设备上正值逆时针，Three.js 需要取反）
+      if (touchRotationAxis === 'x') {
+        rotationAngleRef.current.x -= deltaY / touchRotationSensitivity;
+      } else if (touchRotationAxis === 'y') {
+        rotationAngleRef.current.y -= deltaX / touchRotationSensitivity;
+      } else if (touchRotationAxis === 'z') {
+        rotationAngleRef.current.z -= deltaX / touchRotationSensitivity;
+      }
+      
+      lastMousePosRef.current = { x: e.clientX, y: e.clientY };
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
+  const handleMouseUp = (e: React.MouseEvent) => {
+    if (touchRotationEnabled && isDraggingRef.current && e.button === 1) {
+      isDraggingRef.current = false;
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
+  const handleMouseLeave = () => {
+    handlers.onMouseLeave();
+    if (touchRotationEnabled && isDraggingRef.current) {
+      isDraggingRef.current = false;
+    }
+  };
 
   return (
-    <div key={component.id} style={style} {...handlers}>
+    <div 
+      key={component.id} 
+      style={style}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseEnter={handlers.onMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onContextMenu={handlers.onContextMenu}
+    >
       {modelPath ? (
         <div style={{ width: '100%', height: '100%', position: 'relative' }}>
           <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
