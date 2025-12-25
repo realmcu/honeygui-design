@@ -443,9 +443,9 @@ export class CreateProjectPanel {
                 timestamp: Date.now()
             });
 
-            // 自动打开项目文件夹
-            // 注意：这会导致VSCode重新加载扩展，当前上下文将失效
-            await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(projectPath), false);
+            // 自动打开工作区文件
+            const workspaceFile = path.join(projectPath, `${projectName}.code-workspace`);
+            await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(workspaceFile), false);
 
             // 注意：代码执行到这里，扩展会被重新加载
             // 实际的激活逻辑将在 extension.ts 的 activate 函数中处理
@@ -526,6 +526,28 @@ export class CreateProjectPanel {
             'utf8'
         );
 
+        // 创建 VSCode 工作区文件
+        const workspaceConfig = {
+            folders: [
+                { path: '.' }
+            ],
+            settings: {
+                'files.associations': {
+                    '*.hml': 'xml'
+                }
+            },
+            extensions: {
+                recommendations: [
+                    'realmcu.honeygui-visual-designer'
+                ]
+            }
+        };
+        fs.writeFileSync(
+            path.join(projectPath, `${projectName}.code-workspace`),
+            JSON.stringify(workspaceConfig, null, 2),
+            'utf8'
+        );
+
         // SDK 路径已保存到 project.json，项目将直接引用 SDK 而不拷贝文件
         logger.info(`[CreateProjectPanel] Project created with target engine: ${targetEngine}, SDK path: ${projectConfig.honeyguiSdkPath || 'default'}, romfs base addr: ${projectConfig.romfsBaseAddr}`);
     }
@@ -598,6 +620,28 @@ export class CreateProjectPanel {
                     fs.writeFileSync(projectJsonPath, JSON.stringify(projectConfig, null, 2), 'utf8');
                     logger.info(`[CreateProjectPanel] SDK path and romfs address added to project.json: ${sdkPath}, ${projectConfig.romfsBaseAddr}`);
                 }
+
+                // 创建 VSCode 工作区文件
+                const workspaceConfig = {
+                    folders: [
+                        { path: '.' }
+                    ],
+                    settings: {
+                        'files.associations': {
+                            '*.hml': 'xml'
+                        }
+                    },
+                    extensions: {
+                        recommendations: [
+                            'realmcu.honeygui-visual-designer'
+                        ]
+                    }
+                };
+                fs.writeFileSync(
+                    path.join(projectPath, `${projectName}.code-workspace`),
+                    JSON.stringify(workspaceConfig, null, 2),
+                    'utf8'
+                );
             });
 
             // 显示成功消息
@@ -613,8 +657,9 @@ export class CreateProjectPanel {
                 timestamp: Date.now()
             });
 
-            // 自动打开项目文件夹
-            await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(projectPath), false);
+            // 自动打开工作区文件
+            const workspaceFile = path.join(projectPath, `${projectName}.code-workspace`);
+            await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(workspaceFile), false);
 
             // 关闭Webview
             this.dispose();
