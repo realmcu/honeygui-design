@@ -31,20 +31,20 @@ export class CodeGenerator {
             throw new Error(`UI目录不存在: ${uiDir}`);
         }
 
+        // 递归扫描 ui/ 下所有 .hml 文件
         const hmlFiles: string[] = [];
-        const designDirs = fs.readdirSync(uiDir, { withFileTypes: true })
-            .filter(dirent => dirent.isDirectory())
-            .map(dirent => dirent.name);
-
-        for (const designName of designDirs) {
-            const designDir = path.join(uiDir, designName);
-            const files = fs.readdirSync(designDir);
-            for (const file of files) {
-                if (file.endsWith('.hml')) {
-                    hmlFiles.push(path.join(designDir, file));
+        const scanDir = (dir: string) => {
+            const entries = fs.readdirSync(dir, { withFileTypes: true });
+            for (const entry of entries) {
+                const fullPath = path.join(dir, entry.name);
+                if (entry.isFile() && entry.name.endsWith('.hml')) {
+                    hmlFiles.push(fullPath);
+                } else if (entry.isDirectory()) {
+                    scanDir(fullPath);
                 }
             }
-        }
+        };
+        scanDir(uiDir);
 
         return hmlFiles;
     }
