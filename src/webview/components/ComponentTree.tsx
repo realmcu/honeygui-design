@@ -28,21 +28,42 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
   const children = components.filter(c => c.parent === componentId);
   const hasChildren = children.length > 0;
 
+  const clickTimerRef = React.useRef<number | null>(null);
+
   const handleSelect = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const multi = e.ctrlKey || e.metaKey || e.shiftKey;
-    if (multi) {
-      const next = selectedComponents.includes(componentId)
-        ? selectedComponents.filter((id: string) => id !== componentId)
-        : [...selectedComponents, componentId];
-      setSelectedComponents(next);
-    } else {
-      selectComponent(componentId);
+    
+    // 清除之前的定时器，防止双击时触发单击逻辑
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = null;
     }
+    
+    const multi = e.ctrlKey || e.metaKey || e.shiftKey;
+    
+    // 延迟执行单击逻辑，给双击事件判断的时间
+    clickTimerRef.current = window.setTimeout(() => {
+      if (multi) {
+        const next = selectedComponents.includes(componentId)
+          ? selectedComponents.filter((id: string) => id !== componentId)
+          : [...selectedComponents, componentId];
+        setSelectedComponents(next);
+      } else {
+        selectComponent(componentId);
+      }
+      clickTimerRef.current = null;
+    }, 200);
   };
 
   const handleDoubleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    
+    // 取消单击的延迟执行
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = null;
+    }
+    
     selectComponent(componentId);
     centerViewOnCanvas(componentId);
   };

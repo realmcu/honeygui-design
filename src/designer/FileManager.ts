@@ -172,6 +172,29 @@ export class FileManager {
      */
 
     /**
+     * 递归扫描目录下所有 HML 文件
+     */
+    private scanHmlFilesRecursive(dir: string, projectRoot: string): Array<{path: string, name: string, relativePath: string}> {
+        const results: Array<{path: string, name: string, relativePath: string}> = [];
+        if (!fs.existsSync(dir)) return results;
+
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        for (const entry of entries) {
+            const fullPath = path.join(dir, entry.name);
+            if (entry.isDirectory()) {
+                results.push(...this.scanHmlFilesRecursive(fullPath, projectRoot));
+            } else if (entry.isFile() && entry.name.endsWith('.hml')) {
+                results.push({
+                    path: fullPath,
+                    name: entry.name,
+                    relativePath: path.relative(projectRoot, fullPath)
+                });
+            }
+        }
+        return results;
+    }
+
+    /**
      * 扫描项目中所有 HML 文件
      */
     private scanAllHmlFiles(currentFilePath: string): Array<{path: string, name: string, relativePath: string}> {
@@ -181,33 +204,7 @@ export class FileManager {
         }
 
         const uiDir = ProjectUtils.getUiDir(projectRoot);
-        if (!fs.existsSync(uiDir)) {
-            return [];
-        }
-
-        const allFiles: Array<{path: string, name: string, relativePath: string}> = [];
-        const designDirs = fs.readdirSync(uiDir, { withFileTypes: true })
-            .filter(dirent => dirent.isDirectory())
-            .map(dirent => dirent.name);
-
-        for (const designName of designDirs) {
-            const designDir = path.join(uiDir, designName);
-            const files = fs.readdirSync(designDir);
-            
-            for (const file of files) {
-                if (file.endsWith('.hml')) {
-                    const hmlPath = path.join(designDir, file);
-                    const relativePath = path.relative(projectRoot, hmlPath);
-                    allFiles.push({
-                        path: hmlPath,
-                        name: file,
-                        relativePath: relativePath
-                    });
-                }
-            }
-        }
-
-        return allFiles;
+        return this.scanHmlFilesRecursive(uiDir, projectRoot);
     }
 
     /**
@@ -220,67 +217,56 @@ export class FileManager {
         }
 
         const uiDir = ProjectUtils.getUiDir(projectRoot);
-        if (!fs.existsSync(uiDir)) {
-            return [];
-        }
-
+        const hmlFiles = this.scanHmlFilesRecursive(uiDir, projectRoot);
         const allViews: Array<{id: string, name: string, file: string, edges: Array<{target: string, event: string, switchOutStyle?: string, switchInStyle?: string}>}> = [];
-        const designDirs = fs.readdirSync(uiDir, { withFileTypes: true })
-            .filter(dirent => dirent.isDirectory())
-            .map(dirent => dirent.name);
 
-        for (const designName of designDirs) {
-            const designDir = path.join(uiDir, designName);
-            const files = fs.readdirSync(designDir);
-            
-            for (const file of files) {
-                if (file.endsWith('.hml')) {
-                    const hmlPath = path.join(designDir, file);
-                    try {
-                        const tempController = new HmlController();
-                        const doc = await tempController.loadFile(hmlPath);
-                        
-                        // 提取所有 hg_view 及其跳转关系
-                        const extractViews = (components: any[]): void => {
-                            for (const comp of components) {
-                                if (comp.type === 'hg_view') {
-                                    // 提取跳转边
-                                    const edges: Array<{target: string, event: string, switchOutStyle?: string, switchInStyle?: string}> = [];
-                                    if (comp.eventConfigs) {
-                                        for (const eventConfig of comp.eventConfigs) {
-                                            for (const action of eventConfig.actions || []) {
-                                                if (action.type === 'switchView' && action.target) {
-                                                    edges.push({
-                                                        target: action.target,
-                                                        event: eventConfig.type,
-                                                        switchOutStyle: action.switchOutStyle,
-                                                        switchInStyle: action.switchInStyle,
-                                                    });
-                                                }
-                                            }
+        for (const hmlFile of hmlFiles) {
+            try {
+                const tempController = new HmlController();
+                const doc = await tempController.loadFile(hmlFile.path);
+                
+                // 从相对路径提取文件标识（去掉 .hml 后缀）
+                const fileId = hmlFile.name.replace('.hml', '');
+                
+                // 提取所有 hg_view 及其跳转关系
+                const extractViews = (components: any[]): void => {
+                    for (const comp of components) {
+                        if (comp.type === 'hg_view') {
+                            // 提取跳转边
+                            const edges: Array<{target: string, event: string, switchOutStyle?: string, switchInStyle?: string}> = [];
+                            if (comp.eventConfigs) {
+                                for (const eventConfig of comp.eventConfigs) {
+                                    for (const action of eventConfig.actions || []) {
+                                        if (action.type === 'switchView' && action.target) {
+                                            edges.push({
+                                                target: action.target,
+                                                event: eventConfig.type,
+                                                switchOutStyle: action.switchOutStyle,
+                                                switchInStyle: action.switchInStyle,
+                                            });
                                         }
                                     }
-                                    
-                                    allViews.push({
-                                        id: comp.id,
-                                        name: comp.name || comp.id,
-                                        file: designName,
-                                        edges,
-                                    });
-                                }
-                                if (comp.children && comp.children.length > 0) {
-                                    extractViews(comp.children);
                                 }
                             }
-                        };
-                        
-                        if (doc.view && doc.view.components) {
-                            extractViews(doc.view.components);
+                            
+                            allViews.push({
+                                id: comp.id,
+                                name: comp.name || comp.id,
+                                file: fileId,
+                                edges,
+                            });
                         }
-                    } catch (err) {
-                        logger.warn(`扫描 ${hmlPath} 失败: ${err}`);
+                        if (comp.children && comp.children.length > 0) {
+                            extractViews(comp.children);
+                        }
                     }
+                };
+                
+                if (doc.view && doc.view.components) {
+                    extractViews(doc.view.components);
                 }
+            } catch (err) {
+                logger.warn(`扫描 ${hmlFile.path} 失败: ${err}`);
             }
         }
 
