@@ -640,9 +640,22 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     // 实际缩放比例（与 DesignerCanvas 中的 transform 一致）
     const effectiveZoom = state.zoom / (window.devicePixelRatio || 1);
     
+    // 计算组件的绝对位置（累加所有父组件的偏移）
+    let absX = component.position.x;
+    let absY = component.position.y;
+    let parentId = component.parent;
+    while (parentId) {
+      const parent = state.components.find(c => c.id === parentId);
+      if (parent && parent.position) {
+        absX += parent.position.x;
+        absY += parent.position.y;
+      }
+      parentId = parent?.parent || null;
+    }
+    
     // 计算组件中心点（在画布坐标系中）
-    const compCenterX = component.position.x + component.position.width / 2;
-    const compCenterY = component.position.y + component.position.height / 2;
+    const compCenterX = absX + component.position.width / 2;
+    const compCenterY = absY + component.position.height / 2;
     
     // 计算需要的偏移量，使组件中心对齐视口中心
     // 公式：视口中心 = 组件中心 * effectiveZoom + offset
