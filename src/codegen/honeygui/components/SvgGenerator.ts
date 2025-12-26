@@ -10,9 +10,16 @@ export class SvgGenerator implements ComponentCodeGenerator {
     const parentRef = context.getParentRef(component);
     const { x, y } = component.position;
     
-    const src = component.data?.src || '';
+    let src = component.data?.src || '';
+    // 去掉 assets/ 前缀
+    src = src.replace(/^assets\//, '');
+    // 确保路径以 / 开头
+    if (!src.startsWith('/')) {
+      src = '/' + src;
+    }
 
-    return `${indentStr}${component.id} = gui_svg_create_from_file(${parentRef}, "${component.name}", "${src}", ${x}, ${y});\n`;
+    // 使用 gui_svg_create_from_file 创建 SVG
+    return `${indentStr}${component.id} = (gui_obj_t *)gui_svg_create_from_file(${parentRef}, "${component.name}", "${src}", ${x}, ${y});\n`;
   }
 
   generatePropertySetters(component: Component, indent: number, _context: GeneratorContext): string {
@@ -21,12 +28,12 @@ export class SvgGenerator implements ComponentCodeGenerator {
 
     // 缩放
     if (component.style?.scale !== undefined) {
-      code += `${indentStr}gui_svg_set_scale(${component.id}, ${component.style.scale});\n`;
+      code += `${indentStr}gui_svg_set_scale((gui_svg_t *)${component.id}, ${component.style.scale}f);\n`;
     }
 
     // 透明度
     if (component.style?.opacity !== undefined) {
-      code += `${indentStr}${component.id}->opacity_value = ${component.style.opacity};\n`;
+      code += `${indentStr}gui_svg_set_opacity((gui_svg_t *)${component.id}, ${component.style.opacity});\n`;
     }
 
     return code;

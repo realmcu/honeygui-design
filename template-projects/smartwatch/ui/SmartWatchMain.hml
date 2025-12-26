@@ -33,9 +33,10 @@
                     <action type="switchView" target="untitledView" switchOutStyle="SWITCH_OUT_TO_LEFT_USE_TRANSLATION" switchInStyle="SWITCH_IN_FROM_RIGHT_USE_TRANSLATION" />
                 </event>
             </events>
-            <hg_image id="hg_image_1766487405785_tkxn" x="54" y="113" width="100" height="106" src="assets/UI_app_list/app_activity_icon.png" zIndex="1" />
-            <hg_image id="hg_image_1766485021368_l76l" x="281" y="212" width="100" height="106" src="assets/UI_app_list/app_activity_icon.png" zIndex="1" />
-            <hg_image id="hg_image_1766487258446_5ckq" x="206" y="299" width="100" height="100" src="assets/UI_app_list/app_compass_icon.png" zIndex="1" />
+            <hg_image id="hg_image_1766487405785_tkxn" x="68" y="190" width="100" height="106" src="assets/UI_app_list/app_activity_icon.png" zIndex="1" />
+            <hg_image id="hg_image_1766485021368_l76l" x="281" y="190" width="100" height="106" src="assets/UI_app_list/app_activity_icon.png" zIndex="1" />
+            <hg_image id="hg_image_1766487258446_5ckq" x="183" y="313" width="100" height="100" src="assets/UI_app_list/app_compass_icon.png" zIndex="1" />
+            <hg_image id="hg_image_1766738140163_ufor" x="155" y="45" width="100" height="100" src="assets/test.svg" zIndex="1" />
         </hg_view>
     </view>
 </hml>

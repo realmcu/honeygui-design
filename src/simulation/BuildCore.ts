@@ -108,6 +108,11 @@ export class BuildCore {
 
         this.logger.log(`图片转换完成: ${imageResults.length} 个`);
 
+        // 拷贝 SVG 资源（不需要转换）
+        this.logger.log('拷贝 SVG 资源...');
+        const svgCount = this.copySvgAssets(assetsDir, outputDir);
+        this.logger.log(`SVG 拷贝完成: ${svgCount} 个`);
+
         // 转换视频资源
         this.logger.log('转换视频资源...');
         // 传递日志回调，让 VideoConverterService 的日志输出到 Output Channel
@@ -678,6 +683,37 @@ if os.path.exists(os.path.join(PROJECT_SRC, 'SConscript')):
             }
             return quality;
         }
+    }
+
+    /**
+     * 拷贝 SVG 资源（不需要转换，直接拷贝）
+     */
+    protected copySvgAssets(assetsDir: string, outputDir: string): number {
+        let count = 0;
+        
+        const scanDir = (dir: string) => {
+            if (!fs.existsSync(dir)) return;
+            
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+                const fullPath = path.join(dir, entry.name);
+                if (entry.isDirectory()) {
+                    scanDir(fullPath);
+                } else if (entry.name.toLowerCase().endsWith('.svg')) {
+                    const relativePath = path.relative(assetsDir, fullPath);
+                    const destPath = path.join(outputDir, relativePath);
+                    const destDir = path.dirname(destPath);
+                    
+                    if (!fs.existsSync(destDir)) {
+                        fs.mkdirSync(destDir, { recursive: true });
+                    }
+                    fs.copyFileSync(fullPath, destPath);
+                    count++;
+                }
+            }
+        };
+        
+        scanDir(assetsDir);
+        return count;
     }
 
     protected copyDirectory(src: string, dest: string): void {

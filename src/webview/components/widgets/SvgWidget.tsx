@@ -9,7 +9,7 @@ export const SvgWidget: React.FC<WidgetProps> = ({ component, style, handlers })
   return (
     <div style={{ ...style, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...handlers}>
       {webviewUri ? (
-        <img src={webviewUri} style={{ width: '100%', height: '100%', objectFit: 'contain' }} alt="SVG" />
+        <img src={webviewUri} style={{ width: '100%', height: '100%', objectFit: 'contain' }} alt="SVG" draggable={false} />
       ) : (
         <span style={{ fontSize: 32 }}>🎨</span>
       )}

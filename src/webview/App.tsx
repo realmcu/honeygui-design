@@ -10,7 +10,7 @@ import { ViewRelationModal } from './components/ViewRelationModal';
 import { Component, ComponentType } from './types';
 import useKeyboardShortcuts from './utils/keyboardShortcuts';
 import { getAbsolutePosition, findComponentAtPosition, isDropTargetType } from './utils/componentUtils';
-import { createImageComponentAtPosition, create3DComponentAtPosition, createVideoComponentAtPosition } from './services/messageHandler';
+import { createImageComponentAtPosition, create3DComponentAtPosition, createVideoComponentAtPosition, createSvgComponentAtPosition } from './services/messageHandler';
 import { processImageFiles } from './utils/fileUtils';
 import { parseObjDependencies, parseMtlDependencies, findDependencyFiles } from './utils/objDependencyParser';
 import './App.css';
@@ -189,6 +189,20 @@ const App: React.FC = () => {
               message.targetContainerId,
               store.components,
               store.addComponent
+            );
+          }
+          break;
+
+        case 'createSvgComponent':
+          if (message.svgPath && message.targetContainerId && message.dropPosition) {
+            const store = useDesignerStore.getState();
+            createSvgComponentAtPosition(
+              message.svgPath,
+              message.dropPosition,
+              message.targetContainerId,
+              store.components,
+              store.addComponent,
+              message.size
             );
           }
           break;
@@ -501,6 +515,7 @@ const App: React.FC = () => {
         const ext = assetPath.split('.').pop()?.toLowerCase();
         const is3DModel = ext && ['obj', 'gltf', 'glb'].includes(ext);
         const isVideo = ext && ['mp4', 'avi', 'mov', 'mkv', 'webm'].includes(ext);
+        const isSvg = ext === 'svg';
         
         if (is3DModel) {
           // 3D 模型：直接创建组件
@@ -515,6 +530,14 @@ const App: React.FC = () => {
           api.postMessage({
             command: 'createVideoComponent',
             videoPath: `assets/${assetPath}`,
+            dropPosition: { x, y },
+            targetContainerId: targetContainer.id
+          });
+        } else if (isSvg) {
+          // SVG：创建 SVG 组件
+          api.postMessage({
+            command: 'createSvgComponent',
+            svgPath: `assets/${assetPath}`,
             dropPosition: { x, y },
             targetContainerId: targetContainer.id
           });

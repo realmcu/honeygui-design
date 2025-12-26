@@ -9,13 +9,14 @@ import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js';
 
 // 文件类型分类
-const IMAGE_EXTS = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'webp'];
+const IMAGE_EXTS = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'];
+const SVG_EXTS = ['svg'];
 const VIDEO_EXTS = ['mp4', 'avi', 'mov', 'mkv', 'webm'];
 const MODEL_EXTS = ['gltf', 'glb', 'obj'];  // 3D 模型主文件
 const FONT_EXTS = ['ttf', 'otf', 'woff', 'woff2'];  // 字体文件
 const MODEL_DEP_EXTS = ['mtl', 'bin'];  // 3D 模型依赖文件（材质文件、二进制数据）
 
-type AssetCategory = 'all' | 'images' | 'videos' | 'models' | 'fonts';
+type AssetCategory = 'all' | 'images' | 'svgs' | 'videos' | 'models' | 'fonts';
 
 // 视频预览组件
 const VideoPreview: React.FC<{ videoPath: string }> = ({ videoPath }) => {
@@ -325,6 +326,7 @@ const getFileExt = (name: string): string => {
 const getAssetCategory = (name: string): AssetCategory | null => {
   const ext = getFileExt(name);
   if (IMAGE_EXTS.includes(ext)) return 'images';
+  if (SVG_EXTS.includes(ext)) return 'svgs';
   if (VIDEO_EXTS.includes(ext)) return 'videos';
   if (MODEL_EXTS.includes(ext)) return 'models';
   if (FONT_EXTS.includes(ext)) return 'fonts';
@@ -375,6 +377,7 @@ const AssetsPanel: React.FC = () => {
     const result: Record<AssetCategory, AssetFile[]> = {
       all: [],
       images: [],
+      svgs: [],
       videos: [],
       models: [],
       fonts: []
@@ -422,6 +425,7 @@ const AssetsPanel: React.FC = () => {
   const counts = React.useMemo(() => ({
     all: categorizedAssets.all.length,
     images: categorizedAssets.images.length,
+    svgs: categorizedAssets.svgs.length,
     videos: categorizedAssets.videos.length,
     models: categorizedAssets.models.length,
     fonts: categorizedAssets.fonts.length
@@ -467,7 +471,7 @@ const AssetsPanel: React.FC = () => {
 
   const renderAssetItem = (asset: AssetFile) => {
     const ext = getFileExt(asset.name);
-    const isImage = IMAGE_EXTS.includes(ext);
+    const isImage = IMAGE_EXTS.includes(ext) || SVG_EXTS.includes(ext);
     const isVideo = VIDEO_EXTS.includes(ext);
     const isModel = MODEL_EXTS.includes(ext);
     const isFont = FONT_EXTS.includes(ext);
@@ -488,6 +492,7 @@ const AssetsPanel: React.FC = () => {
             <img
               src={asset.path}
               alt={asset.name}
+              draggable={false}
               onError={(e) => {
                 (e.target as HTMLImageElement).style.display = 'none';
               }}
@@ -630,6 +635,7 @@ const AssetsPanel: React.FC = () => {
   const { folders } = getCurrentFolderContent;
   const emptyMessage = activeCategory === 'all' ? '暂无资源' : 
     activeCategory === 'images' ? '暂无图片资源' :
+    activeCategory === 'svgs' ? '暂无SVG资源' :
     activeCategory === 'videos' ? '暂无视频资源' : 
     activeCategory === 'models' ? '暂无3D模型资源' : '暂无字体资源';
 
@@ -651,6 +657,7 @@ const AssetsPanel: React.FC = () => {
         >
           <option value="all">全部 ({counts.all})</option>
           <option value="images">图片 ({counts.images})</option>
+          <option value="svgs">SVG ({counts.svgs})</option>
           <option value="videos">视频 ({counts.videos})</option>
           <option value="models">3D ({counts.models})</option>
           <option value="fonts">字体 ({counts.fonts})</option>

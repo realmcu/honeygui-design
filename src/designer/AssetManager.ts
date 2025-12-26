@@ -77,7 +77,8 @@ export class AssetManager {
                 }
             } else if (stats.isFile()) {
                 const ext = path.extname(file).toLowerCase();
-                const imageExts = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg', '.webp'];
+                const imageExts = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'];
+                const svgExts = ['.svg'];
                 const videoExts = ['.mp4', '.avi', '.mov', '.mkv', '.webm'];
                 const modelExts = ['.gltf', '.glb', '.obj'];
                 const modelDepExts = ['.mtl', '.bin'];  // 3D 模型依赖文件（不显示在资源栏）
@@ -91,6 +92,8 @@ export class AssetManager {
                 let assetType: string | null = null;
                 if (imageExts.includes(ext)) {
                     assetType = 'image';
+                } else if (svgExts.includes(ext)) {
+                    assetType = 'svg';
                 } else if (videoExts.includes(ext)) {
                     assetType = 'video';
                 } else if (modelExts.includes(ext)) {
@@ -634,6 +637,56 @@ export class AssetManager {
             });
         } catch (error) {
             logger.error(`[AssetManager] 创建视频组件失败: ${error}`);
+        }
+    }
+
+    /**
+     * 处理创建 SVG 组件请求
+     */
+    public handleCreateSvgComponent(
+        svgPath: string,
+        dropPosition: { x: number; y: number },
+        targetContainerId: string,
+        currentFilePath: string | undefined
+    ): void {
+        try {
+            if (!currentFilePath) {
+                return;
+            }
+
+            // 获取 SVG 尺寸
+            const projectRoot = path.dirname(path.dirname(currentFilePath));
+            const fullPath = path.join(projectRoot, svgPath);
+            const size = this.getSvgSize(fullPath);
+
+            this._panel.webview.postMessage({
+                command: 'createSvgComponent',
+                svgPath,
+                dropPosition,
+                targetContainerId,
+                size
+            });
+        } catch (error) {
+            logger.error(`[AssetManager] 创建 SVG 组件失败: ${error}`);
+        }
+    }
+
+    /**
+     * 获取 SVG 尺寸
+     */
+    private getSvgSize(filePath: string): { width: number; height: number } {
+        try {
+            const content = fs.readFileSync(filePath, 'utf-8');
+            // 匹配 width 和 height 属性
+            const widthMatch = content.match(/width\s*=\s*["']?(\d+)/);
+            const heightMatch = content.match(/height\s*=\s*["']?(\d+)/);
+            
+            const width = widthMatch ? parseInt(widthMatch[1], 10) : 100;
+            const height = heightMatch ? parseInt(heightMatch[1], 10) : 100;
+            
+            return { width, height };
+        } catch (error) {
+            return { width: 100, height: 100 };
         }
     }
 
