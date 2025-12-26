@@ -167,7 +167,12 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
     this.components.forEach(comp => {
       // 跳过 hg_view、hg_3d 和 hg_list_item（list_item 由 note_design 回调处理）
       if (comp.type !== 'hg_view' && comp.type !== 'hg_3d' && comp.type !== 'hg_list_item') {
-        code += `extern gui_obj_t *${comp.id};\n`;
+        // list 控件使用 gui_list_t * 类型
+        if (comp.type === 'hg_list') {
+          code += `extern gui_list_t *${comp.id};\n`;
+        } else {
+          code += `extern gui_obj_t *${comp.id};\n`;
+        }
       }
     });
 
@@ -196,7 +201,12 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
     this.components.forEach(comp => {
       // 跳过 hg_view、hg_3d 和 hg_list_item（list_item 由 note_design 回调处理）
       if (comp.type !== 'hg_view' && comp.type !== 'hg_3d' && comp.type !== 'hg_list_item') {
-        code += `gui_obj_t *${comp.id} = NULL;\n`;
+        // list 控件使用 gui_list_t * 类型
+        if (comp.type === 'hg_list') {
+          code += `gui_list_t *${comp.id} = NULL;\n`;
+        } else {
+          code += `gui_obj_t *${comp.id} = NULL;\n`;
+        }
       }
     });
 

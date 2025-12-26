@@ -13,10 +13,15 @@ export class ListGenerator implements ComponentCodeGenerator {
       const { x, y, width, height } = component.position;
 
       // 获取 list 属性
-      const itemWidth = component.data?.itemWidth ?? 100;
-      const itemHeight = component.data?.itemHeight ?? 100;
-      const space = component.data?.space ?? 0;
-      const direction = component.data?.direction ?? 'VERTICAL';
+      // itemWidth 和 itemHeight 在 style group 中，但为了兼容性，同时检查 data 和 style
+      const itemWidth = component.style?.itemWidth ?? component.data?.itemWidth ?? 100;
+      const itemHeight = component.style?.itemHeight ?? component.data?.itemHeight ?? 100;
+      let space = component.style?.space ?? component.data?.space ?? 10;  // 默认间距为 10
+      // 确保 space 至少为 1，避免重叠
+      if (space < 1) {
+        space = 10;
+      }
+      const direction = component.style?.direction ?? component.data?.direction ?? 'VERTICAL';
       const createBar = component.data?.createBar ?? false;
 
       // 验证必需属性
@@ -41,8 +46,16 @@ export class ListGenerator implements ComponentCodeGenerator {
       const listWidth = 0;
       const listHeight = 0;
 
+      // 获取样式和数量（需要在创建后立即设置）
+      const style = component.style?.style ?? 'LIST_CLASSIC';
+      const noteNum = component.data?.noteNum ?? 5;
+
       // 生成创建代码
       let code = `${indentStr}${component.id} = gui_list_create(${parentRef}, "${component.name}", ${x}, ${y}, ${listWidth}, ${listHeight}, ${noteLength}, ${space}, ${dirEnum}, ${noteDesignCallback}, NULL, ${createBar ? 'true' : 'false'});\n`;
+      
+      // 立即设置样式和数量（必须在创建后立即设置，否则某些样式效果会失效）
+      code += `${indentStr}gui_list_set_style(${component.id}, ${style});\n`;
+      code += `${indentStr}gui_list_set_note_num(${component.id}, ${noteNum});\n`;
 
       return code;
     } catch (error) {
@@ -67,47 +80,34 @@ export class ListGenerator implements ComponentCodeGenerator {
         throw new Error('List component missing required id');
       }
 
-      // 获取 list 属性
-      const noteNum = component.data?.noteNum ?? 5;
-      const style = component.style?.style ?? 'LIST_CLASSIC';  // 从 style 对象中读取
+      // 获取 list 属性（style 和 noteNum 已经在 generateCreation 中设置）
       const autoAlign = component.data?.autoAlign ?? true;
       const inertia = component.data?.inertia ?? true;
       const loop = component.data?.loop ?? false;
       const offset = component.data?.offset ?? 0;
       const outScope = component.data?.outScope ?? 0;
 
-      // 验证属性值
-      if (noteNum < 1) {
-        throw new Error(`Invalid noteNum value: ${noteNum} (must be >= 1)`);
-      }
-
-      // 1. 生成 gui_list_set_note_num() 调用
-      code += `${indentStr}gui_list_set_note_num(${component.id}, ${noteNum});\n`;
-
-      // 2. 生成 gui_list_set_style() 调用（转换样式名称为枚举值）
-      code += `${indentStr}gui_list_set_style(${component.id}, ${style});\n`;
-
-      // 3. 条件生成 gui_list_set_auto_align()（仅当 autoAlign 为 true）
+      // 1. 条件生成 gui_list_set_auto_align()（仅当 autoAlign 为 true）
       if (autoAlign === true) {
         code += `${indentStr}gui_list_set_auto_align(${component.id}, true);\n`;
       }
 
-      // 4. 条件生成 gui_list_set_inertia()（仅当 inertia 为 false）
+      // 2. 条件生成 gui_list_set_inertia()（仅当 inertia 为 false）
       if (inertia === false) {
         code += `${indentStr}gui_list_set_inertia(${component.id}, false);\n`;
       }
 
-      // 5. 条件生成 gui_list_enable_loop()（仅当 loop 为 true）
+      // 3. 条件生成 gui_list_enable_loop()（仅当 loop 为 true）
       if (loop === true) {
         code += `${indentStr}gui_list_enable_loop(${component.id}, true);\n`;
       }
 
-      // 6. 条件生成 gui_list_set_offset()（仅当 offset 非零）
+      // 4. 条件生成 gui_list_set_offset()（仅当 offset 非零）
       if (offset !== 0) {
         code += `${indentStr}gui_list_set_offset(${component.id}, ${offset});\n`;
       }
 
-      // 7. 条件生成 gui_list_set_out_scope()（仅当 outScope 非零）
+      // 5. 条件生成 gui_list_set_out_scope()（仅当 outScope 非零）
       if (outScope !== 0) {
         code += `${indentStr}gui_list_set_out_scope(${component.id}, ${outScope});\n`;
       }
