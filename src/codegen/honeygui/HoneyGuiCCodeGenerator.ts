@@ -363,8 +363,12 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
    * 创建生成器上下文
    */
   private createGeneratorContext(): GeneratorContext {
+    // 从 srcDir 推导项目根目录（srcDir 的父目录）
+    const projectRoot = path.dirname(this.options.srcDir);
+    
     return {
       componentMap: this.componentMap,
+      projectRoot,
       getParentRef: (component: Component) => {
         if (!component.parent) return 'NULL';
         const parentComp = this.componentMap.get(component.parent);

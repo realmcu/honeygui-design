@@ -21,4 +21,5 @@ export interface ComponentCodeGenerator {
 export interface GeneratorContext {
   componentMap: Map<string, Component>;
   getParentRef(component: Component): string;
+  projectRoot?: string;  // 项目根目录，用于读取资源文件
 }
