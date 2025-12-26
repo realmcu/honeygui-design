@@ -38,11 +38,13 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
       setSelectedComponents(next);
     } else {
       selectComponent(componentId);
-      // 如果是 hg_view，自动居中显示
-      if (component.type === 'hg_view') {
-        centerViewOnCanvas(componentId);
-      }
     }
+  };
+
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    selectComponent(componentId);
+    centerViewOnCanvas(componentId);
   };
 
   const handleToggleVisibility = (e: React.MouseEvent) => {
@@ -97,6 +99,7 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
         className="tree-node-content"
         style={{ paddingLeft: `${level * 16 + 8}px` }}
         onClick={handleSelect}
+        onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
       >
         {hasChildren && (

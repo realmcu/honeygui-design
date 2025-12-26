@@ -6,7 +6,7 @@
     </meta>
     <view>
         <hg_view id="app_menu_view" x="13" y="11" width="410" height="502" backgroundColor="#000000" borderRadius="0" padding="12" overflow="auto" zIndex="1">
-            <hg_list id="hg_list_1766648792206_m7zs" x="43" y="-559" width="350" height="2725" itemWidth="350" itemHeight="100" space="5" direction="VERTICAL" style="LIST_CIRCLE" noteNum="26" offset="0" outScope="50" autoAlign="true" inertia="true" loop="false" createBar="false" zIndex="1">
+            <hg_list id="hg_list_1766648792206_m7zs" x="29" y="-93" width="350" height="2725" itemWidth="350" itemHeight="100" space="5" direction="VERTICAL" style="LIST_CIRCLE" noteNum="26" offset="0" outScope="50" autoAlign="true" inertia="true" loop="false" createBar="false" zIndex="1">
                 <hg_list_item id="hg_list_1766648792206_m7zs_item_1" x="0" y="0" width="350" height="100" locked="true" zIndex="1">
                     <hg_image id="hg_image_1766649235950_h90c" x="0" y="-6" width="100" height="106" src="assets/UI_app_list/app_activity_icon.png" zIndex="1" />
                 </hg_list_item>
