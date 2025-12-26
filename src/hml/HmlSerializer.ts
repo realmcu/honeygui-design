@@ -45,8 +45,8 @@ export class HmlSerializer {
 
                 // 不创建 .bak 备份文件，直接进行原子替换
 
-                // 5) 原子替换：重命名临时文件到目标文件（不生成额外备份文件）
-                fs.renameSync(tempPath, filePath);
+                // 5) 原子替换：重命名临时文件到目标文件（带重试机制）
+                this._renameWithRetry(tempPath, filePath, 5, 100);
 
                 // 6) 再次快速读取并校验（保障落盘内容）
                 const written = fs.readFileSync(filePath, 'utf8');
@@ -353,5 +353,94 @@ export class HmlSerializer {
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
+    }
+
+    /**
+     * 带重试机制的文件重命名
+     * 解决 Windows 上文件被占用导致的 EPERM 错误
+     * @param sourcePath 源文件路径
+     * @param targetPath 目标文件路径
+     * @param maxRetries 最大重试次数
+     * @param delayMs 每次重试的延迟（毫秒）
+     */
+    private _renameWithRetry(sourcePath: string, targetPath: string, maxRetries: number, delayMs: number): void {
+        let lastError: Error | null = null;
+        
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                // 尝试重命名
+                fs.renameSync(sourcePath, targetPath);
+                
+                // 成功，记录日志并返回
+                if (attempt > 1) {
+                    console.log(`[HmlSerializer] 文件重命名成功（第 ${attempt} 次尝试）`);
+                }
+                return;
+                
+            } catch (error) {
+                lastError = error as Error;
+                
+                // 如果不是 EPERM 或 EBUSY 错误，直接抛出
+                if (error && typeof error === 'object' && 'code' in error) {
+                    const code = (error as any).code;
+                    if (code !== 'EPERM' && code !== 'EBUSY' && code !== 'EACCES') {
+                        throw error;
+                    }
+                }
+                
+                // 如果是最后一次尝试，抛出错误
+                if (attempt === maxRetries) {
+                    console.error(`[HmlSerializer] 文件重命名失败，已重试 ${maxRetries} 次`);
+                    break;
+                }
+                
+                // 等待后重试
+                console.warn(`[HmlSerializer] 文件重命名失败（第 ${attempt} 次尝试），${delayMs}ms 后重试...`);
+                this._sleep(delayMs);
+                
+                // 指数退避：每次重试延迟翻倍
+                delayMs *= 2;
+            }
+        }
+        
+        // 所有重试都失败，尝试备用方案：先删除目标文件再重命名
+        try {
+            console.warn('[HmlSerializer] 尝试备用方案：先删除目标文件');
+            if (fs.existsSync(targetPath)) {
+                fs.unlinkSync(targetPath);
+                this._sleep(50); // 短暂等待文件系统释放
+            }
+            fs.renameSync(sourcePath, targetPath);
+            console.log('[HmlSerializer] 备用方案成功');
+            return;
+        } catch (backupError) {
+            console.error('[HmlSerializer] 备用方案也失败');
+        }
+        
+        // 最终方案：直接复制+删除（不是原子操作，但至少能保存）
+        try {
+            console.warn('[HmlSerializer] 尝试最终方案：复制+删除');
+            const content = fs.readFileSync(sourcePath, 'utf8');
+            fs.writeFileSync(targetPath, content, 'utf8');
+            fs.unlinkSync(sourcePath);
+            console.log('[HmlSerializer] 最终方案成功');
+            return;
+        } catch (finalError) {
+            console.error('[HmlSerializer] 所有保存方案都失败');
+        }
+        
+        // 抛出原始错误
+        throw new Error(`文件保存失败（已尝试多种方案）: ${lastError?.message || '未知错误'}\n\n可能原因：\n1. 文件被杀毒软件或备份软件占用\n2. 文件权限不足\n3. 磁盘空间不足\n\n建议：\n1. 暂时关闭杀毒软件的实时保护\n2. 检查文件权限\n3. 重启 VSCode`);
+    }
+
+    /**
+     * 同步睡眠（阻塞）
+     * @param ms 睡眠时间（毫秒）
+     */
+    private _sleep(ms: number): void {
+        const start = Date.now();
+        while (Date.now() - start < ms) {
+            // 忙等待
+        }
     }
 }
