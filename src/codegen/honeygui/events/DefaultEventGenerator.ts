@@ -2,7 +2,7 @@
  * 默认事件代码生成器（通用组件）
  */
 import { Component } from '../../../hml/types';
-import { EventCodeGenerator, EVENT_TYPE_TO_GUI_EVENT, generateMessageCallbackImpl } from './EventCodeGenerator';
+import { EventCodeGenerator, EVENT_TYPE_TO_GUI_EVENT, generateMessageCallbackImpl, getMessageCallbackName } from './EventCodeGenerator';
 
 export class DefaultEventGenerator implements EventCodeGenerator {
 
@@ -13,11 +13,13 @@ export class DefaultEventGenerator implements EventCodeGenerator {
 
     let code = '';
     const indentStr = '    '.repeat(indent);
+    let msgIndex = 0;
 
     component.eventConfigs.forEach((eventConfig) => {
       // 处理 onMessage 事件（消息订阅）
       if (eventConfig.type === 'onMessage' && eventConfig.message) {
-        const callbackName = `${component.id}_on_msg_${eventConfig.message.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        const callbackName = getMessageCallbackName(component, eventConfig, msgIndex);
+        msgIndex++;
         code += `${indentStr}gui_msg_subscribe(${component.id}, "${eventConfig.message}", ${callbackName});\n`;
         return;
       }
@@ -45,10 +47,12 @@ export class DefaultEventGenerator implements EventCodeGenerator {
     const functions: string[] = [];
     if (!component.eventConfigs) return functions;
 
+    let msgIndex = 0;
     component.eventConfigs.forEach(eventConfig => {
       if (eventConfig.type === 'onMessage' && eventConfig.message) {
         // onMessage 生成统一回调名
-        functions.push(`${component.id}_on_msg_${eventConfig.message.replace(/[^a-zA-Z0-9]/g, '_')}`);
+        functions.push(getMessageCallbackName(component, eventConfig, msgIndex));
+        msgIndex++;
       } else {
         eventConfig.actions.forEach(action => {
           if (action.type === 'callFunction' && action.functionName) {

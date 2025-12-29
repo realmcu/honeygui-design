@@ -51,6 +51,7 @@ export interface Action {
 export interface EventConfig {
   type: EventType;
   message?: string;          // 仅 onMessage 事件需要
+  handler?: string;          // 回调函数名（onMessage 用）
   actions: Action[];
 }
 

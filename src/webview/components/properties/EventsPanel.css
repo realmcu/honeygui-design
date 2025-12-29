@@ -91,6 +91,40 @@
   box-sizing: border-box;
 }
 
+/* 回调函数名输入 */
+.handler-input {
+  margin-bottom: 12px;
+}
+
+.handler-input label {
+  display: block;
+  font-size: 11px;
+  margin-bottom: 4px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.handler-input input {
+  width: 100%;
+  padding: 4px 8px;
+  font-size: 12px;
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border);
+  border-radius: 2px;
+  box-sizing: border-box;
+}
+
+.handler-input input.input-error {
+  border-color: var(--vscode-inputValidation-errorBorder, #f44336);
+}
+
+.handler-input .error-hint {
+  display: block;
+  font-size: 10px;
+  color: var(--vscode-inputValidation-errorForeground, #f44336);
+  margin-top: 4px;
+}
+
 /* 动作列表 */
 .actions-list {
   margin-bottom: 8px;

@@ -248,6 +248,9 @@ export class HmlSerializer {
                     if (eventConfig.type === 'onMessage' && eventConfig.message) {
                         eventAttrs += ' message="' + this._escapeXmlValue(eventConfig.message) + '"';
                     }
+                    if (eventConfig.handler) {
+                        eventAttrs += ' handler="' + this._escapeXmlValue(eventConfig.handler) + '"';
+                    }
 
                     if (eventConfig.actions && eventConfig.actions.length > 0) {
                         componentContent += eventIndent + '<event ' + eventAttrs + '>\n';

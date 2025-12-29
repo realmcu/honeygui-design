@@ -407,6 +407,11 @@ export class HmlParser {
         eventConfig.message = attrs.message;
       }
 
+      // 解析 handler 属性（回调函数名）
+      if (attrs.handler) {
+        eventConfig.handler = attrs.handler;
+      }
+
       // 解析动作
       if (eventEl.action) {
         const actionElements = Array.isArray(eventEl.action)

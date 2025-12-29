@@ -2,6 +2,7 @@
  * 事件代码生成器基类接口
  */
 import { Component } from '../../../hml/types';
+import { EventConfig } from '../../../hml/eventTypes';
 
 export interface EventCodeGenerator {
   /**
@@ -42,16 +43,32 @@ export const EVENT_TYPE_TO_GUI_EVENT: Record<string, string> = {
 };
 
 /**
+ * 生成 onMessage 回调函数名
+ */
+export function getMessageCallbackName(component: Component, eventConfig: EventConfig, eventIndex: number): string {
+  // 优先使用用户指定的 handler
+  if (eventConfig.handler) {
+    return eventConfig.handler;
+  }
+  // 自动生成：{组件id}_msg_cb_{序号}
+  return `${component.id}_msg_cb_${eventIndex}`;
+}
+
+/**
  * 生成 onMessage 回调实现的公共函数
  */
 export function generateMessageCallbackImpl(component: Component, componentMap: Map<string, Component>): string[] {
   const impls: string[] = [];
   if (!component.eventConfigs) return impls;
 
+  // 统计 onMessage 事件的序号
+  let msgIndex = 0;
   component.eventConfigs.forEach(eventConfig => {
     if (eventConfig.type !== 'onMessage' || !eventConfig.message) return;
 
-    const callbackName = `${component.id}_on_msg_${eventConfig.message.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    const callbackName = getMessageCallbackName(component, eventConfig, msgIndex);
+    msgIndex++;
+    
     let body = '';
 
     eventConfig.actions.forEach(action => {

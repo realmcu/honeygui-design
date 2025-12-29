@@ -90,6 +90,51 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
     onUpdate({ eventConfigs: newConfigs });
   };
 
+  // 生成默认回调函数名
+  const getDefaultHandler = (eventIndex: number): string => {
+    // 计算当前事件在 onMessage 事件中的序号
+    let msgIndex = 0;
+    for (let i = 0; i < eventIndex; i++) {
+      if (eventConfigs[i].type === 'onMessage') {
+        msgIndex++;
+      }
+    }
+    return `${component.id}_msg_cb_${msgIndex}`;
+  };
+
+  // 验证回调函数名
+  const validateHandler = (handler: string, currentIndex: number): string | null => {
+    if (!handler) return null;
+    // 检查格式：只允许字母、数字、下划线，不能以数字开头
+    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(handler)) {
+      return '函数名只能包含字母、数字、下划线，且不能以数字开头';
+    }
+    // 检查重复：在所有组件中查找
+    for (const comp of components) {
+      if (!comp.eventConfigs) continue;
+      for (let i = 0; i < comp.eventConfigs.length; i++) {
+        const ec = comp.eventConfigs[i];
+        if (ec.type === 'onMessage' && ec.handler === handler) {
+          // 排除当前正在编辑的
+          if (comp.id === component.id && i === currentIndex) continue;
+          return `函数名 "${handler}" 已被组件 "${comp.id}" 使用`;
+        }
+      }
+    }
+    return null;
+  };
+
+  // 更新回调函数名
+  const [handlerError, setHandlerError] = useState<string | null>(null);
+  const handleHandlerChange = (index: number, handler: string) => {
+    const error = validateHandler(handler, index);
+    setHandlerError(error);
+    
+    const newConfigs = [...eventConfigs];
+    newConfigs[index] = { ...newConfigs[index], handler };
+    onUpdate({ eventConfigs: newConfigs });
+  };
+
   // 添加动作
   const handleAddAction = (eventIndex: number) => {
     const currentEvent = eventConfigs[eventIndex];
@@ -280,17 +325,30 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
 
             {expandedEvents.has(eventIndex) && (
               <div className="event-content">
-                {/* onMessage 需要消息名 */}
+                {/* onMessage 需要消息名和回调函数名 */}
                 {event.type === 'onMessage' && (
-                  <div className="message-input">
-                    <label>监听消息</label>
-                    <input
-                      type="text"
-                      value={event.message || ''}
-                      onChange={(e) => handleMessageChange(eventIndex, e.target.value)}
-                      placeholder="消息名称"
-                    />
-                  </div>
+                  <>
+                    <div className="message-input">
+                      <label>监听消息</label>
+                      <input
+                        type="text"
+                        value={event.message || ''}
+                        onChange={(e) => handleMessageChange(eventIndex, e.target.value)}
+                        placeholder="消息名称"
+                      />
+                    </div>
+                    <div className="handler-input">
+                      <label>回调函数名</label>
+                      <input
+                        type="text"
+                        value={event.handler || getDefaultHandler(eventIndex)}
+                        onChange={(e) => handleHandlerChange(eventIndex, e.target.value)}
+                        placeholder="回调函数名"
+                        className={handlerError ? 'input-error' : ''}
+                      />
+                      {handlerError && <span className="error-hint">{handlerError}</span>}
+                    </div>
+                  </>
                 )}
 
                 {/* 动作列表 */}

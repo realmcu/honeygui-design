@@ -3,7 +3,7 @@
  * TODO: 实现按钮特定的事件处理逻辑
  */
 import { Component } from '../../../hml/types';
-import { EventCodeGenerator, EVENT_TYPE_TO_GUI_EVENT, generateMessageCallbackImpl } from './EventCodeGenerator';
+import { EventCodeGenerator, EVENT_TYPE_TO_GUI_EVENT, generateMessageCallbackImpl, getMessageCallbackName } from './EventCodeGenerator';
 
 export class ButtonEventGenerator implements EventCodeGenerator {
   generateEventBindings(component: Component, indent: number, _componentMap: Map<string, Component>): string {
@@ -12,10 +12,12 @@ export class ButtonEventGenerator implements EventCodeGenerator {
 
     if (!component.eventConfigs) return code;
 
+    let msgIndex = 0;
     component.eventConfigs.forEach(eventConfig => {
       // 处理 onMessage 事件
       if (eventConfig.type === 'onMessage' && eventConfig.message) {
-        const callbackName = `${component.id}_on_msg_${eventConfig.message.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        const callbackName = getMessageCallbackName(component, eventConfig, msgIndex);
+        msgIndex++;
         code += `${indentStr}gui_msg_subscribe(${component.id}, "${eventConfig.message}", ${callbackName});\n`;
         return;
       }
@@ -39,9 +41,11 @@ export class ButtonEventGenerator implements EventCodeGenerator {
 
     if (!component.eventConfigs) return callbacks;
 
+    let msgIndex = 0;
     component.eventConfigs.forEach(eventConfig => {
       if (eventConfig.type === 'onMessage' && eventConfig.message) {
-        callbacks.push(`${component.id}_on_msg_${eventConfig.message.replace(/[^a-zA-Z0-9]/g, '_')}`);
+        callbacks.push(getMessageCallbackName(component, eventConfig, msgIndex));
+        msgIndex++;
         return;
       }
 

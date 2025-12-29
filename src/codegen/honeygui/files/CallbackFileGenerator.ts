@@ -4,6 +4,7 @@
  */
 import { Component } from '../../../hml/types';
 import { EventGeneratorFactory } from '../events';
+import { getMessageCallbackName } from '../events/EventCodeGenerator';
 
 export class CallbackFileGenerator {
   private components: Component[];
@@ -189,9 +190,11 @@ export class CallbackFileGenerator {
 
     this.components.forEach(component => {
       if (!component.eventConfigs) return;
+      let msgIndex = 0;
       component.eventConfigs.forEach(eventConfig => {
         if (eventConfig.type === 'onMessage' && eventConfig.message) {
-          names.push(`${component.id}_on_msg_${eventConfig.message.replace(/[^a-zA-Z0-9]/g, '_')}`);
+          names.push(getMessageCallbackName(component, eventConfig, msgIndex));
+          msgIndex++;
         }
       });
     });

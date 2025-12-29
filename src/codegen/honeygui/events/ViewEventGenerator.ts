@@ -2,7 +2,7 @@
  * hg_view 事件代码生成器
  */
 import { Component } from '../../../hml/types';
-import { EventCodeGenerator, EVENT_TYPE_TO_GUI_EVENT, generateMessageCallbackImpl } from './EventCodeGenerator';
+import { EventCodeGenerator, EVENT_TYPE_TO_GUI_EVENT, generateMessageCallbackImpl, getMessageCallbackName } from './EventCodeGenerator';
 
 export class ViewEventGenerator implements EventCodeGenerator {
 
@@ -61,9 +61,11 @@ export class ViewEventGenerator implements EventCodeGenerator {
     
     // 收集 onMessage 的回调函数名
     if (component.eventConfigs) {
+      let msgIndex = 0;
       component.eventConfigs.forEach(eventConfig => {
         if (eventConfig.type === 'onMessage' && eventConfig.message) {
-          functions.push(`${component.id}_on_msg_${eventConfig.message.replace(/[^a-zA-Z0-9]/g, '_')}`);
+          functions.push(getMessageCallbackName(component, eventConfig, msgIndex));
+          msgIndex++;
         }
       });
     }
