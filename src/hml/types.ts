@@ -14,6 +14,37 @@ export interface ComponentPosition {
 }
 
 /**
+ * 图像变换类型
+ */
+export interface ImageTransform {
+  // 缩放
+  scaleX?: number;      // 默认 1.0
+  scaleY?: number;      // 默认 1.0
+  
+  // 旋转
+  rotation?: number;    // 角度，默认 0
+  
+  // 平移
+  translateX?: number;  // 默认 0
+  translateY?: number;  // 默认 0
+  
+  // 倾斜
+  skewX?: number;       // 角度，默认 0
+  skewY?: number;       // 角度，默认 0
+  
+  // 变换中心点
+  // 注意：SDK 默认行为不一致
+  // - 旋转默认围绕图片中心
+  // - 缩放默认以 (0,0) 为中心
+  // 设置 focusX/focusY 可统一变换中心
+  focusX?: number;      // 默认：旋转用图片中心，缩放用左上角
+  focusY?: number;      // 默认：旋转用图片中心，缩放用左上角
+  
+  // 透明度
+  opacity?: number;     // 0-255，默认 255
+}
+
+/**
  * 组件样式类型
  */
 export interface ComponentStyle {
@@ -29,6 +60,10 @@ export interface ComponentStyle {
   title?: string;
   titleBarHeight?: number;
   titleBarColor?: string;
+  
+  // 图像变换（用于 hg_image 组件）
+  transform?: ImageTransform;
+  
   [key: string]: any;  // 允许其他样式属性
 }
 

@@ -2,6 +2,7 @@ import { ComponentType } from '../../types';
 import { HgViewProperties } from './HgViewProperties';
 import { Hg3DProperties } from './Hg3DProperties';
 import { HgVideoProperties } from './HgVideoProperties';
+import { HgImageProperties } from './HgImageProperties';
 import { ListItemProperties } from './ListItemProperties';
 import { DefaultProperties } from './DefaultProperties';
 import { PropertyPanelProps } from './types';
@@ -17,7 +18,7 @@ export const propertyPanelRegistry: Record<ComponentType, React.FC<PropertyPanel
   hg_radio: DefaultProperties,
   hg_switch: DefaultProperties,
   hg_slider: DefaultProperties,
-  hg_image: DefaultProperties,
+  hg_image: HgImageProperties,
   hg_window: DefaultProperties,
   hg_canvas: DefaultProperties,
   hg_list: DefaultProperties,
@@ -34,6 +35,7 @@ export const propertyPanelRegistry: Record<ComponentType, React.FC<PropertyPanel
 export { HgViewProperties } from './HgViewProperties';
 export { Hg3DProperties } from './Hg3DProperties';
 export { HgVideoProperties } from './HgVideoProperties';
+export { HgImageProperties } from './HgImageProperties';
 export { ListItemProperties } from './ListItemProperties';
 export { DefaultProperties } from './DefaultProperties';
 export { BaseProperties } from './BaseProperties';

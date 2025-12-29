@@ -240,7 +240,9 @@ export class HmlParser {
       // 矩形属性
       'fillColor',
       // 列表属性
-      'itemWidth', 'itemHeight', 'direction', 'style', 'space'
+      'itemWidth', 'itemHeight', 'direction', 'style', 'space',
+      // 图像变换属性
+      'transform'
     ]);
 
     // 需要转换为数字的属性
@@ -282,6 +284,14 @@ export class HmlParser {
         if (numericProps.has(key) && typeof value === 'string') {
           const num = parseFloat(value);
           value = isNaN(num) ? value : num;
+        }
+        // transform 属性需要从 JSON 字符串解析为对象
+        if (key === 'transform' && typeof value === 'string') {
+          try {
+            value = JSON.parse(value);
+          } catch (e) {
+            console.warn(`Failed to parse transform JSON: ${value}`);
+          }
         }
         style[key] = value;
       } else if (dataProps.has(key)) {

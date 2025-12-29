@@ -83,6 +83,68 @@ export const calculateComponentStyle = (
   // 拖拽时隐藏原组件（仅非容器组件，顶层会渲染副本）
   const isDragging = draggedComponentId === component.id && !isContainer;
 
+  // 图像变换（仅用于预览，实际效果由 SDK 实现）
+  let transformValue: string | undefined;
+  if (component.type === 'hg_image' && component.style?.transform) {
+    const t = component.style.transform;
+    const transforms: string[] = [];
+    
+    // 平移
+    if (t.translateX !== undefined || t.translateY !== undefined) {
+      const tx = t.translateX ?? 0;
+      const ty = t.translateY ?? 0;
+      transforms.push(`translate(${tx}px, ${ty}px)`);
+    }
+    
+    // 缩放
+    if (t.scaleX !== undefined || t.scaleY !== undefined) {
+      const sx = t.scaleX ?? 1.0;
+      const sy = t.scaleY ?? 1.0;
+      transforms.push(`scale(${sx}, ${sy})`);
+    }
+    
+    // 旋转
+    if (t.rotation !== undefined && t.rotation !== 0) {
+      transforms.push(`rotate(${t.rotation}deg)`);
+    }
+    
+    // 倾斜
+    if (t.skewX !== undefined && t.skewX !== 0) {
+      transforms.push(`skewX(${t.skewX}deg)`);
+    }
+    if (t.skewY !== undefined && t.skewY !== 0) {
+      transforms.push(`skewY(${t.skewY}deg)`);
+    }
+    
+    if (transforms.length > 0) {
+      transformValue = transforms.join(' ');
+    }
+  }
+
+  // 变换中心点
+  let transformOriginValue: string | undefined;
+  if (component.type === 'hg_image' && component.style?.transform) {
+    const t = component.style.transform;
+    if (t.focusX !== undefined && t.focusY !== undefined) {
+      // 用户显式设置了变换中心
+      transformOriginValue = `${t.focusX}px ${t.focusY}px`;
+    } else {
+      // 默认行为：
+      // - 如果只有旋转，使用中心点（模拟 SDK 的 gui_img_rotation 行为）
+      // - 如果有缩放，使用左上角（模拟 SDK 的 gui_img_scale 行为）
+      const hasScale = (t.scaleX !== undefined && t.scaleX !== 1.0) || (t.scaleY !== undefined && t.scaleY !== 1.0);
+      const hasRotation = t.rotation !== undefined && t.rotation !== 0;
+      
+      if (hasRotation && !hasScale) {
+        // 只有旋转：使用中心点
+        transformOriginValue = 'center center';
+      } else if (hasScale) {
+        // 有缩放：使用左上角（SDK 默认行为）
+        transformOriginValue = 'top left';
+      }
+    }
+  }
+
   return {
     position: 'absolute',
     left: component.position.x,
@@ -90,7 +152,7 @@ export const calculateComponentStyle = (
     width: component.position.width,
     height: component.position.height,
     display: component.visible ? 'flex' : 'none',
-    opacity: isDragging ? 0 : (component.enabled ? 1 : 0.6),
+    opacity: isDragging ? 0 : (component.style?.transform?.opacity !== undefined ? component.style.transform.opacity / 255 : (component.enabled ? 1 : 0.6)),
     cursor: editingMode === 'move' ? 'move' : 'pointer',
     outline: border, // 使用 outline 不占用空间
     outlineOffset: '-1px',
@@ -102,6 +164,8 @@ export const calculateComponentStyle = (
     zIndex: component.zIndex,
     userSelect: 'none',
     boxSizing: 'border-box',
+    transform: transformValue,
+    transformOrigin: transformOriginValue,
   };
 };
 
