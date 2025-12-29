@@ -10,33 +10,44 @@
                 <event type="onSwipeLeft">
                     <action type="switchView" target="hg_view_1766022481486_seii" switchOutStyle="SWITCH_OUT_TO_LEFT_USE_TRANSLATION" switchInStyle="SWITCH_IN_FROM_RIGHT_USE_TRANSLATION" />
                 </event>
-            </events>
-            <hg_list id="hg_list_1766663103528_tlot" x="8" y="37" width="410" height="500" itemWidth="410" itemHeight="100" space="0" direction="VERTICAL" style="LIST_CLASSIC" noteNum="5" offset="0" outScope="0" autoAlign="true" inertia="true" loop="false" createBar="false" zIndex="1">
-                <hg_list_item id="hg_list_1766663103528_tlot_item_1" x="0" y="0" width="410" height="100" locked="true" zIndex="1">
-                    <hg_image id="hg_image_1766123033044_7gh5" x="79" y="0" width="100" height="100" src="assets/UI_app_list/app_alarm_clock_icon.png" zIndex="1">
-                        <events>
-                            <event type="onClick">
-                                <action type="switchView" target="hg_view_1766022481486_seii" switchOutStyle="SWITCH_OUT_TO_LEFT_USE_TRANSLATION" switchInStyle="SWITCH_IN_FROM_RIGHT_USE_TRANSLATION" />
-                            </event>
-                        </events>
-                    </hg_image>
-                </hg_list_item>
-                <hg_list_item id="hg_list_1766663103528_tlot_item_2" x="0" y="100" width="410" height="100" locked="true" zIndex="1" />
-                <hg_list_item id="hg_list_1766663103528_tlot_item_3" x="0" y="200" width="410" height="100" locked="true" zIndex="1" />
-                <hg_list_item id="hg_list_1766663103528_tlot_item_4" x="0" y="300" width="410" height="100" locked="true" zIndex="1" />
-                <hg_list_item id="hg_list_1766663103528_tlot_item_5" x="0" y="400" width="410" height="100" locked="true" zIndex="1" />
-            </hg_list>
-        </hg_view>
-        <hg_view id="hg_view_1766022481486_seii" x="-3191" y="-874" width="410" height="502" backgroundColor="#000000" borderRadius="0" padding="12" overflow="auto" zIndex="1">
-            <events>
-                <event type="onSwipeLeft">
-                    <action type="switchView" target="untitledView" switchOutStyle="SWITCH_OUT_TO_LEFT_USE_TRANSLATION" switchInStyle="SWITCH_IN_FROM_RIGHT_USE_TRANSLATION" />
+                <event type="onSwipeDown">
+                    <action type="switchView" target="app_top_view" switchOutStyle="SWITCH_OUT_STILL_USE_BLUR" switchInStyle="SWITCH_IN_FROM_TOP_USE_TRANSLATION" />
                 </event>
             </events>
-            <hg_image id="hg_image_1766487405785_tkxn" x="68" y="190" width="100" height="106" src="assets/UI_app_list/app_activity_icon.png" zIndex="1" />
-            <hg_image id="hg_image_1766485021368_l76l" x="281" y="190" width="100" height="106" src="assets/UI_app_list/app_activity_icon.png" zIndex="1" />
-            <hg_image id="hg_image_1766487258446_5ckq" x="183" y="313" width="100" height="100" src="assets/UI_app_list/app_compass_icon.png" zIndex="1" />
-            <hg_image id="hg_image_1766738140163_ufor" x="155" y="45" width="100" height="100" src="assets/test.svg" zIndex="1" />
+            <hg_rect id="hg_rect_1766998925528_70wq" x="0" y="0" width="410" height="502" borderRadius="0" fillColor="#de7994" opacity="255" zIndex="1">
+                <events>
+                    <event type="onClick" />
+                </events>
+            </hg_rect>
+            <hg_image id="hg_image_1767003100359_1bvr" x="105" y="111" width="200" height="245" src="assets/app_home_list/watchface_big_num.png" zIndex="1" />
+        </hg_view>
+        <hg_view id="hg_view_1766022481486_seii" x="-3776" y="-255" width="410" height="502" backgroundColor="#000000" borderRadius="0" padding="12" overflow="auto" zIndex="1">
+            <events>
+                <event type="onSwipeUp">
+                    <action type="switchView" target="mainView" switchOutStyle="SWITCH_OUT_TO_BOTTOM_USE_TRANSLATION" switchInStyle="SWITCH_IN_FROM_TOP_USE_TRANSLATION" />
+                </event>
+            </events>
+        </hg_view>
+        <hg_view id="app_top_view" x="-3776" y="-1506" width="410" height="502" backgroundColor="#000000" borderRadius="0" padding="12" overflow="auto" zIndex="1">
+            <events>
+                <event type="onSwipeUp">
+                    <action type="switchView" target="mainView" switchOutStyle="SWITCH_OUT_TO_TOP_USE_TRANSLATION" switchInStyle="SWITCH_IN_STILL_USE_BLUR" />
+                </event>
+            </events>
+            <hg_rect id="hg_rect_1767003360110_1aep" x="0" y="0" width="410" height="502" borderRadius="0" fillColor="#4e464a" opacity="128" zIndex="1" />
+            <hg_list id="hg_list_1766999250662_ne76" x="29" y="0" width="352" height="491" itemWidth="352" itemHeight="157" space="10" direction="VERTICAL" style="LIST_CLASSIC" noteNum="3" offset="0" outScope="0" autoAlign="true" inertia="true" loop="false" createBar="false" zIndex="1">
+                <hg_list_item id="hg_list_1766999250662_ne76_item_1" x="0" y="0" width="352" height="157" index="0" locked="true" zIndex="1">
+                    <hg_rect id="hg_rect_1766999389952_egj3" x="24" y="39" width="305" height="80" borderRadius="40" fillColor="#272b2c" opacity="255" zIndex="1" />
+                </hg_list_item>
+                <hg_list_item id="hg_list_1766999250662_ne76_item_2" x="0" y="167" width="352" height="157" index="1" locked="true" zIndex="1">
+                    <hg_rect id="hg_rect_1766999449451_en2t" x="0" y="19" width="352" height="120" borderRadius="30" fillColor="#626562" opacity="210" zIndex="1" />
+                    <hg_image id="hg_image_1766999553786_6n5b" x="18" y="0" width="100" height="106" src="assets/UI_app_list/app_activity_icon.png" zIndex="1" />
+                </hg_list_item>
+                <hg_list_item id="hg_list_1766999250662_ne76_item_3" x="0" y="334" width="352" height="157" index="2" locked="true" zIndex="1">
+                    <hg_rect id="hg_rect_1766999449451_en2t_copy_1766999924041" x="0" y="19" width="352" height="120" borderRadius="30" fillColor="#626562" opacity="210" zIndex="1" />
+                    <hg_image id="hg_image_1767000056743_qysv" x="18" y="0" width="100" height="100" src="assets/UI_app_list/app_music_icon.png" zIndex="1" />
+                </hg_list_item>
+            </hg_list>
         </hg_view>
     </view>
 </hml>
