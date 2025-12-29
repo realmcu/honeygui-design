@@ -1,0 +1,3 @@
+[submodule "tools/font-converter"]
+	path = tools/font-converter
+	url = git@github.com:hellsge/font-tool-typescript.git
