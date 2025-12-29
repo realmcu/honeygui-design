@@ -1153,8 +1153,8 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
             zIndex: 0
           };
           
-          // 如果存在第一个 item 且不是第一个新 item，复制第一个 item 的子组件作为模板
-          if (i > 0 && firstItem && firstItem.children && firstItem.children.length > 0) {
+          // 如果存在第一个 item，复制第一个 item 的子组件作为模板
+          if (firstItem && firstItem.children && firstItem.children.length > 0) {
             const clonedChildren: Component[] = [];
             
             // 递归克隆第一个 item 的所有子组件
@@ -1229,6 +1229,29 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
             childId => !idsToRemove.has(childId)
           ) || [];
           newComponents[listIndex] = updatedList;
+        }
+      }
+      
+      // 最后，确保 list 的 children 数组按 index 排序
+      const finalListIndex = newComponents.findIndex(c => c.id === listId);
+      if (finalListIndex !== -1) {
+        const finalList = { ...newComponents[finalListIndex] };
+        if (finalList.children && finalList.children.length > 0) {
+          // 获取所有 list_item 子组件
+          const listItems = finalList.children
+            .map(childId => newComponents.find(c => c.id === childId))
+            .filter(child => child !== undefined && child.type === 'hg_list_item') as Component[];
+          
+          // 按 index 排序
+          listItems.sort((a, b) => {
+            const indexA = a.data?.index ?? 0;
+            const indexB = b.data?.index ?? 0;
+            return indexA - indexB;
+          });
+          
+          // 更新 children 数组为排序后的顺序
+          finalList.children = listItems.map(c => c.id);
+          newComponents[finalListIndex] = finalList;
         }
       }
       

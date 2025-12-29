@@ -314,6 +314,8 @@ export class HmlParser {
     parentId: string,
     parentComponent: Component
   ): void {
+    let listItemIndex = 0; // 用于自动分配 list_item 的 index
+    
     Object.keys(element).forEach(key => {
       if (key === '_attributes' || key === '_text' || key === 'events') {
         return;
@@ -328,10 +330,48 @@ export class HmlParser {
         const children = Array.isArray(childElement) ? childElement : [childElement];
         children.forEach((child: any) => {
           const childComponent = this._parseComponent(key, child, componentMap, parentId);
+          
+          // 对于 hg_list 的 hg_list_item 子组件，如果没有 index 属性，自动分配
+          if (parentComponent.type === 'hg_list' && childComponent.type === 'hg_list_item') {
+            if (childComponent.data && childComponent.data.index === undefined) {
+              childComponent.data.index = listItemIndex;
+            }
+            listItemIndex++;
+          }
+          
           parentComponent.children!.push(childComponent.id);
         });
       }
     });
+
+    // 对于 hg_list 组件，按 y 坐标排序子组件（hg_list_item），并重新分配 index
+    if (parentComponent.type === 'hg_list' && parentComponent.children && parentComponent.children.length > 0) {
+      const childComponents = parentComponent.children
+        .map(childId => componentMap.get(childId))
+        .filter(child => child !== undefined) as Component[];
+      
+      // 按 y 坐标排序（对于垂直列表）或 x 坐标排序（对于水平列表）
+      const direction = parentComponent.style?.direction || parentComponent.data?.direction || 'VERTICAL';
+      childComponents.sort((a, b) => {
+        if (direction === 'VERTICAL') {
+          return a.position.y - b.position.y;
+        } else {
+          return a.position.x - b.position.x;
+        }
+      });
+      
+      // 重新分配 index（按排序后的顺序）
+      childComponents.forEach((child, idx) => {
+        if (child.data) {
+          child.data.index = idx;
+        } else {
+          child.data = { index: idx };
+        }
+      });
+      
+      // 更新 children 数组为排序后的顺序
+      parentComponent.children = childComponents.map(c => c.id);
+    }
   }
 
   /**

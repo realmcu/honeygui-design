@@ -206,10 +206,7 @@ export class HmlSerializer {
                 if (propName === 'interactions' || propName === 'view_switch' || propName === 'events') {
                     return;
                 }
-                // 跳过 list_item 的 index 属性（它会在解析时自动生成）
-                if (component.type === 'hg_list_item' && propName === 'index') {
-                    return;
-                }
+                // 保留 list_item 的 index 属性（用于确保顺序正确）
                 const value = component.data![propName];
                 if (value !== undefined && value !== null && value !== '') {
                     attributesStr += ' ' + propName + '="' + this._escapeXmlValue(this._convertToString(value)) + '"';
@@ -276,7 +273,34 @@ export class HmlSerializer {
 
             // 递归序列化子组件
             if (hasChildren) {
-                component.children!.forEach(childId => {
+                // 对于 hg_list 组件，按 y/x 坐标排序子组件（hg_list_item）
+                let childrenToSerialize = component.children!;
+                if (component.type === 'hg_list') {
+                    const childComponents = component.children!
+                        .map(childId => this.componentMap.get(childId))
+                        .filter(child => child !== undefined) as Component[];
+                    
+                    // 按 y 坐标排序（对于垂直列表）或 x 坐标排序（对于水平列表）
+                    const direction = component.style?.direction || component.data?.direction || 'VERTICAL';
+                    childComponents.sort((a, b) => {
+                        if (direction === 'VERTICAL') {
+                            return a.position.y - b.position.y;
+                        } else {
+                            return a.position.x - b.position.x;
+                        }
+                    });
+                    
+                    // 重新分配 index（按排序后的顺序）
+                    childComponents.forEach((child, idx) => {
+                        if (child.data) {
+                            child.data.index = idx;
+                        }
+                    });
+                    
+                    childrenToSerialize = childComponents.map(c => c.id);
+                }
+                
+                childrenToSerialize.forEach(childId => {
                     const child = this.componentMap.get(childId);
                     if (child) {
                         componentContent += this._serializeComponent(child, indentLevel + 1);
