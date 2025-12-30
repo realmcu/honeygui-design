@@ -5,7 +5,7 @@
         <author name="HoneyGUI Design" />
     </meta>
     <view>
-        <hg_view id="mainView" x="-3776" y="-887" width="410" height="502" backgroundColor="#000000">
+        <hg_view id="SmartWatchTemplateMainView" x="-3776" y="-887" width="410" height="502" backgroundColor="#000000">
             <events>
                 <event type="onSwipeLeft">
                     <action type="switchView" target="hg_view_1766022481486_seii" switchOutStyle="SWITCH_OUT_TO_LEFT_USE_TRANSLATION" switchInStyle="SWITCH_IN_FROM_RIGHT_USE_TRANSLATION" />
