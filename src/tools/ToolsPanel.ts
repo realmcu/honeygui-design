@@ -4,7 +4,7 @@ import { logger } from '../utils/Logger';
 import { ImageConverterService } from '../services/ImageConverterService';
 import { VideoConverterService } from '../services/VideoConverterService';
 import { Model3DConverterService } from '../services/Model3DConverterService';
-import { FontConverterService } from '../services/FontConverterService';
+// import { FontConverterService } from '../services/FontConverterService';  // TODO: 等字体转换工具准备好
 import { getToolsPanelHtml } from './ToolsPanelHtml';
 
 interface FileItem {
@@ -26,7 +26,7 @@ export class ToolsPanel {
     private imageConverter: ImageConverterService;
     private videoConverter: VideoConverterService;
     private model3DConverter: Model3DConverterService;
-    private fontConverter: FontConverterService;
+    // private fontConverter: FontConverterService;
 
     private files: Map<string, FileItem> = new Map();
     private folderSettings: Map<string, any> = new Map();
@@ -38,7 +38,7 @@ export class ToolsPanel {
         this.imageConverter = new ImageConverterService(sdkPath);
         this.videoConverter = new VideoConverterService(sdkPath, msg => logger.info(msg));
         this.model3DConverter = new Model3DConverterService(sdkPath);
-        this.fontConverter = new FontConverterService();
+        // this.fontConverter = new FontConverterService();
 
         this.panel.webview.html = getToolsPanelHtml();
         this.panel.onDidDispose(() => this.dispose(), null, this.disposables);
@@ -177,8 +177,9 @@ export class ToolsPanel {
                     result = await this.model3DConverter.convert(tempInput, outputPath, this.outputDir);
                     break;
                 case 'font':
+                    // TODO: 等字体转换工具准备好
                     outputPath = path.join(outputSubDir, file.name.replace(/\.[^.]+$/, '.bin'));
-                    result = await this.fontConverter.convert(tempInput, outputPath, settings);
+                    result = { success: false, inputPath: tempInput, outputPath, error: '字体转换功能开发中' };
                     break;
                 default:
                     result = { success: false, error: 'Unknown file type' };

@@ -18,6 +18,7 @@ export function getToolsPanelHtml(): string {
                         <option value="image">🖼️ 图片</option>
                         <option value="video">🎬 视频</option>
                         <option value="model">📦 3D模型</option>
+                        <option value="font">🔤 字体</option>
                     </select>
                     <div class="header-buttons">
                         <button class="icon-btn" onclick="selectFiles()" title="选择文件">📁</button>
@@ -32,7 +33,7 @@ export function getToolsPanelHtml(): string {
                         <div class="empty-hint">拖拽文件或文件夹到此处</div>
                     </div>
                 </div>
-                <input type="file" id="fileInput" multiple accept=".png,.jpg,.jpeg,.bmp,.mp4,.avi,.mov,.mkv,.webm,.obj,.gltf" style="display:none" onchange="handleFileSelect(event)">
+                <input type="file" id="fileInput" multiple accept=".png,.jpg,.jpeg,.bmp,.mp4,.avi,.mov,.mkv,.webm,.obj,.gltf,.ttf,.otf" style="display:none" onchange="handleFileSelect(event)">
                 <input type="file" id="folderInput" multiple webkitdirectory="" directory="" style="display:none" onchange="handleFileSelect(event)">
             </div>
             <div class="right-panel">
@@ -147,12 +148,14 @@ const folderSettings = {};
 const IMAGE_EXTS = ['.png','.jpg','.jpeg','.bmp'];
 const VIDEO_EXTS = ['.mp4','.avi','.mov','.mkv','.webm'];
 const MODEL_EXTS = ['.obj','.gltf'];
+const FONT_EXTS = ['.ttf','.otf'];
 
 function getFileType(name) {
     const ext = name.toLowerCase().match(/\\.[^.]+$/)?.[0] || '';
     if (IMAGE_EXTS.includes(ext)) return 'image';
     if (VIDEO_EXTS.includes(ext)) return 'video';
     if (MODEL_EXTS.includes(ext)) return 'model';
+    if (FONT_EXTS.includes(ext)) return 'font';
     return 'unknown';
 }
 
@@ -244,14 +247,15 @@ function setFilter(type) {
 }
 
 function updateFilterCounts() {
-    let img=0, vid=0, mod=0;
-    files.forEach(f => { if(f.type==='image')img++; else if(f.type==='video')vid++; else if(f.type==='model')mod++; });
-    const total = img + vid + mod;
+    let img=0, vid=0, mod=0, fnt=0;
+    files.forEach(f => { if(f.type==='image')img++; else if(f.type==='video')vid++; else if(f.type==='model')mod++; else if(f.type==='font')fnt++; });
+    const total = img + vid + mod + fnt;
     const sel = document.getElementById('filterSelect');
     sel.options[0].text = '全部 ('+total+')';
     sel.options[1].text = '🖼️ 图片 ('+img+')';
     sel.options[2].text = '🎬 视频 ('+vid+')';
     sel.options[3].text = '📦 3D模型 ('+mod+')';
+    sel.options[4].text = '🔤 字体 ('+fnt+')';
 }
 
 function getCurrentContent() {
@@ -363,11 +367,13 @@ function renderGrid() {
             html += '<img src="'+f.blobUrl+'" alt="'+f.name+'">';
         } else if (f.type === 'video') {
             html += '<video src="'+f.blobUrl+'" muted></video>';
-        } else {
+        } else if (f.type === 'model') {
             html += '<span class="icon">📦</span>';
+        } else {
+            html += '<span class="icon">🔤</span>';
         }
         html += '</div>';
-        html += '<span class="type-badge">' + (f.type==='image'?'🖼️':f.type==='video'?'🎬':'📦') + '</span>';
+        html += '<span class="type-badge">' + (f.type==='image'?'🖼️':f.type==='video'?'🎬':f.type==='model'?'📦':'🔤') + '</span>';
         html += '<div class="info" title="'+f.name+'">'+f.name+'</div>';
         html += '<button class="remove-btn" onclick="removeFile(event,\\''+f.id+'\\')">✕</button>';
         html += '</div>';
@@ -421,9 +427,9 @@ function clearAll() {
 }
 
 function updateStats() {
-    let img=0, vid=0, mod=0;
-    files.forEach(f => { if(f.type==='image')img++; else if(f.type==='video')vid++; else if(f.type==='model')mod++; });
-    document.getElementById('stats').textContent = '🖼️ '+img+'  🎬 '+vid+'  📦 '+mod;
+    let img=0, vid=0, mod=0, fnt=0;
+    files.forEach(f => { if(f.type==='image')img++; else if(f.type==='video')vid++; else if(f.type==='model')mod++; else if(f.type==='font')fnt++; });
+    document.getElementById('stats').textContent = '🖼️ '+img+'  🎬 '+vid+'  📦 '+mod+'  🔤 '+fnt;
     document.getElementById('convertBtn').disabled = !(files.size && outputDir);
     updateFilterCounts();
 }
@@ -433,18 +439,19 @@ function renderProperties() {
     
     if (selectedFolder) {
         const settings = folderSettings[selectedFolder] || {};
-        let imgCount = 0, vidCount = 0, modCount = 0;
+        let imgCount = 0, vidCount = 0, modCount = 0, fntCount = 0;
         files.forEach(f => {
             if (f.relativePath === selectedFolder || f.relativePath.startsWith(selectedFolder + '/')) {
                 if (f.type === 'image') imgCount++;
                 else if (f.type === 'video') vidCount++;
                 else if (f.type === 'model') modCount++;
+                else if (f.type === 'font') fntCount++;
             }
         });
         
         let html = '<div class="preview-area"><div class="model-preview">📁</div></div>';
         html += '<div class="file-name">'+selectedFolder.split('/').pop()+'</div>';
-        html += '<div class="file-path">🖼️ '+imgCount+'  🎬 '+vidCount+'  📦 '+modCount+'</div>';
+        html += '<div class="file-path">🖼️ '+imgCount+'  🎬 '+vidCount+'  📦 '+modCount+'  🔤 '+fntCount+'</div>';
         
         if (imgCount > 0) {
             html += '<div class="prop-group"><div class="prop-group-title">🖼️ 图片设置 ('+imgCount+'个)</div>' +
@@ -472,6 +479,21 @@ function renderProperties() {
             html += '<div class="prop-group"><div class="prop-group-title">📦 3D模型 ('+modCount+'个)</div><div style="font-size:11px;color:var(--vscode-descriptionForeground)">无额外设置</div></div>';
         }
         
+        if (fntCount > 0) {
+            html += '<div class="prop-group"><div class="prop-group-title">🔤 字体设置 ('+fntCount+'个)</div>' +
+                '<div class="prop-row"><label>字号:</label><input type="number" min="8" max="200" value="'+(settings.font?.fontSize||32)+'" onchange="updateFolderSetting(\\'font\\',\\'fontSize\\',+this.value)"></div>' +
+                '<div class="prop-row"><label>渲染模式:</label><select onchange="updateFolderSetting(\\'font\\',\\'renderMode\\',+this.value)">' +
+                '<option value="1"'+(settings.font?.renderMode===1?' selected':'')+'>1位 (单色)</option>' +
+                '<option value="2"'+(settings.font?.renderMode===2?' selected':'')+'>2位 (4级灰度)</option>' +
+                '<option value="4"'+(!settings.font?.renderMode||settings.font?.renderMode===4?' selected':'')+'>4位 (16级灰度)</option>' +
+                '<option value="8"'+(settings.font?.renderMode===8?' selected':'')+'>8位 (256级灰度)</option>' +
+                '</select></div>' +
+                '<div class="prop-row"><label>输出格式:</label><select onchange="updateFolderSetting(\\'font\\',\\'outputFormat\\',this.value)">' +
+                '<option value="bitmap"'+(!settings.font?.outputFormat||settings.font?.outputFormat==='bitmap'?' selected':'')+'>位图字体</option>' +
+                '<option value="vector"'+(settings.font?.outputFormat==='vector'?' selected':'')+'>矢量字体</option>' +
+                '</select></div></div>';
+        }
+        
         props.innerHTML = html;
         return;
     }
@@ -492,8 +514,10 @@ function renderProperties() {
         html += '<img src="'+file.blobUrl+'">';
     } else if (file.type === 'video') {
         html += '<video src="'+file.blobUrl+'" controls muted style="max-height:150px"></video>';
-    } else {
+    } else if (file.type === 'model') {
         html += '<div class="model-preview">📦</div>';
+    } else {
+        html += '<div class="model-preview">🔤</div>';
     }
     html += '</div>';
     
@@ -523,6 +547,22 @@ function renderProperties() {
             '</select></div>' +
             '<div class="prop-row"><label>质量:</label><input type="number" min="1" max="31" value="'+(settings.quality||'')+'" placeholder="继承 ('+(iv.quality||1)+')" onchange="updateSetting(\\'quality\\',this.value?+this.value:null)"></div>' +
             '<div class="prop-row"><label>帧率:</label><input type="number" value="'+(settings.frameRate||'')+'" placeholder="'+(iv.frameRate||'保持原始')+'" onchange="updateSetting(\\'frameRate\\',this.value?+this.value:null)"></div></div>';
+    } else if (file.type === 'font') {
+        const ifnt = inherited.font || {};
+        html += '<div class="prop-group"><div class="prop-group-title">转换设置</div>' +
+            '<div class="prop-row"><label>字号:</label><input type="number" min="8" max="200" value="'+(settings.fontSize||'')+'" placeholder="继承 ('+(ifnt.fontSize||32)+')" onchange="updateSetting(\\'fontSize\\',this.value?+this.value:null)"></div>' +
+            '<div class="prop-row"><label>渲染模式:</label><select onchange="updateSetting(\\'renderMode\\',this.value?+this.value:null)">' +
+            '<option value=""'+(!settings.renderMode?' selected':'')+'>继承 ('+(ifnt.renderMode||4)+'位)</option>' +
+            '<option value="1"'+(settings.renderMode===1?' selected':'')+'>1位 (单色)</option>' +
+            '<option value="2"'+(settings.renderMode===2?' selected':'')+'>2位 (4级灰度)</option>' +
+            '<option value="4"'+(settings.renderMode===4?' selected':'')+'>4位 (16级灰度)</option>' +
+            '<option value="8"'+(settings.renderMode===8?' selected':'')+'>8位 (256级灰度)</option>' +
+            '</select></div>' +
+            '<div class="prop-row"><label>输出格式:</label><select onchange="updateSetting(\\'outputFormat\\',this.value||null)">' +
+            '<option value=""'+(!settings.outputFormat?' selected':'')+'>继承 ('+(ifnt.outputFormat||'位图')+')</option>' +
+            '<option value="bitmap"'+(settings.outputFormat==='bitmap'?' selected':'')+'>位图字体</option>' +
+            '<option value="vector"'+(settings.outputFormat==='vector'?' selected':'')+'>矢量字体</option>' +
+            '</select></div></div>';
     } else {
         html += '<div class="prop-group"><div class="prop-group-title">转换设置</div><div style="font-size:11px;color:var(--vscode-descriptionForeground)">3D模型无额外设置</div></div>';
     }
