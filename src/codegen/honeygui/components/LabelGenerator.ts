@@ -37,14 +37,15 @@ export class LabelGenerator implements ComponentCodeGenerator {
 
     // 文本内容（如果有时间格式，使用占位符）
     const timeFormat = component.data?.timeFormat;
-    const text = timeFormat ? this.getTimeFormatPlaceholder(timeFormat) : (component.data?.text || '');
+    const rawText = timeFormat ? this.getTimeFormatPlaceholder(timeFormat) : (component.data?.text ?? '');
+    const text = String(rawText);  // 确保是字符串
     code += `${indentStr}gui_text_content_set((gui_text_t *)${component.id}, (void *)"${text}", ${text.length});\n`;
 
     // 颜色
     const color = component.style?.color;
     if (color) {
-      const hexColor = this.colorToHex(color);
-      code += `${indentStr}gui_text_color_set((gui_text_t *)${component.id}, ${hexColor});\n`;
+      const rgb = this.colorToRgb(color);
+      code += `${indentStr}gui_text_color_set((gui_text_t *)${component.id}, gui_rgb(${rgb.r}, ${rgb.g}, ${rgb.b}));\n`;
     }
 
     // 对齐方式
@@ -92,10 +93,26 @@ export class LabelGenerator implements ComponentCodeGenerator {
     }
   }
 
-  private colorToHex(color: string): string {
+  /**
+   * 将颜色字符串转换为 RGB 对象
+   */
+  private colorToRgb(color: string): { r: number; g: number; b: number } {
     if (color.startsWith('#')) {
-      return '0x' + color.slice(1).toUpperCase();
+      const hex = color.slice(1);
+      if (hex.length === 6) {
+        return {
+          r: parseInt(hex.slice(0, 2), 16),
+          g: parseInt(hex.slice(2, 4), 16),
+          b: parseInt(hex.slice(4, 6), 16),
+        };
+      } else if (hex.length === 3) {
+        return {
+          r: parseInt(hex[0] + hex[0], 16),
+          g: parseInt(hex[1] + hex[1], 16),
+          b: parseInt(hex[2] + hex[2], 16),
+        };
+      }
     }
-    return color;
+    return { r: 255, g: 255, b: 255 };  // 默认白色
   }
 }
