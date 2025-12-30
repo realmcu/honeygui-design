@@ -24,14 +24,14 @@
         <hg_view id="hg_view_1766022481486_seii" x="-3776" y="-255" width="410" height="502" backgroundColor="#000000" borderRadius="0" padding="12" overflow="auto" zIndex="1">
             <events>
                 <event type="onSwipeUp">
-                    <action type="switchView" target="mainView" switchOutStyle="SWITCH_OUT_TO_BOTTOM_USE_TRANSLATION" switchInStyle="SWITCH_IN_FROM_TOP_USE_TRANSLATION" />
+                    <action type="switchView" target="SmartWatchTemplateMainView" switchOutStyle="SWITCH_OUT_TO_BOTTOM_USE_TRANSLATION" switchInStyle="SWITCH_IN_FROM_TOP_USE_TRANSLATION" />
                 </event>
             </events>
         </hg_view>
         <hg_view id="app_top_view" x="-3776" y="-1506" width="410" height="502" backgroundColor="#000000" borderRadius="0" padding="12" overflow="auto" zIndex="1">
             <events>
                 <event type="onSwipeUp">
-                    <action type="switchView" target="mainView" switchOutStyle="SWITCH_OUT_TO_TOP_USE_TRANSLATION" switchInStyle="SWITCH_IN_STILL_USE_BLUR" />
+                    <action type="switchView" target="SmartWatchTemplateMainView" switchOutStyle="SWITCH_OUT_TO_TOP_USE_TRANSLATION" switchInStyle="SWITCH_IN_STILL_USE_BLUR" />
                 </event>
             </events>
             <hg_rect id="hg_rect_1767003360110_1aep" x="0" y="0" width="410" height="502" borderRadius="0" fillColor="#4e464a" opacity="128" zIndex="1" />

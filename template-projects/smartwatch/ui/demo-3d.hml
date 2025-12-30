@@ -14,7 +14,7 @@
         <hg_view id="hg_view_1766044593245_j9p2" x="278" y="-204" width="410" height="502" backgroundColor="#000000" borderRadius="0" padding="12" overflow="auto" zIndex="1">
             <events>
                 <event type="onSwipeLeft">
-                    <action type="switchView" target="mainView" switchOutStyle="SWITCH_OUT_TO_LEFT_USE_TRANSLATION" switchInStyle="SWITCH_IN_FROM_RIGHT_USE_TRANSLATION" />
+                    <action type="switchView" target="SmartWatchTemplateMainView" switchOutStyle="SWITCH_OUT_TO_LEFT_USE_TRANSLATION" switchInStyle="SWITCH_IN_FROM_RIGHT_USE_TRANSLATION" />
                 </event>
             </events>
             <hg_label id="hg_label_1766044605026_tgpz" x="156" y="33" width="100" height="50" fontSize="32" align="LEFT" letterSpacing="0" lineSpacing="0" wordWrap="false" text="测试你好" fontFile="/NotoSansSC-Bold.ttf" zIndex="1" />
