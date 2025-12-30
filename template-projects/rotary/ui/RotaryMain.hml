@@ -5,7 +5,7 @@
         <author name="HoneyGUI Design" />
     </meta>
     <view>
-        <hg_view id="mainView" x="0" y="0" width="480" height="480" name="mainView" backgroundColor="#000000">
+        <hg_view id="mainView" entry="true" x="0" y="0" width="480" height="480" name="mainView" backgroundColor="#000000">
             <!-- Time Display (center) -->
             <hg_text id="timeText" x="190" y="200" width="100" height="50" name="timeText"
                      text="12:30" fontSize="36" color="#FFFFFF" align="center" />
