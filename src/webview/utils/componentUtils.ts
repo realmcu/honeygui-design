@@ -52,6 +52,7 @@ export const getAbsolutePosition = (
  * 查找指定位置的目标容器组件
  * 只返回容器类型（hg_view 或 hg_window）
  * 返回最小的包含该位置的容器
+ * 当面积相同时，优先选择 z-index 更大或数组位置更靠后的组件
  */
 export const findComponentAtPosition = (
   x: number,
@@ -59,8 +60,12 @@ export const findComponentAtPosition = (
   components: Component[]
 ): Component | null => {
   let targetContainer: Component | null = null;
+  let targetArea = Infinity;
+  let targetIndex = -1;
   
-  for (const comp of components) {
+  for (let i = 0; i < components.length; i++) {
+    const comp = components[i];
+    
     // 只查找容器类型
     if (!isContainerType(comp.type)) {
       continue;
@@ -70,8 +75,13 @@ export const findComponentAtPosition = (
     const { width: cw, height: ch } = comp.position;
     
     if (x >= absPos.x && x <= absPos.x + cw && y >= absPos.y && y <= absPos.y + ch) {
-      if (!targetContainer || (cw * ch < targetContainer.position.width * targetContainer.position.height)) {
+      const area = cw * ch;
+      
+      // 选择面积更小的容器，或面积相同时选择数组位置更靠后的（渲染层级更高）
+      if (!targetContainer || area < targetArea || (area === targetArea && i > targetIndex)) {
         targetContainer = comp;
+        targetArea = area;
+        targetIndex = i;
       }
     }
   }

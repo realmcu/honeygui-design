@@ -38,7 +38,7 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
 
   // 获取当前组件所属的根 hg_view
   const getRootView = (comp: typeof component): typeof component | null => {
-    if (comp.type === 'hg_view' || comp.type === 'hg_window') {
+    if (comp.type === 'hg_view') {
       return comp;
     }
     if (comp.parent) {
@@ -178,6 +178,12 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
               }}
             >
               <option value="">无</option>
+              {/* 如果当前父对象不在可选列表中，也要显示它 */}
+              {currentParent && !availableParents.find(p => p.id === currentParent.id) && (
+                <option key={currentParent.id} value={currentParent.id}>
+                  {currentParent.name} ({currentParent.type})
+                </option>
+              )}
               {availableParents.map(p => (
                 <option key={p.id} value={p.id}>
                   {p.name} ({p.type})

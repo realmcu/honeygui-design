@@ -325,29 +325,29 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       if (updates.style) {
         const validatedStyle = { ...updates.style };
         
-        // 验证 itemWidth >= 10
+        // 验证 itemWidth >= 1
         if ('itemWidth' in validatedStyle) {
           const itemWidth = validatedStyle.itemWidth as number;
-          if (itemWidth < 10) {
-            validatedStyle.itemWidth = 10;
+          if (itemWidth < 1) {
+            validatedStyle.itemWidth = 1;
             if (vscodeAPI) {
               vscodeAPI.postMessage({
                 command: 'showError',
-                text: '项宽度必须大于等于 10'
+                text: '项宽度必须大于等于 1'
               });
             }
           }
         }
         
-        // 验证 itemHeight >= 10
+        // 验证 itemHeight >= 1
         if ('itemHeight' in validatedStyle) {
           const itemHeight = validatedStyle.itemHeight as number;
-          if (itemHeight < 10) {
-            validatedStyle.itemHeight = 10;
+          if (itemHeight < 1) {
+            validatedStyle.itemHeight = 1;
             if (vscodeAPI) {
               vscodeAPI.postMessage({
                 command: 'showError',
-                text: '项高度必须大于等于 10'
+                text: '项高度必须大于等于 1'
               });
             }
           }
