@@ -112,6 +112,18 @@ h1{font-size:16px;margin-bottom:12px}
 .prop-row{display:flex;align-items:center;margin-bottom:6px;font-size:12px}
 .prop-row label{width:65px;color:var(--vscode-descriptionForeground)}
 .prop-row select,.prop-row input{flex:1;background:var(--vscode-input-background);border:1px solid var(--vscode-input-border);color:var(--vscode-input-foreground);padding:4px 6px;border-radius:3px;font-size:11px}
+.prop-row button{padding:4px 8px;font-size:10px;flex:none}
+.charset-list{margin-top:6px;border:1px solid var(--vscode-panel-border);border-radius:3px;max-height:150px;overflow-y:auto}
+.charset-item{display:flex;flex-direction:column;padding:6px;font-size:11px;border-bottom:1px solid var(--vscode-panel-border);gap:4px}
+.charset-item:last-child{border-bottom:none}
+.charset-item .charset-row{display:flex;align-items:center;gap:4px}
+.charset-item select{width:auto;min-width:90px;flex:none}
+.charset-item input{flex:1;min-width:0}
+.charset-item .remove-charset{background:transparent;border:none;color:var(--vscode-descriptionForeground);cursor:pointer;padding:2px 4px;font-size:12px;flex:none}
+.charset-item .remove-charset:hover{color:#f44}
+.charset-item .browse-btn{padding:2px 8px;font-size:10px;flex:none}
+.charset-hint{font-size:9px;color:var(--vscode-descriptionForeground);padding-left:94px}
+.add-charset{margin-top:4px;font-size:10px;padding:3px 8px}
 .output-section{display:flex;align-items:center;gap:10px;padding:10px 0;font-size:13px}
 .output-path{flex:1;padding:6px 10px;background:var(--vscode-textBlockQuote-background);border-radius:4px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .footer{display:flex;justify-content:space-between;align-items:center;padding:10px 0}
@@ -480,18 +492,33 @@ function renderProperties() {
         }
         
         if (fntCount > 0) {
+            const charsets = settings.font?.characterSets || [{type:'range',value:'0x20-0x7E'}];
+            const isVector = settings.font?.outputFormat === 'vector';
+            const displayFontSize = isVector ? 32 : (settings.font?.fontSize || 32);
+            const displayRenderMode = isVector ? 8 : (settings.font?.renderMode || 4);
             html += '<div class="prop-group"><div class="prop-group-title">🔤 字体设置 ('+fntCount+'个)</div>' +
-                '<div class="prop-row"><label>字号:</label><input type="number" min="8" max="200" value="'+(settings.font?.fontSize||32)+'" onchange="updateFolderSetting(\\'font\\',\\'fontSize\\',+this.value)"></div>' +
-                '<div class="prop-row"><label>渲染模式:</label><select onchange="updateFolderSetting(\\'font\\',\\'renderMode\\',+this.value)">' +
-                '<option value="1"'+(settings.font?.renderMode===1?' selected':'')+'>1位 (单色)</option>' +
-                '<option value="2"'+(settings.font?.renderMode===2?' selected':'')+'>2位 (4级灰度)</option>' +
-                '<option value="4"'+(!settings.font?.renderMode||settings.font?.renderMode===4?' selected':'')+'>4位 (16级灰度)</option>' +
-                '<option value="8"'+(settings.font?.renderMode===8?' selected':'')+'>8位 (256级灰度)</option>' +
-                '</select></div>' +
-                '<div class="prop-row"><label>输出格式:</label><select onchange="updateFolderSetting(\\'font\\',\\'outputFormat\\',this.value)">' +
-                '<option value="bitmap"'+(!settings.font?.outputFormat||settings.font?.outputFormat==='bitmap'?' selected':'')+'>位图字体</option>' +
+                '<div class="prop-row"><label>输出格式:</label><select onchange="handleFolderOutputFormatChange(this.value)">' +
+                '<option value="bitmap"'+(!settings.font?.outputFormat||settings.font?.outputFormat==='bitmap'?' selected':'')+'>点阵字体</option>' +
                 '<option value="vector"'+(settings.font?.outputFormat==='vector'?' selected':'')+'>矢量字体</option>' +
-                '</select></div></div>';
+                '</select></div>' +
+                (isVector ? '<div style="font-size:10px;color:var(--vscode-descriptionForeground);margin:-4px 0 6px 65px;">矢量字体渲染支持字号调整，无需修改当前配置</div>' : '') +
+                '<div class="prop-row"><label>字号:</label><input type="number" min="8" max="200" value="'+displayFontSize+'" onchange="updateFolderSetting(\\'font\\',\\'fontSize\\',+this.value)"'+(isVector?' disabled style="opacity:0.5"':'')+'>'+
+                (isVector ? '<span style="font-size:10px;color:var(--vscode-descriptionForeground);margin-left:4px">(固定)</span>' : '') + '</div>' +
+                '<div class="prop-row"><label>渲染模式:</label><select onchange="updateFolderSetting(\\'font\\',\\'renderMode\\',+this.value)"'+(isVector?' disabled style="opacity:0.5"':'')+'>'+
+                '<option value="1"'+(displayRenderMode===1?' selected':'')+'>1位 (单色)</option>' +
+                '<option value="2"'+(displayRenderMode===2?' selected':'')+'>2位 (4级灰度)</option>' +
+                '<option value="4"'+(displayRenderMode===4?' selected':'')+'>4位 (16级灰度)</option>' +
+                '<option value="8"'+(displayRenderMode===8?' selected':'')+'>8位 (256级灰度)</option>' +
+                '</select>'+(isVector ? '<span style="font-size:10px;color:var(--vscode-descriptionForeground);margin-left:4px">(固定)</span>' : '')+'</div>' +
+                '<div class="prop-row"><label>裁剪模式:</label><select onchange="updateFolderSetting(\\'font\\',\\'crop\\',this.value)">' +
+                '<option value="auto"'+(!settings.font?.crop||settings.font?.crop==='auto'?' selected':'')+'>自动</option>' +
+                '<option value="true"'+(settings.font?.crop==='true'?' selected':'')+'>启用</option>' +
+                '<option value="false"'+(settings.font?.crop==='false'?' selected':'')+'>禁用</option>' +
+                '</select></div>' +
+                '<div class="prop-group-title" style="margin-top:8px">字符集</div>' +
+                '<div class="charset-list" id="folderCharsetList">' + renderCharsetItems(charsets, true) + '</div>' +
+                '<button class="add-charset" onclick="addFolderCharset()">+ 添加字符集</button>' +
+                '</div>';
         }
         
         props.innerHTML = html;
@@ -549,20 +576,37 @@ function renderProperties() {
             '<div class="prop-row"><label>帧率:</label><input type="number" value="'+(settings.frameRate||'')+'" placeholder="'+(iv.frameRate||'保持原始')+'" onchange="updateSetting(\\'frameRate\\',this.value?+this.value:null)"></div></div>';
     } else if (file.type === 'font') {
         const ifnt = inherited.font || {};
+        const charsets = settings.characterSets || ifnt.characterSets || [{type:'range',value:'0x20-0x7E'}];
+        const effectiveOutputFormat = settings.outputFormat || ifnt.outputFormat || 'bitmap';
+        const isVector = effectiveOutputFormat === 'vector';
+        const displayFontSize = isVector ? 32 : (settings.fontSize || ifnt.fontSize || 32);
+        const displayRenderMode = isVector ? 8 : (settings.renderMode || ifnt.renderMode || 4);
         html += '<div class="prop-group"><div class="prop-group-title">转换设置</div>' +
-            '<div class="prop-row"><label>字号:</label><input type="number" min="8" max="200" value="'+(settings.fontSize||'')+'" placeholder="继承 ('+(ifnt.fontSize||32)+')" onchange="updateSetting(\\'fontSize\\',this.value?+this.value:null)"></div>' +
-            '<div class="prop-row"><label>渲染模式:</label><select onchange="updateSetting(\\'renderMode\\',this.value?+this.value:null)">' +
-            '<option value=""'+(!settings.renderMode?' selected':'')+'>继承 ('+(ifnt.renderMode||4)+'位)</option>' +
-            '<option value="1"'+(settings.renderMode===1?' selected':'')+'>1位 (单色)</option>' +
-            '<option value="2"'+(settings.renderMode===2?' selected':'')+'>2位 (4级灰度)</option>' +
-            '<option value="4"'+(settings.renderMode===4?' selected':'')+'>4位 (16级灰度)</option>' +
-            '<option value="8"'+(settings.renderMode===8?' selected':'')+'>8位 (256级灰度)</option>' +
-            '</select></div>' +
-            '<div class="prop-row"><label>输出格式:</label><select onchange="updateSetting(\\'outputFormat\\',this.value||null)">' +
-            '<option value=""'+(!settings.outputFormat?' selected':'')+'>继承 ('+(ifnt.outputFormat||'位图')+')</option>' +
-            '<option value="bitmap"'+(settings.outputFormat==='bitmap'?' selected':'')+'>位图字体</option>' +
+            '<div class="prop-row"><label>输出格式:</label><select onchange="handleFileOutputFormatChange(this.value)">' +
+            '<option value=""'+(!settings.outputFormat?' selected':'')+'>继承 ('+(ifnt.outputFormat==='vector'?'矢量':'点阵')+')</option>' +
+            '<option value="bitmap"'+(settings.outputFormat==='bitmap'?' selected':'')+'>点阵字体</option>' +
             '<option value="vector"'+(settings.outputFormat==='vector'?' selected':'')+'>矢量字体</option>' +
-            '</select></div></div>';
+            '</select></div>' +
+            (isVector ? '<div style="font-size:10px;color:var(--vscode-descriptionForeground);margin:-4px 0 6px 65px;">矢量字体渲染支持字号调整，无需修改当前配置</div>' : '') +
+            '<div class="prop-row"><label>字号:</label><input type="number" min="8" max="200" value="'+(isVector?'':settings.fontSize||'')+'" placeholder="'+(isVector?'32 (固定)':'继承 ('+(ifnt.fontSize||32)+')')+'" onchange="updateSetting(\\'fontSize\\',this.value?+this.value:null)"'+(isVector?' disabled style="opacity:0.5"':'')+'>'+
+            (isVector ? '<span style="font-size:10px;color:var(--vscode-descriptionForeground);margin-left:4px">(固定)</span>' : '') + '</div>' +
+            '<div class="prop-row"><label>渲染模式:</label><select onchange="updateSetting(\\'renderMode\\',this.value?+this.value:null)"'+(isVector?' disabled style="opacity:0.5"':'')+'>'+
+            '<option value=""'+(!settings.renderMode&&!isVector?' selected':'')+'>继承 ('+(ifnt.renderMode||4)+'位)</option>' +
+            '<option value="1"'+(!isVector&&settings.renderMode===1?' selected':'')+'>1位 (单色)</option>' +
+            '<option value="2"'+(!isVector&&settings.renderMode===2?' selected':'')+'>2位 (4级灰度)</option>' +
+            '<option value="4"'+(!isVector&&settings.renderMode===4?' selected':'')+'>4位 (16级灰度)</option>' +
+            '<option value="8"'+(isVector||settings.renderMode===8?' selected':'')+'>8位 (256级灰度)</option>' +
+            '</select>'+(isVector ? '<span style="font-size:10px;color:var(--vscode-descriptionForeground);margin-left:4px">(固定)</span>' : '')+'</div>' +
+            '<div class="prop-row"><label>裁剪模式:</label><select onchange="updateSetting(\\'crop\\',this.value||null)">' +
+            '<option value=""'+(!settings.crop?' selected':'')+'>继承 ('+(ifnt.crop==='true'?'启用':ifnt.crop==='false'?'禁用':'自动')+')</option>' +
+            '<option value="auto"'+(settings.crop==='auto'?' selected':'')+'>自动</option>' +
+            '<option value="true"'+(settings.crop==='true'?' selected':'')+'>启用</option>' +
+            '<option value="false"'+(settings.crop==='false'?' selected':'')+'>禁用</option>' +
+            '</select></div>' +
+            '<div class="prop-group-title" style="margin-top:8px">字符集</div>' +
+            '<div class="charset-list" id="fileCharsetList">' + renderCharsetItems(charsets, false) + '</div>' +
+            '<button class="add-charset" onclick="addFileCharset()">+ 添加字符集</button>' +
+            '</div>';
     } else {
         html += '<div class="prop-group"><div class="prop-group-title">转换设置</div><div style="font-size:11px;color:var(--vscode-descriptionForeground)">3D模型无额外设置</div></div>';
     }
@@ -597,6 +641,171 @@ function updateSetting(key, value) {
     vscode.postMessage({type:'updateFileSettings', id:selectedId, settings: file.settings});
 }
 
+// 保存点阵字体设置的临时存储
+const bitmapFontSettings = {
+    folder: {},  // folderPath -> {fontSize, renderMode}
+    file: {}     // fileId -> {fontSize, renderMode}
+};
+
+function handleFolderOutputFormatChange(value) {
+    const settings = folderSettings[selectedFolder] || {};
+    const currentFontSettings = settings.font || {};
+    
+    if (value === 'vector') {
+        // 切换到矢量字体：保存当前设置
+        bitmapFontSettings.folder[selectedFolder] = {
+            fontSize: currentFontSettings.fontSize || 32,
+            renderMode: currentFontSettings.renderMode || 4
+        };
+        // 设置矢量字体固定值
+        updateFolderSetting('font', 'outputFormat', 'vector');
+        updateFolderSetting('font', 'fontSize', 32);
+        updateFolderSetting('font', 'renderMode', 8);
+    } else {
+        // 切换到点阵字体：恢复之前保存的设置
+        const saved = bitmapFontSettings.folder[selectedFolder] || {};
+        updateFolderSetting('font', 'outputFormat', 'bitmap');
+        if (saved.fontSize) updateFolderSetting('font', 'fontSize', saved.fontSize);
+        if (saved.renderMode) updateFolderSetting('font', 'renderMode', saved.renderMode);
+    }
+    renderProperties();
+}
+
+function handleFileOutputFormatChange(value) {
+    const file = files.get(selectedId);
+    if (!file) return;
+    const settings = file.settings || {};
+    
+    if (value === 'vector') {
+        // 切换到矢量字体：保存当前设置
+        bitmapFontSettings.file[selectedId] = {
+            fontSize: settings.fontSize,
+            renderMode: settings.renderMode
+        };
+        // 设置矢量字体固定值
+        updateSetting('outputFormat', 'vector');
+        updateSetting('fontSize', 32);
+        updateSetting('renderMode', 8);
+    } else if (value === 'bitmap') {
+        // 切换到点阵字体：恢复之前保存的设置
+        const saved = bitmapFontSettings.file[selectedId] || {};
+        updateSetting('outputFormat', 'bitmap');
+        if (saved.fontSize) updateSetting('fontSize', saved.fontSize);
+        else updateSetting('fontSize', null);
+        if (saved.renderMode) updateSetting('renderMode', saved.renderMode);
+        else updateSetting('renderMode', null);
+    } else {
+        // 继承：清除设置
+        const saved = bitmapFontSettings.file[selectedId] || {};
+        updateSetting('outputFormat', null);
+        if (saved.fontSize) updateSetting('fontSize', saved.fontSize);
+        else updateSetting('fontSize', null);
+        if (saved.renderMode) updateSetting('renderMode', saved.renderMode);
+        else updateSetting('renderMode', null);
+    }
+    renderProperties();
+}
+
+// 字符集相关函数
+function renderCharsetItems(charsets, isFolder) {
+    return charsets.map((cs, i) => {
+        const prefix = isFolder ? 'folder' : 'file';
+        const needBrowse = cs.type === 'file' || cs.type === 'codepage';
+        const placeholders = {range:'如: 0x20-0x7E', string:'直接输入字符', file:'点击浏览选择', codepage:'点击浏览选择'};
+        const hints = {range:'格式: 起始码-结束码', string:'', file:'.cst / .txt 文件', codepage:'如 CP936'};
+        // 文件类型只显示文件名
+        const displayValue = needBrowse && cs.value ? cs.value.split(/[\\\\/]/).pop() : (cs.value || '');
+        return '<div class="charset-item">' +
+            '<div class="charset-row">' +
+            '<select onchange="updateCharsetType('+i+',this.value,'+isFolder+')">' +
+            '<option value="range"'+(cs.type==='range'?' selected':'')+'>Unicode范围</option>' +
+            '<option value="string"'+(cs.type==='string'?' selected':'')+'>自定义字符</option>' +
+            '<option value="file"'+(cs.type==='file'?' selected':'')+'>Charset文件</option>' +
+            '<option value="codepage"'+(cs.type==='codepage'?' selected':'')+'>CodePage文件</option>' +
+            '</select>' +
+            '<input type="text" id="'+prefix+'Charset'+i+'" value="'+displayValue+'" placeholder="'+placeholders[cs.type]+'" onchange="updateCharsetValue('+i+',this.value,'+isFolder+')"'+(needBrowse?' readonly':'')+' title="'+(cs.value||'')+'">' +
+            (needBrowse ? '<button class="browse-btn" onclick="browseCharsetFile('+i+',\\''+cs.type+'\\','+isFolder+')">浏览</button>' : '') +
+            (charsets.length > 1 ? '<span class="remove-charset" onclick="removeCharset('+i+','+isFolder+')">✕</span>' : '') +
+            '</div>' +
+            (hints[cs.type] ? '<div class="charset-hint">'+hints[cs.type]+'</div>' : '') +
+            '</div>';
+    }).join('');
+}
+
+function getCharsets(isFolder) {
+    if (isFolder) {
+        const settings = folderSettings[selectedFolder] || {};
+        return settings.font?.characterSets || [{type:'range',value:'0x20-0x7E'}];
+    } else {
+        const file = files.get(selectedId);
+        const inherited = getInheritedSettings(file);
+        return file?.settings?.characterSets || inherited.font?.characterSets || [{type:'range',value:'0x20-0x7E'}];
+    }
+}
+
+function setCharsets(charsets, isFolder) {
+    if (isFolder) {
+        if (!folderSettings[selectedFolder]) folderSettings[selectedFolder] = {};
+        if (!folderSettings[selectedFolder].font) folderSettings[selectedFolder].font = {};
+        folderSettings[selectedFolder].font.characterSets = charsets;
+        vscode.postMessage({type:'updateFolderSettings', folderPath: selectedFolder, settings: folderSettings[selectedFolder]});
+    } else {
+        const file = files.get(selectedId);
+        if (!file) return;
+        if (!file.settings) file.settings = {};
+        file.settings.characterSets = charsets;
+        vscode.postMessage({type:'updateFileSettings', id:selectedId, settings: file.settings});
+    }
+    refreshCharsetList(isFolder);
+}
+
+function refreshCharsetList(isFolder) {
+    const listId = isFolder ? 'folderCharsetList' : 'fileCharsetList';
+    const list = document.getElementById(listId);
+    if (list) list.innerHTML = renderCharsetItems(getCharsets(isFolder), isFolder);
+}
+
+function updateCharsetType(idx, type, isFolder) {
+    const charsets = getCharsets(isFolder);
+    charsets[idx].type = type;
+    charsets[idx].value = '';
+    setCharsets(charsets, isFolder);
+}
+
+function updateCharsetValue(idx, value, isFolder) {
+    const charsets = getCharsets(isFolder);
+    charsets[idx].value = value;
+    setCharsets(charsets, isFolder);
+}
+
+function addFolderCharset() {
+    const charsets = getCharsets(true);
+    charsets.push({type:'range', value:''});
+    setCharsets(charsets, true);
+}
+
+function addFileCharset() {
+    const charsets = getCharsets(false);
+    charsets.push({type:'range', value:''});
+    setCharsets(charsets, false);
+}
+
+function removeCharset(idx, isFolder) {
+    const charsets = getCharsets(isFolder);
+    if (charsets.length <= 1) return;
+    charsets.splice(idx, 1);
+    setCharsets(charsets, isFolder);
+}
+
+function browseCharsetFile(idx, type, isFolder) {
+    currentCharsetIdx = idx;
+    currentCharsetIsFolder = isFolder;
+    vscode.postMessage({type:'selectCharsetFile', charsetIdx: idx, charsetType: type});
+}
+
+let currentCharsetIdx = 0;
+let currentCharsetIsFolder = false;
+
 function startConvert() {
     if (!outputDir || !files.size) return;
     document.getElementById('progressSection').style.display = 'block';
@@ -611,6 +820,10 @@ window.addEventListener('message', e => {
         outputDir = msg.dir;
         document.getElementById('outputDirPath').textContent = msg.dir;
         updateStats();
+    } else if (msg.type === 'charsetFileSelected') {
+        const charsets = getCharsets(currentCharsetIsFolder);
+        charsets[msg.charsetIdx].value = msg.filePath;
+        setCharsets(charsets, currentCharsetIsFolder);
     } else if (msg.type === 'progress') {
         const pct = msg.total ? (msg.current / msg.total * 100) : 0;
         document.getElementById('progressFill').style.width = pct + '%';

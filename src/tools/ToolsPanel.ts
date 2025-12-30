@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as fs from 'fs';
 import { logger } from '../utils/Logger';
 import { ImageConverterService } from '../services/ImageConverterService';
 import { VideoConverterService } from '../services/VideoConverterService';
@@ -21,6 +22,7 @@ export class ToolsPanel {
     private static readonly viewType = 'honeygui.toolsPanel';
 
     private readonly panel: vscode.WebviewPanel;
+    private readonly extensionUri: vscode.Uri;
     private disposables: vscode.Disposable[] = [];
 
     private imageConverter: ImageConverterService;
@@ -34,6 +36,7 @@ export class ToolsPanel {
 
     private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
         this.panel = panel;
+        this.extensionUri = extensionUri;
         const sdkPath = this.getSdkPath();
         this.imageConverter = new ImageConverterService(sdkPath);
         this.videoConverter = new VideoConverterService(sdkPath, msg => logger.info(msg));
@@ -92,6 +95,9 @@ export class ToolsPanel {
             case 'selectOutputDir':
                 await this.selectOutputDir();
                 break;
+            case 'selectCharsetFile':
+                await this.selectCharsetFile(message.charsetIdx, message.charsetType);
+                break;
             case 'startConvert':
                 await this.startConvert();
                 break;
@@ -119,6 +125,48 @@ export class ToolsPanel {
         }
     }
 
+    private async selectCharsetFile(charsetIdx: number, charsetType: string): Promise<void> {
+        // 获取扩展所在目录
+        const extensionPath = this.extensionUri.fsPath;
+        
+        let defaultUri: vscode.Uri | undefined;
+        let filters: Record<string, string[]> | undefined;
+        let title: string;
+
+        if (charsetType === 'codepage') {
+            // CodePage 文件：默认路径 tools/font-converter/CodePage，无后缀限制
+            const codepagePath = path.join(extensionPath, 'tools', 'font-converter', 'CodePage');
+            if (fs.existsSync(codepagePath)) {
+                defaultUri = vscode.Uri.file(codepagePath);
+            }
+            title = '选择 CodePage 文件';
+            // 不设置 filters，允许选择所有文件
+        } else {
+            // Charset 文件：默认路径 tools/font-converter/charset
+            const charsetPath = path.join(extensionPath, 'tools', 'font-converter', 'charset');
+            if (fs.existsSync(charsetPath)) {
+                defaultUri = vscode.Uri.file(charsetPath);
+            }
+            filters = { '字符集文件': ['cst', 'txt'] };
+            title = '选择字符集文件';
+        }
+
+        const result = await vscode.window.showOpenDialog({
+            canSelectMany: false,
+            defaultUri,
+            filters,
+            openLabel: title
+        });
+
+        if (result?.[0]) {
+            this.panel.webview.postMessage({
+                type: 'charsetFileSelected',
+                charsetIdx,
+                filePath: result[0].fsPath
+            });
+        }
+    }
+
     private async startConvert(): Promise<void> {
         if (!this.outputDir || this.files.size === 0) return;
 
@@ -141,8 +189,10 @@ export class ToolsPanel {
 
     private async convertFile(file: FileItem): Promise<any> {
         const tempDir = require('os').tmpdir();
-        const tempInput = path.join(tempDir, `honeygui_${file.id}_${file.name}`);
-        const fs = require('fs');
+        // 字体文件使用原始文件名（因为转换器会用文件名生成输出名）
+        // 其他类型使用带 ID 的名称避免冲突
+        const tempFileName = file.type === 'font' ? file.name : `honeygui_${file.id}_${file.name}`;
+        const tempInput = path.join(tempDir, tempFileName);
         
         try {
             fs.writeFileSync(tempInput, Buffer.from(file.data));
@@ -177,11 +227,13 @@ export class ToolsPanel {
                     result = await this.model3DConverter.convert(tempInput, outputPath, this.outputDir);
                     break;
                 case 'font':
-                    outputPath = path.join(outputSubDir, file.name.replace(/\.[^.]+$/, '.bin'));
+                    outputPath = outputSubDir;
                     result = await this.fontConverter.convert(tempInput, outputPath, {
                         fontSize: settings.fontSize || 32,
                         renderMode: settings.renderMode || 4,
-                        outputFormat: settings.outputFormat || 'bitmap'
+                        outputFormat: settings.outputFormat || 'bitmap',
+                        characterSets: settings.characterSets || [{ type: 'range', value: '0x20-0x7E' }],
+                        crop: settings.crop
                     });
                     break;
                 default:

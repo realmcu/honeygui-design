@@ -1,77 +1,168 @@
-import * as path from 'path';
 import * as fs from 'fs';
+import * as path from 'path';
 import { BitmapFontGenerator } from '../../tools/font-converter/src/bitmap-generator';
 import { VectorFontGenerator } from '../../tools/font-converter/src/vector-generator';
 import { FontConfig, CharacterSetSource } from '../../tools/font-converter/src/types/config';
 import { RenderMode, Rotation, IndexMethod } from '../../tools/font-converter/src/types/enums';
+import { CharsetProcessor } from '../../tools/font-converter/src/charset-processor';
 
 export interface FontConvertResult {
     success: boolean;
     inputPath: string;
     outputPath: string;
     error?: string;
+    processedCount?: number;
+    failedCount?: number;
+}
+
+export interface CharacterSetItem {
+    type: 'range' | 'file' | 'codepage' | 'string';
+    value: string;
 }
 
 export interface FontConvertOptions {
-    fontSize?: number;
-    renderMode?: number;  // 1, 2, 4, 8
-    outputFormat?: 'bitmap' | 'vector';
+    fontSize: number;
+    renderMode: number;  // 1, 2, 4, 8
+    outputFormat: 'bitmap' | 'vector';
     bold?: boolean;
     italic?: boolean;
-    characterSets?: Array<{ type: string; value: string }>;
+    characterSets: CharacterSetItem[];  // 多个字符集源，取并集
+    crop?: 'auto' | 'true' | 'false';   // 裁剪模式：自动/启用/禁用
 }
 
 export class FontConverterService {
+    // 字符数阈值：超过此值使用 crop + index 0，否则使用 index 1
+    private static readonly CROP_THRESHOLD = 2048;
+
     constructor() {}
 
-    async convert(inputPath: string, outputPath: string, options?: FontConvertOptions): Promise<FontConvertResult> {
-        try {
-            if (!fs.existsSync(inputPath)) {
-                return { success: false, inputPath, outputPath, error: `输入文件不存在: ${inputPath}` };
-            }
+    /**
+     * 根据字符数量自动选择最优的 index 和 crop 配置
+     */
+    private getOptimalIndexConfig(charCount: number): { crop: boolean; indexMethod: IndexMethod } {
+        if (charCount > FontConverterService.CROP_THRESHOLD) {
+            return { crop: true, indexMethod: IndexMethod.ADDRESS };
+        } else {
+            return { crop: false, indexMethod: IndexMethod.OFFSET };
+        }
+    }
 
+    /**
+     * 预估字符集中的字符数量
+     */
+    private estimateCharCount(characterSets: CharacterSetSource[], basePath: string): number {
+        try {
+            const chars = CharsetProcessor.mergeCharacterSources(characterSets, basePath);
+            return chars.length;
+        } catch {
+            return 1000;
+        }
+    }
+
+    /**
+     * 转换单个字体文件
+     */
+    async convert(inputPath: string, outputDir: string, options: FontConvertOptions): Promise<FontConvertResult> {
+        try {
             // 确保输出目录存在
-            const outputDir = path.dirname(outputPath);
             if (!fs.existsSync(outputDir)) {
                 fs.mkdirSync(outputDir, { recursive: true });
             }
 
             // 构建字符集
-            const characterSets: CharacterSetSource[] = options?.characterSets?.map(item => ({
-                type: item.type as 'file' | 'codepage' | 'range' | 'string',
+            const characterSets: CharacterSetSource[] = options.characterSets.map(item => ({
+                type: item.type,
                 value: item.value
-            })) || [{ type: 'range', value: '0x20-0x7E' }];  // 默认 ASCII
+            }));
 
-            const outputFormat = options?.outputFormat || 'bitmap';
+            // 如果没有字符集，默认使用 ASCII
+            if (characterSets.length === 0) {
+                characterSets.push({ type: 'range', value: '0x20-0x7E' });
+            }
+
+            // 预估字符数量，决定 crop 和 indexMethod
+            const basePath = path.dirname(inputPath);
+            const charCount = this.estimateCharCount(characterSets, basePath);
+            
+            // 根据 crop 选项决定配置
+            let crop: boolean;
+            let indexMethod: IndexMethod;
+            
+            if (options.crop === 'true') {
+                crop = true;
+                indexMethod = IndexMethod.ADDRESS;
+            } else if (options.crop === 'false') {
+                crop = false;
+                indexMethod = IndexMethod.OFFSET;
+            } else {
+                // 自动模式：根据字符数量选择
+                const autoConfig = this.getOptimalIndexConfig(charCount);
+                crop = autoConfig.crop;
+                indexMethod = autoConfig.indexMethod;
+            }
 
             // 构建配置
             const config: FontConfig = {
                 fontPath: inputPath,
-                outputPath: outputPath,
-                fontSize: options?.fontSize || 32,
-                renderMode: (options?.renderMode || 4) as RenderMode,
-                bold: options?.bold || false,
-                italic: options?.italic || false,
+                outputPath: outputDir,
+                fontSize: options.fontSize,
+                renderMode: this.parseRenderMode(options.renderMode),
+                bold: options.bold || false,
+                italic: options.italic || false,
                 rotation: Rotation.ROTATE_0,
                 gamma: 1.0,
-                indexMethod: IndexMethod.OFFSET,
-                crop: false,
+                indexMethod,
+                crop,
                 characterSets,
-                outputFormat
+                outputFormat: options.outputFormat
             };
 
-            // 根据输出格式选择生成器
-            if (outputFormat === 'vector') {
-                const generator = new VectorFontGenerator(config);
-                await generator.generate();
-            } else {
-                const generator = new BitmapFontGenerator(config);
-                await generator.generate();
-            }
+            // 创建生成器并执行
+            const generator = options.outputFormat === 'vector'
+                ? new VectorFontGenerator(config)
+                : new BitmapFontGenerator(config);
 
-            return { success: true, inputPath, outputPath };
+            await generator.generate();
+
+            const processed = generator.getProcessedCharacters();
+            const failed = generator.getFailedCharacters();
+
+            generator.cleanup();
+
+            return {
+                success: true,
+                inputPath,
+                outputPath: outputDir,
+                processedCount: processed.length,
+                failedCount: failed.length
+            };
         } catch (error: any) {
-            return { success: false, inputPath, outputPath, error: error.message };
+            return {
+                success: false,
+                inputPath,
+                outputPath: outputDir,
+                error: error.message
+            };
         }
+    }
+
+    /**
+     * 解析渲染模式
+     */
+    private parseRenderMode(mode: number): RenderMode {
+        switch (mode) {
+            case 1: return RenderMode.BIT_1;
+            case 2: return RenderMode.BIT_2;
+            case 4: return RenderMode.BIT_4;
+            case 8: return RenderMode.BIT_8;
+            default: return RenderMode.BIT_4;
+        }
+    }
+
+    /**
+     * 批量转换
+     */
+    async convertBatch(items: Array<{ input: string; outputDir: string; options: FontConvertOptions }>): Promise<FontConvertResult[]> {
+        return Promise.all(items.map(item => this.convert(item.input, item.outputDir, item.options)));
     }
 }
