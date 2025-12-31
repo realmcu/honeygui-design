@@ -254,6 +254,15 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     set((state) => {
       const newComponents = [...state.components];
 
+      // 如果是 hg_view，检查是否是第一个，设置 entry 属性
+      if (component.type === 'hg_view') {
+        const existingViews = newComponents.filter(c => c.type === 'hg_view');
+        if (existingViews.length === 0) {
+          // 第一个 hg_view，设置 entry="true"
+          component.data = { ...component.data, entry: true };
+        }
+      }
+
       // 如果组件有父组件引用，需要将其添加到父组件的children数组中
       if (component.parent && typeof component.parent === 'string') {
         const parentIndex = newComponents.findIndex(comp => comp.id === component.parent);
@@ -403,6 +412,24 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
         width: newSize,
         height: newSize,
       };
+    }
+    
+    // 对于 hg_view，如果设置 entry=true，需要将其他 hg_view 的 entry 设为 false
+    if (before.type === 'hg_view' && finalUpdates.data?.entry === true) {
+      set((state) => ({
+        components: state.components.map((comp) => {
+          if (comp.id === id) {
+            return { ...comp, ...finalUpdates };
+          }
+          // 其他 hg_view 的 entry 设为 false
+          if (comp.type === 'hg_view' && comp.data?.entry === true) {
+            return { ...comp, data: { ...comp.data, entry: false } };
+          }
+          return comp;
+        }),
+      }));
+      get().saveToFile();
+      return;
     }
     
     set((state) => ({

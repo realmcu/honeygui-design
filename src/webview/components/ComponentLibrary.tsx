@@ -83,6 +83,7 @@ const componentDefinitions: ComponentDefinition[] = [
     icon: '👁️',
     defaultSize: { width: 350, height: 250 },
     properties: [
+      { name: 'entry', label: '入口视图', type: 'boolean', defaultValue: false, group: 'general' },
       { name: 'backgroundColor', label: '背景色', type: 'color', defaultValue: '#000000', group: 'style' },
       { name: 'borderRadius', label: '圆角', type: 'number', defaultValue: 0, group: 'style' },
       { name: 'padding', label: '内边距', type: 'number', defaultValue: 12, group: 'style' },
