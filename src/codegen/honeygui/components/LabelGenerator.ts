@@ -1,9 +1,18 @@
 /**
  * hg_label 组件代码生成器
  */
+import * as path from 'path';
 import { Component } from '../../../hml/types';
 import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';
 import { HoneyGuiApiMapper } from '../HoneyGuiApiMapper';
+
+/**
+ * 字体初始化信息
+ */
+export interface FontInitInfo {
+  fontPath: string;      // 转换后的字体文件路径
+  fontType: 'bitmap' | 'vector';
+}
 
 export class LabelGenerator implements ComponentCodeGenerator {
   private apiMapper = new HoneyGuiApiMapper();
@@ -47,8 +56,10 @@ export class LabelGenerator implements ComponentCodeGenerator {
 
     // 设置字体文件路径（如果指定了字体文件）
     if (fontFile) {
+      // 生成转换后的字体文件名
+      const convertedFontFile = this.getConvertedFontFileName(component);
       const fontMode = this.getFontMode();
-      code += `${indentStr}gui_text_type_set((gui_text_t *)${component.id}, "${fontFile}", ${fontMode});\n`;
+      code += `${indentStr}gui_text_type_set((gui_text_t *)${component.id}, "${convertedFontFile}", ${fontMode});\n`;
     }
 
     // 对齐方式 - 根据 hAlign 和 vAlign 组合生成 TEXT_MODE
@@ -203,5 +214,135 @@ export class LabelGenerator implements ComponentCodeGenerator {
       }
     }
     return { r: 255, g: 255, b: 255 };  // 默认白色
+  }
+
+  /**
+   * 根据组件属性生成转换后的字体文件名
+   * 
+   * 输出文件名规则：
+   * - Bitmap: [fontName]_size[N]_bits[M]_bitmap.bin
+   * - Vector: [fontName]_vector.bin
+   * 
+   * @param component 组件
+   * @returns 转换后的字体文件路径
+   */
+  private getConvertedFontFileName(component: Component): string {
+    const fontFile = component.data?.fontFile;
+    if (!fontFile) {
+      return '';
+    }
+
+    // 提取字体文件名（不含扩展名）
+    const fontFileName = path.basename(fontFile);
+    const fontName = fontFileName.replace(/\.(ttf|otf|woff|woff2)$/i, '');
+    
+    // 获取字体类型和相关属性
+    const fontType = component.data?.fontType || 'bitmap';
+    const fontSize = component.data?.fontSize || 16;
+    const renderMode = parseInt(component.data?.renderMode || '4', 10);
+
+    // 获取原始字体文件的目录路径
+    const fontDir = path.dirname(fontFile);
+    
+    let convertedFileName: string;
+    if (fontType === 'vector') {
+      // 矢量字体: [fontName]_vector.bin
+      convertedFileName = `${fontName}_vector.bin`;
+    } else {
+      // 点阵字体: [fontName]_size[N]_bits[M]_bitmap.bin
+      convertedFileName = `${fontName}_size${fontSize}_bits${renderMode}_bitmap.bin`;
+    }
+
+    // 保持原始目录结构
+    if (fontDir && fontDir !== '.') {
+      return `${fontDir}/${convertedFileName}`;
+    }
+    return convertedFileName;
+  }
+
+  /**
+   * 从组件中提取字体初始化信息
+   * 
+   * @param component 组件
+   * @returns 字体初始化信息，如果没有指定字体则返回 null
+   */
+  static getFontInitInfo(component: Component): FontInitInfo | null {
+    const fontFile = component.data?.fontFile;
+    if (!fontFile) {
+      return null;
+    }
+
+    const fontType = (component.data?.fontType || 'bitmap') as 'bitmap' | 'vector';
+    const fontSize = component.data?.fontSize || 16;
+    const renderMode = parseInt(component.data?.renderMode || '4', 10);
+
+    // 提取字体文件名（不含扩展名）
+    const fontFileName = path.basename(fontFile);
+    const fontName = fontFileName.replace(/\.(ttf|otf|woff|woff2)$/i, '');
+    
+    // 获取原始字体文件的目录路径
+    const fontDir = path.dirname(fontFile);
+    
+    let convertedFileName: string;
+    if (fontType === 'vector') {
+      convertedFileName = `${fontName}_vector.bin`;
+    } else {
+      convertedFileName = `${fontName}_size${fontSize}_bits${renderMode}_bitmap.bin`;
+    }
+
+    // 保持原始目录结构
+    let fontPath: string;
+    if (fontDir && fontDir !== '.') {
+      fontPath = `${fontDir}/${convertedFileName}`;
+    } else {
+      fontPath = convertedFileName;
+    }
+
+    return { fontPath, fontType };
+  }
+
+  /**
+   * 从组件列表中收集所有需要初始化的字体
+   * 
+   * @param components 组件列表
+   * @returns 去重后的字体初始化信息列表（只包含点阵字体）
+   */
+  static collectFontInitInfos(components: Component[]): FontInitInfo[] {
+    const fontMap = new Map<string, FontInitInfo>();
+
+    for (const component of components) {
+      if (component.type !== 'hg_label') continue;
+      
+      const info = LabelGenerator.getFontInitInfo(component);
+      if (info && info.fontType === 'bitmap') {
+        // 只有点阵字体需要预加载，矢量字体不需要
+        fontMap.set(info.fontPath, info);
+      }
+    }
+
+    return Array.from(fontMap.values());
+  }
+
+  /**
+   * 生成字体初始化代码
+   * 
+   * @param fontInfos 字体初始化信息列表
+   * @param indent 缩进级别
+   * @returns 初始化代码字符串
+   */
+  static generateFontInitCode(fontInfos: FontInitInfo[], indent: number = 1): string {
+    if (fontInfos.length === 0) {
+      return '';
+    }
+
+    const indentStr = '    '.repeat(indent);
+    let code = `${indentStr}// 初始化点阵字体（从文件系统加载）\n`;
+
+    for (const info of fontInfos) {
+      code += `${indentStr}gui_font_mem_init_fs((uint8_t *)"${info.fontPath}");\n`;
+    }
+
+    code += '\n';
+    return code;
   }
 }

@@ -4,6 +4,7 @@ import { spawn } from 'child_process';
 import { ImageConverterService } from '../services/ImageConverterService';
 import { VideoConverterService } from '../services/VideoConverterService';
 import { Model3DConverterService } from '../services/Model3DConverterService';
+import { FontConverterService, FontConvertOptions } from '../services/FontConverterService';
 import { ProjectConfig } from '../common/ProjectConfig';
 import { RomfsConfig } from '../common/RomfsConfig';
 
@@ -168,6 +169,19 @@ export class BuildCore {
         }
 
         this.logger.log(`3D模型转换完成: ${model3DResults.length} 个`);
+
+        // 转换字体资源
+        this.logger.log('转换字体资源...');
+        const fontResults = await this.convertFontsWithLabelConfig(assetsDir, outputDir);
+        const fontFailed = fontResults.filter(r => !r.success);
+        if (fontFailed.length > 0) {
+            for (const f of fontFailed) {
+                this.logger.log(`字体转换失败: ${f.inputPath} - ${f.error}`, true);
+            }
+            // 字体转换失败不阻止编译，只是警告
+            this.logger.log(`警告: ${fontFailed.length} 个字体转换失败`, true);
+        }
+        this.logger.log(`字体转换完成: ${fontResults.filter(r => r.success).length} 个`);
 
         // 拷贝 ui 目录到 build/assets
         const uiSrcDir = path.join(this.projectRoot, 'ui');
@@ -714,6 +728,243 @@ if os.path.exists(os.path.join(PROJECT_SRC, 'SConscript')):
         
         scanDir(assetsDir);
         return count;
+    }
+
+    /**
+     * 根据 Label 组件配置转换字体资源
+     * 
+     * 从 HML 文件中提取所有 hg_label 组件的字体配置，
+     * 使用组件的文本内容作为字符集进行转换
+     */
+    private async convertFontsWithLabelConfig(
+        assetsDir: string,
+        outputDir: string
+    ): Promise<any[]> {
+        // 获取项目中所有 Label 组件的字体配置
+        const labelConfigs = await this.getLabelFontConfigs();
+        
+        if (labelConfigs.length === 0) {
+            this.logger.log('未找到需要转换的字体配置');
+            return [];
+        }
+
+        // 按字体文件+配置分组，合并相同配置的字符集
+        const fontGroups = this.groupLabelConfigsByFont(labelConfigs);
+        
+        const fontConverter = new FontConverterService();
+        const results: any[] = [];
+
+        for (const group of fontGroups) {
+            const fontPath = path.join(assetsDir, group.fontFile);
+            
+            // 检查字体文件是否存在
+            if (!fs.existsSync(fontPath)) {
+                this.logger.log(`字体文件不存在: ${group.fontFile}`, true);
+                results.push({
+                    success: false,
+                    inputPath: fontPath,
+                    outputPath: outputDir,
+                    error: '字体文件不存在'
+                });
+                continue;
+            }
+
+            // 确定输出目录（保持原始目录结构）
+            const fontDir = path.dirname(group.fontFile);
+            const fontOutputDir = fontDir ? path.join(outputDir, fontDir) : outputDir;
+
+            // 构建转换选项
+            const options: FontConvertOptions = {
+                fontSize: group.fontSize,
+                renderMode: group.renderMode,
+                outputFormat: group.fontType,
+                characterSets: [
+                    // 使用合并后的字符集（自定义字符）
+                    { type: 'string', value: group.characters }
+                ]
+            };
+
+            this.logger.log(`转换字体: ${group.fontFile} (${group.fontType}, size=${group.fontSize}, bits=${group.renderMode})`);
+            this.logger.log(`  字符集: "${group.characters.substring(0, 50)}${group.characters.length > 50 ? '...' : ''}" (${group.characters.length} 字符)`);
+
+            try {
+                const result = await fontConverter.convert(fontPath, fontOutputDir, options);
+                results.push(result);
+                
+                if (result.success) {
+                    this.logger.log(`  ✓ 成功: ${result.processedCount} 字符`);
+                } else {
+                    this.logger.log(`  ✗ 失败: ${result.error}`, true);
+                }
+            } catch (error: any) {
+                results.push({
+                    success: false,
+                    inputPath: fontPath,
+                    outputPath: fontOutputDir,
+                    error: error.message
+                });
+                this.logger.log(`  ✗ 异常: ${error.message}`, true);
+            }
+        }
+
+        return results;
+    }
+
+    /**
+     * 获取项目中所有 Label 组件的字体配置
+     */
+    private async getLabelFontConfigs(): Promise<Array<{
+        fontFile: string;
+        fontSize: number;
+        fontType: 'bitmap' | 'vector';
+        renderMode: number;
+        text: string;
+    }>> {
+        const configs: Array<any> = [];
+        
+        try {
+            const uiDir = path.join(this.projectRoot, 'ui');
+            if (fs.existsSync(uiDir)) {
+                await this.scanHmlFilesForLabelConfigs(uiDir, configs);
+            }
+        } catch (error) {
+            this.logger.log(`读取 Label 组件配置时出错: ${error}`, true);
+        }
+        
+        return configs;
+    }
+
+    /**
+     * 扫描 HML 文件中的 Label 组件配置
+     */
+    private async scanHmlFilesForLabelConfigs(dir: string, configs: Array<any>): Promise<void> {
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        
+        for (const entry of entries) {
+            const fullPath = path.join(dir, entry.name);
+            
+            if (entry.isDirectory()) {
+                await this.scanHmlFilesForLabelConfigs(fullPath, configs);
+            } else if (entry.name.endsWith('.hml')) {
+                try {
+                    const content = fs.readFileSync(fullPath, 'utf-8');
+                    this.extractLabelConfigsFromHml(content, configs);
+                } catch (error) {
+                    this.logger.log(`读取 HML 文件失败: ${fullPath} - ${error}`, true);
+                }
+            }
+        }
+    }
+
+    /**
+     * 从 HML 内容中提取 Label 组件的字体配置
+     */
+    private extractLabelConfigsFromHml(hmlContent: string, configs: Array<any>): void {
+        // 匹配 hg_label 标签
+        const labelTagRegex = /<hg_label[^>]*>/g;
+        let match;
+        
+        while ((match = labelTagRegex.exec(hmlContent)) !== null) {
+            const tagContent = match[0];
+            
+            // 提取 fontFile 属性
+            const fontFileMatch = tagContent.match(/fontFile\s*=\s*["']([^"']+)["']/);
+            if (!fontFileMatch) {
+                continue; // 没有指定字体文件，跳过
+            }
+            
+            const config: any = {
+                fontFile: fontFileMatch[1],
+                fontSize: 16,
+                fontType: 'bitmap',
+                renderMode: 4,
+                text: ''
+            };
+            
+            // 提取 fontSize 属性
+            const fontSizeMatch = tagContent.match(/fontSize\s*=\s*["']?(\d+)["']?/);
+            if (fontSizeMatch) {
+                config.fontSize = parseInt(fontSizeMatch[1]);
+            }
+            
+            // 提取 fontType 属性
+            const fontTypeMatch = tagContent.match(/fontType\s*=\s*["']([^"']+)["']/);
+            if (fontTypeMatch) {
+                config.fontType = fontTypeMatch[1] === 'vector' ? 'vector' : 'bitmap';
+            }
+            
+            // 提取 renderMode 属性
+            const renderModeMatch = tagContent.match(/renderMode\s*=\s*["']?(\d+)["']?/);
+            if (renderModeMatch) {
+                config.renderMode = parseInt(renderModeMatch[1]);
+            }
+            
+            // 提取 text 属性
+            const textMatch = tagContent.match(/text\s*=\s*["']([^"']*)["']/);
+            if (textMatch) {
+                config.text = textMatch[1];
+            }
+            
+            configs.push(config);
+        }
+    }
+
+    /**
+     * 按字体文件和配置分组，合并相同配置的字符集
+     * 
+     * 相同的字体文件 + fontSize + fontType + renderMode 视为同一组，
+     * 合并它们的文本内容作为字符集
+     */
+    private groupLabelConfigsByFont(configs: Array<{
+        fontFile: string;
+        fontSize: number;
+        fontType: 'bitmap' | 'vector';
+        renderMode: number;
+        text: string;
+    }>): Array<{
+        fontFile: string;
+        fontSize: number;
+        fontType: 'bitmap' | 'vector';
+        renderMode: number;
+        characters: string;
+    }> {
+        const groups = new Map<string, {
+            fontFile: string;
+            fontSize: number;
+            fontType: 'bitmap' | 'vector';
+            renderMode: number;
+            charSet: Set<string>;
+        }>();
+
+        for (const config of configs) {
+            // 生成分组键
+            const key = `${config.fontFile}|${config.fontSize}|${config.fontType}|${config.renderMode}`;
+            
+            if (!groups.has(key)) {
+                groups.set(key, {
+                    fontFile: config.fontFile,
+                    fontSize: config.fontSize,
+                    fontType: config.fontType,
+                    renderMode: config.renderMode,
+                    charSet: new Set()
+                });
+            }
+            
+            // 将文本中的每个字符添加到字符集
+            const group = groups.get(key)!;
+            for (const char of config.text) {
+                group.charSet.add(char);
+            }
+        }
+
+        // 转换为数组，并将字符集转为字符串
+        return Array.from(groups.values()).map(group => ({
+            fontFile: group.fontFile,
+            fontSize: group.fontSize,
+            fontType: group.fontType,
+            renderMode: group.renderMode,
+            characters: Array.from(group.charSet).join('')
+        }));
     }
 
     protected copyDirectory(src: string, dest: string): void {

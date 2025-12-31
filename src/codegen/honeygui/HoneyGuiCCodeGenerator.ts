@@ -17,6 +17,7 @@ import { ICodeGenerator, CodeGenOptions, CodeGenResult } from '../ICodeGenerator
 import { EventGeneratorFactory } from './events';
 import { ComponentGeneratorFactory, GeneratorContext } from './components';
 import { ListGenerator } from './components/ListGenerator';
+import { LabelGenerator } from './components/LabelGenerator';
 import { CallbackFileGenerator, UserFileGenerator, ProtectedAreaMerger } from './files';
 
 // Re-export for backward compatibility
@@ -123,6 +124,11 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
     const headers = this.apiMapper.getRequiredHeaders(componentTypes);
     const hasView = componentTypes.includes('hg_view');
     const has3D = componentTypes.includes('hg_3d');
+    const hasLabel = componentTypes.includes('hg_label');
+
+    // 检查是否有需要初始化的点阵字体
+    const fontInitInfos = LabelGenerator.collectFontInitInfos(this.components);
+    const needsFontInit = fontInitInfos.length > 0;
 
     let code = `/**
  * ${baseName} UI定义（自动生成，请勿手动修改）
@@ -152,6 +158,11 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       if (hasTouchRotation) {
         code += `#include "tp_algo.h"\n`;
       }
+    }
+
+    // 如果有点阵字体需要初始化，添加 font_mem.h
+    if (needsFontInit) {
+      code += `#include "font_mem.h"\n`;
     }
 
     headers.forEach(header => {
