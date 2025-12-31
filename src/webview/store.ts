@@ -455,18 +455,23 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       selectedComponents: state.selectedComponents.map(id => id === oldId ? newId : id),
       // 更新组件列表
       components: state.components.map((comp) => {
+        let updated = comp;
+        
+        // 更新组件自身的 id 和 name
         if (comp.id === oldId) {
-          // 更新组件自身的 id 和 name
-          return { ...comp, id: newId, name: newId };
+          updated = { ...updated, id: newId, name: newId };
         }
+        
+        // 更新子组件的 parent 引用
         if (comp.parent === oldId) {
-          // 更新子组件的 parent 引用
-          return { ...comp, parent: newId };
+          updated = { ...updated, parent: newId };
         }
+        
+        // 更新父组件的 children 数组
         if (comp.children?.includes(oldId)) {
-          // 更新父组件的 children 数组
-          return { ...comp, children: comp.children.map(c => c === oldId ? newId : c) };
+          updated = { ...updated, children: comp.children.map(c => c === oldId ? newId : c) };
         }
+        
         // 更新事件配置中的 target 引用
         if (comp.eventConfigs) {
           const updatedConfigs = comp.eventConfigs.map(ec => ({
@@ -475,9 +480,10 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
               action.target === oldId ? { ...action, target: newId } : action
             )
           }));
-          return { ...comp, eventConfigs: updatedConfigs };
+          updated = { ...updated, eventConfigs: updatedConfigs };
         }
-        return comp;
+        
+        return updated;
       }),
     }));
     get().saveToFile();

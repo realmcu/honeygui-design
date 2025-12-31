@@ -273,6 +273,91 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                         </div>
                       ))}
                   </>
+                ) : component.type === 'hg_label' ? (
+                  <>
+                    {/* hg_label 特殊处理：对齐方式在一行 */}
+                    <div className="property-item">
+                      <label>对齐</label>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
+                        <div>
+                          <label style={{ fontSize: '12px' }}>水平</label>
+                          <PropertyEditor
+                            type="select"
+                            value={(component.style as any)?.hAlign || 'LEFT'}
+                            onChange={(value) => handleStyleChange('hAlign', value)}
+                            options={['LEFT', 'CENTER', 'RIGHT']}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '12px' }}>竖直</label>
+                          <PropertyEditor
+                            type="select"
+                            value={(component.style as any)?.vAlign || 'TOP'}
+                            onChange={(value) => handleStyleChange('vAlign', value)}
+                            options={['TOP', 'MID']}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    {/* 其他样式属性（排除对齐、间距、换行相关） */}
+                    {definition.properties
+                      .filter(p => p.group === 'style' && !['hAlign', 'vAlign', 'letterSpacing', 'lineSpacing', 'wordWrap', 'wordBreak'].includes(p.name))
+                      .map((property) => (
+                        <div key={property.name} className="property-item">
+                          <label>{property.label}</label>
+                          <PropertyEditor
+                            type={property.type as any}
+                            value={(component.style as any)?.[property.name]}
+                            onChange={(value) => handleStyleChange(property.name, value)}
+                            options={property.options as string[]}
+                          />
+                        </div>
+                      ))}
+                    {/* 自动换行和断词保护在一行 */}
+                    <div className="property-item">
+                      <label>换行</label>
+                      <div style={{ display: 'flex', gap: '16px', marginTop: '4px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <PropertyEditor
+                            type="boolean"
+                            value={(component.style as any)?.wordWrap ?? false}
+                            onChange={(value) => handleStyleChange('wordWrap', value)}
+                          />
+                          <span style={{ fontSize: '12px' }}>自动换行</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }} title="英文按空格断词，避免单词被截断">
+                          <PropertyEditor
+                            type="boolean"
+                            value={(component.style as any)?.wordBreak ?? false}
+                            onChange={(value) => handleStyleChange('wordBreak', value)}
+                          />
+                          <span style={{ fontSize: '12px' }}>按词换行</span>
+                        </div>
+                      </div>
+                    </div>
+                    {/* 字间距和行间距在一行 */}
+                    <div className="property-item">
+                      <label>间距</label>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
+                        <div>
+                          <label style={{ fontSize: '12px' }}>字间距</label>
+                          <PropertyEditor
+                            type="number"
+                            value={(component.style as any)?.letterSpacing ?? 0}
+                            onChange={(value) => handleStyleChange('letterSpacing', value)}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '12px' }}>行间距</label>
+                          <PropertyEditor
+                            type="number"
+                            value={(component.style as any)?.lineSpacing ?? 0}
+                            onChange={(value) => handleStyleChange('lineSpacing', value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </>
                 ) : (
                   definition.properties
                     .filter(p => p.group === 'style')
@@ -310,6 +395,24 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                           (component.data as any)?.[property.name],
                           (value) => handleDataChange(property.name, value)
                         )
+                      ) : property.name === 'text' && component.type === 'hg_label' && (component.style as any)?.wordWrap ? (
+                        // 自动换行开启时，文本输入框变成多行
+                        <textarea
+                          value={(component.data as any)?.[property.name] || ''}
+                          onChange={(e) => handleDataChange(property.name, e.target.value)}
+                          rows={3}
+                          style={{
+                            width: '100%',
+                            padding: '4px 6px',
+                            backgroundColor: 'var(--vscode-input-background)',
+                            color: 'var(--vscode-input-foreground)',
+                            border: '1px solid var(--vscode-input-border)',
+                            borderRadius: '2px',
+                            resize: 'vertical',
+                            fontFamily: 'inherit',
+                            fontSize: '13px',
+                          }}
+                        />
                       ) : (
                         <PropertyEditor
                           type={property.type as any}
@@ -340,6 +443,58 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                       />
                     </div>
                   ))}
+              </div>
+            )}
+
+            {/* Font Properties - 仅对 hg_label 显示 */}
+            {definition && component.type === 'hg_label' && definition.properties.filter(p => p.group === 'font').length > 0 && (
+              <div className="property-group">
+                <div className="property-group-title">字体</div>
+                {/* 字体文件 */}
+                <div className="property-item">
+                  <label>字体文件</label>
+                  {renderFontProperty(
+                    (component.data as any)?.fontFile,
+                    (value) => handleDataChange('fontFile', value)
+                  )}
+                </div>
+                {/* 字体大小 */}
+                <div className="property-item">
+                  <label>字体大小</label>
+                  <PropertyEditor
+                    type="number"
+                    value={(component.data as any)?.fontSize || 16}
+                    onChange={(value) => handleDataChange('fontSize', value)}
+                  />
+                </div>
+                {/* 字体类型 */}
+                <div className="property-item">
+                  <label>字体类型</label>
+                  <PropertyEditor
+                    type="select"
+                    value={(component.data as any)?.fontType || 'bitmap'}
+                    onChange={(value) => handleDataChange('fontType', value)}
+                    options={['bitmap', 'vector']}
+                  />
+                  <span style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '2px' }}>
+                    {(component.data as any)?.fontType === 'vector' ? '矢量字体' : '点阵字体'}
+                  </span>
+                </div>
+                {/* 渲染模式 - 仅点阵字体显示 */}
+                {((component.data as any)?.fontType || 'bitmap') === 'bitmap' && (
+                  <div className="property-item">
+                    <label>渲染模式</label>
+                    <PropertyEditor
+                      type="select"
+                      value={(component.data as any)?.renderMode || '4'}
+                      onChange={(value) => handleDataChange('renderMode', value)}
+                      options={['1', '2', '4', '8']}
+                    />
+                    <span style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '2px' }}>
+                      {(component.data as any)?.renderMode || '4'}-bit 灰度
+                    </span>
+                  </div>
+                )}
               </div>
             )}
           </>

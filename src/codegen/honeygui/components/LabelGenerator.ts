@@ -21,36 +21,39 @@ export class LabelGenerator implements ComponentCodeGenerator {
     return `${indentStr}${component.id} = ${mapping.createFunction}(${parentRef}, "${component.name}", ${x}, ${y}, ${width}, ${height});\n`;
   }
 
-  generatePropertySetters(component: Component, indent: number, context: GeneratorContext): string {
+  generatePropertySetters(component: Component, indent: number, _context: GeneratorContext): string {
     let code = '';
     const indentStr = '    '.repeat(indent);
 
-    // fontFile 必须先设置
-    const fontFile = component.data?.fontFile;
-    if (fontFile) {
-      code += `${indentStr}gui_text_type_set((gui_text_t *)${component.id}, (void *)"${fontFile}", FONT_SRC_FILESYS);\n`;
-    }
-
-    // 字体大小
-    const fontSize = component.style?.fontSize || 16;
-    code += `${indentStr}gui_text_size_set((gui_text_t *)${component.id}, ${fontSize}, 0);\n`;
-
+    // 获取属性值
+    const fontSize = component.data?.fontSize || 16;
+    const color = component.style?.color || '#ffffff';
+    const rgb = this.colorToRgb(color);
+    
     // 文本内容（如果有时间格式，使用占位符）
     const timeFormat = component.data?.timeFormat;
     const rawText = timeFormat ? this.getTimeFormatPlaceholder(timeFormat) : (component.data?.text ?? '');
-    const text = String(rawText);  // 确保是字符串
-    code += `${indentStr}gui_text_content_set((gui_text_t *)${component.id}, (void *)"${text}", ${text.length});\n`;
+    const text = String(rawText);
 
-    // 颜色
-    const color = component.style?.color;
-    if (color) {
-      const rgb = this.colorToRgb(color);
-      code += `${indentStr}gui_text_color_set((gui_text_t *)${component.id}, gui_rgb(${rgb.r}, ${rgb.g}, ${rgb.b}));\n`;
+    // 确定字体类型
+    const fontType = this.getFontType(component);
+    const fontFile = component.data?.fontFile;
+
+    // gui_text_set 是必须调用的核心 API
+    // 参数: widget, text, text_type, color, length, font_size
+    // length 是字符串的字节数（UTF-8编码），不是 Unicode 字符数量
+    const textByteLength = this.getUtf8ByteLength(text);
+    code += `${indentStr}gui_text_set((gui_text_t *)${component.id}, "${text}", ${fontType}, gui_rgb(${rgb.r}, ${rgb.g}, ${rgb.b}), ${textByteLength}, ${fontSize});\n`;
+
+    // 设置字体文件路径（如果指定了字体文件）
+    if (fontFile) {
+      const fontMode = this.getFontMode();
+      code += `${indentStr}gui_text_type_set((gui_text_t *)${component.id}, "${fontFile}", ${fontMode});\n`;
     }
 
-    // 对齐方式
-    const align = component.style?.align || 'LEFT';
-    code += `${indentStr}gui_text_mode_set((gui_text_t *)${component.id}, ${align});\n`;
+    // 对齐方式 - 根据 hAlign 和 vAlign 组合生成 TEXT_MODE
+    const textMode = this.getTextMode(component);
+    code += `${indentStr}gui_text_mode_set((gui_text_t *)${component.id}, ${textMode});\n`;
 
     // 字间距
     const letterSpacing = component.style?.letterSpacing;
@@ -64,19 +67,82 @@ export class LabelGenerator implements ComponentCodeGenerator {
       code += `${indentStr}gui_text_extra_line_spacing_set((gui_text_t *)${component.id}, ${lineSpacing});\n`;
     }
 
-    // 自动换行
-    if (component.style?.wordWrap) {
+    // 断词保护（英文跨行断词）
+    const wordBreak = component.style?.wordBreak;
+    if (wordBreak === true) {
       code += `${indentStr}gui_text_wordwrap_set((gui_text_t *)${component.id}, true);\n`;
     }
 
-    // 时间格式的 label 不需要在这里注册事件，由 view 的 switch_in 创建定时器
-
     // 可见性
-    if (component.visible !== undefined) {
-      code += `${indentStr}gui_obj_show(${component.id}, ${component.visible ? 'true' : 'false'});\n`;
+    if (component.visible === false) {
+      code += `${indentStr}gui_obj_show(${component.id}, false);\n`;
     }
 
     return code;
+  }
+
+  /**
+   * 根据字体配置确定字体类型
+   */
+  private getFontType(component: Component): string {
+    const fontType = component.data?.fontType || 'bitmap';
+    if (fontType === 'vector') {
+      return 'GUI_FONT_SRC_TTF';
+    }
+    return 'GUI_FONT_SRC_BMP';
+  }
+
+  /**
+   * 根据 hAlign、vAlign 和 wordWrap 生成 TEXT_MODE
+   */
+  private getTextMode(component: Component): string {
+    const hAlign = component.style?.hAlign || 'LEFT';
+    const vAlign = component.style?.vAlign || 'TOP';
+    const wordWrap = component.style?.wordWrap || false;
+    
+    // 组合对齐方式
+    if (vAlign === 'MID') {
+      if (wordWrap) {
+        switch (hAlign) {
+          case 'LEFT': return 'MULTI_MID_LEFT';
+          case 'CENTER': return 'MULTI_MID_CENTER';
+          case 'RIGHT': return 'MULTI_MID_RIGHT';
+          default: return 'MULTI_MID_LEFT';
+        }
+      } else {
+        switch (hAlign) {
+          case 'LEFT': return 'MID_LEFT';
+          case 'CENTER': return 'MID_CENTER';
+          case 'RIGHT': return 'MID_RIGHT';
+          default: return 'MID_LEFT';
+        }
+      }
+    } else {
+      // TOP
+      if (wordWrap) {
+        switch (hAlign) {
+          case 'LEFT': return 'MULTI_LEFT';
+          case 'CENTER': return 'MULTI_CENTER';
+          case 'RIGHT': return 'MULTI_RIGHT';
+          default: return 'MULTI_LEFT';
+        }
+      } else {
+        switch (hAlign) {
+          case 'LEFT': return 'LEFT';
+          case 'CENTER': return 'CENTER';
+          case 'RIGHT': return 'RIGHT';
+          default: return 'LEFT';
+        }
+      }
+    }
+  }
+
+  /**
+   * 获取字体源模式
+   */
+  private getFontMode(): string {
+    // 默认使用文件系统
+    return 'FONT_SRC_FILESYS';
   }
 
   /**
@@ -91,6 +157,29 @@ export class LabelGenerator implements ComponentCodeGenerator {
       case 'MM-DD HH:mm': return '01-01 00:00';
       default: return '00:00:00';
     }
+  }
+
+  /**
+   * 计算字符串的 UTF-8 字节长度
+   * 用于 gui_text_set 的 length 参数
+   */
+  private getUtf8ByteLength(str: string): number {
+    let byteLength = 0;
+    for (let i = 0; i < str.length; i++) {
+      const code = str.charCodeAt(i);
+      if (code <= 0x7F) {
+        byteLength += 1;  // ASCII: 1 字节
+      } else if (code <= 0x7FF) {
+        byteLength += 2;  // 2 字节
+      } else if (code >= 0xD800 && code <= 0xDBFF) {
+        // 代理对（surrogate pair），4 字节
+        byteLength += 4;
+        i++;  // 跳过低代理
+      } else {
+        byteLength += 3;  // 3 字节（包括大部分中文）
+      }
+    }
+    return byteLength;
   }
 
   /**

@@ -239,38 +239,35 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
         </div>
       </div>
 
-      {/* Visibility and State */}
+      {/* Visibility and State - 三个开关放在一行 */}
       <div className="property-group">
         <div className="property-item">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <label>可见</label>
-            <PropertyEditor
-              type="boolean"
-              value={component.visible}
-              onChange={(value) => onUpdate({ visible: value })}
-            />
-          </div>
-        </div>
-
-        <div className="property-item">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <label>启用</label>
-            <PropertyEditor
-              type="boolean"
-              value={component.enabled}
-              onChange={(value) => onUpdate({ enabled: value })}
-            />
-          </div>
-        </div>
-
-        <div className="property-item">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <label>锁定</label>
-            <PropertyEditor
-              type="boolean"
-              value={component.locked}
-              onChange={(value) => onUpdate({ locked: value })}
-            />
+          <label>状态</label>
+          <div style={{ display: 'flex', gap: '16px', marginTop: '4px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <PropertyEditor
+                type="boolean"
+                value={component.visible}
+                onChange={(value) => onUpdate({ visible: value })}
+              />
+              <span style={{ fontSize: '12px' }}>可见</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <PropertyEditor
+                type="boolean"
+                value={component.enabled}
+                onChange={(value) => onUpdate({ enabled: value })}
+              />
+              <span style={{ fontSize: '12px' }}>启用</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <PropertyEditor
+                type="boolean"
+                value={component.locked}
+                onChange={(value) => onUpdate({ locked: value })}
+              />
+              <span style={{ fontSize: '12px' }}>锁定</span>
+            </div>
           </div>
         </div>
 

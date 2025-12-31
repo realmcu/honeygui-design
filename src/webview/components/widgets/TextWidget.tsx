@@ -9,7 +9,7 @@ export const TextWidget: React.FC<WidgetProps> = ({ component, style, handlers }
   const textStyle: React.CSSProperties = {
     ...style,
     fontFamily: fontFamily || 'inherit',
-    fontSize: component.style?.fontSize || 16,
+    fontSize: component.data?.fontSize || 16,
     color: component.style?.color || 'inherit',
   };
 

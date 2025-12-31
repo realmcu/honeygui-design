@@ -232,7 +232,7 @@ export class HmlParser {
     const events: Record<string, any> = {};
 
     const styleProps = new Set([
-      'color', 'backgroundColor', 'fontSize', 'fontWeight',
+      'color', 'backgroundColor', 'fontWeight',
       'border', 'borderRadius', 'padding', 'margin',
       'opacity', 'overflow', 'title', 'titleBarHeight', 'titleBarColor',
       // 圆弧属性
@@ -242,7 +242,9 @@ export class HmlParser {
       // 列表属性
       'itemWidth', 'itemHeight', 'direction', 'style', 'space',
       // 图像变换属性
-      'transform'
+      'transform',
+      // 文本样式属性
+      'align', 'hAlign', 'vAlign', 'letterSpacing', 'lineSpacing', 'wordWrap', 'wordBreak'
     ]);
 
     // 需要转换为数字的属性
@@ -258,7 +260,11 @@ export class HmlParser {
       // 列表数据属性
       'noteNum',
       // 列表通用属性
-      'autoAlign', 'inertia', 'loop', 'createBar', 'offset', 'outScope', 'cardStackLocation'
+      'autoAlign', 'inertia', 'loop', 'createBar', 'offset', 'outScope', 'cardStackLocation',
+      // 文本数据属性
+      'fontFile', 'timeFormat',
+      // 字体配置属性
+      'fontType', 'renderMode', 'fontSize'
     ]);
 
     const metaProps = new Set([

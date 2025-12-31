@@ -15,19 +15,25 @@ export const LabelWidget: React.FC<WidgetProps> = ({ component, style, handlers 
   const showWarning = fontPath && !fontLoading && !isChecking && !supported && missingChars.length > 0;
 
   // 合并字体样式
+  const hAlign = component.style?.hAlign || 'LEFT';
+  const vAlign = component.style?.vAlign || 'TOP';
+  const wordWrap = component.style?.wordWrap || false;
+  const wordBreak = component.style?.wordBreak || false;
+  
   const labelStyle: React.CSSProperties = {
     ...style,
     fontFamily: fontFamily || 'inherit',
-    fontSize: component.style?.fontSize || 16,
+    fontSize: component.data?.fontSize || 16,
     color: component.style?.color || '#ffffff',
     letterSpacing: component.style?.letterSpacing || 0,
     lineHeight: component.style?.lineSpacing ? `${(component.style.lineSpacing as number) + 16}px` : 'normal',
-    textAlign: (component.style?.align as any)?.toLowerCase()?.replace('mid_', '') || 'left',
+    textAlign: hAlign.toLowerCase() as any,
     display: 'flex',
     flexDirection: 'column',
-    justifyContent: component.style?.align?.toString().startsWith('MID_') ? 'center' : 'flex-start',
-    wordBreak: component.style?.wordWrap ? 'break-word' : 'normal',
-    whiteSpace: component.style?.wordWrap ? 'pre-wrap' : 'nowrap',
+    justifyContent: vAlign === 'MID' ? 'center' : 'flex-start',
+    // 按词换行：word-break: keep-all 保持单词完整，break-all 允许任意位置断开
+    wordBreak: wordBreak ? 'keep-all' : 'break-all',
+    whiteSpace: wordWrap ? 'pre-wrap' : 'nowrap',
     overflow: 'hidden',
   };
 
