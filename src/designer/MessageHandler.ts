@@ -156,6 +156,15 @@ export class MessageHandler {
                 this._assetManager.handleGetFontFiles(this._fileManager.currentFilePath);
                 break;
 
+            case 'checkFontGlyphs':
+                this._assetManager.handleCheckFontGlyphs(
+                    message.fontPath,
+                    message.text,
+                    message.requestId,
+                    this._fileManager.currentFilePath
+                );
+                break;
+
             case 'deleteAsset':
                 this._assetManager.handleDeleteAsset(message.fileName, this._fileManager.currentFilePath);
                 break;

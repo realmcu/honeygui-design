@@ -30,7 +30,7 @@ const componentDefinitions: ComponentDefinition[] = [
       { name: 'align', label: '对齐方式', type: 'select', defaultValue: 'LEFT', 
         options: ['LEFT', 'CENTER', 'RIGHT', 'MID_LEFT', 'MID_CENTER', 'MID_RIGHT'], group: 'style' },
       { name: 'fontSize', label: '字体大小', type: 'number', defaultValue: 16, group: 'style' },
-      { name: 'color', label: '颜色', type: 'color', group: 'style' },
+      { name: 'color', label: '颜色', type: 'color', defaultValue: '#ffffff', group: 'style' },
       { name: 'letterSpacing', label: '字间距', type: 'number', defaultValue: 0, group: 'style' },
       { name: 'lineSpacing', label: '行间距', type: 'number', defaultValue: 0, group: 'style' },
       { name: 'wordWrap', label: '自动换行', type: 'boolean', defaultValue: false, group: 'style' },

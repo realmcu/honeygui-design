@@ -784,4 +784,232 @@ export class AssetManager {
             });
         }
     }
+
+    /**
+     * 检测字体是否支持指定文本中的所有字符
+     * 通过解析 TTF/OTF 文件的 cmap 表获取支持的字符集
+     */
+    public async handleCheckFontGlyphs(
+        fontPath: string,
+        text: string,
+        requestId: string,
+        currentFilePath: string | undefined
+    ): Promise<void> {
+        try {
+            if (!currentFilePath || !fontPath || !text) {
+                this._panel.webview.postMessage({
+                    command: 'fontGlyphCheckResult',
+                    requestId,
+                    supported: true,
+                    missingChars: []
+                });
+                return;
+            }
+
+            const projectRoot = ProjectUtils.findProjectRoot(currentFilePath);
+            if (!projectRoot) {
+                this._panel.webview.postMessage({
+                    command: 'fontGlyphCheckResult',
+                    requestId,
+                    supported: true,
+                    missingChars: []
+                });
+                return;
+            }
+
+            // fontPath 格式为 /font/xxx.ttf，需要转换为 assets/font/xxx.ttf
+            const absolutePath = path.join(projectRoot, 'assets', fontPath.replace(/^\//, ''));
+            
+            if (!fs.existsSync(absolutePath)) {
+                logger.warn(`[字形检测] 字体文件不存在: ${absolutePath}`);
+                this._panel.webview.postMessage({
+                    command: 'fontGlyphCheckResult',
+                    requestId,
+                    supported: true,
+                    missingChars: []
+                });
+                return;
+            }
+
+            // 解析字体文件获取支持的字符集
+            const supportedChars = this.parseFontCmap(absolutePath);
+            
+            // 检测文本中哪些字符不被支持
+            const uniqueChars = [...new Set(text)];
+            const missingChars: string[] = [];
+            
+            for (const char of uniqueChars) {
+                // 跳过空白字符
+                if (/\s/.test(char)) continue;
+                
+                const codePoint = char.codePointAt(0);
+                if (codePoint !== undefined && !supportedChars.has(codePoint)) {
+                    missingChars.push(char);
+                }
+            }
+
+            this._panel.webview.postMessage({
+                command: 'fontGlyphCheckResult',
+                requestId,
+                supported: missingChars.length === 0,
+                missingChars
+            });
+        } catch (error) {
+            logger.error(`[字形检测] 检测失败: ${error}`);
+            this._panel.webview.postMessage({
+                command: 'fontGlyphCheckResult',
+                requestId,
+                supported: true,
+                missingChars: []
+            });
+        }
+    }
+
+    /**
+     * 解析 TTF/OTF 字体文件的 cmap 表，获取支持的字符码点集合
+     */
+    private parseFontCmap(fontPath: string): Set<number> {
+        const supportedChars = new Set<number>();
+        
+        try {
+            const buffer = fs.readFileSync(fontPath);
+            
+            // 读取字体文件头
+            const sfntVersion = buffer.readUInt32BE(0);
+            // 0x00010000 = TrueType, 0x4F54544F = 'OTTO' (OpenType with CFF)
+            if (sfntVersion !== 0x00010000 && sfntVersion !== 0x4F54544F) {
+                logger.warn(`[字形检测] 不支持的字体格式: ${sfntVersion.toString(16)}`);
+                return supportedChars;
+            }
+
+            const numTables = buffer.readUInt16BE(4);
+            
+            // 查找 cmap 表
+            let cmapOffset = 0;
+            for (let i = 0; i < numTables; i++) {
+                const tableOffset = 12 + i * 16;
+                const tag = buffer.toString('ascii', tableOffset, tableOffset + 4);
+                if (tag === 'cmap') {
+                    cmapOffset = buffer.readUInt32BE(tableOffset + 8);
+                    break;
+                }
+            }
+
+            if (cmapOffset === 0) {
+                logger.warn(`[字形检测] 未找到 cmap 表`);
+                return supportedChars;
+            }
+
+            // 解析 cmap 表
+            const cmapVersion = buffer.readUInt16BE(cmapOffset);
+            const numSubtables = buffer.readUInt16BE(cmapOffset + 2);
+
+            // 查找最佳的子表（优先 Unicode BMP 或 Full Unicode）
+            let bestSubtableOffset = 0;
+            let bestPriority = -1;
+
+            for (let i = 0; i < numSubtables; i++) {
+                const subtableOffset = cmapOffset + 4 + i * 8;
+                const platformID = buffer.readUInt16BE(subtableOffset);
+                const encodingID = buffer.readUInt16BE(subtableOffset + 2);
+                const offset = buffer.readUInt32BE(subtableOffset + 4);
+
+                // 优先级：Unicode Full (0,4) > Unicode BMP (0,3) > Windows Unicode BMP (3,1) > Windows Unicode Full (3,10)
+                let priority = -1;
+                if (platformID === 0 && encodingID === 4) priority = 4; // Unicode Full
+                else if (platformID === 0 && encodingID === 3) priority = 3; // Unicode BMP
+                else if (platformID === 3 && encodingID === 10) priority = 2; // Windows Unicode Full
+                else if (platformID === 3 && encodingID === 1) priority = 1; // Windows Unicode BMP
+
+                if (priority > bestPriority) {
+                    bestPriority = priority;
+                    bestSubtableOffset = cmapOffset + offset;
+                }
+            }
+
+            if (bestSubtableOffset === 0) {
+                logger.warn(`[字形检测] 未找到合适的 cmap 子表`);
+                return supportedChars;
+            }
+
+            // 解析子表
+            const format = buffer.readUInt16BE(bestSubtableOffset);
+            
+            if (format === 4) {
+                // Format 4: Segment mapping to delta values (BMP only)
+                this.parseCmapFormat4(buffer, bestSubtableOffset, supportedChars);
+            } else if (format === 12) {
+                // Format 12: Segmented coverage (Full Unicode)
+                this.parseCmapFormat12(buffer, bestSubtableOffset, supportedChars);
+            } else {
+                logger.warn(`[字形检测] 不支持的 cmap 格式: ${format}`);
+            }
+
+        } catch (error) {
+            logger.error(`[字形检测] 解析字体文件失败: ${error}`);
+        }
+
+        return supportedChars;
+    }
+
+    /**
+     * 解析 cmap Format 4 子表（BMP 字符）
+     */
+    private parseCmapFormat4(buffer: Buffer, offset: number, supportedChars: Set<number>): void {
+        const segCountX2 = buffer.readUInt16BE(offset + 6);
+        const segCount = segCountX2 / 2;
+
+        const endCodeOffset = offset + 14;
+        const startCodeOffset = endCodeOffset + segCountX2 + 2; // +2 for reservedPad
+        const idDeltaOffset = startCodeOffset + segCountX2;
+        const idRangeOffsetOffset = idDeltaOffset + segCountX2;
+
+        for (let i = 0; i < segCount; i++) {
+            const endCode = buffer.readUInt16BE(endCodeOffset + i * 2);
+            const startCode = buffer.readUInt16BE(startCodeOffset + i * 2);
+            const idDelta = buffer.readInt16BE(idDeltaOffset + i * 2);
+            const idRangeOffset = buffer.readUInt16BE(idRangeOffsetOffset + i * 2);
+
+            if (startCode === 0xFFFF) break;
+
+            for (let charCode = startCode; charCode <= endCode; charCode++) {
+                let glyphIndex: number;
+                
+                if (idRangeOffset === 0) {
+                    glyphIndex = (charCode + idDelta) & 0xFFFF;
+                } else {
+                    const glyphIndexOffset = idRangeOffsetOffset + i * 2 + idRangeOffset + (charCode - startCode) * 2;
+                    glyphIndex = buffer.readUInt16BE(glyphIndexOffset);
+                    if (glyphIndex !== 0) {
+                        glyphIndex = (glyphIndex + idDelta) & 0xFFFF;
+                    }
+                }
+
+                if (glyphIndex !== 0) {
+                    supportedChars.add(charCode);
+                }
+            }
+        }
+    }
+
+    /**
+     * 解析 cmap Format 12 子表（Full Unicode）
+     */
+    private parseCmapFormat12(buffer: Buffer, offset: number, supportedChars: Set<number>): void {
+        const numGroups = buffer.readUInt32BE(offset + 12);
+
+        for (let i = 0; i < numGroups; i++) {
+            const groupOffset = offset + 16 + i * 12;
+            const startCharCode = buffer.readUInt32BE(groupOffset);
+            const endCharCode = buffer.readUInt32BE(groupOffset + 4);
+            const startGlyphID = buffer.readUInt32BE(groupOffset + 8);
+
+            for (let charCode = startCharCode; charCode <= endCharCode; charCode++) {
+                const glyphID = startGlyphID + (charCode - startCharCode);
+                if (glyphID !== 0) {
+                    supportedChars.add(charCode);
+                }
+            }
+        }
+    }
 }
