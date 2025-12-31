@@ -1,0 +1,406 @@
+import * as vscode from 'vscode';
+import * as path from 'path';
+import * as fs from 'fs';
+import { spawn, exec } from 'child_process';
+import { ProjectUtils } from '../utils/ProjectUtils';
+
+export interface UartConfig {
+    port: string;
+    baudRate: number;
+    chipType?: string;      // 芯片类型: RTL87X3E, RTL87X3EP, RTL87X3D, RTL87X3G
+    flashAddress?: string;  // Flash 地址，默认使用 romfsBaseAddr
+}
+
+const SUPPORTED_CHIPS = ['RTL87X3E', 'RTL87X3EP', 'RTL87X3D', 'RTL87X3G'];
+
+/**
+ * UART 下载服务
+ * 使用 mpcli 工具下载 romfs.bin 到开发板
+ */
+export class UartDownloadService {
+    private statusBarItem: vscode.StatusBarItem;
+    private outputChannel: vscode.OutputChannel;
+    private isDownloading = false;
+    private mpcliPath: string;
+
+    constructor(private context: vscode.ExtensionContext) {
+        // mpcli 工具路径（相对于扩展目录）
+        this.mpcliPath = path.join(context.extensionPath, 'tools', 'mpcli_meta_tool_py_v4.0.0.4');
+
+        this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
+        this.statusBarItem.text = '$(cloud-download) UART下载';
+        this.statusBarItem.command = 'honeygui.uartDownload';
+        this.statusBarItem.tooltip = 'UART 下载 romfs.bin 到开发板';
+        this.statusBarItem.show();
+
+        this.outputChannel = vscode.window.createOutputChannel('HoneyGUI UART');
+    }
+
+    registerCommands(): void {
+        this.context.subscriptions.push(
+            vscode.commands.registerCommand('honeygui.uartDownload', () => this.showDownloadDialog()),
+            vscode.commands.registerCommand('honeygui.uartDownload.quick', () => this.quickDownload()),
+            vscode.commands.registerCommand('honeygui.scanSerialPorts', async () => this.scanPorts())
+        );
+    }
+
+    /**
+     * 扫描可用串口
+     */
+    async scanPorts(): Promise<string[]> {
+        return new Promise((resolve) => {
+            if (process.platform === 'win32') {
+                // Windows: 使用 PowerShell 获取串口列表
+                exec('powershell -Command "Get-WMIObject Win32_SerialPort | Select-Object -ExpandProperty DeviceID"', (err, stdout) => {
+                    if (!err && stdout.trim()) {
+                        const ports = stdout.trim().split('\n').map(p => p.trim()).filter(p => p);
+                        if (ports.length > 0) {
+                            resolve(ports);
+                            return;
+                        }
+                    }
+                    // 备用方案：使用 .NET SerialPort
+                    exec('powershell -Command "[System.IO.Ports.SerialPort]::GetPortNames()"', (err2, stdout2) => {
+                        if (!err2 && stdout2.trim()) {
+                            const ports = stdout2.trim().split('\n').map(p => p.trim()).filter(p => p.startsWith('COM'));
+                            resolve(ports);
+                        } else {
+                            resolve([]);
+                        }
+                    });
+                });
+            } else {
+                // Linux/macOS
+                exec('ls /dev/tty* 2>/dev/null | grep -E "(USB|ACM|serial)"', (err, stdout) => {
+                    if (err) { resolve([]); return; }
+                    resolve(stdout.trim().split('\n').filter(p => p));
+                });
+            }
+        });
+    }
+
+    /**
+     * 显示下载配置对话框 - 使用下拉框方式
+     */
+    async showDownloadDialog(): Promise<void> {
+        const projectRoot = await this.getProjectRoot();
+        if (!projectRoot) {
+            vscode.window.showErrorMessage('未找到项目根目录');
+            return;
+        }
+
+        // 检查 romfs.bin
+        const romfsPath = path.join(projectRoot, 'build', 'app_romfs.bin');
+        if (!fs.existsSync(romfsPath)) {
+            const choice = await vscode.window.showErrorMessage('romfs.bin 不存在，请先编译项目', '编译项目');
+            if (choice === '编译项目') {
+                vscode.commands.executeCommand('honeygui.simulation');
+            }
+            return;
+        }
+
+        // 读取保存的配置
+        const config = ProjectUtils.loadProjectConfig(projectRoot);
+        const savedConfig = this.getSavedUartConfig();
+
+        // 扫描串口
+        const ports = await this.scanPorts();
+
+        // 创建 QuickPick 界面
+        const quickPick = vscode.window.createQuickPick();
+        quickPick.title = 'UART 下载配置';
+        quickPick.ignoreFocusOut = true;
+
+        // 当前选择状态
+        let selectedChip = savedConfig.chipType || 'RTL87X3G';
+        let selectedBaud = savedConfig.baudRate?.toString() || '115200';
+        let selectedPort = savedConfig.port || (ports.length > 0 ? ports[0] : '');
+
+        const BAUD_RATES = ['115200', '921600', '460800', '230400', '57600'];
+
+        // 更新选项列表
+        const updateItems = () => {
+            const items: vscode.QuickPickItem[] = [
+                { label: '芯片类型', kind: vscode.QuickPickItemKind.Separator },
+                ...SUPPORTED_CHIPS.map(c => ({
+                    label: c,
+                    description: c === selectedChip ? '✓' : '',
+                    picked: c === selectedChip
+                })),
+                { label: '波特率', kind: vscode.QuickPickItemKind.Separator },
+                ...BAUD_RATES.map(b => ({
+                    label: b,
+                    description: b === selectedBaud ? '✓' : '',
+                    picked: b === selectedBaud
+                })),
+                { label: '串口', kind: vscode.QuickPickItemKind.Separator },
+                ...ports.map(p => ({
+                    label: p,
+                    description: p === selectedPort ? '✓' : '',
+                    picked: p === selectedPort
+                })),
+                {
+                    label: '$(edit) 手动输入串口...',
+                    alwaysShow: true
+                },
+                { label: '', kind: vscode.QuickPickItemKind.Separator },
+                {
+                    label: '$(play) 开始下载',
+                    description: `${selectedChip} | ${selectedPort} | ${selectedBaud}`,
+                    alwaysShow: true
+                }
+            ];
+            quickPick.items = items;
+        };
+
+        updateItems();
+
+        quickPick.onDidAccept(async () => {
+            const selected = quickPick.selectedItems[0];
+            if (!selected) return;
+
+            const label = selected.label;
+
+            // 点击开始下载
+            if (label.includes('开始下载')) {
+                if (!selectedPort) {
+                    vscode.window.showWarningMessage('请选择或输入串口');
+                    return;
+                }
+                quickPick.hide();
+
+                const uartConfig: UartConfig = {
+                    port: selectedPort,
+                    baudRate: parseInt(selectedBaud),
+                    chipType: selectedChip,
+                    flashAddress: config.romfsBaseAddr || '0x04400000'
+                };
+                await this.saveUartConfig(uartConfig);
+                await this.download(projectRoot, uartConfig);
+                return;
+            }
+
+            // 手动输入串口
+            if (label.includes('手动输入')) {
+                quickPick.hide();
+                const inputPort = await vscode.window.showInputBox({
+                    prompt: '输入串口号',
+                    placeHolder: process.platform === 'win32' ? 'COM3' : '/dev/ttyUSB0',
+                    value: selectedPort
+                });
+                if (inputPort) {
+                    selectedPort = inputPort;
+                    if (!ports.includes(inputPort)) {
+                        ports.push(inputPort);
+                    }
+                }
+                quickPick.show();
+                updateItems();
+                return;
+            }
+
+            // 选择芯片
+            if (SUPPORTED_CHIPS.includes(label)) {
+                selectedChip = label;
+                updateItems();
+                return;
+            }
+
+            // 选择波特率
+            if (BAUD_RATES.includes(label)) {
+                selectedBaud = label;
+                updateItems();
+                return;
+            }
+
+            // 选择串口
+            if (ports.includes(label)) {
+                selectedPort = label;
+                updateItems();
+                return;
+            }
+        });
+
+        quickPick.show();
+    }
+
+    /**
+     * 快速下载（使用上次配置）
+     */
+    async quickDownload(): Promise<void> {
+        const projectRoot = await this.getProjectRoot();
+        if (!projectRoot) {
+            vscode.window.showErrorMessage('未找到项目根目录');
+            return;
+        }
+
+        const savedConfig = this.getSavedUartConfig();
+        if (!savedConfig.port || !savedConfig.chipType) {
+            await this.showDownloadDialog();
+            return;
+        }
+
+        // 验证串口
+        const ports = await this.scanPorts();
+        if (!ports.includes(savedConfig.port)) {
+            vscode.window.showWarningMessage(`串口 ${savedConfig.port} 不可用，请重新选择`);
+            await this.showDownloadDialog();
+            return;
+        }
+
+        const config = ProjectUtils.loadProjectConfig(projectRoot);
+        await this.download(projectRoot, {
+            port: savedConfig.port,
+            baudRate: 115200,
+            chipType: savedConfig.chipType,
+            flashAddress: config.romfsBaseAddr || '0x04400000'
+        });
+    }
+
+    /**
+     * 执行下载
+     */
+    async download(projectRoot: string, uartConfig: UartConfig): Promise<void> {
+        if (this.isDownloading) {
+            vscode.window.showWarningMessage('下载正在进行中');
+            return;
+        }
+
+        const romfsPath = path.join(projectRoot, 'build', 'app_romfs.bin');
+        if (!fs.existsSync(romfsPath)) {
+            vscode.window.showErrorMessage('romfs.bin 不存在，请先编译项目');
+            return;
+        }
+
+        // 检查 mpcli 工具
+        if (!fs.existsSync(this.mpcliPath)) {
+            vscode.window.showErrorMessage(`mpcli 工具不存在: ${this.mpcliPath}`);
+            return;
+        }
+
+        this.isDownloading = true;
+        this.updateStatusBar('$(sync~spin) 下载中...');
+        this.outputChannel.show(true);
+        this.outputChannel.clear();
+
+        const fileSize = fs.statSync(romfsPath).size;
+        this.log(`===== UART 下载 =====`);
+        this.log(`芯片: ${uartConfig.chipType}`);
+        this.log(`串口: ${uartConfig.port}`);
+        this.log(`地址: ${uartConfig.flashAddress}`);
+        this.log(`文件: ${romfsPath}`);
+        this.log(`大小: ${(fileSize / 1024).toFixed(2)} KB`);
+        this.log(`---------------------`);
+
+        try {
+            await this.downloadWithMpcli(romfsPath, uartConfig);
+            this.log(`---------------------`);
+            this.log('下载完成!');
+            vscode.window.showInformationMessage('UART 下载完成');
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : String(error);
+            this.log(`下载失败: ${msg}`, true);
+            vscode.window.showErrorMessage(`下载失败: ${msg}`);
+        } finally {
+            this.isDownloading = false;
+            this.updateStatusBar('$(cloud-download) UART下载');
+        }
+    }
+
+    /**
+     * 使用 mpcli 工具下载
+     */
+    private async downloadWithMpcli(romfsPath: string, config: UartConfig): Promise<void> {
+        return new Promise((resolve, reject) => {
+            const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
+            
+            // mpcli 命令参数
+            // python mpcli -T <芯片> -c <串口> -p -A <地址> -F <文件> -M 5 -r -u
+            const args = [
+                this.mpcliPath,
+                '-T', config.chipType || 'RTL87X3G',
+                '-c', config.port,
+                '-p',
+                '-A', config.flashAddress || '0x04400000',
+                '-F', romfsPath,
+                '-M', '5',
+                '-r',
+                '-u'
+            ];
+
+            this.log(`执行: ${pythonCmd} ${args.join(' ')}`);
+
+            const proc = spawn(pythonCmd, args, {
+                shell: true,
+                cwd: this.mpcliPath
+            });
+
+            proc.stdout?.on('data', (data) => {
+                const lines = data.toString().split('\n');
+                lines.forEach((line: string) => {
+                    if (line.trim()) this.log(line.trim());
+                });
+            });
+
+            proc.stderr?.on('data', (data) => {
+                const lines = data.toString().split('\n');
+                lines.forEach((line: string) => {
+                    if (line.trim()) this.log(line.trim());
+                });
+            });
+
+            proc.on('close', (code) => {
+                if (code === 0) {
+                    resolve();
+                } else {
+                    reject(new Error(`mpcli 退出码: ${code}`));
+                }
+            });
+
+            proc.on('error', (err) => {
+                reject(new Error(`无法执行 mpcli: ${err.message}\n请确保已安装 Python 和 pyserial 库`));
+            });
+        });
+    }
+
+    private async saveUartConfig(uartConfig: UartConfig): Promise<void> {
+        // 使用 globalState 存储，不写入 project.json
+        await this.context.globalState.update('honeygui.uart.port', uartConfig.port);
+        await this.context.globalState.update('honeygui.uart.chipType', uartConfig.chipType);
+        await this.context.globalState.update('honeygui.uart.baudRate', uartConfig.baudRate);
+    }
+
+    private getSavedUartConfig(): { port?: string; chipType?: string; baudRate?: number } {
+        return {
+            port: this.context.globalState.get<string>('honeygui.uart.port'),
+            chipType: this.context.globalState.get<string>('honeygui.uart.chipType'),
+            baudRate: this.context.globalState.get<number>('honeygui.uart.baudRate')
+        };
+    }
+
+    private async getProjectRoot(): Promise<string | undefined> {
+        const activeEditor = vscode.window.activeTextEditor;
+        if (activeEditor) {
+            const root = ProjectUtils.findProjectRoot(activeEditor.document.fileName);
+            if (root) return root;
+        }
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (workspaceFolders?.length) {
+            return ProjectUtils.findProjectRoot(workspaceFolders[0].uri.fsPath);
+        }
+        return undefined;
+    }
+
+    private updateStatusBar(text: string): void {
+        this.statusBarItem.text = text;
+    }
+
+    private log(message: string, isError = false): void {
+        this.outputChannel.appendLine(message);
+    }
+
+    dispose(): void {
+        this.statusBarItem.dispose();
+        this.outputChannel.dispose();
+    }
+}

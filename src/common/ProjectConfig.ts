@@ -39,6 +39,11 @@ export interface ProjectConfig {
         timeoutMs?: number;
         [key: string]: any;
     };
+    uart?: {
+        port?: string;       // 串口号，如 "COM3" 或 "/dev/ttyUSB0"
+        baudRate?: number;   // 波特率，默认 115200
+        chipType?: string;   // 芯片类型: RTL87X3E, RTL87X3EP, RTL87X3D, RTL87X3G
+    };
     [key: string]: any;
 }
 

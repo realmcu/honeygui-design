@@ -43,6 +43,13 @@ export class ExtensionManager {
             simulationService.registerCommands();
             this.disposables.push(simulationService);
 
+            // 注册 UART 下载服务
+            const uartServiceModule = await import('../services/UartDownloadService');
+            const UartDownloadService = uartServiceModule.UartDownloadService;
+            const uartService = new UartDownloadService(this.context);
+            uartService.registerCommands();
+            this.disposables.push(uartService);
+
             // 注册HML编辑器提供者
             this.registerHmlEditorProvider();
 

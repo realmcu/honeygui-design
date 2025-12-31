@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useDesignerStore } from '../store';
-import { Save, Code, Play, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, GitBranch, Palette, AlignLeft, Grid } from 'lucide-react';
+import { Save, Code, Play, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, GitBranch, Palette, AlignLeft, Grid, Download } from 'lucide-react';
 import { AlignType, DistributeType, ResizeType, getAlignmentConfigsByCategory } from '../utils/alignmentUtils';
 import './Toolbar.css';
 
@@ -91,6 +91,13 @@ const Toolbar: React.FC = () => {
     window.vscodeAPI?.postMessage({
       command: 'executeCommand',
       commandId: 'honeygui.preview',
+    });
+  };
+
+  const handleUartDownload = () => {
+    window.vscodeAPI?.postMessage({
+      command: 'executeCommand',
+      commandId: 'honeygui.uartDownload',
     });
   };
 
@@ -319,6 +326,14 @@ const Toolbar: React.FC = () => {
         >
           <Play size={16} />
           <span>预览</span>
+        </button>
+        <button
+          className="toolbar-button"
+          onClick={handleUartDownload}
+          title="UART 下载到开发板"
+        >
+          <Download size={16} />
+          <span>下载</span>
         </button>
       </div>
     </div>
