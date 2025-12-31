@@ -1,0 +1,1048 @@
+mpcli python
+
+Release Notes
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 4.0.0.4
+Nov. 10, 2025
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1.support RTL87x3G v1, auto detect the rom version by getting
+        property command.
+Bug Fixes:
+        NULL
+Known Issues:
+        NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 4.0.0.3
+Jul. 25, 2025
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1. Support to program for unaligned address.
+Bug Fixes:
+        NULL
+Known Issues:
+        NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 4.0.0.2
+Jun. 27, 2025
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1. Support HCI reboot for RTL87X3E/RTL87X3EP/RTL87X3D.
+      2. Fix found issue in verification procedure by meta tool.
+      3. Support -T [RTL87X3E,RTL87X3EP,RTL87X3D,RTL87X3G].
+Bug Fixes:
+        NULL
+Known Issues:
+        NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 4.0.0.1
+Jun. 26, 2025
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1.update mpcli for metal tool initial version.
+Bug Fixes:
+        NULL
+Known Issues:
+        NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 3.1.0.14
+Jun. 4, 2025
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1.update serial write operation for RTL8773G.
+Bug Fixes:
+        NULL
+Known Issues:
+        NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 3.1.0.13
+May. 29, 2025
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1.update flash erase v2 checking issue for RTL8773G.
+Bug Fixes:
+        NULL
+Known Issues:
+        NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 3.1.0.12
+Jan. 21, 2025
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1.support programming for RTL8773G.
+Bug Fixes:
+        NULL
+Known Issues:
+        NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 3.1.0.11
+Aug. 13, 2024
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1.support nand flash download on flash address 0x80000000 for RTL8773E.
+Bug Fixes:
+        NULL
+Known Issues:
+        NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 3.1.0.10
+Apri. 22, 2024
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1. adjust the page erase block size to 0x10000.
+      2.adjust the flash verify time by the data length, 1M byts -> 5 seconds.
+Bug Fixes:
+        NULL
+Known Issues:
+        NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 3.1.0.9
+Feb. 27, 2024
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1. support to assign stack patch and ota header image in one flash sector.
+         add read back and merge for the data on this sector.
+Bug Fixes:
+        NULL
+Known Issues:
+        NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 3.1.0.9
+Feb. 27, 2024
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1. support to assign stack patch and ota header image in one flash sector.
+Bug Fixes:
+        NULL
+Known Issues:
+        NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 3.1.0.8
+Feb. 26, 2024
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1. remove unnecessary flash type get procedure in the
+         erase command.
+Bug Fixes:
+        NULL
+Known Issues:
+        NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 3.1.0.7
+Jan. 8, 2024
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1. update to support IC_8773EP a cut.
+Bug Fixes:
+        NULL
+Known Issues:
+        NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 3.1.0.6
+Sep. 5, 2023
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1. update mp loader ram patch to the latest version.
+Bug Fixes:
+        NULL
+Known Issues:
+        NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 3.1.0.5
+Jun. 23, 2022
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1. modify OCCD image download address with input paramter address, instead
+         of config occd address.
+Bug Fixes:
+        NULL
+Known Issues:
+        NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 3.1.0.4
+Mar. 21, 2022
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1. modify the download procedure when the image address for fsbl is
+         aligned with 4KB for 87x3E.
+Bug Fixes:
+        NULL
+Known Issues:
+        NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 3.1.0.3
+Jan. 17, 2022
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1. support to download ota header and fsbl on the same flash sector.
+Bug Fixes:
+        NULL
+Known Issues:
+        NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 3.1.0.2
+July. 20, 2021
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1. modify -x proceudre to support bt address setting for 8763D.
+      2. support non-cache flash address for 8763D through ram patch.
+Bug Fixes:
+        NULL
+Known Issues:
+        NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 3.1.0.1
+Jun. 3, 2021
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1. add  flash address checking proceudre for 8763D.
+Bug Fixes:
+        NULL
+Known Issues:
+        NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 3.1.0.0
+May 8, 2021
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1. add support for 8763D.
+Bug Fixes:
+        NULL
+Known Issues:
+        NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 3.0.3.0
+Apr. 1, 2021
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1. add support to python3.9.
+Bug Fixes:
+        NULL
+Known Issues:
+        NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 3.0.2.3
+Feb. 23, 2021
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1. close console(cmd.exe or python.exe) Quick Edit Mode only for windows,not for mac and linux.
+Bug Fixes:
+        NULL
+Known Issues:
+        NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 3.0.2.2
+Feb. 3, 2021
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1. close console(cmd.exe or python.exe) Quick Edit Mode.
+Bug Fixes:
+        NULL
+Known Issues:
+        NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 3.0.2.1
+Jan. 28, 2021
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1. add mpcli exit log for factory log capture.
+Bug Fixes:
+        NULL
+Known Issues:
+        NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 3.0.2.0
+July. 16, 2020
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1. modify read_disable_ram_patch_auth_val for 8763C V2 secure device through 1wire.
+Bug Fixes:
+        NULL
+Known Issues:
+        NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 3.0.1.2
+June. 9, 2020
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1. modify registerM2.py to support 8763C V2 with -M 2 to access through load_rp.
+Bug Fixes:
+        NULL
+Known Issues:
+        NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 3.0.1.1
+March. 19, 2020
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1. add time stamp to tmp file name to support multiple flashing simultaniously
+Bug Fixes:
+        NULL
+Known Issues:
+        NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 3.0.1.0
+Feb. 19, 2020
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1. sign the RTL8763C_V2_ram_patch.bin with rtk_rsa.pem to run on secure device.
+Bug Fixes:
+        NULL
+Known Issues:
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 3.0.0.8
+Feb. 13, 2020
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1. dump app_euid and ecc public key for 8763C V2 in the reboot procedure under M 5.
+Bug Fixes:
+        NULL
+Known Issues:
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 3.0.0.7
+Feb. 10, 2020
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1. support more than one flash protection region in custom_config.ini.
+      2. adjust the protection space logs, disable the protection log in scanning
+         all the JSON files.
+Bug Fixes:
+        NULL
+Known Issues:
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 3.0.0.6
+Jan. 21, 2020
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1. modify __check_handshake_rsp in MPLoaderFor8763CV2.py to support invalid data with "0x87,0xA0,0x20"
+         before valid handshake response.
+Bug Fixes:
+        NULL
+Known Issues:
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 3.0.0.5
+Jan. 6, 2020
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1. modify flash protection space as [0x1800000,0x1804000) for 8763C V2 for the rf calibration data will
+         be written in the space from 0x1800000.
+Bug Fixes:
+        NULL
+Known Issues:
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 3.0.0.4
+Dec. 17, 2019
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1. modify packet size to 0x1000 when the openning baudrate is 2Mbps under M 2.
+      2. support update 1wire ram patch with image header, automatically skip the image header if the
+         disable_ram_patch_auth is 0b11, and if the disable_ram_patch_auth is 0b00, mpcli will update
+         the ram patch with image header.
+      3. add HCICmdFor8763CV2 to update the hci reboot command HCI_VENDOR_ENABLE_WDG_RESET_CMD(0xFC8E).
+Bug Fixes:
+        NULL
+Known Issues:
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 3.0.0.3
+Dec. 2, 2019
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1.update timeout for 8763C V2 load_rp procedure.
+        a.set read timeout to 0.5 second for handshake through reading procedure.
+        b.set inter byte timeout as 0.01 for app cli uart.
+        c.set read timeout for load_rp cli as 0.2 second, then call read() to read the cli response.
+        d.add log if the load_rp response is None for debug in furture.
+        e.set read timeout as 0.3 second for cli command '?\r',then call read() to get the cli response.
+        f.set the wait_for_load_rp_s = 0.11 in custom_config.ini for load_rp delay 100 ms then init
+          1wire environment.
+        g.if use 1w through load_rp, set 2w packet size as 0x1000 in this mpcli verison.
+          set 2w_packet_size=0x1000 under [packet_size] in custom_config.ini.
+Bug Fixes:
+        NULL
+Known Issues:
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 3.0.0.2
+Nov. 25, 2019
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1.update RTL8763C_V2_ram_patch.bin for 8763C V2 1-wrie for the invalid command length.
+        avoid to enter into while loop, enable the retry mechanism to recover the procedure.
+      2.modify the ACut to V1,BCut to V2,ECut to V3.
+      3.add flash lock procedure in hci mode for flash unlock in the load_fw procedure.
+Bug Fixes:
+        NULL
+Known Issues:
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 3.0.0.1
+Nov. 19, 2019
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1.add default_modify_baudrate in custom_config.ini,
+        set default_modify_baudrate = 1000000 in base_config.ini.
+        set default_modify_baudrate = 2000000 in custom_config.ini for 8763C.
+Bug Fixes:
+        NULL
+Known Issues:
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 3.0.0.0
+oct. 12, 2019
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1.refactor mpcli in new framework.
+Bug Fixes:
+        NULL
+Known Issues:
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 2.0.3.6
+June 25, 2019
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1.modify OCCD flash layout for ic 8763C in mp_setting.py.
+        powell-master:CONFIG_DEFAULT_IC_TYPE = IC_8763C
+        puget/hark/zebra:CONFIG_DEFAULT_IC_TYPE = IC_8763B
+      2.fix oem cfg format checking fail issue with -x, support oem cfg image with redundant 0xFF to 4 bytes aligned.
+Bug Fixes:
+        NULL
+Known Issues:
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 2.0.3.5
+June 12, 2019
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1.modify the procedure for command line with -I, don't need to try load_rp again.
+      2.modify the default baudrate 2000000 for application as the config variable CONFIG_UART_APP_BAUDRATE
+        in the mp_setting.py, the default value is CONFIG_UART_BAUDRATE_2M. it should be modified according 
+        to the application project.
+      3.add checking for load_rp cli command when there is a hardfault in the load_rp.
+      4.modify enter_mp_loader procedure under M 5 for ic 8763C, -M 5 supports both 2w and 1w for ic 8763C.
+      5.add RTL8763C_FW_V1.bin in the fw directory to support -M 1 for ic 8763C.
+      6.add json.decoder.JSONDecodeError,TypeError in the json file parsing procedure.
+Bug Fixes:
+        NULL
+Known Issues:
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 2.0.3.4
+Apr 4, 2019
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1.add checking config data format procedure for the OCCD config data read from the flash.
+        If the data format of the OCCD config data on the flash is corrupted, setting bt mac through -x will fail.
+        mpcli will fail to download corrupted OCCD config file, but if OCCD config data is included in a bank image,
+        OCCD config data will not be splited from the whole image, and the OCCD config data format will not be checked.
+      2.modify detecting load_rp procedure to improve the success rate when there are a lot of logs.
+      3.set CONFIG_WAIT_FOR_APP_RUN_S as 0 second. wait for application in the detect_app_cli_status through \r dynamically.
+      4.merge the modifications for M 5: add IC_BBPRO2_MPLOADER = 0x20(CMD_RUN_MP_LOADER belongs to this type ),
+        set CMD_RUN_MP_LOADER = 0xA0,set CONFIG_MP_LOADER_LOG_ENABLE = 0xFF,modify CONFIG_SET_SYSTEM_CFG_DATA value.
+Bug Fixes:
+        NULL
+Known Issues:
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 2.0.3.3
+Mar 27, 2019
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1.adjust timeout value for erase procedure when erase size >= 3MB to 60 seconds.
+        when 4MB flash size is all 0x0, the erase entire flash will need about 47 seconds.
+      2.adjust the load_rp procedure log detecting condition to check "<ASC:".
+      3.adjust the application running status checking procedure in the wdt_reset_cli function.
+Bug Fixes:
+        NULL
+Known Issues:
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 2.0.3.2
+Mar 20, 2019
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1.modify serial timeout default value in the serial_handle.py as the CONFIG variable in the mp_setting.py.
+      2.add response command code checking in the mp_cmd_proto.py.
+        adjust the log in the mp_cmd_proto.py to add address and size information.
+      3.add delay 1 second for the retry mechanism.
+        because the response is without address information,it is difficult to confirm the response is for which request.
+        when the single uart is not stable, the last response may be received in the next retry mechanism.
+        even though mp_send will clear tx/rx buffer before sending next request.
+        so add this delay to extend the interval retry time.
+Bug Fixes:
+        NULL
+Known Issues:
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 2.0.3.1
+Mar 01, 2019
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1.add the erase size checking after erase address range adjusting procedure.
+        the erase size out of the protection space can not be 0.
+      2.modify read retrying metrics bug in the  connection procedure for 1W UART environment.
+Bug Fixes:
+        NULL
+Known Issues:
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 2.0.3.0
+Feb 25, 2019
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1.modify the arguments parsing procedure through argparse module.
+      2.add -n to enable multi-slot.
+      3.define error code ad the return code in the main function.
+      4.add retrying metrics on flashing.
+Bug Fixes:
+        NULL
+Known Issues:
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 2.0.2.10
+Jan 29, 2019
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1.add retrying mechanism in the read procedure.
+        if read 1 byte, there is none retrying because reading 1 byte may be
+        the handshake procedure now.
+      2.add the address|CONFIG_FLASH_ADDR_NON_CACHE for -A parameter value.
+        for "load_rp" procedure,programming flash address must be non-cache flash address.
+      3.check the response "$" for "\r\n" at least 2 times in the checking application running procedure.
+      4.add log for the erasing procedure  in the -m handling procedure.
+Bug Fixes:
+        NULL
+Known Issues:
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 2.0.2.9
+Jan 29, 2019
+
+Notices:
+        there is none functional modification in this version.
+Changes and Enhancements:
+      1.modify the function name reset_hark to wdt_rest_cli,and modify the variable name in this function.
+      2.modify the format for some comments, and remove some commented code lines.
+Bug Fixes:
+        NULL
+Known Issues:
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 2.0.2.8
+Jan 23, 2019
+
+Notices:
+        the modificaiton in this version is valid for easy_flash_mpcli.py and save_bud_nvm_state_mpcli.py.
+Changes and Enhancements:
+      1.modify the trying load_rp procedure in the main function.
+      2.modify the baudrate usage for uart opening and baudrate modification procedure.
+      3.add -B to set serial openinig baudrate.
+Bug Fixes:
+        NULL
+Known Issues:
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 2.0.2.7
+Jan 7, 2019
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1.modify main function to return the major procedure returned value.
+      2.modify get_bud_dbg_board_port to support "com" and "COM" for -c flag.
+Bug Fixes:
+        NULL
+Known Issues:
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 2.0.2.6
+Dec 27, 2018
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1.fix the bug in the append_btmac_config_entry for -x with -af.
+      2.add -d in the usage description.
+      3.add retry mechanism in the program/verify procedure.
+      4.modify the procedure in the main to support -c only with -D.
+
+Bug Fixes:
+        NULL
+Known Issues:
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 2.0.2.5
+Dec 18, 2018
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1. support -D with -f/-a/-r/-c/-E for secure bud.
+Bug Fixes:
+        NULL
+Known Issues:
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 2.0.2.4
+Dec 14, 2018
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1.add hci mode checking procedure for r/-M 0.
+        modify reboot log for hci mode.
+
+Bug Fixes:
+        NULL
+Known Issues:
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 2.0.2.3
+Dec 14, 2018
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1.modify for hark 1W UART: add "wdt reset" through CLI without pressing the reset button.
+        if the hark app is not in the CLI mode, user will see the log "Please reset hark through reset button!",
+        then user should press reset button.
+
+Bug Fixes:
+        NULL
+Known Issues:
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 2.0.2.2
+Dec 13, 2018
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1.remove hci reboot command, and implement hci_reboot through hci_dbg_passwd.
+Bug Fixes:
+        NULL
+Known Issues:
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 2.0.2.1
+Dec 11, 2018
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1.remove checking OCCD protection through the CLI command "unlock -I".
+      2.modify the count N for downloading files in the log "Download N image files successfully!"
+Bug Fixes:
+        NULL
+Known Issues:
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 2.0.2.0
+Dec 7, 2018
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1.remove downloading boot patch image for secure DVT with -M 2.
+        set CONFIG_SECURE_DEVICE_ON_PRODUCTION default value as True.
+        If user want to open the automatically load boot patch feature,set
+        CONFIG_SECURE_DEVICE_ON_PRODUCTION as False.
+Bug Fixes:
+        NULL
+Known Issues:
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 2.0.1.6
+Dec 5, 2018
+
+Notices:
+        NULL
+Changes and Enhancements:
+      1.modify 1W-UART hark fsbl accessing procedure.
+        remove try_conut,add time duration checking.
+        add time configuration in mp_setting.py.
+Bug Fixes:
+        NULL
+Known Issues:
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 2.0.1.5
+Dec 3, 2018
+
+Notices:
+      1. -d flag is invalid in the mpcli v2.0.1.4.
+Changes and Enhancements:
+      1.add image type checking procedure for OCCD image without MP header.
+     
+Bug Fixes:
+      1.fix the -d flag issue in the mpcli v2.0.1.4.
+
+Known Issues:
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 2.0.1.4
+Dec 3, 2018
+
+Notices:
+        NULL.
+Changes and Enhancements:
+      1.modify mpcli downloading function to support the simple splicing packed image.
+     
+Bug Fixes:
+      1.fix the download size issue for simple splicing packed image.
+
+Known Issues:
+      1. -d flag is invalid in the version 2.0.1.4.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 2.0.1.3
+November 29, 2018
+
+Notices:
+        NULL.
+Changes and Enhancements:
+      1.fix the bug about -E/-r on seucre bud.
+      2.modify the bug for entering into mp loader mode.
+
+Bug Fixes:
+      1.fix the bug about -E/-r on secure bud.
+
+Known Issues:
+
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 2.0.1.2
+November 28, 2018
+
+Notices:
+        NULL.
+Changes and Enhancements:
+      1.add image parser class in image_parser.py,
+        modify downloading checking procedure.
+      2.add some procedure for entering into mp loader mode.
+Bug Fixes:
+      1.fix the bug for downloading dsp data image with extend data.
+
+Known Issues:
+
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 2.0.1.1
+November 27, 2018
+
+Notices:
+        NULL.
+Changes and Enhancements:
+  1.for the options [s/r/e/m] without -M,use HCI mode for secure device.
+Bug Fixes:
+	NULL.
+
+Known Issues:
+
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 2.0.1.0
+November 26, 2018
+
+Notices:
+  1.add -M 5 to enter into mp loader.
+  2.support to use -x with -f/-a.
+Changes and Enhancements:
+  1.remove the repeated erasing procedure for oem cfg without -d.
+  2.add -M 5 to enter into mp loader mode.
+  3.support to use -x with -f/-a.
+  4.adjust the downloading time consumption for secure bud.
+Bug Fixes:
+	NULL.
+
+Known Issues:
+
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 2.0.0.9
+November 20, 2018
+
+Notices:
+  1.fix the feedback about the mpcli command running on the secure device.
+  2.erasing procedure is unstable under single wire UART mode.
+    add retry mechanism for erasing procedure.
+Changes and Enhancements:
+  1.add loading boot patch procedure for secure device.
+  2.add retrying mechanism for erasing procedure.
+    erasing procedure is unstable under single wire UART mode.
+  3.adjust the time consumption to enter easy mode.
+Bug Fixes:
+	NULL.
+
+Known Issues:
+
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 2.0.0.8
+November 15, 2018
+
+Notices:
+  1. add -u or "--unlock_protected" to unlock the protection for SCCD and OCCD.
+     set protecting the SCCD and OCCD flash space as default setting.
+     If user want to erase or program SCCD and OCCD, please add -u flag in the mpcli command line.
+
+Changes and Enhancements:
+  1.add -u or "--unlock_protected" to erase or program SCCD and OCCD flash space.
+    SCCD and OCCD flash space will be protected as default setting.
+  2.add CONFIG_WAIT_BUD_ENTER_HCI_MODE_S in mp_setting.py.
+    If the sleep time is not long enough, the bud maybe not enter into hci mode.
+    the duration may has serval seconds distinguish for different debug board.
+Bug Fixes:
+	NULL.
+
+Known Issues:
+
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 2.0.0.7
+November 15, 2018
+
+Notices:
+	1. PUGETFW-1640: Don't support "unlock -I" for non-puget project.
+Changes and Enhancements:
+	1.if the project don't support "unlock" command, skip the OCCD flash space
+    checking procedure.
+Bug Fixes:
+	NULL.
+
+Known Issues:
+
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 2.0.0.6
+November 14, 2018
+
+Notices:
+  1.reading and downloading is not stable under single wire UART mode.
+Changes and Enhancements:
+  1.adjust -E only to enter hci mode for bud.
+    use "-E" combined with "-M " to specify program mode.
+    use "-E" without "-M" to autodect fireware.
+  2.debug saving bin and downloading procedure under single wire UART mode.
+    the function can run but not stable, need further improvement for mpcli and fsbl.
+          
+Bug Fixes:
+	NULL.
+
+Known Issues:
+
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 2.0.0.5
+November 13, 2018
+
+Notices:
+	1.fix the feedback on PUGETFW-1626
+Changes and Enhancements:
+	1.change the bud debug board port compatible with Windows, Linux and MacOS.
+        2.modify -V output api from "print" to "LOG_CRITICAL".
+        3.modify the read efuse hci event data checking procedure.
+        4.add the flash protection for SCCD.
+          
+Bug Fixes:
+	NULL.
+
+Known Issues:
+
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 2.0.0.4
+November 9, 2018
+
+Notices:
+	1.add log level management.
+Changes and Enhancements:
+	1.modify print as LOG_ERR\LOG_DBG\LOG_CRITICAL,
+	  modify console log level through CONFIG_LOG_LEVEL in mp_setting.py.
+	2.add sleep in the function load_ram_patch to wait for serial output string.
+	  adjust the try...except procedure in the load_ram_patch.
+Bug Fixes:
+	NULL.
+
+Known Issues:
+
+	NULL.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Version 2.0.0.3
+November 9, 2018
+
+Notices:
+	1.add load_rp before downloading images for mpcli command line  with -I flag.
+Changes and Enhancements:
+	1.modify implementation procedure for mpcli command line  with -I flag:
+          send load_rp command to load ram patch before downloading images.
+Bug Fixes:
+	NULL.
+
+Known Issues:
+
+	NULL.
