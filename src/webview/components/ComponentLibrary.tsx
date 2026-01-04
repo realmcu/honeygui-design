@@ -191,6 +191,7 @@ const componentDefinitions: ComponentDefinition[] = [
       { name: 'strokeWidth', label: '线宽', type: 'number', defaultValue: 8, group: 'style' },
       { name: 'color', label: '颜色', type: 'color', defaultValue: '#007acc', group: 'style' },
       { name: 'opacity', label: '透明度', type: 'number', defaultValue: 255, group: 'style' },
+      { name: 'useGradient', label: '启用渐变', type: 'boolean', defaultValue: false, group: 'style' },
     ],
   },
   {
@@ -202,6 +203,8 @@ const componentDefinitions: ComponentDefinition[] = [
       { name: 'radius', label: '半径', type: 'number', defaultValue: 40, group: 'style' },
       { name: 'fillColor', label: '填充颜色', type: 'color', defaultValue: '#007acc', group: 'style' },
       { name: 'opacity', label: '透明度', type: 'number', defaultValue: 255, group: 'style' },
+      { name: 'useGradient', label: '启用渐变', type: 'boolean', defaultValue: false, group: 'style' },
+      { name: 'gradientType', label: '渐变类型', type: 'select', defaultValue: 'radial', options: ['radial', 'angular'], group: 'style' },
     ],
   },
   {
@@ -213,6 +216,8 @@ const componentDefinitions: ComponentDefinition[] = [
       { name: 'borderRadius', label: '圆角半径', type: 'number', defaultValue: 0, group: 'style' },
       { name: 'fillColor', label: '填充颜色', type: 'color', defaultValue: '#007acc', group: 'style' },
       { name: 'opacity', label: '透明度', type: 'number', defaultValue: 255, group: 'style' },
+      { name: 'useGradient', label: '启用渐变', type: 'boolean', defaultValue: false, group: 'style' },
+      { name: 'gradientDirection', label: '渐变方向', type: 'select', defaultValue: 'horizontal', options: ['horizontal', 'vertical', 'diagonal_tl_br', 'diagonal_tr_bl'], group: 'style' },
     ],
   },
   {

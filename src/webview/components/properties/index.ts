@@ -4,6 +4,7 @@ import { Hg3DProperties } from './Hg3DProperties';
 import { HgVideoProperties } from './HgVideoProperties';
 import { HgImageProperties } from './HgImageProperties';
 import { ListItemProperties } from './ListItemProperties';
+import { GeometryProperties } from './GeometryProperties';
 import { DefaultProperties } from './DefaultProperties';
 import { PropertyPanelProps } from './types';
 
@@ -25,9 +26,9 @@ export const propertyPanelRegistry: Record<ComponentType, React.FC<PropertyPanel
   hg_list_item: ListItemProperties,
   hg_video: HgVideoProperties,
   hg_3d: Hg3DProperties,
-  hg_arc: DefaultProperties,
-  hg_circle: DefaultProperties,
-  hg_rect: DefaultProperties,
+  hg_arc: GeometryProperties,
+  hg_circle: GeometryProperties,
+  hg_rect: GeometryProperties,
   hg_svg: DefaultProperties,
   hg_lottie: DefaultProperties,
 };
@@ -37,6 +38,7 @@ export { Hg3DProperties } from './Hg3DProperties';
 export { HgVideoProperties } from './HgVideoProperties';
 export { HgImageProperties } from './HgImageProperties';
 export { ListItemProperties } from './ListItemProperties';
+export { GeometryProperties } from './GeometryProperties';
 export { DefaultProperties } from './DefaultProperties';
 export { BaseProperties } from './BaseProperties';
 export { PropertyEditor } from './PropertyEditor';

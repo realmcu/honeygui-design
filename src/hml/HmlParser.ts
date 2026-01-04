@@ -244,7 +244,10 @@ export class HmlParser {
       // 图像变换属性
       'transform',
       // 文本样式属性
-      'align', 'hAlign', 'vAlign', 'letterSpacing', 'lineSpacing', 'wordWrap', 'wordBreak'
+      'align', 'hAlign', 'vAlign', 'letterSpacing', 'lineSpacing', 'wordWrap', 'wordBreak',
+      // 渐变属性
+      'useGradient', 'gradientType', 'gradientDirection'
+
     ]);
 
     // 需要转换为数字的属性
@@ -299,12 +302,35 @@ export class HmlParser {
             console.warn(`Failed to parse transform JSON: ${value}`);
           }
         }
+        // useGradient 布尔值转换
+        if (key === 'useGradient') {
+          value = value === 'true' || value === true;
+        }
         style[key] = value;
       } else if (dataProps.has(key)) {
         data[key] = attributes[key];
       } else {
         // 未知属性放入data
-        data[key] = attributes[key];
+        let value = attributes[key];
+        // gradientStops 需要从 JSON 字符串解析为数组
+        if (key === 'gradientStops' && typeof value === 'string') {
+          try {
+            value = JSON.parse(value);
+          } catch (e) {
+            console.warn(`Failed to parse gradientStops JSON: ${value}`);
+            value = [];
+          }
+        }
+        // gradientStartAngle 和 gradientEndAngle 需要转换为数字
+        if ((key === 'gradientStartAngle' || key === 'gradientEndAngle') && typeof value === 'string') {
+          const num = parseFloat(value);
+          value = isNaN(num) ? 0 : num;
+        }
+        // enableEndCap 需要转换为布尔值
+        if (key === 'enableEndCap') {
+          value = value === 'true' || value === true;
+        }
+        data[key] = value;
       }
     });
 

@@ -35,6 +35,28 @@ export class ArcGenerator implements ComponentCodeGenerator {
       code += `${indentStr}${component.id}->opacity_value = ${component.style.opacity};\n`;
     }
 
+    // 渐变设置
+    if (component.style?.useGradient && component.data?.gradientStops) {
+      const stops = component.data.gradientStops as Array<{ position: number; color: string }>;
+      if (stops.length >= 2) {
+        // 使用独立的渐变角度，如果没有设置则使用弧形角度
+        const gradientStartAngle = component.data?.gradientStartAngle ?? component.style?.startAngle ?? 0;
+        const gradientEndAngle = component.data?.gradientEndAngle ?? component.style?.endAngle ?? 360;
+        
+        code += `${indentStr}// 设置角度渐变\n`;
+        code += `${indentStr}gui_arc_set_angular_gradient(${component.id}, ${gradientStartAngle}, ${gradientEndAngle});\n`;
+        
+        stops.forEach(stop => {
+          const color = this.convertColorToRgba(stop.color);
+          // 确保 position 是浮点数格式（如 0.0f 而不是 0f）
+          const position = Number.isInteger(stop.position) 
+            ? `${stop.position}.0f` 
+            : `${stop.position}f`;
+          code += `${indentStr}gui_arc_add_gradient_stop(${component.id}, ${position}, ${color});\n`;
+        });
+      }
+    }
+
     return code;
   }
 
@@ -53,5 +75,21 @@ export class ArcGenerator implements ComponentCodeGenerator {
     }
     
     return color;
+  }
+
+  /**
+   * 转换颜色值为 gui_rgba() 格式（用于渐变色标）
+   */
+  private convertColorToRgba(color: string): string {
+    if (color.startsWith('#')) {
+      const hex = color.substring(1);
+      const r = parseInt(hex.substring(0, 2), 16);
+      const g = parseInt(hex.substring(2, 4), 16);
+      const b = parseInt(hex.substring(4, 6), 16);
+      // 默认完全不透明
+      return `gui_rgba(${r}, ${g}, ${b}, 255)`;
+    }
+    
+    return `gui_rgba(255, 255, 255, 255)`;
   }
 }

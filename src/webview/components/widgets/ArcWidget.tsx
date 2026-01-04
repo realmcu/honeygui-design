@@ -5,7 +5,7 @@ export const ArcWidget: React.FC<WidgetProps> = ({ component, style, handlers })
   const width = component.position?.width ?? 100;
   const height = component.position?.height ?? 100;
   const s = component.style || {};
-  
+
   const radius = s.radius ?? 40;
   const startAngle = s.startAngle ?? 0;
   const endAngle = s.endAngle ?? 270;
@@ -20,7 +20,7 @@ export const ArcWidget: React.FC<WidgetProps> = ({ component, style, handlers })
   // 计算角度跨度
   let angleSpan = endAngle - startAngle;
   if (angleSpan <= 0) angleSpan += 360;
-  
+
   // 检查是否为完整圆弧（360度）
   const isFullCircle = Math.abs(angleSpan - 360) < 0.01;
 
