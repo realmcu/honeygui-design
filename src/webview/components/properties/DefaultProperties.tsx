@@ -13,6 +13,11 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
   const [activeTab, setActiveTab] = useState<'properties' | 'events'>('properties');
   const [showFontPicker, setShowFontPicker] = useState(false);
   const [fontFiles, setFontFiles] = useState<string[]>([]);
+  const [fontMetrics, setFontMetrics] = useState<{
+    needsWarning: boolean;
+    message: string;
+    example: string;
+  } | null>(null);
   const definition = componentDefinitions.find((d) => d.type === component.type);
   const syncListItems = useDesignerStore((state) => state.syncListItems);
 
@@ -69,11 +74,29 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
     const handleMessage = (event: MessageEvent) => {
       if (event.data.command === 'fontFilesLoaded') {
         setFontFiles(event.data.fonts || []);
+      } else if (event.data.command === 'fontMetricsLoaded') {
+        // 只有当前组件的字体度量信息才更新
+        if (event.data.fontPath === (component.data as any)?.fontFile) {
+          setFontMetrics(event.data.metrics);
+        }
       }
     };
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, []);
+  }, [component.data]);
+
+  // 当字体文件改变时，请求字体度量信息
+  React.useEffect(() => {
+    const fontFile = (component.data as any)?.fontFile;
+    if (fontFile && component.type === 'hg_label') {
+      window.vscodeAPI?.postMessage({
+        command: 'getFontMetrics',
+        fontPath: fontFile
+      });
+    } else {
+      setFontMetrics(null);
+    }
+  }, [(component.data as any)?.fontFile, component.type]);
 
   const renderImageProperty = (value: any, onChange: (value: any) => void) => {
     return (
@@ -493,6 +516,92 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                     <span style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '2px' }}>
                       {(component.data as any)?.renderMode || '4'}-bit 灰度
                     </span>
+                  </div>
+                )}
+                {/* 预览模式开关 */}
+                <div className="property-item">
+                  <label>预览模式（不改变实际渲染效果）</label>
+                  <div style={{ marginTop: '4px' }}>
+                    {/* 精确预览选项 */}
+                    <div 
+                      style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '8px',
+                        padding: '6px 8px',
+                        backgroundColor: (component.data as any)?.useAccuratePreview ?? true 
+                          ? 'var(--vscode-list-activeSelectionBackground)' 
+                          : 'transparent',
+                        borderRadius: '3px',
+                        cursor: 'pointer',
+                        marginBottom: '4px'
+                      }}
+                      onClick={() => handleDataChange('useAccuratePreview', true)}
+                    >
+                      <input 
+                        type="radio" 
+                        checked={(component.data as any)?.useAccuratePreview ?? true}
+                        onChange={() => handleDataChange('useAccuratePreview', true)}
+                        style={{ margin: 0 }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '12px', fontWeight: 500 }}>精确预览</div>
+                        <div style={{ fontSize: '10px', color: 'var(--vscode-descriptionForeground)', marginTop: '2px' }}>
+                          真实渲染效果，与仿真环境和嵌入式环境一致
+                        </div>
+                      </div>
+                    </div>
+                    {/* 设计预览选项 */}
+                    <div 
+                      style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '8px',
+                        padding: '6px 8px',
+                        backgroundColor: !((component.data as any)?.useAccuratePreview ?? true)
+                          ? 'var(--vscode-list-activeSelectionBackground)' 
+                          : 'transparent',
+                        borderRadius: '3px',
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => handleDataChange('useAccuratePreview', false)}
+                    >
+                      <input 
+                        type="radio" 
+                        checked={!((component.data as any)?.useAccuratePreview ?? true)}
+                        onChange={() => handleDataChange('useAccuratePreview', false)}
+                        style={{ margin: 0 }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '12px', fontWeight: 500 }}>设计预览</div>
+                        <div style={{ fontSize: '10px', color: 'var(--vscode-descriptionForeground)', marginTop: '2px' }}>
+                          设计参考，与 Figma/Sketch 等工具一致
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {/* 字体度量警告 - 动态显示 */}
+                {fontMetrics && fontMetrics.needsWarning && (
+                  <div style={{
+                    fontSize: '11px',
+                    color: 'var(--vscode-descriptionForeground)',
+                    marginTop: '8px',
+                    padding: '6px 8px',
+                    backgroundColor: 'var(--vscode-inputValidation-infoBackground)',
+                    border: '1px solid var(--vscode-inputValidation-infoBorder)',
+                    borderRadius: '3px',
+                    lineHeight: '1.4'
+                  }}>
+                    <div style={{ marginBottom: '4px', color: 'var(--vscode-inputValidation-infoForeground)' }}>
+                      💡 <strong>嵌入式设备采用 Fit-in-Box 算法优化。</strong>
+                    </div>
+                    <div style={{ marginTop: '4px', opacity: 0.9 }}>
+                      {fontMetrics.message}
+                    </div>
+                    <div style={{ marginTop: '4px', opacity: 0.9 }}>
+                      {fontMetrics.example}
+                    </div>
                   </div>
                 )}
               </div>
