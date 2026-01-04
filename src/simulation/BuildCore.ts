@@ -191,6 +191,14 @@ export class BuildCore {
             this.logger.log('UI 目录已拷贝到 assets');
         }
 
+        // 拷贝 project.json 到 build/assets
+        const projectJsonSrc = path.join(this.projectRoot, 'project.json');
+        const projectJsonDest = path.join(outputDir, 'project.json');
+        if (fs.existsSync(projectJsonSrc)) {
+            fs.copyFileSync(projectJsonSrc, projectJsonDest);
+            this.logger.log('project.json 已拷贝到 assets');
+        }
+
         // 打包 romfs
         await this.packRomfs();
     }
