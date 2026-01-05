@@ -147,10 +147,13 @@ HmlEditorProvider.resolveCustomTextEditor()
    - 如果不确定是否需要提交，先询问用户
 8. **发布版本**：
    - 当用户说"发布版本"或"publish"时，执行以下流程：
-     1. 更新版本号（递增 patch 版本，如 1.4.9 → 1.4.10，或使用用户指定的版本）
-     2. Commit: `chore: bump version to x.x.x`
-     3. Push to Gitee
-     4. 执行 `vsce publish` 发布到 VSCode 插件市场
+     1. 更新版本号（递增 patch 版本，如 1.4.13 → 1.4.14，或使用用户指定的版本）
+     2. 执行 `npm install` 确保依赖最新（适用于干净仓库）
+     3. 执行 `npm run compile` 编译代码
+     4. 执行 `npm run build:webview` 构建前端
+     5. Commit: `chore: bump version to x.x.x`
+     6. Push to Gitee
+     7. 执行 `vsce publish` 发布到 VSCode 插件市场
 9. **SDK 目录**：`/home/howie_wang/.HoneyGUI-SDK` 为 SDK 目录
 10. **实验工程**：测试用的实验工程, 也是模板工程位于 `./template-projects/smartwatch` 目录
 
