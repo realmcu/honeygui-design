@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { DEFAULT_ROMFS_BASE_ADDR } from '../common/ProjectConfig';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -516,7 +517,7 @@ export class CreateProjectPanel {
             pixelMode: pixelMode,
             mainHmlFile: `ui/${hmlFileName}`,
             honeyguiSdkPath: honeyguiSdkPath || ProjectUtils.getDefaultSdkPath(),
-            romfsBaseAddr: romfsBaseAddr || '0x04400000',
+            romfsBaseAddr: romfsBaseAddr || DEFAULT_ROMFS_BASE_ADDR,
             created: new Date().toISOString()
         };
 
@@ -623,7 +624,7 @@ export class CreateProjectPanel {
                 if (fs.existsSync(projectJsonPath)) {
                     const projectConfig = JSON.parse(fs.readFileSync(projectJsonPath, 'utf8'));
                     projectConfig.honeyguiSdkPath = sdkPath;
-                    projectConfig.romfsBaseAddr = romfsBaseAddr || '0x04400000';
+                    projectConfig.romfsBaseAddr = romfsBaseAddr || DEFAULT_ROMFS_BASE_ADDR;
                     fs.writeFileSync(projectJsonPath, JSON.stringify(projectConfig, null, 2), 'utf8');
                     logger.info(`[CreateProjectPanel] SDK path and romfs address added to project.json: ${sdkPath}, ${projectConfig.romfsBaseAddr}`);
                 }

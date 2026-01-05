@@ -5,7 +5,7 @@ import { ImageConverterService } from '../services/ImageConverterService';
 import { VideoConverterService } from '../services/VideoConverterService';
 import { Model3DConverterService } from '../services/Model3DConverterService';
 import { FontConverterService, FontConvertOptions } from '../services/FontConverterService';
-import { ProjectConfig } from '../common/ProjectConfig';
+import { ProjectConfig, DEFAULT_ROMFS_BASE_ADDR } from '../common/ProjectConfig';
 import { RomfsConfig } from '../common/RomfsConfig';
 
 /**
@@ -216,7 +216,7 @@ export class BuildCore {
         }
 
         // 获取 romfs 基地址
-        const baseAddr = this.projectConfig.romfsBaseAddr || '0x04400000';
+        const baseAddr = this.projectConfig.romfsBaseAddr || DEFAULT_ROMFS_BASE_ADDR;
 
         // 生成 C 文件
         await this.runMkromfs(mkromfsScript, assetsDir, romfsOutput, false, baseAddr);

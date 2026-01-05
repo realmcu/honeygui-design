@@ -13,5 +13,5 @@
   "assetsDir": "assets",
   "uiDir": "ui",
   "srcDir": "src",
-  "romfsBaseAddr": "0x04400000"
+  "romfsBaseAddr": "0x704D1000"
 }

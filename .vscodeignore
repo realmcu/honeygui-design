@@ -29,6 +29,7 @@ test-services.js
 scripts/**
 docs/**
 tools/**
+!tools/mpcli_meta_tool_py_v4.0.0.4/**
 
 # 其他
 azure.png
@@ -57,6 +58,7 @@ node_modules/**
 !node_modules/fast-xml-parser/**
 !node_modules/ini/**
 !node_modules/jpeg-js/**
+!node_modules/mp4box/**
 !node_modules/opentype.js/**
 !node_modules/pngjs/**
 !node_modules/ws/**

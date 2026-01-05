@@ -15,7 +15,7 @@ export interface ProjectConfig {
     uiDir?: string;          // UI目录，默认 "ui"
     srcDir?: string;         // 源码目录，默认 "src"
     honeyguiSdkPath?: string; // HoneyGUI SDK 路径（用于编译仿真）
-    romfsBaseAddr?: string;   // romfs 基地址（十六进制，如 "0x04400000"），用于嵌入式烧录
+    romfsBaseAddr?: string;   // romfs 基地址（十六进制，如 "0x704D1000"），用于嵌入式烧录
     
     // 屏幕形状配置（与 SDK DRV_LCD_CORNER_RADIUS 对应）
     // 0 = 矩形（默认）, -1 = 圆形, >0 = 圆角半径（像素）
@@ -48,6 +48,11 @@ export interface ProjectConfig {
 }
 
 /**
+ * 默认配置常量
+ */
+export const DEFAULT_ROMFS_BASE_ADDR = '0x704D1000';  // 默认 romfs 基地址
+
+/**
  * 项目配置默认值
  */
 export const DEFAULT_PROJECT_CONFIG: Partial<ProjectConfig> = {
@@ -55,6 +60,6 @@ export const DEFAULT_PROJECT_CONFIG: Partial<ProjectConfig> = {
     assetsDir: 'assets',
     uiDir: 'ui',
     srcDir: 'src',
-    romfsBaseAddr: '0x04400000',  // 默认 romfs 基地址
+    romfsBaseAddr: DEFAULT_ROMFS_BASE_ADDR,
     cornerRadius: 0  // 默认矩形屏幕，-1 为圆形，>0 为圆角半径
 };

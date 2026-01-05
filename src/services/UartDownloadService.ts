@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { spawn, exec } from 'child_process';
 import { ProjectUtils } from '../utils/ProjectUtils';
+import { DEFAULT_ROMFS_BASE_ADDR } from '../common/ProjectConfig';
 
 export interface UartConfig {
     port: string;
@@ -173,7 +174,7 @@ export class UartDownloadService {
                     port: selectedPort,
                     baudRate: parseInt(selectedBaud),
                     chipType: selectedChip,
-                    flashAddress: config.romfsBaseAddr || '0x04400000'
+                    flashAddress: config.romfsBaseAddr || DEFAULT_ROMFS_BASE_ADDR
                 };
                 await this.saveUartConfig(uartConfig);
                 await this.download(projectRoot, uartConfig);
@@ -253,7 +254,7 @@ export class UartDownloadService {
             port: savedConfig.port,
             baudRate: 115200,
             chipType: savedConfig.chipType,
-            flashAddress: config.romfsBaseAddr || '0x04400000'
+            flashAddress: config.romfsBaseAddr || DEFAULT_ROMFS_BASE_ADDR
         });
     }
 
@@ -321,7 +322,7 @@ export class UartDownloadService {
                 '-T', config.chipType || 'RTL87X3G',
                 '-c', config.port,
                 '-p',
-                '-A', config.flashAddress || '0x04400000',
+                '-A', config.flashAddress || DEFAULT_ROMFS_BASE_ADDR,
                 '-F', romfsPath,
                 '-M', '5',
                 '-r',
