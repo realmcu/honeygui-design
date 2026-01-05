@@ -188,8 +188,25 @@ const App: React.FC = () => {
               message.dropPosition,
               message.targetContainerId,
               store.components,
-              store.addComponent
+              store.addComponent,
+              message.videoSize
             );
+          }
+          break;
+
+        case 'updateVideoSize':
+          if (message.componentId && message.videoSize) {
+            const store = useDesignerStore.getState();
+            const component = store.components.find(c => c.id === message.componentId);
+            if (component) {
+              store.updateComponent(message.componentId, {
+                position: {
+                  ...component.position,
+                  width: message.videoSize.width,
+                  height: message.videoSize.height
+                }
+              });
+            }
           }
           break;
 
@@ -526,9 +543,9 @@ const App: React.FC = () => {
             targetContainerId: targetContainer.id
           });
         } else if (isVideo) {
-          // 视频：创建视频组件
+          // 视频：获取尺寸后创建组件
           api.postMessage({
-            command: 'createVideoComponent',
+            command: 'getVideoSize',
             videoPath: `assets/${assetPath}`,
             dropPosition: { x, y },
             targetContainerId: targetContainer.id

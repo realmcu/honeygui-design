@@ -53,6 +53,18 @@ export const HgVideoProperties: React.FC<PropertyPanelProps> = ({ component, onU
       }
     }
     
+    // 当视频路径改变时，请求获取视频尺寸
+    if (property === 'src' && value) {
+      const vscodeAPI = (window as any).vscodeAPI;
+      if (vscodeAPI) {
+        vscodeAPI.postMessage({
+          command: 'getVideoSizeForProperty',
+          videoPath: value,
+          componentId: component.id
+        });
+      }
+    }
+    
     onUpdate({ data: newData });
   };
 
@@ -86,7 +98,7 @@ export const HgVideoProperties: React.FC<PropertyPanelProps> = ({ component, onU
           <>
             <h3 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 600 }}>视频属性</h3>
             
-            <BaseProperties component={component} onUpdate={onUpdate} components={components} />
+            <BaseProperties component={component} onUpdate={onUpdate} components={components} disableSize={true} sizeTooltip="视频尺寸由源文件决定" />
             
             {/* 视频设置 */}
             <div style={{ marginTop: '16px' }}>

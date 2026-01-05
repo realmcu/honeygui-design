@@ -98,7 +98,8 @@ export const createVideoComponentAtPosition = (
   dropPosition: { x: number; y: number },
   targetContainerId: string,
   components: Component[],
-  addComponent: (component: Component) => void
+  addComponent: (component: Component) => void,
+  videoSize?: { width: number; height: number }
 ): void => {
   const targetContainer = components.find(c => c.id === targetContainerId);
   if (!targetContainer) return;
@@ -107,11 +108,14 @@ export const createVideoComponentAtPosition = (
   const relativeX = Math.max(0, dropPosition.x - targetAbsPos.x);
   const relativeY = Math.max(0, dropPosition.y - targetAbsPos.y);
 
+  // 使用视频真实尺寸，如果没有则使用默认值 320x240
+  const { width, height } = videoSize || { width: 320, height: 240 };
+
   const videoComponent: Component = {
     id: `hg_video_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
     type: 'hg_video',
     name: `video_${Date.now().toString().substr(-4)}`,
-    position: { x: relativeX, y: relativeY, width: 320, height: 180 },
+    position: { x: relativeX, y: relativeY, width, height },
     visible: true,
     enabled: true,
     locked: false,

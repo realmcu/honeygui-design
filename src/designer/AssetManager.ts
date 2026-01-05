@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as MP4Box from 'mp4box';
 import { logger } from '../utils/Logger';
 import { ProjectUtils } from '../utils/ProjectUtils';
 import { FontMetricsAnalyzer } from './FontMetricsAnalyzer';
@@ -659,7 +660,72 @@ export class AssetManager {
     }
 
     /**
-     * 处理创建视频组件请求
+     * 处理获取视频尺寸请求
+     */
+    public async handleGetVideoSize(
+        videoPath: string,
+        dropPosition: { x: number; y: number },
+        targetContainerId: string,
+        currentFilePath: string | undefined
+    ): Promise<void> {
+        try {
+            if (!currentFilePath) {
+                return;
+            }
+
+            const projectRoot = ProjectUtils.findProjectRoot(currentFilePath);
+            if (!projectRoot) {
+                return;
+            }
+
+            const absolutePath = path.join(projectRoot, videoPath);
+            const videoSize = await this.getVideoSizeAsync(absolutePath);
+
+            this._panel.webview.postMessage({
+                command: 'createVideoComponent',
+                videoPath,
+                dropPosition,
+                targetContainerId,
+                videoSize
+            });
+        } catch (error) {
+            logger.error(`[AssetManager] 获取视频尺寸失败: ${error}`);
+        }
+    }
+
+    /**
+     * 处理属性面板获取视频尺寸请求
+     */
+    public async handleGetVideoSizeForProperty(
+        videoPath: string,
+        componentId: string,
+        currentFilePath: string | undefined
+    ): Promise<void> {
+        try {
+            if (!currentFilePath) {
+                return;
+            }
+
+            const projectRoot = ProjectUtils.findProjectRoot(currentFilePath);
+            if (!projectRoot) {
+                return;
+            }
+
+            const absolutePath = path.join(projectRoot, videoPath);
+            const videoSize = await this.getVideoSizeAsync(absolutePath);
+
+            this._panel.webview.postMessage({
+                command: 'updateVideoSize',
+                componentId,
+                videoSize
+            });
+        } catch (error) {
+            logger.error(`[AssetManager] 获取视频尺寸失败: ${error}`);
+        }
+    }
+
+    /**
+     * 处理创建视频组件请求（已废弃，使用 handleGetVideoSize）
      */
     public handleCreateVideoComponent(
         videoPath: string,
@@ -780,6 +846,126 @@ export class AssetManager {
         } catch (error) {
             logger.error(`[AssetManager] 读取图片尺寸失败: ${error}`);
             return { width: 100, height: 100 };
+        }
+    }
+
+    /**
+     * 获取视频尺寸（异步）
+     */
+    private async getVideoSizeAsync(filePath: string): Promise<{ width: number; height: number }> {
+        try {
+            // 检查文件扩展名
+            const ext = path.extname(filePath).toLowerCase();
+            
+            // 只处理 MP4 格式
+            if (ext !== '.mp4') {
+                logger.info(`[AssetManager] 非 MP4 格式视频，使用默认尺寸: ${ext}`);
+                return { width: 320, height: 240 };
+            }
+
+            // 读取文件
+            const buffer = fs.readFileSync(filePath);
+            const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+
+            // 创建 MP4Box 文件对象
+            const mp4boxfile = MP4Box.createFile();
+            
+            return new Promise((resolve) => {
+                let resolved = false;
+
+                // 设置回调
+                mp4boxfile.onReady = (info: any) => {
+                    if (!resolved) {
+                        resolved = true;
+                        if (info.videoTracks && info.videoTracks.length > 0) {
+                            const track = info.videoTracks[0];
+                            resolve({
+                                width: track.track_width || 320,
+                                height: track.track_height || 240
+                            });
+                        } else {
+                            resolve({ width: 320, height: 240 });
+                        }
+                    }
+                };
+
+                mp4boxfile.onError = (e: any) => {
+                    if (!resolved) {
+                        resolved = true;
+                        logger.warn(`[AssetManager] MP4Box 解析失败: ${e}`);
+                        resolve({ width: 320, height: 240 });
+                    }
+                };
+
+                // 添加 buffer（需要添加 fileStart 属性）
+                const mp4Buffer = arrayBuffer as any;
+                mp4Buffer.fileStart = 0;
+                mp4boxfile.appendBuffer(mp4Buffer);
+                mp4boxfile.flush();
+
+                // 超时保护
+                setTimeout(() => {
+                    if (!resolved) {
+                        resolved = true;
+                        logger.warn(`[AssetManager] MP4Box 解析超时`);
+                        resolve({ width: 320, height: 240 });
+                    }
+                }, 3000);
+            });
+        } catch (error) {
+            logger.warn(`[AssetManager] 读取视频尺寸失败: ${error}`);
+            return { width: 320, height: 240 };
+        }
+    }
+
+    /**
+     * 获取视频尺寸（同步版本，用于兼容）
+     */
+    private getVideoSize(filePath: string): { width: number; height: number } {
+        try {
+            // 检查文件扩展名
+            const ext = path.extname(filePath).toLowerCase();
+            
+            // 只处理 MP4 格式
+            if (ext !== '.mp4') {
+                logger.info(`[AssetManager] 非 MP4 格式视频，使用默认尺寸: ${ext}`);
+                return { width: 320, height: 240 };
+            }
+
+            // 读取文件
+            const buffer = fs.readFileSync(filePath);
+            const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+
+            // 创建 MP4Box 文件对象
+            const mp4boxfile = MP4Box.createFile();
+            
+            let videoSize = { width: 320, height: 240 };
+
+            // 设置回调
+            mp4boxfile.onReady = (info: any) => {
+                if (info.videoTracks && info.videoTracks.length > 0) {
+                    const track = info.videoTracks[0];
+                    videoSize = {
+                        width: track.track_width || 320,
+                        height: track.track_height || 240
+                    };
+                }
+            };
+
+            mp4boxfile.onError = (e: any) => {
+                logger.warn(`[AssetManager] MP4Box 解析失败: ${e}`);
+            };
+
+            // 添加 buffer（需要添加 fileStart 属性）
+            const mp4Buffer = arrayBuffer as any;
+            mp4Buffer.fileStart = 0;
+            mp4boxfile.appendBuffer(mp4Buffer);
+            mp4boxfile.flush();
+
+            return videoSize;
+        } catch (error) {
+            logger.warn(`[AssetManager] 读取视频尺寸失败: ${error}`);
+            return { width: 320, height: 240 };
         }
     }
 

@@ -104,7 +104,7 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
       {activeTab === 'properties' ? (
         <>
           {/* 基础属性 */}
-          <BaseProperties component={component} onUpdate={onUpdate} components={components} />
+          <BaseProperties component={component} onUpdate={onUpdate} components={components} disableSize={true} sizeTooltip="图片尺寸由源文件决定" />
 
           {/* 图片源 */}
           <div className="property-group">

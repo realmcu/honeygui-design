@@ -222,6 +222,23 @@ export class MessageHandler {
                 );
                 break;
 
+            case 'getVideoSize':
+                this._assetManager.handleGetVideoSize(
+                    message.videoPath,
+                    message.dropPosition,
+                    message.targetContainerId,
+                    this._fileManager.currentFilePath
+                );
+                break;
+
+            case 'getVideoSizeForProperty':
+                this._assetManager.handleGetVideoSizeForProperty(
+                    message.videoPath,
+                    message.componentId,
+                    this._fileManager.currentFilePath
+                );
+                break;
+
             case 'createVideoComponent':
                 this._assetManager.handleCreateVideoComponent(
                     message.videoPath,
