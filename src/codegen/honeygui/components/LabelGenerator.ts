@@ -39,10 +39,22 @@ export class LabelGenerator implements ComponentCodeGenerator {
     const color = component.style?.color || '#ffffff';
     const rgb = this.colorToRgb(color);
     
-    // 文本内容（如果有时间格式，使用占位符）
+    // 文本内容
     const timeFormat = component.data?.timeFormat;
-    const rawText = timeFormat ? this.getTimeFormatPlaceholder(timeFormat) : (component.data?.text ?? '');
-    const text = String(rawText);
+    let text: string;
+    let textLengthExpr: string;
+    
+    if (timeFormat) {
+      // 时间标签：使用全局变量，长度动态计算
+      const varName = `${component.id}_time_str`;
+      text = varName;
+      textLengthExpr = `strlen(${varName})`;
+    } else {
+      // 普通标签：使用静态文本，长度固定
+      const staticText = String(component.data?.text ?? '');
+      text = `"${staticText}"`;
+      textLengthExpr = String(this.getUtf8ByteLength(staticText));
+    }
 
     // 确定字体类型
     const fontType = this.getFontType(component);
@@ -51,8 +63,7 @@ export class LabelGenerator implements ComponentCodeGenerator {
     // gui_text_set 是必须调用的核心 API
     // 参数: widget, text, text_type, color, length, font_size
     // length 是字符串的字节数（UTF-8编码），不是 Unicode 字符数量
-    const textByteLength = this.getUtf8ByteLength(text);
-    code += `${indentStr}gui_text_set((gui_text_t *)${component.id}, "${text}", ${fontType}, gui_rgb(${rgb.r}, ${rgb.g}, ${rgb.b}), ${textByteLength}, ${fontSize});\n`;
+    code += `${indentStr}gui_text_set((gui_text_t *)${component.id}, ${text}, ${fontType}, gui_rgb(${rgb.r}, ${rgb.g}, ${rgb.b}), ${textLengthExpr}, ${fontSize});\n`;
 
     // 设置字体文件路径（如果指定了字体文件）
     if (fontFile) {

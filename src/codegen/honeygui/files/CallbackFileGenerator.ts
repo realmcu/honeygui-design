@@ -57,14 +57,28 @@ export class CallbackFileGenerator {
    * 生成回调实现文件
    */
   generateImplementation(baseName: string): string {
+    // 收集所有时间标签
+    const timeLabels = this.components.filter(c => c.type === 'hg_label' && c.data?.timeFormat);
+    
     let code = `#include "${baseName}_callbacks.h"
 #include "../ui/${baseName}_ui.h"
 #include <stdio.h>
+#include <string.h>
 #include <time.h>
 
-// 事件回调函数实现
-
 `;
+
+    // 为每个时间标签声明外部全局变量（在 UI 文件中定义）
+    if (timeLabels.length > 0) {
+      code += `// 时间字符串全局变量（在 UI 文件中定义）\n`;
+      timeLabels.forEach(label => {
+        const bufferSize = this.getTimeBufferSize(label.data?.timeFormat);
+        code += `extern char ${label.id}_time_str[${bufferSize}];\n`;
+      });
+      code += `\n`;
+    }
+
+    code += `// 事件回调函数实现\n\n`;
 
     // 收集 switchView 回调实现
     const switchViewImpls = this.collectSwitchViewCallbackImpls();
@@ -235,36 +249,44 @@ export class CallbackFileGenerator {
   }
 
   /**
+   * 获取时间格式对应的缓冲区大小
+   */
+  private getTimeBufferSize(timeFormat?: string): number {
+    switch (timeFormat) {
+      case 'HH:mm:ss': return 10;  // "HH:MM:SS\0" = 9, 留一点余量
+      case 'HH:mm': return 8;       // "HH:MM\0" = 6
+      case 'YYYY-MM-DD': return 12; // "YYYY-MM-DD\0" = 11
+      case 'YYYY-MM-DD HH:mm:ss': return 22; // "YYYY-MM-DD HH:MM:SS\0" = 20
+      case 'MM-DD HH:mm': return 16; // "MM-DD HH:MM\0" = 13
+      default: return 10;
+    }
+  }
+
+  /**
    * 生成时间更新回调函数
+   * 使用全局变量存储时间字符串（与 SDK 保持一致）
    */
   private generateTimeUpdateCallback(componentId: string, timeFormat: string): string {
     let formatStr = '';
-    let bufferSize = 32;
 
     switch (timeFormat) {
       case 'HH:mm:ss':
         formatStr = '%02d:%02d:%02d';
-        bufferSize = 9;
         break;
       case 'HH:mm':
         formatStr = '%02d:%02d';
-        bufferSize = 6;
         break;
       case 'YYYY-MM-DD':
         formatStr = '%04d-%02d-%02d';
-        bufferSize = 11;
         break;
       case 'YYYY-MM-DD HH:mm:ss':
         formatStr = '%04d-%02d-%02d %02d:%02d:%02d';
-        bufferSize = 20;
         break;
       case 'MM-DD HH:mm':
         formatStr = '%02d-%02d %02d:%02d';
-        bufferSize = 15;
         break;
       default:
         formatStr = '%02d:%02d:%02d';
-        bufferSize = 9;
     }
 
     let code = `void ${componentId}_time_update_cb(void *p)\n`;
@@ -273,24 +295,32 @@ export class CallbackFileGenerator {
     code += `    \n`;
     code += `    time_t now = time(NULL);\n`;
     code += `    struct tm *t = localtime(&now);\n`;
-    code += `    static char time_str[${bufferSize}];\n`;
+    code += `    if (t == NULL)\n`;
+    code += `    {\n`;
+    code += `        return;\n`;
+    code += `    }\n`;
     code += `    \n`;
 
     // 根据格式生成不同的 sprintf 调用
     if (timeFormat === 'HH:mm:ss') {
-      code += `    sprintf(time_str, "${formatStr}", t->tm_hour, t->tm_min, t->tm_sec);\n`;
+      code += `    sprintf(${componentId}_time_str, "${formatStr}", t->tm_hour, t->tm_min, t->tm_sec);\n`;
+      //code += `    gui_log("[TIME] Formatted: %s (hour=%d, min=%d, sec=%d)\\n", ${componentId}_time_str, t->tm_hour, t->tm_min, t->tm_sec);\n`;
     } else if (timeFormat === 'HH:mm') {
-      code += `    sprintf(time_str, "${formatStr}", t->tm_hour, t->tm_min);\n`;
+      code += `    sprintf(${componentId}_time_str, "${formatStr}", t->tm_hour, t->tm_min);\n`;
+      //code += `    gui_log("[TIME] Formatted: %s\\n", ${componentId}_time_str);\n`;
     } else if (timeFormat === 'YYYY-MM-DD') {
-      code += `    sprintf(time_str, "${formatStr}", t->tm_year + 1900, t->tm_mon + 1, t->tm_mday);\n`;
+      code += `    sprintf(${componentId}_time_str, "${formatStr}", t->tm_year + 1900, t->tm_mon + 1, t->tm_mday);\n`;
+      //code += `    gui_log("[TIME] Formatted: %s\\n", ${componentId}_time_str);\n`;
     } else if (timeFormat === 'YYYY-MM-DD HH:mm:ss') {
-      code += `    sprintf(time_str, "${formatStr}", t->tm_year + 1900, t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);\n`;
+      code += `    sprintf(${componentId}_time_str, "${formatStr}", t->tm_year + 1900, t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);\n`;
+      //code += `    gui_log("[TIME] Formatted: %s\\n", ${componentId}_time_str);\n`;
     } else if (timeFormat === 'MM-DD HH:mm') {
-      code += `    sprintf(time_str, "${formatStr}", t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min);\n`;
+      code += `    sprintf(${componentId}_time_str, "${formatStr}", t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min);\n`;
+      //code += `    gui_log("[TIME] Formatted: %s\\n", ${componentId}_time_str);\n`;
     }
 
     code += `    \n`;
-    code += `    gui_text_content_set((gui_text_t *)${componentId}, (void *)time_str, strlen(time_str));\n`;
+    code += `    gui_text_content_set((gui_text_t *)${componentId}, ${componentId}_time_str, strlen(${componentId}_time_str));\n`;
     code += `}`;
 
     return code;

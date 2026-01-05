@@ -198,6 +198,9 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
    * 生成UI实现文件（每次覆盖）
    */
   private generateUiImplementation(baseName: string): string {
+    // 收集所有时间标签
+    const timeLabels = this.components.filter(c => c.type === 'hg_label' && c.data?.timeFormat);
+    
     let code = `/**
  * ${baseName} UI实现（自动生成，请勿手动修改）
  * 生成时间: ${new Date().toISOString()}
@@ -205,9 +208,14 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
 #include "${baseName}_ui.h"
 #include "../callbacks/${baseName}_callbacks.h"
 #include <stddef.h>
-
-// 组件句柄定义
 `;
+
+    // 如果有时间标签，添加 time.h
+    if (timeLabels.length > 0) {
+      code += `#include <time.h>\n`;
+    }
+
+    code += `\n// 组件句柄定义\n`;
 
     this.components.forEach(comp => {
       // 跳过 hg_view、hg_3d 和 hg_list_item（list_item 由 note_design 回调处理）
@@ -220,6 +228,15 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
         }
       }
     });
+
+    // 为时间标签生成全局时间字符串变量
+    if (timeLabels.length > 0) {
+      code += `\n// 时间字符串全局变量\n`;
+      timeLabels.forEach(label => {
+        const bufferSize = this.getTimeBufferSize(label.data?.timeFormat);
+        code += `char ${label.id}_time_str[${bufferSize}] = {0};\n`;
+      });
+    }
 
     code += `\n`;
 
@@ -541,5 +558,19 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
     });
 
     return result;
+  }
+
+  /**
+   * 获取时间格式对应的缓冲区大小
+   */
+  private getTimeBufferSize(timeFormat?: string): number {
+    switch (timeFormat) {
+      case 'HH:mm:ss': return 10;
+      case 'HH:mm': return 8;
+      case 'YYYY-MM-DD': return 12;
+      case 'YYYY-MM-DD HH:mm:ss': return 22;
+      case 'MM-DD HH:mm': return 16;
+      default: return 10;
+    }
   }
 }

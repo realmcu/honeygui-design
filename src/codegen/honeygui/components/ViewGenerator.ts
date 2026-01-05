@@ -53,11 +53,28 @@ export class ViewGenerator implements ComponentCodeGenerator {
       code += `${indentStr}    GUI_UNUSED(view);\n`;
     }
     
+    // 初始化时间字符串变量
+    const timeLabels = this.collectTimeLabels(component, context);
+    if (timeLabels.length > 0) {
+      code += `\n${indentStr}    // 初始化时间字符串\n`;
+      code += `${indentStr}    time_t now = time(NULL);\n`;
+      code += `${indentStr}    struct tm *t = localtime(&now);\n`;
+      code += `${indentStr}    if (t != NULL)\n`;
+      code += `${indentStr}    {\n`;
+      timeLabels.forEach(labelId => {
+        const labelComp = context.componentMap.get(labelId);
+        const timeFormat = labelComp?.data?.timeFormat;
+        const formatCode = this.getTimeFormatCode(timeFormat);
+        code += `${indentStr}        sprintf(${labelId}_time_str, "${formatCode.format}", ${formatCode.args});\n`;
+      });
+      code += `${indentStr}    }\n`;
+      code += '\n';
+    }
+    
     // 子组件创建代码由主生成器处理（通过 childrenCode 回调）
     code += `__CHILDREN_PLACEHOLDER__`;
     
     // 为所有带时间格式的 label 创建定时器
-    const timeLabels = this.collectTimeLabels(component, context);
     if (timeLabels.length > 0) {
       code += `\n${indentStr}    // 创建时间更新定时器\n`;
       timeLabels.forEach(labelId => {
@@ -177,19 +194,57 @@ export class ViewGenerator implements ComponentCodeGenerator {
    * 根据时间格式获取定时器间隔（毫秒）
    */
   private getTimerInterval(timeFormat?: string): number {
-    if (!timeFormat) return 1000;
+    if (!timeFormat) return 500;
     
     switch (timeFormat) {
       case 'HH:mm:ss':
       case 'YYYY-MM-DD HH:mm:ss':
-        return 1000; // 1 秒
+        return 500; // 带秒：500ms
       case 'HH:mm':
       case 'MM-DD HH:mm':
-        return 1000; // 1 秒（虽然只显示分钟，但保持 1 秒更新以便及时切换）
+        return 30000; // 只有时分：30秒
       case 'YYYY-MM-DD':
-        return 60000; // 60 秒（日期变化慢，可以降低更新频率）
+        return 60000; // 只有日期：60秒
       default:
-        return 1000;
+        return 500;
+    }
+  }
+
+  /**
+   * 根据时间格式获取 sprintf 格式化代码
+   */
+  private getTimeFormatCode(timeFormat?: string): { format: string; args: string } {
+    switch (timeFormat) {
+      case 'HH:mm:ss':
+        return {
+          format: '%02d:%02d:%02d',
+          args: 't->tm_hour, t->tm_min, t->tm_sec'
+        };
+      case 'HH:mm':
+        return {
+          format: '%02d:%02d',
+          args: 't->tm_hour, t->tm_min'
+        };
+      case 'YYYY-MM-DD':
+        return {
+          format: '%04d-%02d-%02d',
+          args: 't->tm_year + 1900, t->tm_mon + 1, t->tm_mday'
+        };
+      case 'YYYY-MM-DD HH:mm:ss':
+        return {
+          format: '%04d-%02d-%02d %02d:%02d:%02d',
+          args: 't->tm_year + 1900, t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec'
+        };
+      case 'MM-DD HH:mm':
+        return {
+          format: '%02d-%02d %02d:%02d',
+          args: 't->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min'
+        };
+      default:
+        return {
+          format: '%02d:%02d:%02d',
+          args: 't->tm_hour, t->tm_min, t->tm_sec'
+        };
     }
   }
 }
