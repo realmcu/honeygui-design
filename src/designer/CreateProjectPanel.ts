@@ -4,6 +4,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
 import { TemplateManager } from '../template/TemplateManager';
+import { ProjectTemplate } from '../template/ProjectTemplate';
 import { HmlTemplateManager } from '../hml/HmlTemplateManager';
 import { WebviewUtils } from '../common/WebviewUtils';
 import { logger } from '../utils/Logger';
@@ -602,8 +603,19 @@ export class CreateProjectPanel {
                 return;
             }
 
-            // 获取模板实例
-            const template = getTemplateById(templateId);
+            // 确保模板已下载（询问用户）
+            const templatePath = await this._templateManager.ensureTemplate(templateId);
+            if (!templatePath) {
+                // 用户取消下载
+                this._panel.webview.postMessage({
+                    command: 'error',
+                    text: '已取消创建项目'
+                });
+                return;
+            }
+            
+            // 从缓存加载模板
+            const template = await ProjectTemplate.loadFromDir(templatePath);
             if (!template) {
                 throw new Error(`Template not found: ${templateId}`);
             }
@@ -618,7 +630,7 @@ export class CreateProjectPanel {
                 cancellable: false
             }, async () => {
                 // 使用模板创建项目（拷贝完整项目）
-                await template.createProject(projectPath, projectName, appId, sdkPath);
+                await template.generate(projectPath, projectName, sdkPath);
                 
                 // 创建完成后，更新 project.json 添加 SDK 路径和 romfs 地址
                 const projectJsonPath = path.join(projectPath, 'project.json');
