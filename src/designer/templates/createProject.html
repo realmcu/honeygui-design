@@ -235,7 +235,7 @@
             
             <div class="form-group">
                 <label for="romfsBaseAddr">Romfs Base Address (for embedded flash)</label>
-                <input type="text" id="romfsBaseAddr" class="form-control" value="0x04400000" placeholder="0x04400000" />
+                <input type="text" id="romfsBaseAddr" class="form-control" value="{{defaultRomfsAddr}}" placeholder="{{defaultRomfsAddr}}" />
             </div>
             
             <button id="createButton" class="btn-create" disabled>Create</button>
@@ -342,7 +342,7 @@
             
             <div class="form-group">
                 <label for="templateRomfsBaseAddr">Romfs Base Address (for embedded flash)</label>
-                <input type="text" id="templateRomfsBaseAddr" class="form-control" value="0x04400000" placeholder="0x04400000" />
+                <input type="text" id="templateRomfsBaseAddr" class="form-control" value="{{defaultRomfsAddr}}" placeholder="{{defaultRomfsAddr}}" />
             </div>
             
             <button id="createTemplateButton" class="btn-create" disabled>Create from Template</button>
@@ -390,7 +390,7 @@
             
             // 验证地址格式
             if (romfsAddr && !/^0x[0-9A-Fa-f]+$/.test(romfsAddr)) {
-                showError('Invalid romfs base address. Please use hexadecimal format (e.g., 0x04400000)');
+                showError('Invalid romfs base address. Please use hexadecimal format (e.g., {{defaultRomfsAddr}})');
                 return;
             }
             
@@ -418,7 +418,7 @@
                     minSdk: document.getElementById('minSdk').value,
                     pixelMode: document.getElementById('pixelMode').value,
                     honeyguiSdkPath: document.getElementById('honeyguiSdkPath').value.trim() || '',
-                    romfsBaseAddr: romfsAddr || '0x04400000'
+                    romfsBaseAddr: romfsAddr || '{{defaultRomfsAddr}}'
                 }
             });
         }
@@ -433,7 +433,7 @@
             
             // 验证地址格式
             if (romfsAddr && !/^0x[0-9A-Fa-f]+$/.test(romfsAddr)) {
-                showError('Invalid romfs base address. Please use hexadecimal format (e.g., 0x04400000)');
+                showError('Invalid romfs base address. Please use hexadecimal format (e.g., {{defaultRomfsAddr}})');
                 return;
             }
             
@@ -461,7 +461,7 @@
                     minSdk: document.getElementById('templateMinSdk').value,
                     pixelMode: document.getElementById('templatePixelMode').value,
                     honeyguiSdkPath: document.getElementById('templateSdkPath').value.trim() || '',
-                    romfsBaseAddr: romfsAddr || '0x04400000'
+                    romfsBaseAddr: romfsAddr || '{{defaultRomfsAddr}}'
                 }
             });
         }

@@ -141,6 +141,7 @@ export class CreateProjectPanel {
         html = html.replace(/\{\{nonce\}\}/g, nonce);
         html = html.replace(/\{\{cspSource\}\}/g, webview.cspSource);
         html = html.replace(/\{\{homeDir\}\}/g, homeDir);
+        html = html.replace(/\{\{defaultRomfsAddr\}\}/g, DEFAULT_ROMFS_BASE_ADDR);
         
         return html;
     }
