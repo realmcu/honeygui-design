@@ -19,6 +19,7 @@ src/**
 # TypeScript 相关
 *.ts
 *.map
+out/**/*.map
 
 # 测试
 test/**

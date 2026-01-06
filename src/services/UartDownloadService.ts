@@ -51,23 +51,33 @@ export class UartDownloadService {
     async scanPorts(): Promise<string[]> {
         return new Promise((resolve) => {
             if (process.platform === 'win32') {
-                // Windows: 使用 PowerShell 获取串口列表
-                exec('powershell -Command "Get-WMIObject Win32_SerialPort | Select-Object -ExpandProperty DeviceID"', (err, stdout) => {
+                // Windows: 使用注册表查询（最可靠）
+                exec('powershell -Command "Get-ItemProperty -Path HKLM:\\HARDWARE\\DEVICEMAP\\SERIALCOMM -ErrorAction SilentlyContinue | Select-Object -ExpandProperty PSObject | Select-Object -ExpandProperty Properties | Select-Object -ExpandProperty Value"', (err, stdout) => {
                     if (!err && stdout.trim()) {
-                        const ports = stdout.trim().split('\n').map(p => p.trim()).filter(p => p);
+                        const ports = stdout.trim().split('\n').map(p => p.trim()).filter(p => p.startsWith('COM'));
                         if (ports.length > 0) {
-                            resolve(ports);
+                            resolve(ports.sort());
                             return;
                         }
                     }
-                    // 备用方案：使用 .NET SerialPort
+                    // 备用方案1：使用 .NET SerialPort
                     exec('powershell -Command "[System.IO.Ports.SerialPort]::GetPortNames()"', (err2, stdout2) => {
                         if (!err2 && stdout2.trim()) {
                             const ports = stdout2.trim().split('\n').map(p => p.trim()).filter(p => p.startsWith('COM'));
-                            resolve(ports);
-                        } else {
-                            resolve([]);
+                            if (ports.length > 0) {
+                                resolve(ports.sort());
+                                return;
+                            }
                         }
+                        // 备用方案2：使用 WMI
+                        exec('powershell -Command "Get-WMIObject Win32_SerialPort | Select-Object -ExpandProperty DeviceID"', (err3, stdout3) => {
+                            if (!err3 && stdout3.trim()) {
+                                const ports = stdout3.trim().split('\n').map(p => p.trim()).filter(p => p);
+                                resolve(ports.sort());
+                            } else {
+                                resolve([]);
+                            }
+                        });
                     });
                 });
             } else {
@@ -117,7 +127,7 @@ export class UartDownloadService {
         let selectedBaud = savedConfig.baudRate?.toString() || '115200';
         let selectedPort = savedConfig.port || (ports.length > 0 ? ports[0] : '');
 
-        const BAUD_RATES = ['115200', '921600', '460800', '230400', '57600'];
+        const BAUD_RATES = ['3000000', '2000000', '921600', '460800', '230400', '115200', '57600'];
 
         // 更新选项列表
         const updateItems = () => {
