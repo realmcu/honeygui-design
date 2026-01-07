@@ -13,6 +13,7 @@
     "url": "https://github.com/realmcu/HoneyGUI/issues"
   },
   "publisher": "honeygui-visual-designer",
+  "icon": "resources/HoneyGUI-LOGO.png",
   "engines": {
     "vscode": "^1.80.0"
   },
