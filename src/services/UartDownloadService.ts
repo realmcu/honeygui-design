@@ -346,21 +346,44 @@ export class UartDownloadService {
                 cwd: this.mpcliPath
             });
 
+            let buffer = '';
+
             proc.stdout?.on('data', (data) => {
-                const lines = data.toString().split('\n');
-                lines.forEach((line: string) => {
-                    if (line.trim()) this.log(line.trim());
-                });
+                const text = data.toString();
+                buffer += text;
+                
+                // 只有包含换行符时才输出
+                if (buffer.includes('\n')) {
+                    const lines = buffer.split('\n');
+                    // 最后一个元素可能是不完整的行，保留到 buffer
+                    buffer = lines.pop() || '';
+                    
+                    lines.forEach((line: string) => {
+                        if (line.trim()) this.log(line.trim());
+                    });
+                }
             });
 
             proc.stderr?.on('data', (data) => {
-                const lines = data.toString().split('\n');
-                lines.forEach((line: string) => {
-                    if (line.trim()) this.log(line.trim());
-                });
+                const text = data.toString();
+                buffer += text;
+                
+                // 只有包含换行符时才输出
+                if (buffer.includes('\n')) {
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+                    
+                    lines.forEach((line: string) => {
+                        if (line.trim()) this.log(line.trim());
+                    });
+                }
             });
 
             proc.on('close', (code) => {
+                // 输出剩余的缓冲内容
+                if (buffer.trim()) {
+                    this.log(buffer.trim());
+                }
                 if (code === 0) {
                     resolve();
                 } else {
