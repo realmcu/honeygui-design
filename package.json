@@ -70,7 +70,7 @@
         {
           "id": "honeygui-explorer",
           "title": "HoneyGUI Visual Designer",
-          "icon": "resources/honeygui-icon.svg",
+          "icon": "resources/HoneyGUI-LOGO.svg",
           "priority": 100
         }
       ]
