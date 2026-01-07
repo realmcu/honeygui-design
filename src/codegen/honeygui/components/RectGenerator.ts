@@ -11,7 +11,14 @@ export class RectGenerator implements ComponentCodeGenerator {
     const { x, y, width, height } = component.position;
     
     // 从 style 中获取参数，设置默认值
-    const borderRadius = component.style?.borderRadius || 0;
+    let borderRadius = component.style?.borderRadius || 0;
+    
+    // 限制圆角半径：不能超过矩形宽度或高度的一半
+    const maxRadius = Math.min(width / 2, height / 2);
+    if (borderRadius > maxRadius) {
+      borderRadius = maxRadius;
+    }
+    
     const fillColor = this.convertColor(component.style?.fillColor);
 
     return `${indentStr}${component.id} = gui_rect_create(${parentRef}, "${component.name}", ${x}, ${y}, ${width}, ${height}, ${borderRadius}, ${fillColor});\n`;
