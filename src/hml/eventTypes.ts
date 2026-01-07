@@ -10,6 +10,8 @@ export type EventType =
   | 'onLongPress'
   | 'onTouchDown'
   | 'onTouchUp'
+  | 'onKeyShortClick'
+  | 'onKeyLongClick'
   // 滑动事件
   | 'onSwipeLeft'
   | 'onSwipeRight'
@@ -58,8 +60,8 @@ export interface EventConfig {
 // ============ 组件支持的事件映射 ============
 
 export const COMPONENT_SUPPORTED_EVENTS: Record<string, EventType[]> = {
-  hg_view: ['onClick', 'onLongPress', 'onTouchDown', 'onTouchUp', 'onSwipeLeft', 'onSwipeRight', 'onSwipeUp', 'onSwipeDown', 'onShow', 'onHide', 'onMessage'],
-  hg_window: ['onClick', 'onLongPress', 'onTouchDown', 'onTouchUp', 'onSwipeLeft', 'onSwipeRight', 'onSwipeUp', 'onSwipeDown', 'onShow', 'onHide', 'onMessage'],
+  hg_view: ['onClick', 'onLongPress', 'onTouchDown', 'onTouchUp', 'onKeyShortClick', 'onKeyLongClick', 'onSwipeLeft', 'onSwipeRight', 'onSwipeUp', 'onSwipeDown', 'onShow', 'onHide', 'onMessage'],
+  hg_window: ['onClick', 'onLongPress', 'onTouchDown', 'onTouchUp', 'onKeyShortClick', 'onKeyLongClick', 'onSwipeLeft', 'onSwipeRight', 'onSwipeUp', 'onSwipeDown', 'onShow', 'onHide', 'onMessage'],
   hg_button: ['onClick', 'onLongPress', 'onTouchDown', 'onTouchUp', 'onMessage'],
   hg_image: ['onClick', 'onLongPress', 'onTouchDown', 'onTouchUp', 'onMessage'],
   hg_text: ['onClick', 'onLongPress', 'onMessage'],
@@ -89,6 +91,8 @@ export const EVENT_LABELS: Record<EventType, string> = {
   onLongPress: '长按',
   onTouchDown: '按下',
   onTouchUp: '抬起',
+  onKeyShortClick: '键盘短按',
+  onKeyLongClick: '键盘长按',
   onSwipeLeft: '左滑',
   onSwipeRight: '右滑',
   onSwipeUp: '上滑',

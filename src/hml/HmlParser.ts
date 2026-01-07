@@ -234,7 +234,7 @@ export class HmlParser {
     const styleProps = new Set([
       'color', 'backgroundColor', 'fontWeight',
       'border', 'borderRadius', 'padding', 'margin',
-      'opacity', 'overflow', 'title', 'titleBarHeight', 'titleBarColor',
+      'overflow', 'title', 'titleBarHeight', 'titleBarColor',
       // 圆弧属性
       'radius', 'startAngle', 'endAngle', 'strokeWidth',
       // 矩形属性
@@ -252,7 +252,7 @@ export class HmlParser {
 
     // 需要转换为数字的属性
     const numericProps = new Set([
-      'fontSize', 'borderRadius', 'padding', 'margin', 'opacity',
+      'fontSize', 'borderRadius', 'padding', 'margin',
       'titleBarHeight', 'radius', 'startAngle', 'endAngle', 'strokeWidth',
       'itemWidth', 'itemHeight'
     ]);
@@ -267,7 +267,9 @@ export class HmlParser {
       // 文本数据属性
       'fontFile', 'timeFormat',
       // 字体配置属性
-      'fontType', 'renderMode', 'fontSize'
+      'fontType', 'renderMode', 'fontSize',
+      // hg_view 特有属性
+      'residentMemory', 'animateStep', 'opacity'
     ]);
 
     const metaProps = new Set([

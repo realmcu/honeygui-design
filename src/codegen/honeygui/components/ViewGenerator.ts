@@ -8,6 +8,13 @@ import { LabelGenerator, FontInitInfo } from './LabelGenerator';
 
 // 事件类型到 GUI_EVENT 的映射（用于 view 的 switch 事件）
 const VIEW_SWITCH_EVENT_MAP: Record<string, string> = {
+  // 触摸事件
+  'onClick': 'GUI_EVENT_TOUCH_CLICKED',
+  'onLongPress': 'GUI_EVENT_TOUCH_LONG',
+  // 键盘事件
+  'onKeyShortClick': 'GUI_EVENT_KB_SHORT_CLICKED',
+  'onKeyLongClick': 'GUI_EVENT_KB_LONG_CLICKED',
+  // 滑动事件
   'onSwipeLeft': 'GUI_EVENT_TOUCH_MOVE_LEFT',
   'onSwipeRight': 'GUI_EVENT_TOUCH_MOVE_RIGHT',
   'onSwipeUp': 'GUI_EVENT_TOUCH_MOVE_UP',
@@ -19,6 +26,12 @@ export class ViewGenerator implements ComponentCodeGenerator {
   generateCreation(component: Component, indent: number, context: GeneratorContext): string {
     const indentStr = '    '.repeat(indent);
     const name = component.name;
+    const residentMemory = component.data?.residentMemory || false;
+    // 动画步长默认值为屏幕高度的 1/10
+    const defaultAnimateStep = Math.round(component.position.height / 10);
+    const animateStep = component.data?.animateStep ?? defaultAnimateStep;
+    // 透明度默认值为 255（完全不透明）
+    const opacity = component.data?.opacity ?? 255;
 
     let code = '';
     
@@ -31,6 +44,16 @@ export class ViewGenerator implements ComponentCodeGenerator {
     // 生成 switch_in 回调
     code += `${indentStr}static void ${name}_switch_in(gui_view_t *view)\n`;
     code += `${indentStr}{\n`;
+    
+    // 设置动画步长（总是设置，使用默认值或用户配置值）
+    code += `${indentStr}    // 设置动画步长\n`;
+    code += `${indentStr}    gui_view_set_animate_step(view, ${animateStep});\n`;
+    code += '\n';
+    
+    // 设置透明度
+    code += `${indentStr}    // 设置透明度\n`;
+    code += `${indentStr}    gui_view_set_opacity(view, ${opacity});\n`;
+    code += '\n';
     
     // 收集当前 view 下所有需要初始化的点阵字体
     const fontInitInfos = this.collectBitmapFonts(component, context);
@@ -86,8 +109,8 @@ export class ViewGenerator implements ComponentCodeGenerator {
     
     code += `${indentStr}}\n`;
     
-    // GUI_VIEW_INSTANCE 宏调用
-    code += `${indentStr}GUI_VIEW_INSTANCE("${name}", false, ${name}_switch_in, ${name}_switch_out);\n`;
+    // GUI_VIEW_INSTANCE 宏调用（第二个参数为常驻内存标志）
+    code += `${indentStr}GUI_VIEW_INSTANCE("${name}", ${residentMemory ? 'true' : 'false'}, ${name}_switch_in, ${name}_switch_out);\n`;
 
     return code;
   }
