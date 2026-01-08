@@ -240,7 +240,7 @@ export class HmlParser {
       // 矩形属性
       'fillColor',
       // 列表属性
-      'itemWidth', 'itemHeight', 'direction', 'style', 'space',
+      'itemWidth', 'itemHeight', 'direction', 'style', 'space', 'cardStackLocation',
       // 图像变换属性
       'transform',
       // 文本样式属性
@@ -263,7 +263,7 @@ export class HmlParser {
       // 列表数据属性
       'noteNum',
       // 列表通用属性
-      'autoAlign', 'inertia', 'loop', 'createBar', 'offset', 'outScope', 'cardStackLocation',
+      'autoAlign', 'inertia', 'loop', 'createBar', 'offset', 'outScope',
       // 文本数据属性
       'fontFile', 'timeFormat',
       // 字体配置属性

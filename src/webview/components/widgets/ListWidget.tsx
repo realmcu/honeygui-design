@@ -38,17 +38,22 @@ export const ListWidget: React.FC<WidgetProps> = ({ component, style, handlers, 
     const isVertical = direction === 'VERTICAL';
     const currentChildren = component.children || [];
     
-    // 计算列表的总尺寸（包含间距）
-    const newWidth = isVertical ? itemWidth : noteNum * itemWidth + (noteNum - 1) * space;
-    const newHeight = isVertical ? noteNum * itemHeight + (noteNum - 1) * space : itemHeight;
+    // 只同步垂直/水平方向上与项尺寸相关的维度
+    // 垂直方向：列表宽度 = 项宽度（高度由用户手动设置）
+    // 水平方向：列表高度 = 项高度（宽度由用户手动设置）
+    const positionUpdates: Partial<typeof component.position> = {};
+    if (isVertical && component.position.width !== itemWidth) {
+      positionUpdates.width = itemWidth;
+    } else if (!isVertical && component.position.height !== itemHeight) {
+      positionUpdates.height = itemHeight;
+    }
     
-    // 如果尺寸变化，更新列表尺寸
-    if (component.position.width !== newWidth || component.position.height !== newHeight) {
+    // 如果有尺寸变化，更新列表尺寸
+    if (Object.keys(positionUpdates).length > 0) {
       updateComponent(component.id, {
         position: {
           ...component.position,
-          width: newWidth,
-          height: newHeight,
+          ...positionUpdates,
         },
       });
     }

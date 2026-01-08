@@ -448,11 +448,41 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       return false;
     }
     
+    // 获取被重命名的组件
+    const targetComponent = state.components.find(c => c.id === oldId);
+    
+    // 如果是 hg_list 组件，需要同步重命名其子 hg_list_item
+    const listItemRenames: Map<string, string> = new Map();
+    if (targetComponent?.type === 'hg_list') {
+      // 找到所有子 hg_list_item
+      const listItems = state.components.filter(
+        c => c.type === 'hg_list_item' && c.parent === oldId
+      );
+      
+      // 为每个 list_item 生成新的 ID
+      listItems.forEach(item => {
+        // 从旧 ID 中提取 item 后缀（如 _item_1）
+        const oldItemId = item.id;
+        const itemSuffix = oldItemId.replace(oldId, '');
+        const newItemId = newId + itemSuffix;
+        
+        // 检查新 ID 是否已存在
+        if (!state.components.some(c => c.id === newItemId)) {
+          listItemRenames.set(oldItemId, newItemId);
+        }
+      });
+    }
+    
     // 更新组件 ID 和所有引用
     set((state) => ({
       // 更新选中状态
-      selectedComponent: state.selectedComponent === oldId ? newId : state.selectedComponent,
-      selectedComponents: state.selectedComponents.map(id => id === oldId ? newId : id),
+      selectedComponent: state.selectedComponent === oldId ? newId : 
+        (listItemRenames.has(state.selectedComponent || '') ? listItemRenames.get(state.selectedComponent!)! : state.selectedComponent),
+      selectedComponents: state.selectedComponents.map(id => {
+        if (id === oldId) return newId;
+        if (listItemRenames.has(id)) return listItemRenames.get(id)!;
+        return id;
+      }),
       // 更新组件列表
       components: state.components.map((comp) => {
         let updated = comp;
@@ -460,25 +490,51 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
         // 更新组件自身的 id 和 name
         if (comp.id === oldId) {
           updated = { ...updated, id: newId, name: newId };
+        } else if (listItemRenames.has(comp.id)) {
+          // 更新 list_item 的 id 和 name
+          const newItemId = listItemRenames.get(comp.id)!;
+          updated = { ...updated, id: newItemId, name: newItemId };
         }
         
         // 更新子组件的 parent 引用
         if (comp.parent === oldId) {
           updated = { ...updated, parent: newId };
+        } else if (listItemRenames.has(comp.parent || '')) {
+          updated = { ...updated, parent: listItemRenames.get(comp.parent!)! };
         }
         
         // 更新父组件的 children 数组
-        if (comp.children?.includes(oldId)) {
-          updated = { ...updated, children: comp.children.map(c => c === oldId ? newId : c) };
+        if (comp.children) {
+          let childrenUpdated = false;
+          const newChildren = comp.children.map(c => {
+            if (c === oldId) {
+              childrenUpdated = true;
+              return newId;
+            }
+            if (listItemRenames.has(c)) {
+              childrenUpdated = true;
+              return listItemRenames.get(c)!;
+            }
+            return c;
+          });
+          if (childrenUpdated) {
+            updated = { ...updated, children: newChildren };
+          }
         }
         
         // 更新事件配置中的 target 引用
         if (comp.eventConfigs) {
           const updatedConfigs = comp.eventConfigs.map(ec => ({
             ...ec,
-            actions: ec.actions.map(action => 
-              action.target === oldId ? { ...action, target: newId } : action
-            )
+            actions: ec.actions.map(action => {
+              if (action.target === oldId) {
+                return { ...action, target: newId };
+              }
+              if (listItemRenames.has(action.target || '')) {
+                return { ...action, target: listItemRenames.get(action.target!)! };
+              }
+              return action;
+            })
           }));
           updated = { ...updated, eventConfigs: updatedConfigs };
         }
