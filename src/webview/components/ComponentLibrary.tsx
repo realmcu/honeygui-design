@@ -104,12 +104,8 @@ const componentDefinitions: ComponentDefinition[] = [
     icon: '🪟',
     defaultSize: { width: 450, height: 350 },
     properties: [
-      { name: 'title', label: '窗口标题', type: 'string', defaultValue: '窗口', group: 'general' },
-      { name: 'backgroundColor', label: '背景色', type: 'color', defaultValue: '#ffffff', group: 'style' },
-      { name: 'border', label: '边框', type: 'string', defaultValue: '1px solid #ccc', group: 'style' },
-      { name: 'borderRadius', label: '圆角', type: 'number', defaultValue: 6, group: 'style' },
-      { name: 'titleBarHeight', label: '标题栏高度', type: 'number', defaultValue: 36, group: 'style' },
-      { name: 'titleBarColor', label: '标题栏颜色', type: 'color', defaultValue: '#f0f0f0', group: 'style' },
+      { name: 'enableBlur', label: '启用模糊', type: 'boolean', defaultValue: false, group: 'general' },
+      { name: 'blurDegree', label: '模糊程度', type: 'number', defaultValue: 225, group: 'general' },
     ],
   },
   {

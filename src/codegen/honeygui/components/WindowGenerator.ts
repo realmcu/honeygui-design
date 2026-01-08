@@ -1,0 +1,196 @@
+/**
+ * hg_window 组件代码生成器
+ * 对应 HoneyGUI 的 gui_win API
+ * 
+ * 与 hg_view 的区别：
+ * - 使用 gui_win_create 而不是 GUI_VIEW_INSTANCE
+ * - 支持 blur 效果（gui_win_enable_blur, gui_win_set_blur_degree）
+ * - 不支持视图切换功能
+ */
+import { Component } from '../../../hml/types';
+import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';
+import { LabelGenerator, FontInitInfo } from './LabelGenerator';
+
+export class WindowGenerator implements ComponentCodeGenerator {
+  
+  generateCreation(component: Component, indent: number, context: GeneratorContext): string {
+    const indentStr = '    '.repeat(indent);
+    const parentRef = context.getParentRef(component);
+    
+    // 获取位置和尺寸
+    const { x, y, width, height } = component.position;
+    
+    // 获取 blur 相关属性
+    const enableBlur = component.data?.enableBlur ?? false;
+    const blurDegree = component.data?.blurDegree ?? 225; // 默认值 225
+    
+    let code = '';
+    
+    // 创建 window
+    code += `${indentStr}gui_win_t *${component.id} = gui_win_create(${parentRef}, "${component.id}", ${x}, ${y}, ${width}, ${height});\n`;
+    
+    // 设置 blur 效果
+    if (enableBlur) {
+      code += `${indentStr}gui_win_enable_blur(${component.id}, true);\n`;
+      code += `${indentStr}gui_win_set_blur_degree(${component.id}, ${blurDegree});\n`;
+    }
+    
+    // 收集当前 window 下所有需要初始化的点阵字体
+    const fontInitInfos = this.collectBitmapFonts(component, context);
+    if (fontInitInfos.length > 0) {
+      code += `\n${indentStr}// 初始化点阵字体（从文件系统加载）\n`;
+      for (const info of fontInitInfos) {
+        code += `${indentStr}gui_font_mem_init_fs((uint8_t *)"${info.fontPath}");\n`;
+      }
+    }
+    
+    // 初始化时间字符串变量
+    const timeLabels = this.collectTimeLabels(component, context);
+    if (timeLabels.length > 0) {
+      code += `\n${indentStr}// 初始化时间字符串\n`;
+      code += `${indentStr}time_t now = time(NULL);\n`;
+      code += `${indentStr}struct tm *t = localtime(&now);\n`;
+      code += `${indentStr}if (t != NULL)\n`;
+      code += `${indentStr}{\n`;
+      timeLabels.forEach(labelId => {
+        const labelComp = context.componentMap.get(labelId);
+        const timeFormat = labelComp?.data?.timeFormat;
+        const formatCode = this.getTimeFormatCode(timeFormat);
+        code += `${indentStr}    sprintf(${labelId}_time_str, "${formatCode.format}", ${formatCode.args});\n`;
+      });
+      code += `${indentStr}}\n`;
+    }
+    
+    // 子组件创建代码由主生成器处理（通过 childrenCode 回调）
+    code += `__CHILDREN_PLACEHOLDER__`;
+    
+    // 为所有带时间格式的 label 创建定时器
+    if (timeLabels.length > 0) {
+      code += `\n${indentStr}// 创建时间更新定时器\n`;
+      timeLabels.forEach(labelId => {
+        const labelComp = context.componentMap.get(labelId);
+        const interval = this.getTimerInterval(labelComp?.data?.timeFormat);
+        code += `${indentStr}gui_obj_create_timer(GUI_BASE(${labelId}), ${interval}, true, ${labelId}_time_update_cb);\n`;
+      });
+    }
+    
+    return code;
+  }
+
+  generatePropertySetters(_component: Component, _indent: number, _context: GeneratorContext): string {
+    // window 组件的属性在创建时已设置
+    return '';
+  }
+
+  /**
+   * 收集当前 window 下所有带时间格式的 label 组件
+   */
+  private collectTimeLabels(component: Component, context: GeneratorContext): string[] {
+    const timeLabels: string[] = [];
+    
+    const collectRecursive = (comp: Component) => {
+      // 检查当前组件是否是带时间格式的 label
+      if (comp.type === 'hg_label' && comp.data?.timeFormat) {
+        timeLabels.push(comp.id);
+      }
+      
+      // 递归检查子组件
+      if (comp.children) {
+        comp.children.forEach(childId => {
+          const child = context.componentMap.get(childId);
+          if (child) {
+            collectRecursive(child);
+          }
+        });
+      }
+    };
+    
+    collectRecursive(component);
+    return timeLabels;
+  }
+
+  /**
+   * 收集当前 window 下所有需要初始化的点阵字体
+   * 只有点阵字体需要预加载，矢量字体不需要
+   */
+  private collectBitmapFonts(component: Component, context: GeneratorContext): FontInitInfo[] {
+    const allComponents: Component[] = [];
+    
+    const collectRecursive = (comp: Component) => {
+      allComponents.push(comp);
+      
+      // 递归收集子组件
+      if (comp.children) {
+        comp.children.forEach(childId => {
+          const child = context.componentMap.get(childId);
+          if (child) {
+            collectRecursive(child);
+          }
+        });
+      }
+    };
+    
+    collectRecursive(component);
+    
+    // 使用 LabelGenerator 的静态方法收集字体信息
+    return LabelGenerator.collectFontInitInfos(allComponents);
+  }
+
+  /**
+   * 根据时间格式获取定时器间隔（毫秒）
+   */
+  private getTimerInterval(timeFormat?: string): number {
+    if (!timeFormat) return 500;
+    
+    switch (timeFormat) {
+      case 'HH:mm:ss':
+      case 'YYYY-MM-DD HH:mm:ss':
+        return 500; // 带秒：500ms
+      case 'HH:mm':
+      case 'MM-DD HH:mm':
+        return 30000; // 只有时分：30秒
+      case 'YYYY-MM-DD':
+        return 60000; // 只有日期：60秒
+      default:
+        return 500;
+    }
+  }
+
+  /**
+   * 根据时间格式获取 sprintf 格式化代码
+   */
+  private getTimeFormatCode(timeFormat?: string): { format: string; args: string } {
+    switch (timeFormat) {
+      case 'HH:mm:ss':
+        return {
+          format: '%02d:%02d:%02d',
+          args: 't->tm_hour, t->tm_min, t->tm_sec'
+        };
+      case 'HH:mm':
+        return {
+          format: '%02d:%02d',
+          args: 't->tm_hour, t->tm_min'
+        };
+      case 'YYYY-MM-DD':
+        return {
+          format: '%04d-%02d-%02d',
+          args: 't->tm_year + 1900, t->tm_mon + 1, t->tm_mday'
+        };
+      case 'YYYY-MM-DD HH:mm:ss':
+        return {
+          format: '%04d-%02d-%02d %02d:%02d:%02d',
+          args: 't->tm_year + 1900, t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec'
+        };
+      case 'MM-DD HH:mm':
+        return {
+          format: '%02d-%02d %02d:%02d',
+          args: 't->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min'
+        };
+      default:
+        return {
+          format: '%02d:%02d:%02d',
+          args: 't->tm_hour, t->tm_min, t->tm_sec'
+        };
+    }
+  }
+}

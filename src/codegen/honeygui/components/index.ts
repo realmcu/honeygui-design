@@ -3,6 +3,7 @@
  */
 import { ComponentCodeGenerator } from './ComponentGenerator';
 import { ViewGenerator } from './ViewGenerator';
+import { WindowGenerator } from './WindowGenerator';
 import { ImageGenerator } from './ImageGenerator';
 import { VideoGenerator } from './VideoGenerator';
 import { Model3DGenerator } from './Model3DGenerator';
@@ -27,7 +28,7 @@ export class ComponentGeneratorFactory {
   static {
     // 容器组件
     this.generators.set('hg_view', new ViewGenerator());
-    this.generators.set('hg_window', new ViewGenerator());
+    this.generators.set('hg_window', new WindowGenerator());
     
     // 基础控件
     this.generators.set('hg_button', new ButtonGenerator());

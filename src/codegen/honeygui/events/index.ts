@@ -3,6 +3,7 @@
  */
 import { EventCodeGenerator } from './EventCodeGenerator';
 import { ViewEventGenerator } from './ViewEventGenerator';
+import { WindowEventGenerator } from './WindowEventGenerator';
 import { ButtonEventGenerator } from './ButtonEventGenerator';
 import { LabelEventGenerator } from './LabelEventGenerator';
 import { ImageEventGenerator } from './ImageEventGenerator';
@@ -27,7 +28,7 @@ export class EventGeneratorFactory {
   static {
     // 容器组件
     this.generators.set('hg_view', new ViewEventGenerator());
-    this.generators.set('hg_window', new ViewEventGenerator());
+    this.generators.set('hg_window', new WindowEventGenerator());
     
     // 基础控件
     this.generators.set('hg_button', new ButtonEventGenerator());

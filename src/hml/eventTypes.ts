@@ -61,7 +61,7 @@ export interface EventConfig {
 
 export const COMPONENT_SUPPORTED_EVENTS: Record<string, EventType[]> = {
   hg_view: ['onClick', 'onLongPress', 'onTouchDown', 'onTouchUp', 'onKeyShortClick', 'onKeyLongClick', 'onSwipeLeft', 'onSwipeRight', 'onSwipeUp', 'onSwipeDown', 'onShow', 'onHide', 'onMessage'],
-  hg_window: ['onClick', 'onLongPress', 'onTouchDown', 'onTouchUp', 'onKeyShortClick', 'onKeyLongClick', 'onSwipeLeft', 'onSwipeRight', 'onSwipeUp', 'onSwipeDown', 'onShow', 'onHide', 'onMessage'],
+  hg_window: ['onClick', 'onLongPress', 'onTouchDown', 'onTouchUp', 'onMessage'],
   hg_button: ['onClick', 'onLongPress', 'onTouchDown', 'onTouchUp', 'onMessage'],
   hg_image: ['onClick', 'onLongPress', 'onTouchDown', 'onTouchUp', 'onMessage'],
   hg_text: ['onClick', 'onLongPress', 'onMessage'],

@@ -123,6 +123,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
     const componentTypes = [...new Set(this.components.map(c => c.type))];
     const headers = this.apiMapper.getRequiredHeaders(componentTypes);
     const hasView = componentTypes.includes('hg_view');
+    const hasWindow = componentTypes.includes('hg_window');
     const has3D = componentTypes.includes('hg_3d');
     const hasLabel = componentTypes.includes('hg_label');
 
@@ -147,6 +148,10 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       code += `#include "gui_view_instance.h"\n`;
     }
 
+    if (hasWindow) {
+      code += `#include "gui_win.h"\n`;
+    }
+
     if (has3D) {
       code += `#include "gui_lite3d.h"\n`;
       code += `#include "gui_vfs.h"\n`;
@@ -166,7 +171,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
     }
 
     headers.forEach(header => {
-      if (header !== 'gui_view.h') {
+      if (header !== 'gui_view.h' && header !== 'gui_win.h') {
         code += `#include "${header}"\n`;
       }
     });
@@ -181,7 +186,12 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
         // list 控件使用 gui_list_t * 类型
         if (comp.type === 'hg_list') {
           code += `extern gui_list_t *${comp.id};\n`;
-        } else {
+        }
+        // window 控件使用 gui_win_t * 类型
+        else if (comp.type === 'hg_window') {
+          code += `extern gui_win_t *${comp.id};\n`;
+        }
+        else {
           code += `extern gui_obj_t *${comp.id};\n`;
         }
       }
@@ -223,7 +233,12 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
         // list 控件使用 gui_list_t * 类型
         if (comp.type === 'hg_list') {
           code += `gui_list_t *${comp.id} = NULL;\n`;
-        } else {
+        }
+        // window 控件使用 gui_win_t * 类型
+        else if (comp.type === 'hg_window') {
+          code += `gui_win_t *${comp.id} = NULL;\n`;
+        }
+        else {
           code += `gui_obj_t *${comp.id} = NULL;\n`;
         }
       }
@@ -335,7 +350,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
 
   /**
    * 生成 hg_view/hg_window 组件代码
-   * 使用 ViewGenerator 生成，并处理子组件
+   * 使用对应的 Generator 生成，并处理子组件
    */
   private generateViewComponent(component: Component, indent: number): string {
     const generator = ComponentGeneratorFactory.getGenerator(component.type);
@@ -348,7 +363,9 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       component.children.forEach(childId => {
         const child = this.componentMap.get(childId);
         if (child) {
-          childrenCode += this.generateComponentTree(child, indent + 1);
+          // hg_window 的子组件缩进需要调整（因为没有 switch_in 回调包裹）
+          const childIndent = component.type === 'hg_window' ? indent : indent + 1;
+          childrenCode += this.generateComponentTree(child, childIndent);
         }
       });
     }

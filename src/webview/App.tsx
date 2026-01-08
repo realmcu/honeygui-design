@@ -9,7 +9,7 @@ import Toolbar from './components/Toolbar';
 import { ViewRelationModal } from './components/ViewRelationModal';
 import { Component, ComponentType } from './types';
 import useKeyboardShortcuts from './utils/keyboardShortcuts';
-import { getAbsolutePosition, findComponentAtPosition, isDropTargetType } from './utils/componentUtils';
+import { getAbsolutePosition, findComponentAtPosition, isDropTargetType, isContainerType } from './utils/componentUtils';
 import { createImageComponentAtPosition, create3DComponentAtPosition, createVideoComponentAtPosition, createSvgComponentAtPosition } from './services/messageHandler';
 import { processImageFiles } from './utils/fileUtils';
 import { parseObjDependencies, parseMtlDependencies, findDependencyFiles } from './utils/objDependencyParser';
@@ -661,17 +661,17 @@ const App: React.FC = () => {
     
     let parent: string | null = null;
 
-    // 判断是否为容器组件
-    const isContainer = componentType === 'hg_view' || componentType === 'hg_window';
-    // hg_list 是特殊的容器组件，但必须放在 hg_view 或 hg_window 内
-    const isListComponent = componentType === 'hg_list';
+    // 判断是否为顶级容器组件（只有 hg_view）
+    const isTopLevelContainer = componentType === 'hg_view';
+    // 判断是否为可嵌套的容器组件（hg_window, hg_list, hg_canvas 等）
+    const isNestedContainer = isContainerType(componentType) && !isTopLevelContainer;
 
-    if (isContainer) {
-      // 容器组件：作为顶级组件
+    if (isTopLevelContainer) {
+      // 顶级容器组件：作为顶级组件
       parent = null;
-      if (DEBUG_DROP) console.info(`[拖放] 容器组件 ${componentType} 作为顶级组件`);
+      if (DEBUG_DROP) console.info(`[拖放] 顶级容器组件 ${componentType} 作为顶级组件`);
     } else {
-      // UI组件：必须放在某个容器内
+      // UI组件或可嵌套容器：必须放在某个容器内
       // 根据鼠标位置查找目标容器
       let targetContainer: Component | null = null;
       
@@ -730,17 +730,18 @@ const App: React.FC = () => {
         if (DEBUG_DROP) {
           console.log(`[拖放] 目标容器绝对位置: (${targetAbsPos.x}, ${targetAbsPos.y})`);
           console.log(`[拖放] UI组件相对坐标: (${positionX}, ${positionY})`);
-          console.info(`[拖放] ✓ UI组件 ${componentType} 添加到容器 ${targetContainer.id}`);
+          console.info(`[拖放] ✓ ${isNestedContainer ? '嵌套容器' : 'UI组件'} ${componentType} 添加到容器 ${targetContainer.id}`);
         }
       } else {
         // 没有找到容器，提示用户
         console.error('[拖放] 鼠标位置下没有容器组件');
         const api = useDesignerStore.getState().vscodeAPI;
         if (api) {
-          // 针对 hg_list 提供特定的错误提示
-          const errorMessage = isListComponent
-            ? 'List 控件只能放置在容器组件（hg_view 或 hg_window）内'
-            : '请将组件拖放到容器内（View/Panel/Window）';
+          // 针对不同组件类型提供特定的错误提示
+          let errorMessage = '请将组件拖放到容器内（View/Window）';
+          if (isNestedContainer) {
+            errorMessage = `${componentType} 必须放置在容器组件（hg_view 或 hg_window）内`;
+          }
           api.postMessage({
             command: 'error',
             text: errorMessage
