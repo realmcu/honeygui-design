@@ -758,13 +758,17 @@ const App: React.FC = () => {
         defaultStyle[prop.name] = prop.defaultValue;
       });
 
-    // hg_list 特殊处理：根据项目分辨率计算默认项尺寸
+    // hg_list 特殊处理：默认宽高为屏幕宽高，项尺寸根据方向自动计算
     if (componentType === 'hg_list') {
       const projectConfig = useDesignerStore.getState().projectConfig;
       const resolution = projectConfig?.resolution || '480X272';
       const [resWidth, resHeight] = resolution.split('X').map(Number);
       
-      // 默认垂直列表，项宽度=屏幕宽度，项高度=屏幕高度/5
+      // 列表宽高默认为屏幕宽高
+      width = resWidth;
+      height = resHeight;
+      
+      // 默认垂直列表，项宽度=列表宽度，项高度=屏幕高度/5
       defaultStyle.itemWidth = resWidth;
       defaultStyle.itemHeight = Math.round(resHeight / 5);
     }

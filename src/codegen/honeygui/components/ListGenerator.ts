@@ -10,7 +10,29 @@ export class ListGenerator implements ComponentCodeGenerator {
     try {
       const indentStr = '    '.repeat(indent);
       const parentRef = context.getParentRef(component);
-      const { x, y, width, height } = component.position;
+      let { x, y, width, height } = component.position;
+
+      // 获取屏幕尺寸（从根 hg_view 获取）
+      let screenWidth = 480;  // 默认值
+      let screenHeight = 272; // 默认值
+      
+      // 查找根 hg_view 组件获取屏幕尺寸
+      const allComponents = Array.from(context.componentMap.values());
+      const rootView = allComponents.find(c => c.type === 'hg_view' && !c.parent);
+      if (rootView) {
+        screenWidth = rootView.position.width;
+        screenHeight = rootView.position.height;
+      }
+
+      // 边界检查：确保 x + width <= screenWidth
+      if (x + width > screenWidth) {
+        width = Math.max(1, screenWidth - x);
+      }
+
+      // 边界检查：确保 y + height <= screenHeight
+      if (y + height > screenHeight) {
+        height = Math.max(1, screenHeight - y);
+      }
 
       // 获取 list 属性
       // itemWidth 和 itemHeight 在 style group 中，但为了兼容性，同时检查 data 和 style
@@ -41,17 +63,12 @@ export class ListGenerator implements ComponentCodeGenerator {
       // 生成 note_design 回调函数名
       const noteDesignCallback = `${component.id}_note_design`;
 
-      // list 控件的宽高建议设置为 0，自动适应父容器
-      // 这样可以确保 list 在父容器内正常滚动
-      const listWidth = 0;
-      const listHeight = 0;
-
       // 获取样式和数量（需要在创建后立即设置）
       const style = component.style?.style ?? 'LIST_CLASSIC';
       const noteNum = component.data?.noteNum ?? 5;
 
-      // 生成创建代码
-      let code = `${indentStr}${component.id} = gui_list_create(${parentRef}, "${component.name}", ${x}, ${y}, ${listWidth}, ${listHeight}, ${noteLength}, ${space}, ${dirEnum}, ${noteDesignCallback}, NULL, ${createBar ? 'true' : 'false'});\n`;
+      // 生成创建代码，使用位置与大小中的宽高值
+      let code = `${indentStr}${component.id} = gui_list_create(${parentRef}, "${component.name}", ${x}, ${y}, ${width}, ${height}, ${noteLength}, ${space}, ${dirEnum}, ${noteDesignCallback}, NULL, ${createBar ? 'true' : 'false'});\n`;
       
       // 立即设置样式和数量（必须在创建后立即设置，否则某些样式效果会失效）
       code += `${indentStr}gui_list_set_style(${component.id}, ${style});\n`;
@@ -86,6 +103,8 @@ export class ListGenerator implements ComponentCodeGenerator {
       const loop = component.data?.loop ?? false;
       const offset = component.data?.offset ?? 0;
       const outScope = component.data?.outScope ?? 0;
+      const style = component.style?.style ?? 'LIST_CLASSIC';
+      const cardStackLocation = component.style?.cardStackLocation ?? 0;
 
       // 1. 条件生成 gui_list_set_auto_align()（仅当 autoAlign 为 true）
       if (autoAlign === true) {
@@ -98,6 +117,7 @@ export class ListGenerator implements ComponentCodeGenerator {
       }
 
       // 3. 条件生成 gui_list_enable_loop()（仅当 loop 为 true）
+      // 循环滚动开启时，超出范围强制为 0，样式不能为 LIST_CARD
       if (loop === true) {
         code += `${indentStr}gui_list_enable_loop(${component.id}, true);\n`;
       }
@@ -107,9 +127,15 @@ export class ListGenerator implements ComponentCodeGenerator {
         code += `${indentStr}gui_list_set_offset(${component.id}, ${offset});\n`;
       }
 
-      // 5. 条件生成 gui_list_set_out_scope()（仅当 outScope 非零）
-      if (outScope !== 0) {
+      // 5. 条件生成 gui_list_set_out_scope()（仅当 outScope 非零且不是循环模式且不是 LIST_CARD）
+      // 循环滚动或 LIST_CARD 样式时，超出范围必须为 0
+      if (outScope !== 0 && !loop && style !== 'LIST_CARD') {
         code += `${indentStr}gui_list_set_out_scope(${component.id}, ${outScope});\n`;
+      }
+
+      // 6. LIST_CARD 样式特有：设置堆叠位置（总是调用，即使值为0）
+      if (style === 'LIST_CARD') {
+        code += `${indentStr}gui_list_set_card_stack_location(${component.id}, ${cardStackLocation});\n`;
       }
 
       return code;
@@ -168,7 +194,20 @@ export class ListGenerator implements ComponentCodeGenerator {
       code += `    \n`;
       code += `    // 转换 obj 为 gui_list_note_t * 类型\n`;
       code += `    gui_list_note_t *note = (gui_list_note_t *)obj;\n`;
-      code += `    uint16_t index = note->index;\n`;
+      
+      // 根据是否开启循环滚动，使用不同的 index 计算方式
+      const loop = component.data?.loop ?? false;
+      if (loop) {
+        code += `    // 循环滚动模式：处理负索引\n`;
+        code += `    int16_t index = note->index;\n`;
+        code += `    gui_list_t *list = (gui_list_t *)obj->parent;\n`;
+        code += `    uint8_t note_num = list->note_num;\n`;
+        code += `    index %= note_num;\n`;
+        code += `    index += note_num;\n`;
+        code += `    index %= note_num;\n`;
+      } else {
+        code += `    uint16_t index = note->index;\n`;
+      }
       code += `    \n`;
 
       // 生成 switch-case 结构，根据 index 创建不同的内容

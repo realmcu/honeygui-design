@@ -3,6 +3,7 @@ import { HgViewProperties } from './HgViewProperties';
 import { Hg3DProperties } from './Hg3DProperties';
 import { HgVideoProperties } from './HgVideoProperties';
 import { HgImageProperties } from './HgImageProperties';
+import { HgListProperties } from './HgListProperties';
 import { ListItemProperties } from './ListItemProperties';
 import { GeometryProperties } from './GeometryProperties';
 import { DefaultProperties } from './DefaultProperties';
@@ -22,7 +23,7 @@ export const propertyPanelRegistry: Record<ComponentType, React.FC<PropertyPanel
   hg_image: HgImageProperties,
   hg_window: DefaultProperties,
   hg_canvas: DefaultProperties,
-  hg_list: DefaultProperties,
+  hg_list: HgListProperties,
   hg_list_item: ListItemProperties,
   hg_video: HgVideoProperties,
   hg_3d: Hg3DProperties,
@@ -37,6 +38,7 @@ export { HgViewProperties } from './HgViewProperties';
 export { Hg3DProperties } from './Hg3DProperties';
 export { HgVideoProperties } from './HgVideoProperties';
 export { HgImageProperties } from './HgImageProperties';
+export { HgListProperties } from './HgListProperties';
 export { ListItemProperties } from './ListItemProperties';
 export { GeometryProperties } from './GeometryProperties';
 export { DefaultProperties } from './DefaultProperties';

@@ -135,6 +135,7 @@ const componentDefinitions: ComponentDefinition[] = [
       { name: 'space', label: '项间距', type: 'number', defaultValue: 5, group: 'style' },
       { name: 'direction', label: '方向', type: 'select', defaultValue: 'VERTICAL', options: ['VERTICAL', 'HORIZONTAL'], group: 'style' },
       { name: 'style', label: '样式', type: 'select', defaultValue: 'LIST_CLASSIC', options: ['LIST_CLASSIC', 'LIST_CIRCLE', 'LIST_ZOOM', 'LIST_CARD', 'LIST_FADE', 'LIST_FAN', 'LIST_HELIX', 'LIST_CURL'], group: 'style' },
+      { name: 'cardStackLocation', label: '堆叠位置距离', type: 'number', defaultValue: 0, group: 'style' },
       { name: 'noteNum', label: '项数量', type: 'number', defaultValue: 5, group: 'data' },
       { name: 'autoAlign', label: '自动对齐', type: 'boolean', defaultValue: true, group: 'general' },
       { name: 'inertia', label: '惯性滚动', type: 'boolean', defaultValue: true, group: 'general' },
