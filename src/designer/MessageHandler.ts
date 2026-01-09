@@ -191,7 +191,8 @@ export class MessageHandler {
                     this._fileManager.currentFilePath,
                     message.dropPosition,
                     message.targetContainerId,
-                    message.relativePath
+                    message.relativePath,
+                    message.componentId
                 );
                 break;
 

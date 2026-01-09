@@ -481,7 +481,8 @@ export class AssetManager {
         currentFilePath: string | undefined,
         dropPosition?: { x: number; y: number },
         targetContainerId?: string,
-        relativePath?: string
+        relativePath?: string,
+        componentId?: string
     ): Promise<void> {
         try {
             if (!currentFilePath) {
@@ -534,6 +535,13 @@ export class AssetManager {
                     targetContainerId,
                     imageSize
                 });
+            } else if (componentId) {
+                // 如果提供了 componentId，则更新现有组件的图片路径
+                this._panel.webview.postMessage({
+                    command: 'updateImagePath',
+                    componentId: componentId,
+                    path: hmlRelativePath
+                });
             }
 
             // 重新加载资源列表
@@ -564,38 +572,37 @@ export class AssetManager {
             const fileUri = await vscode.window.showOpenDialog(options);
             if (fileUri && fileUri.length > 0) {
                 const filePath = fileUri[0].fsPath;
+                const fileName = path.basename(filePath);
                 
-                let relativePath = filePath;
-                let rootPath: string | undefined;
-
-                // 尝试使用项目根目录
-                if (currentFilePath) {
-                    rootPath = ProjectUtils.findProjectRoot(currentFilePath);
+                if (!currentFilePath) {
+                    vscode.window.showErrorMessage('无法确定项目路径');
+                    return;
                 }
 
-                // 如果没找到项目根目录，使用工作区目录
-                if (!rootPath && vscode.workspace.workspaceFolders?.[0]) {
-                    rootPath = vscode.workspace.workspaceFolders[0].uri.fsPath;
+                const projectRoot = ProjectUtils.findProjectRoot(currentFilePath);
+                if (!projectRoot) {
+                    vscode.window.showErrorMessage('无法找到项目根目录');
+                    return;
                 }
+
+                const assetsDir = path.join(projectRoot, 'assets');
+                const targetPath = path.join(assetsDir, fileName);
+
+                // 复制文件到 assets 目录
+                await fs.promises.copyFile(filePath, targetPath);
                 
-                if (rootPath) {
-                    // 转换为相对路径
-                    relativePath = path.relative(rootPath, filePath);
-                    // 统一使用正斜杠
-                    relativePath = relativePath.replace(/\\/g, '/');
-                }
-                
-                // 发送路径到webview
+                // 发送相对路径到webview
+                const relativePath = `assets/${fileName}`;
                 this._panel.webview.postMessage({
                     command: 'updateImagePath',
                     componentId: componentId,
                     path: relativePath
                 });
                 
-                logger.info(`[DesignerPanel] 选择图片路径: ${relativePath}`);
+                logger.info(`[AssetManager] 图片已复制到: ${relativePath}`);
             }
         } catch (error) {
-            logger.error(`[DesignerPanel] 选择图片路径失败: ${error}`);
+            logger.error(`[AssetManager] 选择图片失败: ${error}`);
             vscode.window.showErrorMessage('选择图片失败');
         }
     }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { PropertyPanelProps } from './types';
 import { PropertyEditor } from './PropertyEditor';
 import { BaseProperties } from './BaseProperties';
@@ -39,10 +39,28 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
   };
 
   const handleSelectImagePath = () => {
-    window.vscodeAPI?.postMessage({
-      command: 'selectImagePath',
-      componentId: component.id
-    });
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.png,.jpg,.jpeg,.gif,.bmp,.svg,.webp';
+    input.onchange = (e: Event) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const arrayBuffer = event.target?.result as ArrayBuffer;
+        const uint8Array = new Uint8Array(arrayBuffer);
+        window.vscodeAPI?.postMessage({
+          command: 'saveImageToAssets',
+          fileName: file.name,
+          fileData: Array.from(uint8Array),
+          relativePath: '',
+          componentId: component.id
+        });
+      };
+      reader.readAsArrayBuffer(file);
+    };
+    input.click();
   };
 
   const renderImageProperty = (value: any, onChange: (value: any) => void) => {
