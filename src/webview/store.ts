@@ -177,6 +177,8 @@ export interface DesignerStore extends DesignerState {
   duplicateComponent: (id: string) => void;
   moveComponent: (id: string, newParent: string | null) => void;
   reorderComponent: (id: string, newIndex: number) => void;
+  reorderSiblings: (componentId: string, parentId: string | null | undefined, newIndex: number) => void;
+  moveComponentToPosition: (componentId: string, newParentId: string | null | undefined, targetId: string, position: 'before' | 'after') => void;
   moveComponentLayer: (id: string, direction: 'up' | 'down' | 'top' | 'bottom') => void;
   
   // Clipboard operations
@@ -1141,6 +1143,86 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   },
 
   moveComponent: (id, newParent) => {
+    const state = get();
+    const component = state.components.find((c) => c.id === id);
+    if (!component) return;
+
+    // 验证规则
+    // 1. hg_view 不能移动（只能是根组件）
+    if (component.type === 'hg_view') {
+      if (vscodeAPI) {
+        vscodeAPI.postMessage({
+          command: 'showInfo',
+          text: 'hg_view 只能作为根组件，无法移动'
+        });
+      }
+      return;
+    }
+
+    // 2. hg_list_item 只能在 hg_list 中
+    if (component.type === 'hg_list_item') {
+      const newParentComp = newParent ? state.components.find(c => c.id === newParent) : null;
+      if (!newParentComp || newParentComp.type !== 'hg_list') {
+        if (vscodeAPI) {
+          vscodeAPI.postMessage({
+            command: 'showInfo',
+            text: 'list_item 只能在 hg_list 控件中'
+          });
+        }
+        return;
+      }
+    }
+
+    // 3. 非 hg_list_item 不能移动到 hg_list 中
+    if (component.type !== 'hg_list_item' && newParent) {
+      const newParentComp = state.components.find(c => c.id === newParent);
+      if (newParentComp && newParentComp.type === 'hg_list') {
+        if (vscodeAPI) {
+          vscodeAPI.postMessage({
+            command: 'showInfo',
+            text: 'hg_list 只能包含 list_item 子组件'
+          });
+        }
+        return;
+      }
+    }
+
+    // 4. 不能移动到自己的子组件中（避免循环引用）
+    const isDescendant = (parentId: string | null | undefined, targetId: string): boolean => {
+      if (!parentId) return false;
+      if (parentId === targetId) return true;
+      const parent = state.components.find(c => c.id === parentId);
+      return parent ? isDescendant(parent.parent, targetId) : false;
+    };
+
+    if (newParent && isDescendant(newParent, id)) {
+      if (vscodeAPI) {
+        vscodeAPI.postMessage({
+          command: 'showInfo',
+          text: '不能将组件移动到自己的子组件中'
+        });
+      }
+      return;
+    }
+
+    // 5. 只有容器控件（hg_view, hg_window）可以作为父组件
+    if (newParent) {
+      const newParentComp = state.components.find(c => c.id === newParent);
+      if (newParentComp && 
+          newParentComp.type !== 'hg_view' && 
+          newParentComp.type !== 'hg_window' &&
+          newParentComp.type !== 'hg_list' &&
+          newParentComp.type !== 'hg_list_item') {
+        if (vscodeAPI) {
+          vscodeAPI.postMessage({
+            command: 'showInfo',
+            text: '只有容器控件（hg_view, hg_window）可以包含子组件'
+          });
+        }
+        return;
+      }
+    }
+
     set((state) => {
       const component = state.components.find((c) => c.id === id);
       if (!component) return state;
@@ -1150,13 +1232,14 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
           if (comp.id === id) {
             return { ...comp, parent: newParent };
           }
-          // Update parent's children
+          // Update old parent's children
           if (comp.id === component.parent) {
             return {
               ...comp,
               children: comp.children?.filter((childId) => childId !== id),
             };
           }
+          // Update new parent's children
           if (comp.id === newParent) {
             return {
               ...comp,
@@ -1173,6 +1256,99 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   reorderComponent: (id, newIndex) => {
     // Implement reorder logic
     get().saveToFile();
+  },
+
+  // 重新排序同级组件
+  reorderSiblings: (componentId: string, parentId: string | null | undefined, newIndex: number) => {
+    set((state) => {
+      // 获取同级组件
+      const siblings = state.components.filter(c => c.parent === parentId);
+      const currentIndex = siblings.findIndex(c => c.id === componentId);
+      
+      if (currentIndex === -1 || currentIndex === newIndex) {
+        return state;
+      }
+      
+      // 重新排列同级组件
+      const reordered = [...siblings];
+      const [moved] = reordered.splice(currentIndex, 1);
+      reordered.splice(newIndex, 0, moved);
+      
+      // 重建整个 components 数组，保持新的顺序
+      const siblingIds = new Set(siblings.map(s => s.id));
+      const newComponents: typeof state.components = [];
+      let siblingsInserted = false;
+      
+      for (const comp of state.components) {
+        if (siblingIds.has(comp.id)) {
+          // 遇到第一个同级组件时，插入所有重排后的同级组件
+          if (!siblingsInserted) {
+            newComponents.push(...reordered);
+            siblingsInserted = true;
+          }
+          // 跳过原来的同级组件（已在上面插入）
+        } else {
+          // 如果是父组件，更新其 children 数组
+          if (comp.id === parentId) {
+            newComponents.push({
+              ...comp,
+              children: reordered.map(c => c.id)
+            });
+          } else {
+            newComponents.push(comp);
+          }
+        }
+      }
+      
+      return { components: newComponents };
+    });
+    get().saveToFile();
+  },
+
+  // 移动组件到指定位置（改变父组件并插入到指定位置）
+  moveComponentToPosition: (componentId: string, newParentId: string | null | undefined, targetId: string, position: 'before' | 'after') => {
+    const state = get();
+    const component = state.components.find(c => c.id === componentId);
+    const targetComp = state.components.find(c => c.id === targetId);
+    
+    if (!component || !targetComp) return;
+    
+    // 先移动到新父组件
+    set((state) => {
+      const oldParentId = component.parent;
+      
+      return {
+        components: state.components.map((comp) => {
+          // 更新组件的父引用
+          if (comp.id === componentId) {
+            return { ...comp, parent: newParentId };
+          }
+          // 从旧父组件的 children 中移除
+          if (comp.id === oldParentId) {
+            return {
+              ...comp,
+              children: comp.children?.filter((childId) => childId !== componentId),
+            };
+          }
+          // 添加到新父组件的 children（先添加到末尾，后面会调整顺序）
+          if (comp.id === newParentId) {
+            return {
+              ...comp,
+              children: [...(comp.children || []), componentId],
+            };
+          }
+          return comp;
+        }),
+      };
+    });
+    
+    // 然后调整顺序（使用更新后的状态）
+    const updatedState = get();
+    const siblings = updatedState.components.filter(c => c.parent === newParentId);
+    const targetIndex = siblings.findIndex(c => c.id === targetId);
+    const newIndex = position === 'before' ? targetIndex : targetIndex + 1;
+    
+    get().reorderSiblings(componentId, newParentId, newIndex);
   },
 
   getSelectedComponent: () => {

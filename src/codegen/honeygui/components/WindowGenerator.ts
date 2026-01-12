@@ -34,6 +34,10 @@ export class WindowGenerator implements ComponentCodeGenerator {
       code += `${indentStr}gui_win_enable_blur(${component.id}, true);\n`;
       code += `${indentStr}gui_win_set_blur_degree(${component.id}, ${blurDegree});\n`;
     }
+    else {
+      code += `${indentStr}GUI_UNUSED(${component.id});\n`;
+    }
+
     
     // 收集当前 window 下所有需要初始化的点阵字体
     const fontInitInfos = this.collectBitmapFonts(component, context);

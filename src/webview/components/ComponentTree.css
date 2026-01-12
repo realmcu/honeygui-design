@@ -162,3 +162,19 @@
   background-color: var(--vscode-editor-dropBackground);
   border: 1px dashed var(--vscode-focusBorder);
 }
+
+/* Drag position indicators */
+.tree-node.drag-before > .tree-node-content {
+  border-top: 2px solid var(--vscode-focusBorder);
+  background-color: transparent;
+}
+
+.tree-node.drag-after > .tree-node-content {
+  border-bottom: 2px solid var(--vscode-focusBorder);
+  background-color: transparent;
+}
+
+.tree-node.drag-inside > .tree-node-content {
+  background-color: var(--vscode-editor-dropBackground);
+  border: 1px dashed var(--vscode-focusBorder);
+}
