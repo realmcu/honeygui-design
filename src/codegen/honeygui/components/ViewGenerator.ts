@@ -4,7 +4,6 @@
  */
 import { Component } from '../../../hml/types';
 import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';
-import { LabelGenerator, FontInitInfo } from './LabelGenerator';
 
 // 事件类型到 GUI_EVENT 的映射（用于 view 的 switch 事件）
 const VIEW_SWITCH_EVENT_MAP: Record<string, string> = {
@@ -55,24 +54,14 @@ export class ViewGenerator implements ComponentCodeGenerator {
     code += `${indentStr}    gui_view_set_opacity(view, ${opacity});\n`;
     code += '\n';
     
-    // 收集当前 view 下所有需要初始化的点阵字体
-    const fontInitInfos = this.collectBitmapFonts(component, context);
-    if (fontInitInfos.length > 0) {
-      code += `${indentStr}    // 初始化点阵字体（从文件系统加载）\n`;
-      for (const info of fontInitInfos) {
-        code += `${indentStr}    gui_font_mem_init_fs((uint8_t *)"${info.fontPath}");\n`;
-      }
-      code += '\n';
-    }
-    
     // 注册视图切换事件
     const switchViewEvents = this.extractSwitchViewEvents(component, context);
     if (switchViewEvents.length > 0) {
       switchViewEvents.forEach(({ guiEvent, targetName, switchOutStyle, switchInStyle }) => {
         code += `${indentStr}    gui_view_switch_on_event(view, "${targetName}", ${switchOutStyle}, ${switchInStyle}, ${guiEvent});\n`;
       });
-    } else if (fontInitInfos.length === 0) {
-      // 只有在没有字体初始化且没有视图切换事件时才添加 GUI_UNUSED
+    } else {
+      // 没有视图切换事件时添加 GUI_UNUSED
       code += `${indentStr}    GUI_UNUSED(view);\n`;
     }
     
@@ -184,33 +173,6 @@ export class ViewGenerator implements ComponentCodeGenerator {
     
     collectRecursive(component);
     return timeLabels;
-  }
-
-  /**
-   * 收集当前 view 下所有需要初始化的点阵字体
-   * 只有点阵字体需要预加载，矢量字体不需要
-   */
-  private collectBitmapFonts(component: Component, context: GeneratorContext): FontInitInfo[] {
-    const allComponents: Component[] = [];
-    
-    const collectRecursive = (comp: Component) => {
-      allComponents.push(comp);
-      
-      // 递归收集子组件
-      if (comp.children) {
-        comp.children.forEach(childId => {
-          const child = context.componentMap.get(childId);
-          if (child) {
-            collectRecursive(child);
-          }
-        });
-      }
-    };
-    
-    collectRecursive(component);
-    
-    // 使用 LabelGenerator 的静态方法收集字体信息
-    return LabelGenerator.collectFontInitInfos(allComponents);
   }
 
   /**

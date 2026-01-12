@@ -6,14 +6,6 @@ import { Component } from '../../../hml/types';
 import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';
 import { HoneyGuiApiMapper } from '../HoneyGuiApiMapper';
 
-/**
- * 字体初始化信息
- */
-export interface FontInitInfo {
-  fontPath: string;      // 转换后的字体文件路径
-  fontType: 'bitmap' | 'vector';
-}
-
 export class LabelGenerator implements ComponentCodeGenerator {
   private apiMapper = new HoneyGuiApiMapper();
 
@@ -168,20 +160,6 @@ export class LabelGenerator implements ComponentCodeGenerator {
   }
 
   /**
-   * 获取时间格式的占位符
-   */
-  private getTimeFormatPlaceholder(format: string): string {
-    switch (format) {
-      case 'HH:mm:ss': return '00:00:00';
-      case 'HH:mm': return '00:00';
-      case 'YYYY-MM-DD': return '2024-01-01';
-      case 'YYYY-MM-DD HH:mm:ss': return '2024-01-01 00:00:00';
-      case 'MM-DD HH:mm': return '01-01 00:00';
-      default: return '00:00:00';
-    }
-  }
-
-  /**
    * 计算字符串的 UTF-8 字节长度
    * 用于 gui_text_set 的 length 参数
    */
@@ -269,91 +247,5 @@ export class LabelGenerator implements ComponentCodeGenerator {
       return `${fontDir}/${convertedFileName}`;
     }
     return convertedFileName;
-  }
-
-  /**
-   * 从组件中提取字体初始化信息
-   * 
-   * @param component 组件
-   * @returns 字体初始化信息，如果没有指定字体则返回 null
-   */
-  static getFontInitInfo(component: Component): FontInitInfo | null {
-    const fontFile = component.data?.fontFile;
-    if (!fontFile) {
-      return null;
-    }
-
-    const fontType = (component.data?.fontType || 'bitmap') as 'bitmap' | 'vector';
-    const fontSize = component.data?.fontSize || 16;
-    const renderMode = parseInt(component.data?.renderMode || '4', 10);
-
-    // 提取字体文件名（不含扩展名）
-    const fontFileName = path.basename(fontFile);
-    const fontName = fontFileName.replace(/\.(ttf|otf|woff|woff2)$/i, '');
-    
-    // 获取原始字体文件的目录路径
-    const fontDir = path.dirname(fontFile);
-    
-    let convertedFileName: string;
-    if (fontType === 'vector') {
-      convertedFileName = `${fontName}_vector.bin`;
-    } else {
-      convertedFileName = `${fontName}_size${fontSize}_bits${renderMode}_bitmap.bin`;
-    }
-
-    // 保持原始目录结构
-    let fontPath: string;
-    if (fontDir && fontDir !== '.') {
-      fontPath = `${fontDir}/${convertedFileName}`;
-    } else {
-      fontPath = convertedFileName;
-    }
-
-    return { fontPath, fontType };
-  }
-
-  /**
-   * 从组件列表中收集所有需要初始化的字体
-   * 
-   * @param components 组件列表
-   * @returns 去重后的字体初始化信息列表（只包含点阵字体）
-   */
-  static collectFontInitInfos(components: Component[]): FontInitInfo[] {
-    const fontMap = new Map<string, FontInitInfo>();
-
-    for (const component of components) {
-      if (component.type !== 'hg_label') continue;
-      
-      const info = LabelGenerator.getFontInitInfo(component);
-      if (info && info.fontType === 'bitmap') {
-        // 只有点阵字体需要预加载，矢量字体不需要
-        fontMap.set(info.fontPath, info);
-      }
-    }
-
-    return Array.from(fontMap.values());
-  }
-
-  /**
-   * 生成字体初始化代码
-   * 
-   * @param fontInfos 字体初始化信息列表
-   * @param indent 缩进级别
-   * @returns 初始化代码字符串
-   */
-  static generateFontInitCode(fontInfos: FontInitInfo[], indent: number = 1): string {
-    if (fontInfos.length === 0) {
-      return '';
-    }
-
-    const indentStr = '    '.repeat(indent);
-    let code = `${indentStr}// 初始化点阵字体（从文件系统加载）\n`;
-
-    for (const info of fontInfos) {
-      code += `${indentStr}gui_font_mem_init_fs((uint8_t *)"${info.fontPath}");\n`;
-    }
-
-    code += '\n';
-    return code;
   }
 }

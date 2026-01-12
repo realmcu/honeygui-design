@@ -9,7 +9,6 @@
  */
 import { Component } from '../../../hml/types';
 import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';
-import { LabelGenerator, FontInitInfo } from './LabelGenerator';
 
 export class WindowGenerator implements ComponentCodeGenerator {
   
@@ -38,15 +37,6 @@ export class WindowGenerator implements ComponentCodeGenerator {
       code += `${indentStr}GUI_UNUSED(${component.id});\n`;
     }
 
-    
-    // 收集当前 window 下所有需要初始化的点阵字体
-    const fontInitInfos = this.collectBitmapFonts(component, context);
-    if (fontInitInfos.length > 0) {
-      code += `\n${indentStr}// 初始化点阵字体（从文件系统加载）\n`;
-      for (const info of fontInitInfos) {
-        code += `${indentStr}gui_font_mem_init_fs((uint8_t *)"${info.fontPath}");\n`;
-      }
-    }
     
     // 初始化时间字符串变量
     const timeLabels = this.collectTimeLabels(component, context);
@@ -111,33 +101,6 @@ export class WindowGenerator implements ComponentCodeGenerator {
     
     collectRecursive(component);
     return timeLabels;
-  }
-
-  /**
-   * 收集当前 window 下所有需要初始化的点阵字体
-   * 只有点阵字体需要预加载，矢量字体不需要
-   */
-  private collectBitmapFonts(component: Component, context: GeneratorContext): FontInitInfo[] {
-    const allComponents: Component[] = [];
-    
-    const collectRecursive = (comp: Component) => {
-      allComponents.push(comp);
-      
-      // 递归收集子组件
-      if (comp.children) {
-        comp.children.forEach(childId => {
-          const child = context.componentMap.get(childId);
-          if (child) {
-            collectRecursive(child);
-          }
-        });
-      }
-    };
-    
-    collectRecursive(component);
-    
-    // 使用 LabelGenerator 的静态方法收集字体信息
-    return LabelGenerator.collectFontInitInfos(allComponents);
   }
 
   /**

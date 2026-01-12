@@ -127,10 +127,6 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
     const has3D = componentTypes.includes('hg_3d');
     const hasLabel = componentTypes.includes('hg_label');
 
-    // 检查是否有需要初始化的点阵字体
-    const fontInitInfos = LabelGenerator.collectFontInitInfos(this.components);
-    const needsFontInit = fontInitInfos.length > 0;
-
     let code = `/**
  * ${baseName} UI定义（自动生成，请勿手动修改）
  * 生成时间: ${new Date().toISOString()}
@@ -163,11 +159,6 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       if (hasTouchRotation) {
         code += `#include "tp_algo.h"\n`;
       }
-    }
-
-    // 如果有点阵字体需要初始化，添加 font_mem.h
-    if (needsFontInit) {
-      code += `#include "font_mem.h"\n`;
     }
 
     headers.forEach(header => {
