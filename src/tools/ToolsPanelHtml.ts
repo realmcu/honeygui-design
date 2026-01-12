@@ -19,6 +19,7 @@ export function getToolsPanelHtml(): string {
                         <option value="video">🎬 视频</option>
                         <option value="model">📦 3D模型</option>
                         <option value="font">🔤 字体</option>
+                        <option value="glass">🔮 玻璃</option>
                     </select>
                     <div class="header-buttons">
                         <button class="icon-btn" onclick="selectFiles()" title="选择文件">📁</button>
@@ -33,7 +34,7 @@ export function getToolsPanelHtml(): string {
                         <div class="empty-hint">拖拽文件或文件夹到此处</div>
                     </div>
                 </div>
-                <input type="file" id="fileInput" multiple accept=".png,.jpg,.jpeg,.bmp,.mp4,.avi,.mov,.mkv,.webm,.obj,.gltf,.ttf,.otf" style="display:none" onchange="handleFileSelect(event)">
+                <input type="file" id="fileInput" multiple accept=".png,.jpg,.jpeg,.bmp,.mp4,.avi,.mov,.mkv,.webm,.obj,.gltf,.ttf,.otf,.svg" style="display:none" onchange="handleFileSelect(event)">
                 <input type="file" id="folderInput" multiple webkitdirectory="" directory="" style="display:none" onchange="handleFileSelect(event)">
             </div>
             <div class="right-panel">
@@ -161,6 +162,7 @@ const IMAGE_EXTS = ['.png','.jpg','.jpeg','.bmp'];
 const VIDEO_EXTS = ['.mp4','.avi','.mov','.mkv','.webm'];
 const MODEL_EXTS = ['.obj','.gltf'];
 const FONT_EXTS = ['.ttf','.otf'];
+const GLASS_EXTS = ['.glass'];
 
 function getFileType(name) {
     const ext = name.toLowerCase().match(/\\.[^.]+$/)?.[0] || '';
@@ -168,6 +170,7 @@ function getFileType(name) {
     if (VIDEO_EXTS.includes(ext)) return 'video';
     if (MODEL_EXTS.includes(ext)) return 'model';
     if (FONT_EXTS.includes(ext)) return 'font';
+    if (GLASS_EXTS.includes(ext)) return 'glass';
     return 'unknown';
 }
 
@@ -234,7 +237,32 @@ function processFile(file, relativePath) {
     if (type === 'unknown') return;
     
     const id = Date.now() + '_' + Math.random().toString(36).substr(2,9);
-    const blobUrl = URL.createObjectURL(file);
+    
+    // 对 .glass 文件，需要以 SVG 类型创建 blob 以便正确预览
+    let blobUrl;
+    if (type === 'glass') {
+        // 读取文件内容后创建带正确 MIME 类型的 blob
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const svgBlob = new Blob([e.target.result], { type: 'image/svg+xml' });
+            blobUrl = URL.createObjectURL(svgBlob);
+            blobUrls.set(id, blobUrl);
+            
+            const dataReader = new FileReader();
+            dataReader.onload = (e2) => {
+                const data = Array.from(new Uint8Array(e2.target.result));
+                files.set(id, { id, name: file.name, relativePath, type, data, blobUrl });
+                vscode.postMessage({ type:'addFile', id, name:file.name, relativePath, data });
+                renderGrid();
+                updateStats();
+            };
+            dataReader.readAsArrayBuffer(file);
+        };
+        reader.readAsArrayBuffer(file);
+        return;
+    }
+    
+    blobUrl = URL.createObjectURL(file);
     blobUrls.set(id, blobUrl);
     
     const reader = new FileReader();
@@ -259,15 +287,16 @@ function setFilter(type) {
 }
 
 function updateFilterCounts() {
-    let img=0, vid=0, mod=0, fnt=0;
-    files.forEach(f => { if(f.type==='image')img++; else if(f.type==='video')vid++; else if(f.type==='model')mod++; else if(f.type==='font')fnt++; });
-    const total = img + vid + mod + fnt;
+    let img=0, vid=0, mod=0, fnt=0, gls=0;
+    files.forEach(f => { if(f.type==='image')img++; else if(f.type==='video')vid++; else if(f.type==='model')mod++; else if(f.type==='font')fnt++; else if(f.type==='glass')gls++; });
+    const total = img + vid + mod + fnt + gls;
     const sel = document.getElementById('filterSelect');
     sel.options[0].text = '全部 ('+total+')';
     sel.options[1].text = '🖼️ 图片 ('+img+')';
     sel.options[2].text = '🎬 视频 ('+vid+')';
     sel.options[3].text = '📦 3D模型 ('+mod+')';
     sel.options[4].text = '🔤 字体 ('+fnt+')';
+    sel.options[5].text = '🔮 玻璃 ('+gls+')';
 }
 
 function getCurrentContent() {
@@ -381,11 +410,13 @@ function renderGrid() {
             html += '<video src="'+f.blobUrl+'" muted></video>';
         } else if (f.type === 'model') {
             html += '<span class="icon">📦</span>';
+        } else if (f.type === 'glass') {
+            html += '<img src="'+f.blobUrl+'" alt="'+f.name+'">';
         } else {
             html += '<span class="icon">🔤</span>';
         }
         html += '</div>';
-        html += '<span class="type-badge">' + (f.type==='image'?'🖼️':f.type==='video'?'🎬':f.type==='model'?'📦':'🔤') + '</span>';
+        html += '<span class="type-badge">' + (f.type==='image'?'🖼️':f.type==='video'?'🎬':f.type==='model'?'📦':f.type==='font'?'🔤':'🔮') + '</span>';
         html += '<div class="info" title="'+f.name+'">'+f.name+'</div>';
         html += '<button class="remove-btn" onclick="removeFile(event,\\''+f.id+'\\')">✕</button>';
         html += '</div>';
@@ -439,9 +470,9 @@ function clearAll() {
 }
 
 function updateStats() {
-    let img=0, vid=0, mod=0, fnt=0;
-    files.forEach(f => { if(f.type==='image')img++; else if(f.type==='video')vid++; else if(f.type==='model')mod++; else if(f.type==='font')fnt++; });
-    document.getElementById('stats').textContent = '🖼️ '+img+'  🎬 '+vid+'  📦 '+mod+'  🔤 '+fnt;
+    let img=0, vid=0, mod=0, fnt=0, gls=0;
+    files.forEach(f => { if(f.type==='image')img++; else if(f.type==='video')vid++; else if(f.type==='model')mod++; else if(f.type==='font')fnt++; else if(f.type==='glass')gls++; });
+    document.getElementById('stats').textContent = '🖼️ '+img+'  🎬 '+vid+'  📦 '+mod+'  🔤 '+fnt+'  🔮 '+gls;
     document.getElementById('convertBtn').disabled = !(files.size && outputDir);
     updateFilterCounts();
 }
@@ -451,19 +482,20 @@ function renderProperties() {
     
     if (selectedFolder) {
         const settings = folderSettings[selectedFolder] || {};
-        let imgCount = 0, vidCount = 0, modCount = 0, fntCount = 0;
+        let imgCount = 0, vidCount = 0, modCount = 0, fntCount = 0, glsCount = 0;
         files.forEach(f => {
             if (f.relativePath === selectedFolder || f.relativePath.startsWith(selectedFolder + '/')) {
                 if (f.type === 'image') imgCount++;
                 else if (f.type === 'video') vidCount++;
                 else if (f.type === 'model') modCount++;
                 else if (f.type === 'font') fntCount++;
+                else if (f.type === 'glass') glsCount++;
             }
         });
         
         let html = '<div class="preview-area"><div class="model-preview">📁</div></div>';
         html += '<div class="file-name">'+selectedFolder.split('/').pop()+'</div>';
-        html += '<div class="file-path">🖼️ '+imgCount+'  🎬 '+vidCount+'  📦 '+modCount+'  🔤 '+fntCount+'</div>';
+        html += '<div class="file-path">🖼️ '+imgCount+'  🎬 '+vidCount+'  📦 '+modCount+'  🔤 '+fntCount+'  🔮 '+glsCount+'</div>';
         
         if (imgCount > 0) {
             html += '<div class="prop-group"><div class="prop-group-title">🖼️ 图片设置 ('+imgCount+'个)</div>' +
@@ -521,6 +553,13 @@ function renderProperties() {
                 '</div>';
         }
         
+        if (glsCount > 0) {
+            html += '<div class="prop-group"><div class="prop-group-title">🔮 玻璃设置 ('+glsCount+'个)</div>' +
+                '<div class="prop-row"><label>效果区域:</label><input type="number" min="0" max="100" value="'+(settings.glass?.blurRadius||50)+'" onchange="updateFolderSetting(\\'glass\\',\\'blurRadius\\',+this.value)"><span style="font-size:10px;color:var(--vscode-descriptionForeground);margin-left:4px">%</span></div>' +
+                '<div class="prop-row"><label>效果强度:</label><input type="number" min="0" max="100" value="'+(settings.glass?.blurIntensity||50)+'" onchange="updateFolderSetting(\\'glass\\',\\'blurIntensity\\',+this.value)"><span style="font-size:10px;color:var(--vscode-descriptionForeground);margin-left:4px">%</span></div>' +
+                '</div>';
+        }
+        
         props.innerHTML = html;
         return;
     }
@@ -543,6 +582,13 @@ function renderProperties() {
         html += '<video src="'+file.blobUrl+'" controls muted style="max-height:150px"></video>';
     } else if (file.type === 'model') {
         html += '<div class="model-preview">📦</div>';
+    } else if (file.type === 'glass') {
+        // 玻璃效果：显示预览图或加载状态
+        html += '<div id="glassPreviewArea">' +
+            '<img id="glassPreviewImage" src="'+file.blobUrl+'" style="max-width:100%;max-height:180px;border-radius:4px">' +
+            '<div id="glassPreviewLoading" style="display:none;padding:40px;color:var(--vscode-descriptionForeground);text-align:center">⏳ 生成预览中...</div>' +
+            '<div id="glassPreviewError" style="display:none;padding:10px;color:#f44;font-size:11px;text-align:center"></div>' +
+            '</div>';
     } else {
         html += '<div class="model-preview">🔤</div>';
     }
@@ -607,6 +653,14 @@ function renderProperties() {
             '<div class="charset-list" id="fileCharsetList">' + renderCharsetItems(charsets, false) + '</div>' +
             '<button class="add-charset" onclick="addFileCharset()">+ 添加字符集</button>' +
             '</div>';
+    } else if (file.type === 'glass') {
+        const igls = inherited.glass || {};
+        html += '<div class="prop-group"><div class="prop-group-title">转换设置</div>' +
+            '<div class="prop-row"><label>效果区域:</label><input type="number" min="0" max="100" value="'+(settings.blurRadius||'')+'" placeholder="继承 ('+(igls.blurRadius||50)+')" onchange="updateGlassSetting(\\'blurRadius\\',this.value?+this.value:null)"><span style="font-size:10px;color:var(--vscode-descriptionForeground);margin-left:4px">%</span></div>' +
+            '<div class="prop-row"><label>效果强度:</label><input type="number" min="0" max="100" value="'+(settings.blurIntensity||'')+'" placeholder="继承 ('+(igls.blurIntensity||50)+')" onchange="updateGlassSetting(\\'blurIntensity\\',this.value?+this.value:null)"><span style="font-size:10px;color:var(--vscode-descriptionForeground);margin-left:4px">%</span></div>' +
+            '</div>';
+        // 选中 glass 文件时自动请求预览
+        setTimeout(() => requestGlassPreview(), 100);
     } else {
         html += '<div class="prop-group"><div class="prop-group-title">转换设置</div><div style="font-size:11px;color:var(--vscode-descriptionForeground)">3D模型无额外设置</div></div>';
     }
@@ -814,6 +868,44 @@ function startConvert() {
     vscode.postMessage({type:'startConvert'});
 }
 
+// 玻璃效果设置更新（带防抖的自动预览）
+let glassPreviewTimer = null;
+function updateGlassSetting(key, value) {
+    updateSetting(key, value);
+    // 防抖：延迟请求预览
+    if (glassPreviewTimer) clearTimeout(glassPreviewTimer);
+    glassPreviewTimer = setTimeout(() => requestGlassPreview(), 500);
+}
+
+// 请求玻璃效果预览
+function requestGlassPreview() {
+    if (!selectedId) return;
+    const file = files.get(selectedId);
+    if (!file || file.type !== 'glass') return;
+    
+    // 显示加载状态
+    const img = document.getElementById('glassPreviewImage');
+    const loading = document.getElementById('glassPreviewLoading');
+    const error = document.getElementById('glassPreviewError');
+    
+    if (img) img.style.display = 'none';
+    if (loading) loading.style.display = 'block';
+    if (error) error.style.display = 'none';
+    
+    // 发送预览请求
+    vscode.postMessage({
+        type: 'previewGlass',
+        id: selectedId,
+        data: file.data,
+        settings: file.settings || {}
+    });
+}
+
+// 保留旧函数名兼容
+function previewGlassEffect() {
+    requestGlassPreview();
+}
+
 window.addEventListener('message', e => {
     const msg = e.data;
     if (msg.type === 'outputDirSelected') {
@@ -838,6 +930,32 @@ window.addEventListener('message', e => {
         r.className = 'results ' + (fail ? (ok ? 'mixed' : 'error') : 'success');
         r.textContent = '完成: ' + ok + ' 成功, ' + fail + ' 失败';
         if (fail) r.textContent += '\\n' + msg.results.filter(x=>!x.success).map(x=>x.fileName+': '+x.error).join('\\n');
+    } else if (msg.type === 'glassPreviewResult') {
+        // 处理玻璃预览结果
+        const img = document.getElementById('glassPreviewImage');
+        const loading = document.getElementById('glassPreviewLoading');
+        const errorEl = document.getElementById('glassPreviewError');
+        
+        if (loading) loading.style.display = 'none';
+        
+        if (msg.success && msg.base64) {
+            if (img) {
+                img.src = msg.base64;
+                img.style.display = 'block';
+            }
+            if (errorEl) errorEl.style.display = 'none';
+        } else {
+            // 预览失败时显示原始 SVG
+            const file = files.get(msg.id);
+            if (img && file) {
+                img.src = file.blobUrl;
+                img.style.display = 'block';
+            }
+            if (errorEl) {
+                errorEl.textContent = '预览失败: ' + (msg.error || '未知错误');
+                errorEl.style.display = 'block';
+            }
+        }
     }
 });
 `;

@@ -6,13 +6,14 @@ import { ImageConverterService } from '../services/ImageConverterService';
 import { VideoConverterService } from '../services/VideoConverterService';
 import { Model3DConverterService } from '../services/Model3DConverterService';
 import { FontConverterService } from '../services/FontConverterService';
+import { GlassConverterService } from '../services/GlassConverterService';
 import { getToolsPanelHtml } from './ToolsPanelHtml';
 
 interface FileItem {
     id: string;
     name: string;
     relativePath: string;
-    type: 'image' | 'video' | 'model' | 'font' | 'unknown';
+    type: 'image' | 'video' | 'model' | 'font' | 'glass' | 'unknown';
     data: number[];
     settings?: any;
 }
@@ -29,6 +30,7 @@ export class ToolsPanel {
     private videoConverter: VideoConverterService;
     private model3DConverter: Model3DConverterService;
     private fontConverter: FontConverterService;
+    private glassConverter: GlassConverterService;
 
     private files: Map<string, FileItem> = new Map();
     private folderSettings: Map<string, any> = new Map();
@@ -42,6 +44,7 @@ export class ToolsPanel {
         this.videoConverter = new VideoConverterService(sdkPath, msg => logger.info(msg));
         this.model3DConverter = new Model3DConverterService(sdkPath);
         this.fontConverter = new FontConverterService();
+        this.glassConverter = new GlassConverterService();
 
         this.panel.webview.html = getToolsPanelHtml();
         this.panel.onDidDispose(() => this.dispose(), null, this.disposables);
@@ -65,12 +68,13 @@ export class ToolsPanel {
         return config.get<string>('sdk.path') || process.env.HOME + '/.HoneyGUI-SDK';
     }
 
-    private getFileType(fileName: string): 'image' | 'video' | 'model' | 'font' | 'unknown' {
+    private getFileType(fileName: string): 'image' | 'video' | 'model' | 'font' | 'glass' | 'unknown' {
         const ext = path.extname(fileName).toLowerCase();
         if (['.png', '.jpg', '.jpeg', '.bmp'].includes(ext)) return 'image';
         if (['.mp4', '.avi', '.mov', '.mkv', '.webm'].includes(ext)) return 'video';
         if (['.obj', '.gltf'].includes(ext)) return 'model';
         if (['.ttf', '.otf'].includes(ext)) return 'font';
+        if (['.glass'].includes(ext)) return 'glass';
         return 'unknown';
     }
 
@@ -100,6 +104,9 @@ export class ToolsPanel {
                 break;
             case 'startConvert':
                 await this.startConvert();
+                break;
+            case 'previewGlass':
+                await this.previewGlass(message.id, message.data, message.settings);
                 break;
         }
     }
@@ -236,6 +243,13 @@ export class ToolsPanel {
                         crop: settings.crop
                     });
                     break;
+                case 'glass':
+                    outputPath = path.join(outputSubDir, file.name.replace(/\.[^.]+$/, '.bin'));
+                    result = await this.glassConverter.convert(tempInput, outputPath, {
+                        blurRadius: settings.blurRadius || 50,
+                        blurIntensity: settings.blurIntensity || 50
+                    });
+                    break;
                 default:
                     result = { success: false, error: 'Unknown file type' };
             }
@@ -265,6 +279,44 @@ export class ToolsPanel {
         }
         
         return {};
+    }
+
+    /**
+     * 预览玻璃效果
+     */
+    private async previewGlass(id: string, data: number[], settings: any): Promise<void> {
+        try {
+            const svgData = Buffer.from(data);
+            const result = await this.glassConverter.generatePreview(svgData, {
+                blurRadius: settings?.blurRadius || 50,
+                blurIntensity: settings?.blurIntensity || 50
+            });
+
+            if (result.success && result.base64) {
+                this.panel.webview.postMessage({
+                    type: 'glassPreviewResult',
+                    id,
+                    success: true,
+                    base64: result.base64,
+                    width: result.width,
+                    height: result.height
+                });
+            } else {
+                this.panel.webview.postMessage({
+                    type: 'glassPreviewResult',
+                    id,
+                    success: false,
+                    error: result.error || '预览生成失败'
+                });
+            }
+        } catch (error: any) {
+            this.panel.webview.postMessage({
+                type: 'glassPreviewResult',
+                id,
+                success: false,
+                error: error.message
+            });
+        }
     }
 
     public dispose(): void {
