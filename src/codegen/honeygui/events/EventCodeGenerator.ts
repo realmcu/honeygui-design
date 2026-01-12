@@ -85,15 +85,18 @@ export function generateMessageCallbackImpl(component: Component, componentMap: 
       }
     });
 
-    if (body) {
-      impls.push(`void ${callbackName}(gui_obj_t *obj, const char *topic, void *data, uint16_t len)
+    // 始终生成回调函数，即使 body 为空（避免链接错误）
+    if (!body) {
+      body = `    // TODO: 实现消息处理逻辑\n`;
+    }
+    
+    impls.push(`void ${callbackName}(gui_obj_t *obj, const char *topic, void *data, uint16_t len)
 {
     GUI_UNUSED(obj);
     GUI_UNUSED(topic);
     GUI_UNUSED(data);
     GUI_UNUSED(len);
 ${body}}`);
-    }
   });
 
   return impls;

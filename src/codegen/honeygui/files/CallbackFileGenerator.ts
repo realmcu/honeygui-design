@@ -9,10 +9,40 @@ import { getMessageCallbackName } from '../events/EventCodeGenerator';
 export class CallbackFileGenerator {
   private components: Component[];
   private componentMap: Map<string, Component>;
+  private allComponents: Component[]; // 包含所有嵌套组件的扁平数组
 
   constructor(components: Component[]) {
     this.components = components;
     this.componentMap = new Map(components.map(c => [c.id, c]));
+    // 递归收集所有组件（包括嵌套的）
+    this.allComponents = this.flattenComponents(components);
+  }
+
+  /**
+   * 递归展开所有组件（包括嵌套在容器内的子组件）
+   */
+  private flattenComponents(components: Component[]): Component[] {
+    const visited = new Set<string>();
+    const result: Component[] = [];
+    
+    const traverse = (comp: Component) => {
+      // 防止重复访问
+      if (visited.has(comp.id)) return;
+      visited.add(comp.id);
+      
+      result.push(comp);
+      if (comp.children && comp.children.length > 0) {
+        comp.children.forEach(childId => {
+          const child = this.componentMap.get(childId);
+          if (child) {
+            traverse(child);
+          }
+        });
+      }
+    };
+    
+    components.forEach(comp => traverse(comp));
+    return result;
   }
 
   /**
@@ -57,8 +87,8 @@ export class CallbackFileGenerator {
    * 生成回调实现文件
    */
   generateImplementation(baseName: string): string {
-    // 收集所有时间标签
-    const timeLabels = this.components.filter(c => c.type === 'hg_label' && c.data?.timeFormat);
+    // 收集所有时间标签（使用 allComponents）
+    const timeLabels = this.allComponents.filter(c => c.type === 'hg_label' && c.data?.timeFormat);
     
     let code = `#include "${baseName}_callbacks.h"
 #include "../ui/${baseName}_ui.h"
@@ -131,7 +161,8 @@ export class CallbackFileGenerator {
   collectCallbackFunctions(): string[] {
     const functions = new Set<string>();
 
-    this.components.forEach(component => {
+    // 使用 allComponents 而不是 components，包含所有嵌套组件
+    this.allComponents.forEach(component => {
       const generator = EventGeneratorFactory.getGenerator(component.type);
       generator.collectCallbackFunctions(component).forEach(fn => functions.add(fn));
     });
@@ -143,18 +174,23 @@ export class CallbackFileGenerator {
    * 收集所有 switchView 回调实现
    */
   private collectSwitchViewCallbackImpls(): string[] {
-    const impls: string[] = [];
+    const impls = new Map<string, string>(); // 使用 Map 去重，key 为函数名
 
-    this.components.forEach(component => {
+    this.allComponents.forEach(component => {
       const generator = EventGeneratorFactory.getGenerator(component.type);
       if (generator.getSwitchViewCallbackImpl) {
         generator.getSwitchViewCallbackImpl(component, this.componentMap).forEach(impl => {
-          impls.push(impl);
+          // 提取函数名作为 key
+          const match = impl.match(/void\s+(\w+)\s*\(/);
+          if (match) {
+            const funcName = match[1];
+            impls.set(funcName, impl);
+          }
         });
       }
     });
 
-    return impls;
+    return Array.from(impls.values());
   }
 
   /**
@@ -163,7 +199,7 @@ export class CallbackFileGenerator {
   private collectSwitchViewCallbackNames(): string[] {
     const names: string[] = [];
 
-    this.components.forEach(component => {
+    this.allComponents.forEach(component => {
       if (!component.eventConfigs) return;
       component.eventConfigs.forEach(eventConfig => {
         if (eventConfig.type === 'onMessage') return; // onMessage 单独处理
@@ -182,18 +218,23 @@ export class CallbackFileGenerator {
    * 收集所有 onMessage 回调实现
    */
   private collectMessageCallbackImpls(): string[] {
-    const impls: string[] = [];
+    const impls = new Map<string, string>(); // 使用 Map 去重，key 为函数名
 
-    this.components.forEach(component => {
+    this.allComponents.forEach(component => {
       const generator = EventGeneratorFactory.getGenerator(component.type);
       if (generator.getMessageCallbackImpl) {
         generator.getMessageCallbackImpl(component, this.componentMap).forEach(impl => {
-          impls.push(impl);
+          // 提取函数名作为 key
+          const match = impl.match(/void\s+(\w+)\s*\(/);
+          if (match) {
+            const funcName = match[1];
+            impls.set(funcName, impl);
+          }
         });
       }
     });
 
-    return impls;
+    return Array.from(impls.values());
   }
 
   /**
@@ -202,7 +243,7 @@ export class CallbackFileGenerator {
   private collectMessageCallbackNames(): string[] {
     const names: string[] = [];
 
-    this.components.forEach(component => {
+    this.allComponents.forEach(component => {
       if (!component.eventConfigs) return;
       let msgIndex = 0;
       component.eventConfigs.forEach(eventConfig => {
@@ -220,17 +261,18 @@ export class CallbackFileGenerator {
    * 收集所有时间更新回调实现
    */
   private collectTimeUpdateCallbackImpls(): string[] {
-    const impls: string[] = [];
+    const impls = new Map<string, string>(); // 使用 Map 去重，key 为函数名
 
-    this.components.forEach(component => {
+    this.allComponents.forEach(component => {
       if (component.type === 'hg_label' && component.data?.timeFormat) {
         const timeFormat = component.data.timeFormat;
+        const funcName = `${component.id}_time_update_cb`;
         const impl = this.generateTimeUpdateCallback(component.id, timeFormat);
-        impls.push(impl);
+        impls.set(funcName, impl);
       }
     });
 
-    return impls;
+    return Array.from(impls.values());
   }
 
   /**
@@ -239,7 +281,7 @@ export class CallbackFileGenerator {
   private collectTimeUpdateCallbackNames(): string[] {
     const names: string[] = [];
 
-    this.components.forEach(component => {
+    this.allComponents.forEach(component => {
       if (component.type === 'hg_label' && component.data?.timeFormat) {
         names.push(`${component.id}_time_update_cb`);
       }
