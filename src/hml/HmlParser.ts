@@ -310,7 +310,17 @@ export class HmlParser {
         }
         style[key] = value;
       } else if (dataProps.has(key)) {
-        data[key] = attributes[key];
+        let value = attributes[key];
+        // 布尔值转换（loop, createBar, autoAlign, inertia 等）
+        if (['loop', 'createBar', 'autoAlign', 'inertia'].includes(key)) {
+          value = value === 'true' || value === true;
+        }
+        // 数字类型属性转换
+        if (['noteNum', 'offset', 'outScope'].includes(key) && typeof value === 'string') {
+          const num = parseFloat(value);
+          value = isNaN(num) ? value : num;
+        }
+        data[key] = value;
       } else {
         // 未知属性放入data
         let value = attributes[key];
