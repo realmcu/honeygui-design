@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { WidgetProps } from './types';
 import { useDesignerStore } from '../../store';
 import { Component } from '../../types';
@@ -27,94 +27,129 @@ const calculateItemPosition = (
  * 自动管理子列表项的创建、更新和删除
  */
 export const ListWidget: React.FC<WidgetProps> = ({ component, style, handlers, children }) => {
-  const { components, updateComponent, addComponent } = useDesignerStore();
+  const syncInProgress = useRef(false);
+  const lastSyncKey = useRef('');
+  
+  // 直接从 store 获取方法（不订阅状态变化）
+  const getState = useDesignerStore.getState;
   
   useEffect(() => {
-    const noteNum = (component.data?.noteNum as number) || 5;
-    const itemWidth = (component.style?.itemWidth as number) || 100;
-    const itemHeight = (component.style?.itemHeight as number) || 100;
-    const space = (component.style?.space as number) || 0;
-    const direction = (component.style?.direction as string) || 'VERTICAL';
-    const isVertical = direction === 'VERTICAL';
-    const currentChildren = component.children || [];
+    // 生成同步 key，只有关键属性变化时才同步
+    const syncKey = JSON.stringify({
+      id: component.id,
+      noteNum: component.data?.noteNum,
+      itemWidth: component.style?.itemWidth,
+      itemHeight: component.style?.itemHeight,
+      space: component.style?.space,
+      direction: component.style?.direction,
+    });
     
-    // 只同步垂直/水平方向上与项尺寸相关的维度
-    // 垂直方向：列表宽度 = 项宽度（高度由用户手动设置）
-    // 水平方向：列表高度 = 项高度（宽度由用户手动设置）
-    const positionUpdates: Partial<typeof component.position> = {};
-    if (isVertical && component.position.width !== itemWidth) {
-      positionUpdates.width = itemWidth;
-    } else if (!isVertical && component.position.height !== itemHeight) {
-      positionUpdates.height = itemHeight;
-    }
+    // 如果 key 没变，跳过同步
+    if (syncKey === lastSyncKey.current) return;
+    lastSyncKey.current = syncKey;
     
-    // 如果有尺寸变化，更新列表尺寸
-    if (Object.keys(positionUpdates).length > 0) {
-      updateComponent(component.id, {
-        position: {
-          ...component.position,
-          ...positionUpdates,
-        },
-      });
-    }
+    // 防止重复同步
+    if (syncInProgress.current) return;
+    syncInProgress.current = true;
     
-    // 生成目标子组件列表
-    const targetChildren: string[] = [];
-    
-    for (let i = 0; i < noteNum; i++) {
-      const itemId = `${component.id}_item_${i + 1}`;
-      targetChildren.push(itemId);
+    try {
+      const { components, updateComponent, addComponent } = getState();
       
-      const position = calculateItemPosition(
-        i, itemWidth, itemHeight, space, isVertical
+      const noteNum = (component.data?.noteNum as number) || 5;
+      const itemWidth = (component.style?.itemWidth as number) || 100;
+      const itemHeight = (component.style?.itemHeight as number) || 100;
+      const space = (component.style?.space as number) || 0;
+      const direction = (component.style?.direction as string) || 'VERTICAL';
+      const isVertical = direction === 'VERTICAL';
+      const currentChildren = component.children || [];
+      
+      // 只同步垂直/水平方向上与项尺寸相关的维度
+      const positionUpdates: Partial<typeof component.position> = {};
+      if (isVertical && component.position.width !== itemWidth) {
+        positionUpdates.width = itemWidth;
+      } else if (!isVertical && component.position.height !== itemHeight) {
+        positionUpdates.height = itemHeight;
+      }
+      
+      // 如果有尺寸变化，更新列表尺寸
+      if (Object.keys(positionUpdates).length > 0) {
+        updateComponent(component.id, {
+          position: {
+            ...component.position,
+            ...positionUpdates,
+          },
+        });
+      }
+      
+      // 查找已存在的 list_item 子组件（可能是从 HML 加载的）
+      const existingListItems = components.filter(
+        c => c.type === 'hg_list_item' && c.parent === component.id
       );
       
-      const existingItem = components.find(c => c.id === itemId);
-      
-      if (!existingItem) {
-        // 创建新列表项
-        const newItem: Component = {
-          id: itemId,
-          type: 'hg_list_item',
-          name: `List Item ${i + 1}`,
-          position,
-          visible: true,
-          enabled: true,
-          locked: true,
-          zIndex: 1,
-          children: [],
-          parent: component.id,
-          style: {},
-          data: { index: i },
-        };
-        addComponent(newItem);
-      } else {
-        // 更新现有列表项
-        updateComponent(itemId, { position, locked: true });
+      // 如果已经有子组件，不要重新创建或修改位置
+      // 只在没有子组件时才自动创建
+      if (existingListItems.length > 0) {
+        // 确保 children 数组正确
+        const existingIds = existingListItems.map(c => c.id);
+        const sortedCurrent = [...currentChildren].sort();
+        const sortedExisting = [...existingIds].sort();
+        if (JSON.stringify(sortedCurrent) !== JSON.stringify(sortedExisting)) {
+          updateComponent(component.id, { children: existingIds });
+        }
+        return;
       }
+      
+      // 没有子组件，创建新的 list_item
+      const targetChildren: string[] = [];
+      
+      for (let i = 0; i < noteNum; i++) {
+        const itemId = `${component.id}_item_${i + 1}`;
+        targetChildren.push(itemId);
+        
+        const position = calculateItemPosition(
+          i, itemWidth, itemHeight, space, isVertical
+        );
+        
+        const existingItem = components.find(c => c.id === itemId);
+        
+        if (!existingItem) {
+          // 创建新列表项
+          const newItem: Component = {
+            id: itemId,
+            type: 'hg_list_item',
+            name: `List Item ${i + 1}`,
+            position,
+            visible: true,
+            enabled: true,
+            locked: true,
+            zIndex: 1,
+            children: [],
+            parent: component.id,
+            style: {},
+            data: { index: i },
+          };
+          addComponent(newItem);
+        }
+      }
+      
+      // 更新列表的 children
+      if (targetChildren.length > 0) {
+        updateComponent(component.id, { children: targetChildren });
+      }
+    } finally {
+      syncInProgress.current = false;
     }
-    
-    // 更新列表的 children
-    if (JSON.stringify(currentChildren.sort()) !== JSON.stringify(targetChildren.sort())) {
-      updateComponent(component.id, { children: targetChildren });
-    }
-    
-    // 删除多余的子组件
-    currentChildren
-      .filter(childId => !targetChildren.includes(childId))
-      .forEach(childId => {
-        window.vscodeAPI?.postMessage({
-          command: 'removeComponent',
-          componentId: childId
-        });
-      });
   }, [
     component.id,
     component.data?.noteNum,
     component.style?.itemWidth,
     component.style?.itemHeight,
     component.style?.space,
-    component.style?.direction
+    component.style?.direction,
+    component.position.width,
+    component.position.height,
+    component.children,
+    getState
   ]);
   
   return (
