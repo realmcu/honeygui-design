@@ -44,7 +44,7 @@ export class HmlParser {
       ignoreAttributes: false,
       attributeNamePrefix: '',
       textNodeName: '_text',
-      parseAttributeValue: true,
+      parseAttributeValue: false,  // 关闭自动类型转换，所有属性值保持原始字符串
       trimValues: true
     });
   }
@@ -183,9 +183,9 @@ export class HmlParser {
       eventConfigs,
       children: [],
       parent: parentId || null,
-      visible: attributes.visible !== false,
-      enabled: attributes.enabled !== false,
-      locked: attributes.locked === true,
+      visible: attributes.visible !== 'false',
+      enabled: attributes.enabled !== 'false',
+      locked: attributes.locked === 'true',
       zIndex: parseInt(attributes.zIndex || '0')
     };
 
