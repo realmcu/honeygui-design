@@ -115,6 +115,9 @@ export const ACTION_LABELS: Record<ActionType, string> = {
 // ============ 视图切换动画选项 ============
 
 export const SWITCH_OUT_STYLES = [
+  // 初始状态（无动画）
+  { value: 'SWITCH_INIT_STATE', label: '无动画（初始状态）' },
+  
   // Translation (平移)
   { value: 'SWITCH_OUT_TO_LEFT_USE_TRANSLATION', label: '向左平移' },
   { value: 'SWITCH_OUT_TO_RIGHT_USE_TRANSLATION', label: '向右平移' },
@@ -153,6 +156,9 @@ export const SWITCH_OUT_STYLES = [
 ];
 
 export const SWITCH_IN_STYLES = [
+  // 初始状态（无动画）
+  { value: 'SWITCH_INIT_STATE', label: '无动画（初始状态）' },
+  
   // Translation (平移)
   { value: 'SWITCH_IN_FROM_LEFT_USE_TRANSLATION', label: '从左平移' },
   { value: 'SWITCH_IN_FROM_RIGHT_USE_TRANSLATION', label: '从右平移' },

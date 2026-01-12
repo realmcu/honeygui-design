@@ -4,6 +4,7 @@
  */
 import { Component } from '../../../hml/types';
 import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';
+import { EventGeneratorFactory } from '../events';
 
 export class ListGenerator implements ComponentCodeGenerator {
   generateCreation(component: Component, indent: number, context: GeneratorContext): string {
@@ -330,6 +331,12 @@ export class ListGenerator implements ComponentCodeGenerator {
 
       // 生成属性设置代码
       code += generator.generatePropertySetters(component, indent, modifiedContext);
+
+      // 生成事件绑定代码
+      const eventGenerator = EventGeneratorFactory.getGenerator(component.type);
+      if (eventGenerator && component.eventConfigs && component.eventConfigs.length > 0) {
+        code += eventGenerator.generateEventBindings(component, indent, context.componentMap);
+      }
 
       // 递归生成子组件（如果有）
       if (component.children && component.children.length > 0) {
