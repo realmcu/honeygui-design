@@ -256,6 +256,7 @@ export class HmlParser {
       visible: attributes.visible !== 'false',
       enabled: attributes.enabled !== 'false',
       locked: attributes.locked === 'true',
+      showOverflow: attributes.showOverflow === 'true',
       zIndex: parseInt(attributes.zIndex || '0')
     };
 
@@ -480,6 +481,7 @@ export class HmlParser {
       visible: attributes.visible !== 'false',
       enabled: attributes.enabled !== 'false',
       locked: attributes.locked === 'true',
+      showOverflow: attributes.showOverflow === 'true',
       zIndex: parseInt(attributes.zIndex || '0')
     };
 

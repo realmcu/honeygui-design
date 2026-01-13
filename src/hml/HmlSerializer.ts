@@ -214,7 +214,7 @@ export class HmlSerializer {
             });
         }
 
-        // 序列化元属性（visible, enabled, locked, zIndex）
+        // 序列化元属性（visible, enabled, locked, zIndex, showOverflow）
         // 注意：name 不再单独输出，统一使用 id 作为标识
         if (component.visible === false) {
             attributesStr += ' visible="false"';
@@ -227,6 +227,9 @@ export class HmlSerializer {
         }
         if (component.zIndex && component.zIndex !== 0) {
             attributesStr += ' zIndex="' + component.zIndex + '"';
+        }
+        if (component.showOverflow === true) {
+            attributesStr += ' showOverflow="true"';
         }
 
         // 注意: component.events (旧的事件处理器对象) 已废弃，不再序列化
