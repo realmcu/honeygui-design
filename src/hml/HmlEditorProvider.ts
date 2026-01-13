@@ -35,11 +35,21 @@ export class HmlEditorProvider implements vscode.CustomTextEditorProvider {
             localRoots.push(vscode.Uri.file(projectRoot));
             logger.info(`[HmlEditorProvider] 项目根目录: ${projectRoot}`);
         } else {
-            // 如果没找到，使用 workspace
-            const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-            if (workspaceRoot) {
+            // 如果没找到 project.json，使用 HML 文件所在目录的父目录作为项目根目录
+            // 假设 HML 文件在 ui/ 目录下，父目录就是项目根目录
+            const hmlDir = path.dirname(document.uri.fsPath);
+            const parentDir = path.dirname(hmlDir);
+            localRoots.push(vscode.Uri.file(parentDir));
+            logger.info(`[HmlEditorProvider] 未找到project.json，使用父目录: ${parentDir}`);
+        }
+        
+        // 同时添加 workspace 根目录（如果存在且不同）
+        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        if (workspaceRoot) {
+            const alreadyAdded = localRoots.some(r => r.fsPath === workspaceRoot);
+            if (!alreadyAdded) {
                 localRoots.push(vscode.Uri.file(workspaceRoot));
-                logger.info(`[HmlEditorProvider] 使用workspace: ${workspaceRoot}`);
+                logger.info(`[HmlEditorProvider] 添加workspace: ${workspaceRoot}`);
             }
         }
         

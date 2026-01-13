@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { DesignerPanel } from './DesignerPanel';
 import { logger } from '../utils/Logger';
 import { ProjectUtils } from '../utils/ProjectUtils';
@@ -47,13 +48,22 @@ export class DesignerPanelFactory {
             if (projectRoot) {
                 logger.info(`[DesignerPanelFactory] Found project root: ${projectRoot}`);
                 localRoots.push(vscode.Uri.file(projectRoot));
+            } else {
+                // 如果没找到 project.json，使用文件所在目录的父目录
+                const fileDir = path.dirname(filePath);
+                const parentDir = path.dirname(fileDir);
+                localRoots.push(vscode.Uri.file(parentDir));
+                logger.info(`[DesignerPanelFactory] 未找到project.json，使用父目录: ${parentDir}`);
             }
         }
         
-        if (!projectRoot) {
-            projectRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-            if (projectRoot) {
-                localRoots.push(vscode.Uri.file(projectRoot));
+        // 同时添加 workspace 根目录（如果存在且不同）
+        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        if (workspaceRoot) {
+            const alreadyAdded = localRoots.some(r => r.fsPath === workspaceRoot);
+            if (!alreadyAdded) {
+                localRoots.push(vscode.Uri.file(workspaceRoot));
+                logger.info(`[DesignerPanelFactory] 添加workspace: ${workspaceRoot}`);
             }
         }
 
