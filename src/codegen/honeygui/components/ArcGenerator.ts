@@ -15,7 +15,15 @@ export class ArcGenerator implements ComponentCodeGenerator {
     const startAngle = component.style?.startAngle || 0;
     const endAngle = component.style?.endAngle || 270;
     const strokeWidth = component.style?.strokeWidth || 8;
-    const color = this.convertColor(component.style?.color);
+    
+    // 获取透明度，默认 255（完全不透明）
+    // opacity 优先从 style 读取，兼容从 data 读取
+    const opacity = component.style?.opacity ?? component.data?.opacity ?? 255;
+    
+    // 根据透明度选择颜色格式
+    const color = opacity < 255 
+      ? this.convertColorWithOpacity(component.style?.color, opacity)
+      : this.convertColor(component.style?.color);
 
     // 重要：gui_arc_create 的 x, y 参数是圆心坐标，不是矩形框左上角
     // 设计器中存储的是矩形框左上角，需要转换为圆心坐标
@@ -30,10 +38,7 @@ export class ArcGenerator implements ComponentCodeGenerator {
     const indentStr = '    '.repeat(indent);
     let code = '';
 
-    // 透明度
-    if (component.style?.opacity !== undefined) {
-      code += `${indentStr}${component.id}->opacity_value = ${component.style.opacity};\n`;
-    }
+    // 注意：透明度已在 gui_rgba 中设置，不再单独设置 opacity_value
 
     // 渐变设置
     if (component.style?.useGradient && component.data?.gradientStops) {
@@ -75,6 +80,25 @@ export class ArcGenerator implements ComponentCodeGenerator {
     }
     
     return color;
+  }
+
+  /**
+   * 转换颜色值为 gui_rgba() 格式（带透明度）
+   */
+  private convertColorWithOpacity(color: string | undefined, opacity: number): string {
+    if (!color) {
+      return `gui_rgba(255, 255, 255, ${opacity})`;
+    }
+    
+    if (color.startsWith('#')) {
+      const hex = color.substring(1);
+      const r = parseInt(hex.substring(0, 2), 16);
+      const g = parseInt(hex.substring(2, 4), 16);
+      const b = parseInt(hex.substring(4, 6), 16);
+      return `gui_rgba(${r}, ${g}, ${b}, ${opacity})`;
+    }
+    
+    return `gui_rgba(255, 255, 255, ${opacity})`;
   }
 
   /**

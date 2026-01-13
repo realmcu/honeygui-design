@@ -34,18 +34,31 @@ class ComponentRegistry {
 
 /**
  * HML解析器 (改进版本)
+ * 使用 preserveOrder 模式保持 XML 元素的原始顺序
  */
 export class HmlParser {
   private xmlParser: XMLParser;
+  private xmlParserOrdered: XMLParser;
   private idCounter = 0;
 
   constructor() {
+    // 普通解析器（用于 meta 等不需要保持顺序的部分）
     this.xmlParser = new XMLParser({
       ignoreAttributes: false,
       attributeNamePrefix: '',
       textNodeName: '_text',
-      parseAttributeValue: false,  // 关闭自动类型转换，所有属性值保持原始字符串
+      parseAttributeValue: false,
       trimValues: true
+    });
+    
+    // 保持顺序的解析器（用于 view 中的组件）
+    this.xmlParserOrdered = new XMLParser({
+      ignoreAttributes: false,
+      attributeNamePrefix: '',
+      textNodeName: '_text',
+      parseAttributeValue: false,
+      trimValues: true,
+      preserveOrder: true  // 保持 XML 元素的原始顺序
     });
   }
 
@@ -54,6 +67,7 @@ export class HmlParser {
    */
   parse(content: string): Document {
     try {
+      // 使用普通解析器获取 meta
       const parsed = this.xmlParser.parse(content);
       
       if (!parsed.hml) {
@@ -61,7 +75,10 @@ export class HmlParser {
       }
 
       const meta = this._parseMeta(parsed.hml.meta || {});
-      const view = this._parseView(parsed.hml.view || {}, meta);
+      
+      // 使用保持顺序的解析器解析 view
+      const parsedOrdered = this.xmlParserOrdered.parse(content);
+      const view = this._parseViewOrdered(parsedOrdered, meta);
 
       return { meta, view };
     } catch (error) {
@@ -96,7 +113,253 @@ export class HmlParser {
   }
 
   /**
-   * 解析视图
+   * 解析视图（保持顺序版本）
+   * preserveOrder 模式下的数据结构是数组形式
+   */
+  private _parseViewOrdered(parsedOrdered: any[], meta: Meta): View {
+    const componentMap = new Map<string, Component>();
+
+    // 找到 hml 元素
+    const hmlElement = parsedOrdered.find((item: any) => item.hml);
+    if (!hmlElement || !hmlElement.hml) {
+      return { components: [] };
+    }
+
+    // 找到 view 元素
+    const viewElement = hmlElement.hml.find((item: any) => item.view);
+    if (!viewElement || !viewElement.view) {
+      return { components: [] };
+    }
+
+    // 解析 view 中的组件（保持顺序）
+    this._parseChildrenOrdered(viewElement.view, componentMap, undefined);
+
+    return {
+      components: Array.from(componentMap.values())
+    };
+  }
+
+  /**
+   * 规范化属性名（移除 preserveOrder 模式下的 @_ 前缀）
+   */
+  private _normalizeAttributes(rawAttributes: Record<string, any>): Record<string, any> {
+    const normalized: Record<string, any> = {};
+    
+    for (const key of Object.keys(rawAttributes)) {
+      // 移除 @_ 前缀
+      const normalizedKey = key.startsWith('@_') ? key.substring(2) : key;
+      normalized[normalizedKey] = rawAttributes[key];
+    }
+    
+    return normalized;
+  }
+
+  /**
+   * 解析子组件（保持顺序版本）
+   * preserveOrder 模式下，子元素是数组，每个元素是 { tagName: [...children], ':@': { '@_attrName': value } }
+   */
+  private _parseChildrenOrdered(
+    elements: any[],
+    componentMap: Map<string, Component>,
+    parentId: string | undefined
+  ): string[] {
+    const childIds: string[] = [];
+    let listItemIndex = 0;
+
+    if (!Array.isArray(elements)) {
+      return childIds;
+    }
+
+    elements.forEach((element: any) => {
+      // 获取标签名（排除 :@ 属性对象）
+      const tagName = Object.keys(element).find(key => key !== ':@');
+      if (!tagName) return;
+
+      // 跳过非组件元素
+      if (!ComponentRegistry.isValidComponent(tagName)) {
+        return;
+      }
+
+      // 获取属性（preserveOrder 模式下属性名有 @_ 前缀）
+      const rawAttributes = element[':@'] || {};
+      const attributes = this._normalizeAttributes(rawAttributes);
+      const children = element[tagName] || [];
+
+      // 解析组件
+      const component = this._parseComponentOrdered(tagName, attributes, children, componentMap, parentId);
+      
+      // 对于 hg_list 的 hg_list_item 子组件，自动分配 index
+      if (parentId) {
+        const parent = componentMap.get(parentId);
+        if (parent?.type === 'hg_list' && component.type === 'hg_list_item') {
+          if (component.data && component.data.index === undefined) {
+            component.data.index = listItemIndex;
+          }
+          listItemIndex++;
+        }
+      }
+
+      childIds.push(component.id);
+    });
+
+    return childIds;
+  }
+
+  /**
+   * 解析单个组件（保持顺序版本）
+   */
+  private _parseComponentOrdered(
+    tagName: string,
+    attributes: Record<string, any>,
+    children: any[],
+    componentMap: Map<string, Component>,
+    parentId?: string
+  ): Component {
+    const componentId = attributes.id || this._generateId(tagName);
+
+    // 检查是否已存在
+    if (componentMap.has(componentId)) {
+      return componentMap.get(componentId)!;
+    }
+
+    // 解析位置和尺寸
+    const position: ComponentPosition = {
+      x: parseInt(attributes.x || '0'),
+      y: parseInt(attributes.y || '0'),
+      width: parseInt(attributes.width || '100'),
+      height: parseInt(attributes.height || '40')
+    };
+
+    // 分离属性
+    const { style, data, events } = this._categorizeAttributes(attributes);
+
+    // 应用默认值（针对 list 控件）
+    if (tagName === 'hg_list') {
+      this._applyListDefaults(style, data);
+    }
+
+    // 解析事件配置
+    const eventConfigs = this._parseEventConfigsOrdered(children);
+
+    // 创建组件
+    const component: Component = {
+      id: componentId,
+      type: tagName,
+      name: attributes.name || componentId,
+      position,
+      style,
+      data,
+      events,
+      eventConfigs,
+      children: [],
+      parent: parentId || null,
+      visible: attributes.visible !== 'false',
+      enabled: attributes.enabled !== 'false',
+      locked: attributes.locked === 'true',
+      zIndex: parseInt(attributes.zIndex || '0')
+    };
+
+    // 添加到映射
+    componentMap.set(componentId, component);
+
+    // 递归解析子组件（保持顺序）
+    component.children = this._parseChildrenOrdered(children, componentMap, componentId);
+
+    // 对于 hg_list 组件，按 y/x 坐标排序子组件（hg_list_item）
+    if (tagName === 'hg_list' && component.children && component.children.length > 0) {
+      const childComponents = component.children
+        .map(childId => componentMap.get(childId))
+        .filter(child => child !== undefined) as Component[];
+      
+      const direction = style?.direction || data?.direction || 'VERTICAL';
+      childComponents.sort((a, b) => {
+        if (direction === 'VERTICAL') {
+          return a.position.y - b.position.y;
+        } else {
+          return a.position.x - b.position.x;
+        }
+      });
+      
+      childComponents.forEach((child, idx) => {
+        if (child.data) {
+          child.data.index = idx;
+        } else {
+          child.data = { index: idx };
+        }
+      });
+      
+      component.children = childComponents.map(c => c.id);
+    }
+
+    return component;
+  }
+
+  /**
+   * 解析事件配置（保持顺序版本）
+   */
+  private _parseEventConfigsOrdered(children: any[]): EventConfig[] | undefined {
+    if (!Array.isArray(children)) return undefined;
+
+    // 找到 events 元素
+    const eventsElement = children.find((item: any) => item.events);
+    if (!eventsElement || !eventsElement.events) return undefined;
+
+    const eventConfigs: EventConfig[] = [];
+    const eventElements = eventsElement.events;
+
+    if (!Array.isArray(eventElements)) return undefined;
+
+    eventElements.forEach((eventEl: any) => {
+      if (!eventEl.event) return;
+
+      const rawAttrs = eventEl[':@'] || {};
+      const attrs = this._normalizeAttributes(rawAttrs);
+      const eventType = attrs.type as EventType;
+      if (!eventType) return;
+
+      const eventConfig: EventConfig = {
+        type: eventType,
+        actions: [],
+      };
+
+      if (eventType === 'onMessage' && attrs.message) {
+        eventConfig.message = attrs.message;
+      }
+
+      if (attrs.handler) {
+        eventConfig.handler = attrs.handler;
+      }
+
+      // 解析动作
+      const actionElements = eventEl.event;
+      if (Array.isArray(actionElements)) {
+        actionElements.forEach((actionEl: any) => {
+          if (!actionEl.action) return;
+          
+          const rawActionAttrs = actionEl[':@'] || {};
+          const actionAttrs = this._normalizeAttributes(rawActionAttrs);
+          const action: Action = {
+            type: actionAttrs.type as ActionType,
+          };
+
+          if (actionAttrs.target) action.target = actionAttrs.target;
+          if (actionAttrs.message) action.message = actionAttrs.message;
+          if (actionAttrs.functionName) action.functionName = actionAttrs.functionName;
+          if (actionAttrs.switchOutStyle) action.switchOutStyle = actionAttrs.switchOutStyle;
+          if (actionAttrs.switchInStyle) action.switchInStyle = actionAttrs.switchInStyle;
+
+          eventConfig.actions.push(action);
+        });
+      }
+
+      eventConfigs.push(eventConfig);
+    });
+
+    return eventConfigs.length > 0 ? eventConfigs : undefined;
+  }
+
+  /**
+   * 解析视图（旧版本，保留兼容）
    */
   private _parseView(viewElement: any, meta: Meta): View {
     const components: Component[] = [];
@@ -246,15 +509,16 @@ export class HmlParser {
       // 文本样式属性
       'align', 'hAlign', 'vAlign', 'letterSpacing', 'lineSpacing', 'wordWrap', 'wordBreak',
       // 渐变属性
-      'useGradient', 'gradientType', 'gradientDirection'
-
+      'useGradient', 'gradientType', 'gradientDirection',
+      // 透明度
+      'opacity'
     ]);
 
     // 需要转换为数字的属性
     const numericProps = new Set([
       'fontSize', 'borderRadius', 'padding', 'margin',
       'titleBarHeight', 'radius', 'startAngle', 'endAngle', 'strokeWidth',
-      'itemWidth', 'itemHeight'
+      'itemWidth', 'itemHeight', 'opacity'
     ]);
 
     const dataProps = new Set([
@@ -269,7 +533,7 @@ export class HmlParser {
       // 字体配置属性
       'fontType', 'renderMode', 'fontSize',
       // hg_view 特有属性
-      'residentMemory', 'animateStep', 'opacity'
+      'residentMemory', 'animateStep'
     ]);
 
     const metaProps = new Set([
@@ -315,8 +579,8 @@ export class HmlParser {
         if (['loop', 'createBar', 'autoAlign', 'inertia'].includes(key)) {
           value = value === 'true' || value === true;
         }
-        // 数字类型属性转换
-        if (['noteNum', 'offset', 'outScope'].includes(key) && typeof value === 'string') {
+        // 数字类型属性转换（包括 opacity）
+        if (['noteNum', 'offset', 'outScope', 'opacity', 'animateStep'].includes(key) && typeof value === 'string') {
           const num = parseFloat(value);
           value = isNaN(num) ? value : num;
         }
