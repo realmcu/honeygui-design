@@ -342,15 +342,20 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
   /**
    * 生成 hg_view/hg_window 组件代码
    * 使用对应的 Generator 生成，并处理子组件
+   * 子组件按 children 数组顺序生成（即组件树的显示顺序）
+   * 先创建的组件显示在底层，后创建的显示在上层
    */
   private generateViewComponent(component: Component, indent: number): string {
     const generator = ComponentGeneratorFactory.getGenerator(component.type);
     let code = generator.generateCreation(component, indent, this.createGeneratorContext());
     
-    // 生成子组件代码
+    // 生成子组件代码（按 children 数组顺序，即组件树显示顺序）
     let childrenCode = '';
     if (component.children && component.children.length > 0) {
       childrenCode += '\n';
+      
+      // 直接使用 children 数组顺序，不做额外排序
+      // 组件树中靠前的组件先创建（显示在底层），靠后的后创建（显示在上层）
       component.children.forEach(childId => {
         const child = this.componentMap.get(childId);
         if (child) {
