@@ -86,20 +86,20 @@ export const ListWidget: React.FC<WidgetProps> = ({ component, style, handlers, 
         c => c.type === 'hg_list_item' && c.parent === component.id
       );
       
-      // 如果已经有子组件，不要重新创建或修改位置
-      // 只在没有子组件时才自动创建
+      // 如果已经有 list_item 子组件，不要重新创建
+      // 位置由 HML 解析器在加载时根据 itemWidth/itemHeight/space 计算
       if (existingListItems.length > 0) {
-        // 确保 children 数组正确
-        const existingIds = existingListItems.map(c => c.id);
-        const sortedCurrent = [...currentChildren].sort();
-        const sortedExisting = [...existingIds].sort();
-        if (JSON.stringify(sortedCurrent) !== JSON.stringify(sortedExisting)) {
-          updateComponent(component.id, { children: existingIds });
-        }
+        // 不修改 children 数组，保持原有的子组件关系
         return;
       }
       
-      // 没有子组件，创建新的 list_item
+      // 没有 list_item 子组件，创建新的 list_item
+      // 保留其他类型的子组件
+      const otherChildren = currentChildren.filter(childId => {
+        const child = components.find(c => c.id === childId);
+        return child && child.type !== 'hg_list_item';
+      });
+      
       const targetChildren: string[] = [];
       
       for (let i = 0; i < noteNum; i++) {
@@ -132,9 +132,9 @@ export const ListWidget: React.FC<WidgetProps> = ({ component, style, handlers, 
         }
       }
       
-      // 更新列表的 children
+      // 更新列表的 children：先放 list_item，再放其他子组件
       if (targetChildren.length > 0) {
-        updateComponent(component.id, { children: targetChildren });
+        updateComponent(component.id, { children: [...targetChildren, ...otherChildren] });
       }
     } finally {
       syncInProgress.current = false;
