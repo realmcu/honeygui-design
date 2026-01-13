@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { PropertyPanelProps } from './types';
 import { PropertyEditor } from './PropertyEditor';
 import { isContainerType } from '../../utils/componentUtils';
@@ -89,6 +89,15 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
   const availableParents = getAvailableParents();
   const currentParent = components.find(c => c.id === component.parent);
 
+  // 获取 moveComponent 函数
+  const moveComponent = useDesignerStore(state => state.moveComponent);
+
+  // 处理父对象变更
+  const handleParentChange = useCallback((newParentId: string | null) => {
+    if (newParentId === component.parent) return;
+    moveComponent(component.id, newParentId);
+  }, [component.id, component.parent, moveComponent]);
+
   // ID 编辑状态
   const [editingId, setEditingId] = useState(component.id);
   const [idError, setIdError] = useState<string | null>(null);
@@ -166,7 +175,7 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
             <label>父对象</label>
             <select
               value={component.parent || ''}
-              onChange={(e) => onUpdate({ parent: e.target.value || null })}
+              onChange={(e) => handleParentChange(e.target.value || null)}
               disabled={disableParent}
               style={{
                 width: '100%',

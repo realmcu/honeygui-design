@@ -265,30 +265,61 @@ export class HmlParser {
     // 递归解析子组件（保持顺序）
     component.children = this._parseChildrenOrdered(children, componentMap, componentId);
 
-    // 对于 hg_list 组件，按 y/x 坐标排序子组件（hg_list_item）
+    // 对于 hg_list 组件，按 y/x 坐标排序子组件（hg_list_item），并修正位置
     if (tagName === 'hg_list' && component.children && component.children.length > 0) {
-      const childComponents = component.children
+      // 只处理 hg_list_item 类型的子组件
+      const listItemComponents = component.children
         .map(childId => componentMap.get(childId))
-        .filter(child => child !== undefined) as Component[];
+        .filter(child => child !== undefined && child.type === 'hg_list_item') as Component[];
       
-      const direction = style?.direction || data?.direction || 'VERTICAL';
-      childComponents.sort((a, b) => {
-        if (direction === 'VERTICAL') {
-          return a.position.y - b.position.y;
-        } else {
-          return a.position.x - b.position.x;
-        }
-      });
-      
-      childComponents.forEach((child, idx) => {
-        if (child.data) {
-          child.data.index = idx;
-        } else {
-          child.data = { index: idx };
-        }
-      });
-      
-      component.children = childComponents.map(c => c.id);
+      if (listItemComponents.length > 0) {
+        const direction = style?.direction || data?.direction || 'VERTICAL';
+        const isVertical = direction === 'VERTICAL';
+        
+        // 先按位置排序
+        listItemComponents.sort((a, b) => {
+          if (isVertical) {
+            return a.position.y - b.position.y;
+          } else {
+            return a.position.x - b.position.x;
+          }
+        });
+        
+        // 获取 list 的布局属性
+        const itemWidth = parseInt(style?.itemWidth) || 100;
+        const itemHeight = parseInt(style?.itemHeight) || 100;
+        const space = parseInt(style?.space) || 0;
+        
+        // 重新计算每个 list_item 的位置和尺寸
+        listItemComponents.forEach((child, idx) => {
+          // 更新 index
+          if (child.data) {
+            child.data.index = idx;
+          } else {
+            child.data = { index: idx };
+          }
+          
+          // 根据 direction、itemWidth、itemHeight、space 计算正确的位置
+          if (isVertical) {
+            child.position.x = 0;
+            child.position.y = idx * (itemHeight + space);
+            child.position.width = itemWidth;
+            child.position.height = itemHeight;
+          } else {
+            child.position.x = idx * (itemWidth + space);
+            child.position.y = 0;
+            child.position.width = itemWidth;
+            child.position.height = itemHeight;
+          }
+        });
+        
+        // 重新排列 children 数组：先放排序后的 list_item，再放其他子组件
+        const otherChildren = component.children.filter(childId => {
+          const child = componentMap.get(childId);
+          return child && child.type !== 'hg_list_item';
+        });
+        component.children = [...listItemComponents.map(c => c.id), ...otherChildren];
+      }
     }
 
     return component;
@@ -652,33 +683,61 @@ export class HmlParser {
       }
     });
 
-    // 对于 hg_list 组件，按 y 坐标排序子组件（hg_list_item），并重新分配 index
+    // 对于 hg_list 组件，按 y 坐标排序子组件（hg_list_item），并重新分配 index 和位置
     if (parentComponent.type === 'hg_list' && parentComponent.children && parentComponent.children.length > 0) {
-      const childComponents = parentComponent.children
+      // 只处理 hg_list_item 类型的子组件
+      const listItemComponents = parentComponent.children
         .map(childId => componentMap.get(childId))
-        .filter(child => child !== undefined) as Component[];
+        .filter(child => child !== undefined && child.type === 'hg_list_item') as Component[];
       
-      // 按 y 坐标排序（对于垂直列表）或 x 坐标排序（对于水平列表）
-      const direction = parentComponent.style?.direction || parentComponent.data?.direction || 'VERTICAL';
-      childComponents.sort((a, b) => {
-        if (direction === 'VERTICAL') {
-          return a.position.y - b.position.y;
-        } else {
-          return a.position.x - b.position.x;
-        }
-      });
-      
-      // 重新分配 index（按排序后的顺序）
-      childComponents.forEach((child, idx) => {
-        if (child.data) {
-          child.data.index = idx;
-        } else {
-          child.data = { index: idx };
-        }
-      });
-      
-      // 更新 children 数组为排序后的顺序
-      parentComponent.children = childComponents.map(c => c.id);
+      if (listItemComponents.length > 0) {
+        // 按 y 坐标排序（对于垂直列表）或 x 坐标排序（对于水平列表）
+        const direction = parentComponent.style?.direction || parentComponent.data?.direction || 'VERTICAL';
+        const isVertical = direction === 'VERTICAL';
+        
+        listItemComponents.sort((a, b) => {
+          if (isVertical) {
+            return a.position.y - b.position.y;
+          } else {
+            return a.position.x - b.position.x;
+          }
+        });
+        
+        // 获取 list 的布局属性
+        const itemWidth = parseInt(parentComponent.style?.itemWidth) || 100;
+        const itemHeight = parseInt(parentComponent.style?.itemHeight) || 100;
+        const space = parseInt(parentComponent.style?.space) || 0;
+        
+        // 重新分配 index 和位置（按排序后的顺序）
+        listItemComponents.forEach((child, idx) => {
+          // 更新 index
+          if (child.data) {
+            child.data.index = idx;
+          } else {
+            child.data = { index: idx };
+          }
+          
+          // 根据 direction、itemWidth、itemHeight、space 计算正确的位置
+          if (isVertical) {
+            child.position.x = 0;
+            child.position.y = idx * (itemHeight + space);
+            child.position.width = itemWidth;
+            child.position.height = itemHeight;
+          } else {
+            child.position.x = idx * (itemWidth + space);
+            child.position.y = 0;
+            child.position.width = itemWidth;
+            child.position.height = itemHeight;
+          }
+        });
+        
+        // 重新排列 children 数组：先放排序后的 list_item，再放其他子组件
+        const otherChildren = parentComponent.children.filter(childId => {
+          const child = componentMap.get(childId);
+          return child && child.type !== 'hg_list_item';
+        });
+        parentComponent.children = [...listItemComponents.map(c => c.id), ...otherChildren];
+      }
     }
   }
 

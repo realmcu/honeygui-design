@@ -279,13 +279,20 @@ export class HmlSerializer {
                 // 对于 hg_list 组件，按 y/x 坐标排序子组件（hg_list_item）
                 let childrenToSerialize = component.children!;
                 if (component.type === 'hg_list') {
-                    const childComponents = component.children!
+                    // 只对 hg_list_item 类型的子组件进行排序
+                    const listItemComponents = component.children!
                         .map(childId => this.componentMap.get(childId))
-                        .filter(child => child !== undefined) as Component[];
+                        .filter(child => child !== undefined && child.type === 'hg_list_item') as Component[];
+                    
+                    const otherChildren = component.children!
+                        .filter(childId => {
+                            const child = this.componentMap.get(childId);
+                            return child && child.type !== 'hg_list_item';
+                        });
                     
                     // 按 y 坐标排序（对于垂直列表）或 x 坐标排序（对于水平列表）
                     const direction = component.style?.direction || component.data?.direction || 'VERTICAL';
-                    childComponents.sort((a, b) => {
+                    listItemComponents.sort((a, b) => {
                         if (direction === 'VERTICAL') {
                             return a.position.y - b.position.y;
                         } else {
@@ -294,13 +301,14 @@ export class HmlSerializer {
                     });
                     
                     // 重新分配 index（按排序后的顺序）
-                    childComponents.forEach((child, idx) => {
+                    listItemComponents.forEach((child, idx) => {
                         if (child.data) {
                             child.data.index = idx;
                         }
                     });
                     
-                    childrenToSerialize = childComponents.map(c => c.id);
+                    // 先序列化 list_item，再序列化其他子组件
+                    childrenToSerialize = [...listItemComponents.map(c => c.id), ...otherChildren];
                 }
                 
                 childrenToSerialize.forEach(childId => {
