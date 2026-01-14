@@ -65,9 +65,11 @@ export class ViewGenerator implements ComponentCodeGenerator {
       code += `${indentStr}    GUI_UNUSED(view);\n`;
     }
     
-    // 初始化时间字符串变量
+    // 初始化时间字符串变量（在函数开头统一声明，避免重复定义）
     const timeLabels = this.collectTimeLabels(component, context);
-    if (timeLabels.length > 0) {
+    const hasTimeLabels = timeLabels.length > 0;
+    
+    if (hasTimeLabels) {
       code += `\n${indentStr}    // 初始化时间字符串\n`;
       code += `${indentStr}    time_t now = time(NULL);\n`;
       code += `${indentStr}    struct tm *t = localtime(&now);\n`;

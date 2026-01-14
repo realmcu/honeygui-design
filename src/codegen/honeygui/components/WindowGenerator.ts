@@ -38,12 +38,12 @@ export class WindowGenerator implements ComponentCodeGenerator {
     }
 
     
-    // 初始化时间字符串变量
+    // Window 中的时间标签初始化代码
+    // 注意：不生成 time_t now 和 struct tm *t 的声明，因为它们已经在 view 的 switch_in 函数中声明了
+    // 这里只生成 sprintf 调用来初始化时间字符串
     const timeLabels = this.collectTimeLabels(component, context);
     if (timeLabels.length > 0) {
-      code += `\n${indentStr}// 初始化时间字符串\n`;
-      code += `${indentStr}time_t now = time(NULL);\n`;
-      code += `${indentStr}struct tm *t = localtime(&now);\n`;
+      code += `\n${indentStr}// 初始化时间字符串（使用 view 中已声明的 now 和 t 变量）\n`;
       code += `${indentStr}if (t != NULL)\n`;
       code += `${indentStr}{\n`;
       timeLabels.forEach(labelId => {
