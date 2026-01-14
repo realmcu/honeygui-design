@@ -304,11 +304,20 @@ export class SimulationRunner {
      * @param delayMs 每次重试的延迟（毫秒）
      */
     private async removeDirectoryWithRetry(dirPath: string, maxRetries: number, delayMs: number): Promise<void> {
+        // 先等待一小段时间，让文件系统释放句柄
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         let lastError: Error | null = null;
         
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                await fs.promises.rm(dirPath, { recursive: true, force: true });
+                // 尝试使用 maxRetries 选项，让 Node.js 自己重试
+                await fs.promises.rm(dirPath, { 
+                    recursive: true, 
+                    force: true,
+                    maxRetries: 3,
+                    retryDelay: 100
+                });
                 
                 // 成功，记录日志并返回
                 if (attempt > 1) {
@@ -321,13 +330,13 @@ export class SimulationRunner {
                 const errorCode = (error as any)?.code;
                 
                 // 如果不是文件占用错误，直接抛出
-                if (errorCode !== 'EBUSY' && errorCode !== 'EPERM' && errorCode !== 'EACCES') {
+                if (errorCode !== 'EBUSY' && errorCode !== 'EPERM' && errorCode !== 'EACCES' && errorCode !== 'ENOTEMPTY') {
                     throw error;
                 }
                 
-                // 如果是最后一次尝试，抛出错误
+                // 如果是最后一次尝试，尝试备用方案
                 if (attempt === maxRetries) {
-                    this.log(`目录删除失败，已重试 ${maxRetries} 次`);
+                    this.log(`目录删除失败，已重试 ${maxRetries} 次，尝试备用方案...`);
                     break;
                 }
                 
@@ -350,6 +359,16 @@ export class SimulationRunner {
             this.log(`逐个删除也失败: ${(recursiveError as Error).message}`);
         }
         
+        // 最后尝试：使用 rimraf 风格的强制删除
+        try {
+            this.log('尝试强制删除（忽略错误）...');
+            await this.forceRemoveDirectory(dirPath);
+            this.log('强制删除成功');
+            return;
+        } catch (forceError) {
+            this.log(`强制删除失败: ${(forceError as Error).message}`);
+        }
+        
         // 抛出详细的错误信息
         throw new Error(
             `无法删除目录 ${dirPath}\n\n` +
@@ -364,6 +383,58 @@ export class SimulationRunner {
             `3. 手动删除 build 目录后重试\n` +
             `4. 重启 VSCode`
         );
+    }
+
+    /**
+     * 强制删除目录（忽略部分错误）
+     * 尽可能删除文件，即使部分文件删除失败也继续
+     */
+    private async forceRemoveDirectory(dirPath: string): Promise<void> {
+        if (!fs.existsSync(dirPath)) {
+            return;
+        }
+
+        try {
+            const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
+            
+            // 并行删除所有条目（提高速度）
+            await Promise.allSettled(
+                entries.map(async (entry) => {
+                    const fullPath = path.join(dirPath, entry.name);
+                    
+                    if (entry.isDirectory()) {
+                        // 递归删除子目录
+                        await this.forceRemoveDirectory(fullPath);
+                    } else {
+                        // 删除文件
+                        try {
+                            await fs.promises.unlink(fullPath);
+                        } catch (error) {
+                            // 忽略单个文件删除失败
+                            this.log(`跳过文件: ${entry.name} (${(error as Error).message})`);
+                        }
+                    }
+                })
+            );
+            
+            // 尝试删除目录本身
+            try {
+                await fs.promises.rmdir(dirPath);
+            } catch (error) {
+                // 如果目录不为空，再次尝试
+                const errorCode = (error as any)?.code;
+                if (errorCode === 'ENOTEMPTY') {
+                    // 等待一下再试
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    await fs.promises.rmdir(dirPath);
+                } else {
+                    throw error;
+                }
+            }
+        } catch (error) {
+            // 记录错误但不抛出
+            this.log(`删除目录时出错: ${(error as Error).message}`);
+        }
     }
 
     /**
