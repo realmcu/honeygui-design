@@ -86,14 +86,8 @@ export class CreateProjectPanel {
                     case 'selectFolder':
                         await this._selectProjectFolder();
                         break;
-                    case 'selectSdkPath':
-                        await this._selectSdkPath();
-                        break;
                     case 'selectTemplateFolder':
                         await this._selectTemplateFolder();
-                        break;
-                    case 'selectTemplateSdkPath':
-                        await this._selectTemplateSdkPath();
                         break;
                     case 'getTemplates':
                         this._sendTemplates();
@@ -103,9 +97,6 @@ export class CreateProjectPanel {
                         break;
                     case 'createTemplateProject':
                         await this._createTemplateProject(message.config);
-                        break;
-                    case 'cloneSdk':
-                        await this._cloneSdk(message.source, message.target);
                         break;
                     case 'notify':
                         vscode.window.showInformationMessage(message.text);
@@ -180,31 +171,6 @@ export class CreateProjectPanel {
             WebviewUtils.handleWebviewError(this._panel.webview, 'Failed to select folder');
         }
     }
-    
-    /**
-     * 选择 HoneyGUI SDK 路径
-     */
-    private async _selectSdkPath(): Promise<void> {
-        try {
-            const options: vscode.OpenDialogOptions = {
-                canSelectFolders: true,
-                canSelectFiles: false,
-                canSelectMany: false,
-                openLabel: 'Select HoneyGUI SDK location'
-            };
-            
-            const result = await vscode.window.showOpenDialog(options);
-            if (result && result.length > 0) {
-                this._panel.webview.postMessage({
-                    command: 'sdkPathSelected',
-                    sdkPath: result[0].fsPath
-                });
-            }
-        } catch (error) {
-            logger.error(`选择 SDK 路径失败: ${error}`);
-            WebviewUtils.handleWebviewError(this._panel.webview, 'Failed to select SDK path');
-        }
-    }
 
     /**
      * 选择模板项目文件夹
@@ -232,57 +198,7 @@ export class CreateProjectPanel {
     }
 
     /**
-     * 选择模板项目的 SDK 路径
-     */
-    private async _selectTemplateSdkPath(): Promise<void> {
-        try {
-            const options: vscode.OpenDialogOptions = {
-                canSelectFolders: true,
-                canSelectFiles: false,
-                canSelectMany: false,
-                openLabel: 'Select HoneyGUI SDK location'
-            };
-            
-            const result = await vscode.window.showOpenDialog(options);
-            if (result && result.length > 0) {
-                this._panel.webview.postMessage({
-                    command: 'templateSdkPathSelected',
-                    sdkPath: result[0].fsPath
-                });
-            }
-        } catch (error) {
-            logger.error(`选择 SDK 路径失败: ${error}`);
-            WebviewUtils.handleWebviewError(this._panel.webview, 'Failed to select SDK path');
-        }
-    }
-
-    /**
-     * 克隆 HoneyGUI SDK
-     */
-    private async _cloneSdk(source: 'github' | 'gitee', target: 'empty' | 'template' = 'empty'): Promise<void> {
-        const urls = {
-            github: 'https://github.com/realmcu/HoneyGUI.git',
-            gitee: 'https://gitee.com/realmcu/HoneyGUI.git'
-        };
-        const url = urls[source] || urls.gitee;
-        const targetPath = path.join(os.homedir(), '.HoneyGUI-SDK');
-
-        try {
-            // 检查目标目录是否已存在
-            if (fs.existsSync(targetPath)) {
-                this._panel.webview.postMessage({
-                    command: 'cloneComplete',
-                    sdkPath: targetPath,
-                    target: target
-                });
-                vscode.window.showInformationMessage(`SDK 目录已存在: ${targetPath}`);
-                return;
-            }
-
-            this._panel.webview.postMessage({
-                command: 'cloneProgress',
-                percent: 10,
-                text: '正在克隆 HoneyGUI SDK...'
+     * 创建项目
             });
 
             // 使用 child_process 执行 git clone
@@ -361,14 +277,10 @@ export class CreateProjectPanel {
      */
     private async _createProject(config: any): Promise<void> {
         try {
-            const { projectName, saveLocation, appId, resolution, cornerRadius, targetEngine, minSdk, pixelMode, honeyguiSdkPath, romfsBaseAddr } = config;
+            const { projectName, saveLocation, appId, resolution, cornerRadius, targetEngine, minSdk, pixelMode, romfsBaseAddr } = config;
 
             // 记录日志用于调试
-            logger.info(`[CreateProjectPanel] Creating project: projectName=${projectName}, saveLocation=${saveLocation}, appId=${appId}, targetEngine=${targetEngine}, sdkPath=${honeyguiSdkPath}, romfsBaseAddr=${romfsBaseAddr}, cornerRadius=${cornerRadius}`);
-
-            // 设置默认 SDK 路径
-            const sdkPath = honeyguiSdkPath || ProjectUtils.getDefaultSdkPath();
-            logger.info(`[CreateProjectPanel] Using SDK path: ${sdkPath}`);
+            logger.info(`[CreateProjectPanel] Creating project: projectName=${projectName}, saveLocation=${saveLocation}, appId=${appId}, targetEngine=${targetEngine}, romfsBaseAddr=${romfsBaseAddr}, cornerRadius=${cornerRadius}`);
 
             // 验证必填字段
             if (!projectName || !saveLocation || !appId) {
@@ -429,7 +341,7 @@ export class CreateProjectPanel {
                 cancellable: false
             }, async () => {
                 // 创建项目结构
-                await this._createProjectStructure(projectPath, projectName, appId, resolution, cornerRadius, targetEngine || 'honeygui', minSdk, pixelMode, honeyguiSdkPath, romfsBaseAddr);
+                await this._createProjectStructure(projectPath, projectName, appId, resolution, cornerRadius, targetEngine || 'honeygui', minSdk, pixelMode, romfsBaseAddr);
             });
             
             // 显示成功消息
@@ -478,7 +390,6 @@ export class CreateProjectPanel {
         targetEngine: string,
         minSdk: string,
         pixelMode: string,
-        honeyguiSdkPath?: string,
         romfsBaseAddr?: string
     ): Promise<void> {
         // 创建目录结构
@@ -518,7 +429,6 @@ export class CreateProjectPanel {
             minSdk: minSdk,
             pixelMode: pixelMode,
             mainHmlFile: `ui/${hmlFileName}`,
-            honeyguiSdkPath: honeyguiSdkPath || ProjectUtils.getDefaultSdkPath(),
             romfsBaseAddr: romfsBaseAddr || DEFAULT_ROMFS_BASE_ADDR,
             created: new Date().toISOString()
         };
@@ -530,17 +440,10 @@ export class CreateProjectPanel {
         );
 
         // 创建 VSCode 工作区文件
-        // 创建 VSCode 工作区文件
-        const sdkRealguiPath = honeyguiSdkPath ? path.join(honeyguiSdkPath, 'realgui') : null;
-        const workspaceFolders: Array<{path: string, name?: string}> = [
-            { path: '.' }
-        ];
-        if (sdkRealguiPath && fs.existsSync(sdkRealguiPath)) {
-            workspaceFolders.push({ path: sdkRealguiPath, name: 'HoneyGUI-SDK' });
-        }
-        
         const workspaceConfig = {
-            folders: workspaceFolders,
+            folders: [
+                { path: '.' }
+            ],
             settings: {
                 'files.associations': {
                     '*.hml': 'xml'
@@ -558,8 +461,7 @@ export class CreateProjectPanel {
             'utf8'
         );
 
-        // SDK 路径已保存到 project.json，项目将直接引用 SDK 而不拷贝文件
-        logger.info(`[CreateProjectPanel] Project created with target engine: ${targetEngine}, SDK path: ${projectConfig.honeyguiSdkPath || 'default'}, romfs base addr: ${projectConfig.romfsBaseAddr}`);
+        logger.info(`[CreateProjectPanel] Project created with target engine: ${targetEngine}, romfs base addr: ${projectConfig.romfsBaseAddr}`);
     }
 
     /**
@@ -567,7 +469,7 @@ export class CreateProjectPanel {
      */
     private async _createTemplateProject(config: any): Promise<void> {
         try {
-            const { templateId, projectName, saveLocation, appId, honeyguiSdkPath, romfsBaseAddr } = config;
+            const { templateId, projectName, saveLocation, appId, romfsBaseAddr } = config;
 
             logger.info(`[CreateProjectPanel] Creating template project: templateId=${templateId}, projectName=${projectName}`);
 
@@ -620,9 +522,6 @@ export class CreateProjectPanel {
                 throw new Error(`Template not found: ${templateId}`);
             }
 
-            // 设置 SDK 路径
-            const sdkPath = honeyguiSdkPath || ProjectUtils.getDefaultSdkPath();
-
             // 使用 withProgress 显示创建进度（完成后自动消失）
             await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
@@ -630,29 +529,22 @@ export class CreateProjectPanel {
                 cancellable: false
             }, async () => {
                 // 使用模板创建项目（拷贝完整项目）
-                await template.generate(projectPath, projectName, sdkPath);
+                await template.generate(projectPath, projectName);
                 
-                // 创建完成后，更新 project.json 添加 SDK 路径和 romfs 地址
+                // 创建完成后，更新 project.json 添加 romfs 地址
                 const projectJsonPath = path.join(projectPath, 'project.json');
                 if (fs.existsSync(projectJsonPath)) {
                     const projectConfig = JSON.parse(fs.readFileSync(projectJsonPath, 'utf8'));
-                    projectConfig.honeyguiSdkPath = sdkPath;
                     projectConfig.romfsBaseAddr = romfsBaseAddr || DEFAULT_ROMFS_BASE_ADDR;
                     fs.writeFileSync(projectJsonPath, JSON.stringify(projectConfig, null, 2), 'utf8');
-                    logger.info(`[CreateProjectPanel] SDK path and romfs address added to project.json: ${sdkPath}, ${projectConfig.romfsBaseAddr}`);
+                    logger.info(`[CreateProjectPanel] Romfs address added to project.json: ${projectConfig.romfsBaseAddr}`);
                 }
 
                 // 创建 VSCode 工作区文件
-                const sdkRealguiPath = sdkPath ? path.join(sdkPath, 'realgui') : null;
-                const workspaceFolders: Array<{path: string, name?: string}> = [
-                    { path: '.' }
-                ];
-                if (sdkRealguiPath && fs.existsSync(sdkRealguiPath)) {
-                    workspaceFolders.push({ path: sdkRealguiPath, name: 'HoneyGUI-SDK' });
-                }
-                
                 const workspaceConfig = {
-                    folders: workspaceFolders,
+                    folders: [
+                        { path: '.' }
+                    ],
                     settings: {
                         'files.associations': {
                             '*.hml': 'xml'
@@ -711,8 +603,7 @@ export class CreateProjectPanel {
         targetEngine: string,
         minSdk: string,
         pixelMode: string,
-        templateId: string,
-        honeyguiSdkPath?: string
+        templateId: string
     ): Promise<void> {
         // 创建目录结构
         fs.mkdirSync(projectPath, { recursive: true });
@@ -775,7 +666,6 @@ Created: ${new Date().toLocaleString()}
             minSdk: minSdk,
             pixelMode: pixelMode,
             mainHmlFile: `ui/${hmlFileName}`,
-            honeyguiSdkPath: honeyguiSdkPath || ProjectUtils.getDefaultSdkPath(),
             template: templateId,
             created: new Date().toISOString()
         };

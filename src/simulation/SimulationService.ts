@@ -200,66 +200,6 @@ export class SimulationService {
     }
 
     /**
-     * 获取 SDK 路径（仅从项目配置读取）
-     */
-    private getSdkPath(projectRoot: string): string | undefined {
-        const projectConfig = ProjectUtils.loadProjectConfig(projectRoot);
-        return projectConfig.honeyguiSdkPath;
-    }
-
-    /**
-     * 检查 SDK 路径是否有效
-     */
-    private isValidSdkPath(sdkPath: string): boolean {
-        // 检查目录是否存在，以及是否包含 win32_sim 子目录
-        const win32SimPath = path.join(sdkPath, 'win32_sim');
-        return fs.existsSync(sdkPath) && fs.existsSync(win32SimPath);
-    }
-
-    /**
-     * 提示用户选择 SDK 路径
-     */
-    private async promptForSdkPath(projectRoot: string, reason: string = '未配置'): Promise<string | undefined> {
-        const choice = await vscode.window.showErrorMessage(
-            `HoneyGUI SDK ${reason}，请选择 SDK 目录`,
-            '选择 SDK 目录',
-            '取消'
-        );
-
-        if (choice !== '选择 SDK 目录') {
-            return undefined;
-        }
-
-        const uris = await vscode.window.showOpenDialog({
-            canSelectFiles: false,
-            canSelectFolders: true,
-            canSelectMany: false,
-            title: '选择 HoneyGUI SDK 目录'
-        });
-
-        if (!uris || uris.length === 0) {
-            return undefined;
-        }
-
-        const sdkPath = uris[0].fsPath;
-
-        // 验证选择的路径
-        if (!this.isValidSdkPath(sdkPath)) {
-            vscode.window.showErrorMessage('所选目录不是有效的 HoneyGUI SDK（缺少 win32_sim 目录）');
-            return undefined;
-        }
-
-        // 保存到 project.json
-        const configPath = path.join(projectRoot, 'project.json');
-        const config = ProjectUtils.loadProjectConfig(projectRoot);
-        config.honeyguiSdkPath = sdkPath;
-        fs.writeFileSync(configPath, JSON.stringify(config, null, 4));
-        vscode.window.showInformationMessage('SDK 路径已保存到项目配置');
-
-        return sdkPath;
-    }
-
-    /**
      * 设置运行器监听器
      */
     private setupRunnerListeners(): void {

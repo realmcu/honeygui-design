@@ -121,9 +121,9 @@ export class BuildCore {
         const svgCount = this.copySvgAssets(assetsDir, outputDir);
         this.logger.log(`SVG 拷贝完成: ${svgCount} 个`);
 
-        // 转换视频资源（暂时跳过，需要 FFmpeg）
+        // 转换视频资源
         this.logger.log('检查视频资源...');
-        const videoConverter = new VideoConverterService(undefined, (msg) => {
+        const videoConverter = new VideoConverterService((msg) => {
             this.logger.log(msg);
         });
         
@@ -219,25 +219,29 @@ export class BuildCore {
         // 获取 romfs 基地址
         const baseAddr = this.projectConfig.romfsBaseAddr || DEFAULT_ROMFS_BASE_ADDR;
 
-        // 使用 TypeScript 版本的 mkromfs
-        const { generateRomfs } = await import('../../tools/mkromfs');
+        // 使用 Python 版本的 mkromfs_for_honeygui.py
+        const mkromfsScript = path.join(__dirname, '..', '..', '..', 'tools', 'mkromfs_for_honeygui.py');
+        const { execSync } = require('child_process');
         
         // 生成 C 文件
-        await generateRomfs({
-            inputDir: assetsDir,
-            outputFile: romfsOutput,
-            baseAddr: parseInt(baseAddr, 16)
-        });
-        this.logger.log('romfs C 文件生成完成');
+        try {
+            execSync(`python3 "${mkromfsScript}" -i "${assetsDir}" -o "${romfsOutput}" -a ${baseAddr}`, {
+                stdio: 'inherit'
+            });
+            this.logger.log('romfs C 文件生成完成');
+        } catch (error) {
+            throw new Error(`生成 romfs C 文件失败: ${error}`);
+        }
 
         // 生成二进制文件（用于 UART 下载）
-        await generateRomfs({
-            inputDir: assetsDir,
-            outputFile: romfsBinOutput,
-            baseAddr: parseInt(baseAddr, 16),
-            binary: true
-        });
-        this.logger.log(`romfs 二进制文件生成完成 (基地址: ${baseAddr})`);
+        try {
+            execSync(`python3 "${mkromfsScript}" -i "${assetsDir}" -o "${romfsBinOutput}" -a ${baseAddr} -b`, {
+                stdio: 'inherit'
+            });
+            this.logger.log(`romfs 二进制文件生成完成 (基地址: ${baseAddr})`);
+        } catch (error) {
+            throw new Error(`生成 romfs 二进制文件失败: ${error}`);
+        }
     }
 
     async compile(): Promise<void> {

@@ -1,6 +1,7 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs';
+import { ProjectUtils } from '../utils/ProjectUtils';
 
 const execAsync = promisify(exec);
 
@@ -22,9 +23,9 @@ export interface EnvironmentCheckResult {
 export class EnvironmentChecker {
     /**
      * 检查完整环境
-     * @param libSimPath 插件内置的 lib/sim 路径
      */
-    async checkAll(libSimPath: string): Promise<EnvironmentCheckResult> {
+    async checkAll(): Promise<EnvironmentCheckResult> {
+        const libSimPath = ProjectUtils.getLibSimPath();
         const result: EnvironmentCheckResult = {
             success: true,
             sconsInstalled: false,

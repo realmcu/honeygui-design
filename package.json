@@ -241,11 +241,7 @@
           "default": 10000,
           "description": "预览超时时间（毫秒）"
         },
-        "honeygui.sdk.path": {
-          "type": "string",
-          "default": "",
-          "description": "HoneyGUI SDK 路径（用于编译仿真）"
-        },
+
         "honeygui.ui.gridSize": {
           "type": "number",
           "default": 8,

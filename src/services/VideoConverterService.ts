@@ -43,11 +43,9 @@ export type LogCallback = (message: string) => void;
  * 3. 如果没有尺寸变换需求，直接调用 SDK 转换原始视频
  */
 export class VideoConverterService {
-    private sdkPath?: string;
     private logCallback?: LogCallback;
 
-    constructor(sdkPath?: string, logCallback?: LogCallback) {
-        this.sdkPath = sdkPath;
+    constructor(logCallback?: LogCallback) {
         this.logCallback = logCallback;
     }
 
@@ -268,24 +266,14 @@ export class VideoConverterService {
         outputPath: string,
         options: VideoConvertOptions
     ): Promise<VideoConvertResult> {
-        // 检查 SDK 路径
-        if (!this.sdkPath) {
-            return {
-                success: false,
-                inputPath,
-                outputPath,
-                error: 'SDK path not configured. Cannot perform video conversion.'
-            };
-        }
-
-        // 检查 SDK 转换工具是否存在
+        // 检查视频转换工具是否存在
         const converterPath = this.getConverterPath();
         if (!fs.existsSync(converterPath)) {
             return {
                 success: false,
                 inputPath,
                 outputPath,
-                error: `SDK video_converter not found at: ${converterPath}`
+                error: `Video converter not found at: ${converterPath}`
             };
         }
 
@@ -590,24 +578,9 @@ export class VideoConverterService {
      * 获取 SDK video_converter 路径
      */
     private getConverterPath(): string {
-        if (!this.sdkPath) {
-            return '';
-        }
-        
-        const possiblePaths = [
-            path.join(this.sdkPath, 'tool', 'video-convert-tool', 'video_converter'),
-            path.join(this.sdkPath, 'tool', 'video-convert-tool', 'video_converter.py'),
-            path.join(this.sdkPath, 'tool', 'video_converter'),
-            path.join(this.sdkPath, 'tool', 'video_converter.py'),
-        ];
-
-        for (const p of possiblePaths) {
-            if (fs.existsSync(p)) {
-                return p;
-            }
-        }
-
-        return possiblePaths[0];
+        // __dirname 在编译后指向 out/src/services/，需要向上三级到达插件根目录
+        const extensionPath = path.join(__dirname, '..', '..', '..');
+        return path.join(extensionPath, 'tools', 'video-convert-tool', 'video_converter');
     }
 
     /**

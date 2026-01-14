@@ -39,10 +39,9 @@ export class ToolsPanel {
     private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
         this.panel = panel;
         this.extensionUri = extensionUri;
-        const sdkPath = this.getSdkPath();
-        this.imageConverter = new ImageConverterService(sdkPath);
-        this.videoConverter = new VideoConverterService(sdkPath, msg => logger.info(msg));
-        this.model3DConverter = new Model3DConverterService(sdkPath);
+        this.imageConverter = new ImageConverterService();
+        this.videoConverter = new VideoConverterService(msg => logger.info(msg));
+        this.model3DConverter = new Model3DConverterService();
         this.fontConverter = new FontConverterService();
         this.glassConverter = new GlassConverterService();
 
@@ -61,11 +60,6 @@ export class ToolsPanel {
             { enableScripts: true, retainContextWhenHidden: true }
         );
         ToolsPanel.currentPanel = new ToolsPanel(panel, extensionUri);
-    }
-
-    private getSdkPath(): string | undefined {
-        const config = vscode.workspace.getConfiguration('honeygui');
-        return config.get<string>('sdk.path') || process.env.HOME + '/.HoneyGUI-SDK';
     }
 
     private getFileType(fileName: string): 'image' | 'video' | 'model' | 'font' | 'glass' | 'unknown' {

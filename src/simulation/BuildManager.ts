@@ -27,10 +27,11 @@ export class BuildManager extends BuildCore {
     private outputChannel: vscode.OutputChannel;
     private ownsOutputChannel: boolean;
 
-    constructor(projectRoot: string, sdkPath: string, outputChannel?: vscode.OutputChannel) {
+    constructor(projectRoot: string, outputChannel?: vscode.OutputChannel) {
         const channel = outputChannel || vscode.window.createOutputChannel('HoneyGUI Simulation');
         const projectConfig = ProjectUtils.loadProjectConfig(projectRoot);
-        super(projectRoot, sdkPath, projectConfig, new VSCodeLogger(channel));
+        const libSimPath = ProjectUtils.getLibSimPath();
+        super(projectRoot, libSimPath, projectConfig, new VSCodeLogger(channel));
         this.outputChannel = channel;
         this.ownsOutputChannel = !outputChannel; // 只有自己创建的才负责关闭
     }

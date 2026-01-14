@@ -158,7 +158,7 @@ export class SimulationRunner {
         this.log('检查编译环境...');
 
         const checker = new EnvironmentChecker();
-        const result = await checker.checkAll(this.sdkPath);
+        const result = await checker.checkAll();
 
         if (!result.success) {
             const guide = checker.getInstallGuide(result);
@@ -191,7 +191,7 @@ export class SimulationRunner {
     private async setupBuildEnvironment(): Promise<void> {
         this.log('准备编译环境...');
 
-        this.buildManager = new BuildManager(this.projectRoot, this.sdkPath, this.outputChannel);
+        this.buildManager = new BuildManager(this.projectRoot, this.outputChannel);
 
         await this.buildManager.setupBuildDir();
         await this.buildManager.convertAssets();

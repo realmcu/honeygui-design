@@ -107,8 +107,7 @@ export class TemplateManager {
   public async applyTemplate(
     templateName: string, 
     outputDir: string, 
-    projectName: string,
-    sdkPath?: string
+    projectName: string
   ): Promise<void> {
     const template = await this.getTemplateByName(templateName);
     if (!template) {
@@ -116,7 +115,7 @@ export class TemplateManager {
     }
 
     try {
-      await template.generate(outputDir, projectName, sdkPath);
+      await template.generate(outputDir, projectName);
       logger.info(`成功创建项目: ${projectName}`);
     } catch (error) {
       throw new Error(`应用模板失败: ${error instanceof Error ? error.message : String(error)}`);

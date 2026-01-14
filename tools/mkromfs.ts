@@ -202,18 +202,18 @@ function generateCCode(root: FolderNode, baseAddr: number = 0): string {
         const dirLines: string[] = [];
         const varName = prefix + node.cName + '_children';
         
-        dirLines.push(`static const gui_fs_dirent_t ${varName}[] = {`);
+        dirLines.push(`static const struct romfs_dirent ${varName}[] = {`);
         
         node.children.forEach(child => {
             if (child instanceof FileNode) {
-                dirLines.push(`    {GUI_FS_FILE, "${child.name}", ${prefix}${child.cName}, ${child.entrySize}},`);
+                dirLines.push(`    {ROMFS_DIRENT_FILE, "${child.name}", ${prefix}${child.cName}, ${child.entrySize}},`);
             } else {
                 const childVarName = prefix + child.cName + '_children';
-                dirLines.push(`    {GUI_FS_DIR, "${child.name}", ${childVarName}, 0},`);
+                dirLines.push(`    {ROMFS_DIRENT_DIR, "${child.name}", (const uint8_t *)${childVarName}, 0},`);
             }
         });
         
-        dirLines.push('    {GUI_FS_END, NULL, NULL, 0}');
+        dirLines.push('    {ROMFS_DIRENT_FILE, NULL, NULL, 0}');
         dirLines.push('};');
         
         return dirLines.join('\n');

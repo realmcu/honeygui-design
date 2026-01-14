@@ -11,10 +11,6 @@ export class ProjectUtils {
     /**
      * 获取默认 SDK 路径
      */
-    public static getDefaultSdkPath(): string {
-        return path.join(os.homedir(), '.HoneyGUI-SDK');
-    }
-
     /**
      * 从文件路径向上查找项目根目录（包含project.json的目录）
      * @param filePath 文件路径
@@ -96,6 +92,16 @@ export class ProjectUtils {
     static getSrcDir(projectRoot: string): string {
         const config = this.loadProjectConfig(projectRoot);
         return path.join(projectRoot, config.srcDir || 'src');
+    }
+
+    /**
+     * 获取插件内置的 lib/sim 路径
+     * @returns lib/sim 目录的绝对路径
+     */
+    static getLibSimPath(): string {
+        // __dirname 在编译后指向 out/src/utils/，需要向上三级到达插件根目录
+        const extensionPath = path.join(__dirname, '..', '..', '..');
+        return path.join(extensionPath, 'lib', 'sim');
     }
 
     /**

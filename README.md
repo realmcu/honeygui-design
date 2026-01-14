@@ -40,12 +40,6 @@
 2. 扩展面板搜索 **"HoneyGUI Visual Designer"**
 3. 点击安装
 
-### 前置依赖（用于编译仿真）
-- **HoneyGUI SDK**：安装到 `~/.HoneyGUI-SDK`（或在设置中配置路径）
-- **SCons**：构建工具（`pip install scons==4.4.0`）
-- **GCC/MinGW**：C 编译器
-- **SDL2**：图形库（仅运行仿真时需要）
-
 ## 快速开始
 
 ### 1. 创建项目
@@ -165,15 +159,13 @@ Ctrl+Shift+P → HoneyGUI: Join Session
 ```json
 {
   "name": "my-project",
-  "resolution": "480X272",
-  "honeyguiSdkPath": "/path/to/sdk"
+  "resolution": "480X272"
 }
 ```
 
 ### VSCode 设置
 ```json
 {
-  "honeygui.sdk.path": "~/.HoneyGUI-SDK",
   "honeygui.ui.gridSize": 8,
   "honeygui.ui.snapToGrid": true
 }

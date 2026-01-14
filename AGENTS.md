@@ -154,8 +154,7 @@ HmlEditorProvider.resolveCustomTextEditor()
      5. Commit: `chore: bump version to x.x.x`
      6. Push to Gitee
      7. 执行 `vsce publish` 发布到 VSCode 插件市场
-9. **SDK 目录**：`/home/howie_wang/.HoneyGUI-SDK` 为 SDK 目录
-10. **实验工程**：测试用的实验工程, 也是模板工程位于 `./template-projects/smartwatch` 目录
+9. **实验工程**：测试用的实验工程, 也是模板工程位于 `./template-projects/smartwatch` 目录
 
 ### 不要做的事
 - ❌ 不要修改单元测试（除非用户明确要求）

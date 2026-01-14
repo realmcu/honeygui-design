@@ -25,9 +25,8 @@ export class ProjectTemplate {
    * 生成项目
    * @param outputDir 输出目录
    * @param projectName 项目名称
-   * @param sdkPath SDK路径
    */
-  public async generate(outputDir: string, projectName: string, sdkPath?: string): Promise<void> {
+  public async generate(outputDir: string, projectName: string): Promise<void> {
     // 复制整个模板目录
     await this.copyDirectory(this.templateDir, outputDir);
 
@@ -37,9 +36,6 @@ export class ProjectTemplate {
       const projectJson = JSON.parse(fs.readFileSync(projectJsonPath, 'utf8'));
       projectJson.name = projectName;
       projectJson.appId = `com.honeygui.${projectName.toLowerCase()}`;
-      if (sdkPath) {
-        projectJson.honeyguiSdkPath = sdkPath;
-      }
       projectJson.created = new Date().toISOString().split('T')[0];
       fs.writeFileSync(projectJsonPath, JSON.stringify(projectJson, null, 2), 'utf8');
     }

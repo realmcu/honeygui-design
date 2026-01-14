@@ -14,7 +14,6 @@ export interface ProjectConfig {
     assetsDir?: string;      // 资源目录，默认 "assets"
     uiDir?: string;          // UI目录，默认 "ui"
     srcDir?: string;         // 源码目录，默认 "src"
-    honeyguiSdkPath?: string; // HoneyGUI SDK 路径（用于编译仿真）
     romfsBaseAddr?: string;   // romfs 基地址（十六进制，如 "0x704D1000"），用于嵌入式烧录
     
     // 屏幕形状配置（与 SDK DRV_LCD_CORNER_RADIUS 对应）

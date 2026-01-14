@@ -33,8 +33,8 @@ export class GlassConverterService {
     private bgImagePath: string;
 
     constructor() {
-        // 背景图片路径
-        this.bgImagePath = path.join(__dirname, '../../tools/glass-generator/bg.png');
+        // __dirname 在编译后指向 out/src/services/，需要向上三级到达插件根目录
+        this.bgImagePath = path.join(__dirname, '../../../tools/glass-generator/bg.png');
     }
 
     /**
