@@ -134,11 +134,19 @@ export class ExtensionManager {
      * 注册视图提供者
      */
     private registerViewProviders(): void {
-        // 欢迎视图使用 viewsWelcome 配置，不需要 TreeDataProvider
-        // const welcomeProvider = new WelcomeViewDataProvider();
-        // const welcomeRegistration = vscode.window.registerTreeDataProvider('honeygui.welcome', welcomeProvider);
-        // this.disposables.push(welcomeRegistration);
-        // this.context.subscriptions.push(welcomeRegistration);
+        // 注册环境检查视图
+        const { EnvironmentViewProvider } = require('../ui/EnvironmentViewProvider');
+        const envProvider = new EnvironmentViewProvider();
+        const envRegistration = vscode.window.registerTreeDataProvider('honeygui.environment', envProvider);
+        this.disposables.push(envRegistration);
+        this.context.subscriptions.push(envRegistration);
+
+        // 注册刷新命令
+        const refreshCommand = vscode.commands.registerCommand('honeygui.environment.refresh', () => {
+            envProvider.refresh();
+        });
+        this.disposables.push(refreshCommand);
+        this.context.subscriptions.push(refreshCommand);
 
         // 注册快速操作视图提供者
         const quickProvider = new QuickViewDataProvider();

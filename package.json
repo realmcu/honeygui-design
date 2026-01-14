@@ -84,6 +84,11 @@
           "icon": "$(home)"
         },
         {
+          "id": "honeygui.environment",
+          "name": "ENVIRONMENT",
+          "icon": "$(checklist)"
+        },
+        {
           "id": "honeygui.quick",
           "name": "QUICK",
           "icon": "$(play)"
@@ -124,6 +129,11 @@
           "command": "honeygui.collaboration.stop",
           "when": "view == honeygui.welcome",
           "group": "navigation@2"
+        },
+        {
+          "command": "honeygui.environment.refresh",
+          "when": "view == honeygui.environment",
+          "group": "navigation"
         }
       ]
     },
@@ -198,6 +208,12 @@
         "title": "Stop Collaboration",
         "category": "HoneyGUI",
         "icon": "$(debug-stop)"
+      },
+      {
+        "command": "honeygui.environment.refresh",
+        "title": "Refresh Environment Check",
+        "category": "HoneyGUI",
+        "icon": "$(refresh)"
       }
     ],
     "keybindings": [
