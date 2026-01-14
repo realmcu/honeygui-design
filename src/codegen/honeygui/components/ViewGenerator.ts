@@ -66,32 +66,38 @@ export class ViewGenerator implements ComponentCodeGenerator {
     }
     
     // 初始化时间字符串变量（在函数开头统一声明，避免重复定义）
-    const timeLabels = this.collectTimeLabels(component, context);
-    const hasTimeLabels = timeLabels.length > 0;
+    // 收集所有时间标签（包括 window 中的），以确保 now 和 t 变量被声明
+    const allTimeLabels = this.collectAllTimeLabels(component, context);
+    const hasTimeLabels = allTimeLabels.length > 0;
+    
+    // 只初始化 view 直接子组件中的时间标签（不包括 window 中的）
+    const viewTimeLabels = this.collectViewTimeLabels(component, context);
     
     if (hasTimeLabels) {
       code += `\n${indentStr}    // 初始化时间字符串\n`;
       code += `${indentStr}    time_t now = time(NULL);\n`;
       code += `${indentStr}    struct tm *t = localtime(&now);\n`;
-      code += `${indentStr}    if (t != NULL)\n`;
-      code += `${indentStr}    {\n`;
-      timeLabels.forEach(labelId => {
-        const labelComp = context.componentMap.get(labelId);
-        const timeFormat = labelComp?.data?.timeFormat;
-        const formatCode = this.getTimeFormatCode(timeFormat);
-        code += `${indentStr}        sprintf(${labelId}_time_str, "${formatCode.format}", ${formatCode.args});\n`;
-      });
-      code += `${indentStr}    }\n`;
+      if (viewTimeLabels.length > 0) {
+        code += `${indentStr}    if (t != NULL)\n`;
+        code += `${indentStr}    {\n`;
+        viewTimeLabels.forEach(labelId => {
+          const labelComp = context.componentMap.get(labelId);
+          const timeFormat = labelComp?.data?.timeFormat;
+          const formatCode = this.getTimeFormatCode(timeFormat);
+          code += `${indentStr}        sprintf(${labelId}_time_str, "${formatCode.format}", ${formatCode.args});\n`;
+        });
+        code += `${indentStr}    }\n`;
+      }
       code += '\n';
     }
     
     // 子组件创建代码由主生成器处理（通过 childrenCode 回调）
     code += `__CHILDREN_PLACEHOLDER__`;
     
-    // 为所有带时间格式的 label 创建定时器
-    if (timeLabels.length > 0) {
+    // 为 view 直接子组件中的时间标签创建定时器（window 中的由 WindowGenerator 处理）
+    if (viewTimeLabels.length > 0) {
       code += `\n${indentStr}    // 创建时间更新定时器\n`;
-      timeLabels.forEach(labelId => {
+      viewTimeLabels.forEach(labelId => {
         const labelComp = context.componentMap.get(labelId);
         const interval = this.getTimerInterval(labelComp?.data?.timeFormat);
         code += `${indentStr}    gui_obj_create_timer(GUI_BASE(${labelId}), ${interval}, true, ${labelId}_time_update_cb);\n`;
@@ -151,10 +157,10 @@ export class ViewGenerator implements ComponentCodeGenerator {
   }
 
   /**
-   * 收集当前 view 下所有带时间格式的 label 组件
-   * 注意：跳过 hg_window 子容器，因为 WindowGenerator 会自己处理
+   * 收集所有时间标签（包括 window 中的）
+   * 用于判断是否需要声明 now 和 t 变量
    */
-  private collectTimeLabels(component: Component, context: GeneratorContext): string[] {
+  private collectAllTimeLabels(component: Component, context: GeneratorContext): string[] {
     const timeLabels: string[] = [];
     
     const collectRecursive = (comp: Component) => {
@@ -163,7 +169,35 @@ export class ViewGenerator implements ComponentCodeGenerator {
         timeLabels.push(comp.id);
       }
       
-      // 递归检查子组件，但跳过 hg_window（它有自己的时间初始化逻辑）
+      // 递归检查所有子组件（包括 hg_window）
+      if (comp.children) {
+        comp.children.forEach(childId => {
+          const child = context.componentMap.get(childId);
+          if (child) {
+            collectRecursive(child);
+          }
+        });
+      }
+    };
+    
+    collectRecursive(component);
+    return timeLabels;
+  }
+
+  /**
+   * 收集 view 直接子组件中的时间标签（不包括 window 中的）
+   * 用于生成初始化代码和定时器
+   */
+  private collectViewTimeLabels(component: Component, context: GeneratorContext): string[] {
+    const timeLabels: string[] = [];
+    
+    const collectRecursive = (comp: Component) => {
+      // 检查当前组件是否是带时间格式的 label
+      if (comp.type === 'hg_label' && comp.data?.timeFormat) {
+        timeLabels.push(comp.id);
+      }
+      
+      // 递归检查子组件，但跳过 hg_window
       if (comp.children) {
         comp.children.forEach(childId => {
           const child = context.componentMap.get(childId);
