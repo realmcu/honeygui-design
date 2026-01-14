@@ -14,6 +14,11 @@ const componentDefinitions: ComponentDefinition[] = [
     defaultSize: { width: 100, height: 32 },
     properties: [
       { name: 'text', label: '文本', type: 'string', defaultValue: 'Button', group: 'data' },
+      { name: 'toggleMode', label: '双态模式', type: 'boolean', defaultValue: false, group: 'data' },
+      { name: 'imageOn', label: '开启图片', type: 'string', group: 'data' },
+      { name: 'imageOff', label: '关闭图片', type: 'string', group: 'data' },
+      { name: 'initialState', label: '初始状态', type: 'select', defaultValue: 'off', 
+        options: ['on', 'off'], group: 'data' },
       { name: 'enabled', label: '启用', type: 'boolean', defaultValue: true, group: 'general' },
     ],
   },

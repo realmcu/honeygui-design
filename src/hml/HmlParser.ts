@@ -566,7 +566,9 @@ export class HmlParser {
       // 字体配置属性
       'fontType', 'renderMode', 'fontSize',
       // hg_view 特有属性
-      'residentMemory', 'animateStep'
+      'residentMemory', 'animateStep',
+      // 双态按钮属性
+      'toggleMode', 'imageOn', 'imageOff', 'initialState'
     ]);
 
     const metaProps = new Set([
@@ -608,8 +610,8 @@ export class HmlParser {
         style[key] = value;
       } else if (dataProps.has(key)) {
         let value = attributes[key];
-        // 布尔值转换（loop, createBar, autoAlign, inertia 等）
-        if (['loop', 'createBar', 'autoAlign', 'inertia'].includes(key)) {
+        // 布尔值转换（loop, createBar, autoAlign, inertia, toggleMode 等）
+        if (['loop', 'createBar', 'autoAlign', 'inertia', 'toggleMode'].includes(key)) {
           value = value === 'true' || value === true;
         }
         // 数字类型属性转换（包括 opacity）

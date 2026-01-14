@@ -562,7 +562,7 @@ export class AssetManager {
     /**
      * 处理选择图片路径
      */
-    public async handleSelectImagePath(componentId: string, currentFilePath: string | undefined): Promise<void> {
+    public async handleSelectImagePath(componentId: string, propertyName: string | undefined, currentFilePath: string | undefined): Promise<void> {
         try {
             const options: vscode.OpenDialogOptions = {
                 canSelectFiles: true,
@@ -601,6 +601,7 @@ export class AssetManager {
                 this._panel.webview.postMessage({
                     command: 'updateImagePath',
                     componentId: componentId,
+                    propertyName: propertyName || 'src',
                     path: relativePath
                 });
                 

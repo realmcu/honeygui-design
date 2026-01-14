@@ -76,6 +76,16 @@ export class CallbackFileGenerator {
       code += `void ${funcName}(void *p);\n`;
     });
 
+    // 添加双态按钮状态回调声明
+    const toggleButtonCallbacks = this.collectToggleButtonCallbackNames();
+    if (toggleButtonCallbacks.length > 0) {
+      code += `\n// 双态按钮状态回调函数声明\n`;
+      toggleButtonCallbacks.forEach(({ onCallback, offCallback }) => {
+        code += `void ${onCallback}(void);\n`;
+        code += `void ${offCallback}(void);\n`;
+      });
+    }
+
     code += `
 #endif // ${guardName}
 `;
@@ -127,6 +137,15 @@ export class CallbackFileGenerator {
     timeUpdateImpls.forEach(impl => {
       code += impl + '\n\n';
     });
+
+    // 生成双态按钮状态回调
+    const toggleButtonImpls = this.collectToggleButtonCallbackImpls();
+    if (toggleButtonImpls.length > 0) {
+      code += `// 双态按钮状态回调函数\n\n`;
+      toggleButtonImpls.forEach(impl => {
+        code += impl + '\n';
+      });
+    }
 
     // 生成普通回调函数模板
     const callbackFunctions = this.collectCallbackFunctions();
@@ -366,5 +385,68 @@ export class CallbackFileGenerator {
     code += `}`;
 
     return code;
+  }
+
+  /**
+   * 收集所有双态按钮回调函数名
+   */
+  private collectToggleButtonCallbackNames(): Array<{ onCallback: string; offCallback: string }> {
+    const callbacks: Array<{ onCallback: string; offCallback: string }> = [];
+
+    this.allComponents.forEach(component => {
+      if (component.type === 'hg_button') {
+        const toggleMode = component.data?.toggleMode === true || component.data?.toggleMode === 'true';
+        if (toggleMode) {
+          callbacks.push({
+            onCallback: `${component.id}_on_callback`,
+            offCallback: `${component.id}_off_callback`
+          });
+        }
+      }
+    });
+
+    return callbacks;
+  }
+
+  /**
+   * 收集所有双态按钮回调实现
+   */
+  private collectToggleButtonCallbackImpls(): string[] {
+    const impls: string[] = [];
+
+    this.allComponents.forEach(component => {
+      if (component.type === 'hg_button') {
+        const toggleMode = component.data?.toggleMode === true || component.data?.toggleMode === 'true';
+        if (toggleMode) {
+          const impl = `/* USER CODE BEGIN ${component.id}_on_callback */
+/**
+ * ${component.id} 开启状态回调
+ * 当按钮切换到开启状态时调用
+ */
+void ${component.id}_on_callback(void)
+{
+    // TODO: 实现开启状态的业务逻辑
+    // 例如：music_player_play();
+}
+/* USER CODE END ${component.id}_on_callback */
+
+/* USER CODE BEGIN ${component.id}_off_callback */
+/**
+ * ${component.id} 关闭状态回调
+ * 当按钮切换到关闭状态时调用
+ */
+void ${component.id}_off_callback(void)
+{
+    // TODO: 实现关闭状态的业务逻辑
+    // 例如：music_player_pause();
+}
+/* USER CODE END ${component.id}_off_callback */
+`;
+          impls.push(impl);
+        }
+      }
+    });
+
+    return impls;
   }
 }

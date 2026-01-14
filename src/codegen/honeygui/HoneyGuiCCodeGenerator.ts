@@ -188,6 +188,16 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       }
     });
 
+    // 双态按钮状态管理函数声明
+    const toggleButtons = this.components.filter(c => c.type === 'hg_button' && (c.data?.toggleMode === true || c.data?.toggleMode === 'true'));
+    if (toggleButtons.length > 0) {
+      code += `\n// 双态按钮状态管理函数声明\n`;
+      toggleButtons.forEach(comp => {
+        code += `extern bool ${comp.id}_get_state(void);\n`;
+        code += `extern void ${comp.id}_set_state(bool state);\n`;
+      });
+    }
+
     code += `
 #endif // ${guardName}
 `;
@@ -245,6 +255,20 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
     }
 
     code += `\n`;
+
+    // 生成所有双态按钮的回调函数
+    const hasToggleButtons = this.components.some(c => c.type === 'hg_button' && (c.data?.toggleMode === true || c.data?.toggleMode === 'true'));
+    if (hasToggleButtons) {
+      code += `// 双态按钮回调函数\n`;
+      this.components.forEach(comp => {
+        if (comp.type === 'hg_button' && (comp.data?.toggleMode === true || comp.data?.toggleMode === 'true')) {
+          const generator = ComponentGeneratorFactory.getGenerator('hg_button');
+          if ('generateToggleCallback' in generator) {
+            code += (generator as any).generateToggleCallback(comp);
+          }
+        }
+      });
+    }
 
     // 生成所有 3D 模型的回调函数（包括动画）
     const has3DComponents = this.components.some(c => c.type === 'hg_3d');
@@ -314,6 +338,14 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
 
     // 生成属性设置代码
     code += this.generatePropertySetters(component, indent);
+
+    // 双态按钮：生成点击事件绑定
+    if (component.type === 'hg_button' && (component.data?.toggleMode === true || component.data?.toggleMode === 'true')) {
+      const generator = ComponentGeneratorFactory.getGenerator('hg_button');
+      if ('generateEventBinding' in generator) {
+        code += (generator as any).generateEventBinding(component, indent);
+      }
+    }
 
     // 生成事件绑定代码
     code += this.generateEventConfigBindings(component, indent);

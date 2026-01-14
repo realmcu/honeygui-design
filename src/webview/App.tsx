@@ -142,14 +142,16 @@ const App: React.FC = () => {
             const store = useDesignerStore.getState();
             const component = store.components.find(c => c.id === message.componentId);
             if (component) {
+              // 支持不同的属性名（src, imageOn, imageOff 等）
+              const propertyName = message.propertyName || 'src';
               const updates: any = {
                 data: {
                   ...component.data,
-                  src: message.path
+                  [propertyName]: message.path
                 }
               };
-              // 如果有图片尺寸，同时更新组件尺寸（尺寸在 position 中）
-              if (message.imageSize) {
+              // 如果有图片尺寸，同时更新组件尺寸（仅对 src 属性）
+              if (message.imageSize && propertyName === 'src') {
                 updates.position = {
                   ...component.position,
                   width: message.imageSize.width,

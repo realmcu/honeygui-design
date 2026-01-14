@@ -43,18 +43,15 @@ export class HoneyGuiApiMapper {
       includeHeader: 'gui_view.h'
     });
 
-    // 按钮
+    // 按钮（双态模式使用 gui_img 实现）
     this.mappings.set('hg_button', {
       componentType: 'hg_button',
-      createFunction: 'gui_button_create',
-      propertySetters: [
-        { property: 'text', apiFunction: 'gui_button_set_text' },
-        { property: 'backgroundColor', apiFunction: 'gui_button_set_color', valueTransform: this.colorToHex }
-      ],
+      createFunction: 'gui_img_create_from_fs',
+      propertySetters: [],
       eventHandlers: [
-        { event: 'onClick', apiFunction: 'gui_button_set_click_cb' }
+        { event: 'onClick', apiFunction: 'gui_obj_add_event_cb' }
       ],
-      includeHeader: 'gui_button.h'
+      includeHeader: 'gui_img.h'
     });
 
     // 文本标签

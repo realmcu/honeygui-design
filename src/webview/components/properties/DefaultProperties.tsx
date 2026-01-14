@@ -56,10 +56,11 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
     });
   };
 
-  const handleSelectImagePath = () => {
+  const handleSelectImagePath = (propertyName?: string) => {
     window.vscodeAPI?.postMessage({
       command: 'selectImagePath',
-      componentId: component.id
+      componentId: component.id,
+      propertyName: propertyName || 'src'
     });
   };
 
@@ -98,7 +99,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
     }
   }, [(component.data as any)?.fontFile, component.type]);
 
-  const renderImageProperty = (value: any, onChange: (value: any) => void) => {
+  const renderImageProperty = (value: any, onChange: (value: any) => void, propertyName?: string) => {
     return (
       <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
         <input
@@ -116,7 +117,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
           }}
         />
         <button
-          onClick={handleSelectImagePath}
+          onClick={() => handleSelectImagePath(propertyName)}
           style={{
             padding: '4px 8px',
             backgroundColor: 'var(--vscode-button-background)',
@@ -411,7 +412,15 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                       {property.name === 'src' && component.type === 'hg_image' ? (
                         renderImageProperty(
                           (component.data as any)?.[property.name],
-                          (value) => handleDataChange(property.name, value)
+                          (value) => handleDataChange(property.name, value),
+                          'src'
+                        )
+                      ) : (property.name === 'imageOn' || property.name === 'imageOff') && component.type === 'hg_button' ? (
+                        // 双态按钮的图片选择器
+                        renderImageProperty(
+                          (component.data as any)?.[property.name],
+                          (value) => handleDataChange(property.name, value),
+                          property.name
                         )
                       ) : property.name === 'fontFile' ? (
                         renderFontProperty(
