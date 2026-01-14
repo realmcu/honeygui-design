@@ -7,6 +7,7 @@ import { Model3DConverterService } from '../services/Model3DConverterService';
 import { FontConverterService, FontConvertOptions } from '../services/FontConverterService';
 import { ProjectConfig, DEFAULT_ROMFS_BASE_ADDR } from '../common/ProjectConfig';
 import { RomfsConfig } from '../common/RomfsConfig';
+import { buildSConstruct } from './SConstructTemplate';
 
 /**
  * 日志接口
@@ -17,17 +18,18 @@ export interface Logger {
 
 /**
  * 编译核心逻辑（不依赖 VSCode）
+ * sdkPath 现在指向插件内置的 lib/sim 目录
  */
 export class BuildCore {
     protected buildDir: string;
     protected projectRoot: string;
-    protected sdkPath: string;
+    protected libSimPath: string;  // 插件内置的 lib/sim 路径
     protected logger: Logger;
     protected projectConfig: ProjectConfig;
 
-    constructor(projectRoot: string, sdkPath: string, projectConfig: ProjectConfig, logger: Logger) {
+    constructor(projectRoot: string, libSimPath: string, projectConfig: ProjectConfig, logger: Logger) {
         this.projectRoot = projectRoot;
-        this.sdkPath = sdkPath;
+        this.libSimPath = libSimPath;
         this.projectConfig = projectConfig;
         this.buildDir = path.join(projectRoot, 'build');
         this.logger = logger;
@@ -45,26 +47,31 @@ export class BuildCore {
             fs.mkdirSync(parentDir, { recursive: true });
         }
 
-        const sdkWin32Sim = path.join(this.sdkPath, 'win32_sim');
-        if (!fs.existsSync(sdkWin32Sim)) {
-            throw new Error(`SDK win32_sim 目录不存在: ${sdkWin32Sim}`);
+        // 使用内置的 win32_sim
+        const win32SimSource = path.join(this.libSimPath, 'win32_sim');
+        if (!fs.existsSync(win32SimSource)) {
+            throw new Error(`内置 win32_sim 目录不存在: ${win32SimSource}`);
         }
 
         if (!fs.existsSync(this.buildDir)) {
             this.logger.log('拷贝 win32_sim...');
-            this.copyDirectory(sdkWin32Sim, this.buildDir);
+            this.copyDirectory(win32SimSource, this.buildDir);
             this.logger.log('win32_sim 拷贝完成');
         } else {
-            this.logger.log('win32_sim 已存在，跳过拷贝');
+            this.logger.log('编译目录已存在，跳过拷贝');
         }
 
-        const kconfigSource = path.join(this.sdkPath, 'Kconfig.gui');
-        const kconfigDest = path.join(this.buildDir, 'Kconfig.gui');
-        if (fs.existsSync(kconfigSource)) {
-            fs.copyFileSync(kconfigSource, kconfigDest);
+        // 拷贝 .config
+        const configSource = path.join(win32SimSource, '.config');
+        const configDest = path.join(this.buildDir, '.config');
+        if (fs.existsSync(configSource)) {
+            fs.copyFileSync(configSource, configDest);
+            this.logger.log('.config 拷贝完成');
+        } else {
+            this.logger.log('.config 不存在，生成默认配置');
+            this.generateConfig();
         }
 
-        this.generateConfig();
         this.modifySConstruct();
         this.logger.log('编译目录准备完成');
     }
@@ -94,9 +101,9 @@ export class BuildCore {
             fs.mkdirSync(outputDir, { recursive: true });
         }
 
-        // 转换图片资源
+        // 转换图片资源（不再需要 sdkPath）
         this.logger.log('转换图片资源...');
-        const imageConverter = new ImageConverterService(this.sdkPath);
+        const imageConverter = new ImageConverterService();
         const imageResults = await imageConverter.convertAssetsDir(assetsDir, outputDir);
 
         const imageFailed = imageResults.filter(r => !r.success);
@@ -114,10 +121,9 @@ export class BuildCore {
         const svgCount = this.copySvgAssets(assetsDir, outputDir);
         this.logger.log(`SVG 拷贝完成: ${svgCount} 个`);
 
-        // 转换视频资源
-        this.logger.log('转换视频资源...');
-        // 传递日志回调，让 VideoConverterService 的日志输出到 Output Channel
-        const videoConverter = new VideoConverterService(this.sdkPath, (msg) => {
+        // 转换视频资源（暂时跳过，需要 FFmpeg）
+        this.logger.log('检查视频资源...');
+        const videoConverter = new VideoConverterService(undefined, (msg) => {
             this.logger.log(msg);
         });
         
@@ -155,9 +161,9 @@ export class BuildCore {
 
 
 
-        // 转换 3D 模型资源
+        // 转换 3D 模型资源（不再需要 sdkPath）
         this.logger.log('转换 3D 模型资源...');
-        const model3DConverter = new Model3DConverterService(this.sdkPath);
+        const model3DConverter = new Model3DConverterService();
         const model3DResults = await model3DConverter.convertAssetsDir(assetsDir, outputDir);
 
         const model3DFailed = model3DResults.filter(r => !r.success);
@@ -209,7 +215,8 @@ export class BuildCore {
         const assetsDir = path.join(this.buildDir, 'assets');
         const romfsOutput = path.join(this.buildDir, RomfsConfig.getFileName());
         const romfsBinOutput = path.join(this.buildDir, 'app_romfs.bin');
-        const mkromfsScript = path.join(this.sdkPath, 'tool', 'mkromfs', 'mkromfs_for_honeygui.py');
+        // 使用内置的 mkromfs 脚本
+        const mkromfsScript = path.join(this.libSimPath, 'tool', 'mkromfs', 'mkromfs_for_honeygui.py');
 
         if (!fs.existsSync(mkromfsScript)) {
             throw new Error(`mkromfs 脚本不存在: ${mkromfsScript}`);
@@ -367,64 +374,18 @@ export class BuildCore {
     }
 
     private generateConfig(): void {
-        const kconfigPath = path.join(this.buildDir, 'Kconfig.gui');
-        const configLines: string[] = [];
+        // 固定配置，不依赖 Kconfig.gui
+        const configLines: string[] = [
+            'CONFIG_REALTEK_HONEYGUI=y',
+            'CONFIG_REALTEK_BUILD_PINYIN=y',
+            'CONFIG_REALTEK_BUILD_LETTER_SHELL=y',
+            'CONFIG_REALTEK_BUILD_MONKEY_TEST=y',
+            'CONFIG_REALTEK_H264_DECODER=y',
+            'CONFIG_REALTEK_H264BSD=y',
+            'CONFIG_REALTEK_BUILD_GUI_BOX2D=y',
+            'CONFIG_REALTEK_BUILD_LITE3D=y'
+        ];
         
-        // 1. 启用 HoneyGUI 框架
-        configLines.push('CONFIG_REALTEK_HONEYGUI=y');
-        
-        // 2. 解析 Kconfig.gui，提取 HoneyGUI Feature Configuration 中默认打开的配置项
-        if (fs.existsSync(kconfigPath)) {
-            try {
-                const kconfigContent = fs.readFileSync(kconfigPath, 'utf-8');
-                const lines = kconfigContent.split('\n');
-                
-                let inFeatureMenu = false;
-                let currentConfig = '';
-                let defaultValue = '';
-                
-                for (let i = 0; i < lines.length; i++) {
-                    const line = lines[i].trim();
-                    
-                    // 检测进入 HoneyGUI Feature Configuration 菜单
-                    if (line.includes('HoneyGUI Feature Configuration')) {
-                        inFeatureMenu = true;
-                        continue;
-                    }
-                    
-                    // 检测退出菜单
-                    if (inFeatureMenu && line === 'endmenu') {
-                        inFeatureMenu = false;
-                        continue;
-                    }
-                    
-                    // 在 Feature Configuration 菜单内
-                    if (inFeatureMenu) {
-                        // 提取 config 名称
-                        if (line.startsWith('config ')) {
-                            currentConfig = line.replace('config ', '').trim();
-                            
-                            if (currentConfig) {
-                                // 如果配置名不是以 CONFIG_ 开头，添加 CONFIG_ 前缀
-                                const configName = currentConfig.startsWith('CONFIG_') 
-                                    ? currentConfig 
-                                    : `CONFIG_${currentConfig}`;
-                                configLines.push(`${configName}=y`);
-                            }
-                        }
-                    }
-                }
-                
-                this.logger.log(`从 Kconfig.gui 解析到 ${configLines.length - 1} 个默认启用的配置项`);
-            } catch (error) {
-                this.logger.log(`解析 Kconfig.gui 失败: ${error}`);
-                this.logger.log('使用最小配置');
-            }
-        } else {
-            this.logger.log('Kconfig.gui 不存在，使用最小配置');
-        }
-        
-        // 3. 写入 .config 文件
         const configPath = path.join(this.buildDir, '.config');
         fs.writeFileSync(configPath, configLines.join('\n') + '\n');
         this.logger.log(`.config 文件已生成，包含 ${configLines.length} 个配置项`);
@@ -434,42 +395,20 @@ export class BuildCore {
         const sconstructPath = path.join(this.buildDir, 'SConstruct');
         if (!fs.existsSync(sconstructPath)) return;
 
-        let content = fs.readFileSync(sconstructPath, 'utf-8');
-        const sdkPathNormalized = this.sdkPath.replace(/\\/g, '/');
-        const projectRootNormalized = this.projectRoot.replace(/\\/g, '/');
-        
-        content = content.replace(
-            /PROJECT_ROOT\s*=\s*os\.path\.dirname\(os\.getcwd\(\)\)/,
-            `PROJECT_ROOT = '${sdkPathNormalized}'`
-        );
-
-        // 从projectConfig获取分辨率
+        const libSim = this.libSimPath.replace(/\\/g, '/');
+        const projectSrc = this.projectRoot.replace(/\\/g, '/') + '/src';
         const { width, height } = this.parseResolution(this.projectConfig.resolution);
         const cornerRadius = this.projectConfig.cornerRadius || 0;
+        const platform = process.platform === 'win32' ? 'win32' : 'linux';
 
-        // 添加LCD宏定义到CFLAGS
-        if (!content.includes('DRV_LCD_WIDTH')) {
-            content = content.replace(
-                /(env_params\s*=\s*{[^}]*'CFLAGS':\s*menu_config\.CFLAGS)/,
-                `$1 + ' -DDRV_LCD_WIDTH=${width} -DDRV_LCD_HEIGHT=${height} -DDRV_LCD_CORNER_RADIUS=${cornerRadius}'`
-            );
-        }
+        const content = buildSConstruct({
+            libSim,
+            projectSrc,
+            lcd: { width, height, cornerRadius },
+            platform
+        });
 
-        // 在 DoBuilding 之前添加项目 src 代码的编译（仅当不存在时）
-        if (!content.includes('PROJECT_SRC')) {
-            const srcInclude = `
-# Include project src code
-PROJECT_SRC = '${projectRootNormalized}/src'
-if os.path.exists(os.path.join(PROJECT_SRC, 'SConscript')):
-    objs.extend(SConscript(os.path.join(PROJECT_SRC, 'SConscript')))
-`;
-            content = content.replace(
-                /# Build\s*\nDoBuilding\(TARGET, objs\)/,
-                `${srcInclude}\n# Build\nDoBuilding(TARGET, objs)`
-            );
-        }
-        
-        fs.writeFileSync(sconstructPath, content);
+        fs.writeFileSync(sconstructPath, content, 'utf-8');
     }
 
     /**

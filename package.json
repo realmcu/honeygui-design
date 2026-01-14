@@ -293,7 +293,9 @@
     "clean": "node scripts/clear-cache.js",
     "clean:src": "node scripts/clean-js.js",
     "clean:all": "npm run clean && rimraf node_modules && npm install",
-    "rebuild": "npm run clean && npm run compile && npm run build:webview"
+    "rebuild": "npm run clean && npm run compile && npm run build:webview",
+    "prepare:lib": "./scripts/prepare-lib-sim.sh",
+    "package": "npm run compile && npm run build:webview && vsce package"
   },
   "devDependencies": {
     "@types/bmp-js": "^0.1.2",

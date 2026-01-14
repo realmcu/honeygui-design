@@ -57,6 +57,7 @@ node_modules/**
 !node_modules/bmp-js/**
 !node_modules/chokidar/**
 !node_modules/fast-xml-parser/**
+!node_modules/html2canvas/**
 !node_modules/ini/**
 !node_modules/jpeg-js/**
 !node_modules/mp4box/**

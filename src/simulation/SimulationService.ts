@@ -85,25 +85,17 @@ export class SimulationService {
                 return;
             }
 
-            // 获取 SDK 路径
-            let sdkPath = this.getSdkPath(projectRoot);
-            
-            // 如果没有配置或路径无效，提示用户选择
-            if (!sdkPath || !this.isValidSdkPath(sdkPath)) {
-                const reason = !sdkPath ? '未配置' : '路径无效';
-                sdkPath = await this.promptForSdkPath(projectRoot, reason);
-                if (!sdkPath) {
-                    return;
-                }
-            }
+            // 获取插件内置的 lib/sim 路径
+            const extensionPath = this.context.extensionPath;
+            const libSimPath = path.join(extensionPath, 'lib', 'sim');
 
             // 停止现有的仿真
             if (this.runner) {
                 await this.stopSimulation();
             }
 
-            // 创建新的运行器
-            this.runner = new SimulationRunner(projectRoot, sdkPath, this.outputChannel);
+            // 创建新的运行器（使用内置库路径）
+            this.runner = new SimulationRunner(projectRoot, libSimPath, this.outputChannel);
             this.setupRunnerListeners();
 
             // 启动仿真

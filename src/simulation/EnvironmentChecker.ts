@@ -11,7 +11,7 @@ export interface EnvironmentCheckResult {
     success: boolean;
     sconsInstalled: boolean;
     compilerInstalled: boolean;
-    sdkPathValid: boolean;
+    libSimValid: boolean;
     errors: string[];
 }
 
@@ -22,13 +22,14 @@ export interface EnvironmentCheckResult {
 export class EnvironmentChecker {
     /**
      * 检查完整环境
+     * @param libSimPath 插件内置的 lib/sim 路径
      */
-    async checkAll(sdkPath: string): Promise<EnvironmentCheckResult> {
+    async checkAll(libSimPath: string): Promise<EnvironmentCheckResult> {
         const result: EnvironmentCheckResult = {
             success: true,
             sconsInstalled: false,
             compilerInstalled: false,
-            sdkPathValid: false,
+            libSimValid: false,
             errors: []
         };
 
@@ -47,10 +48,10 @@ export class EnvironmentChecker {
             result.success = false;
         }
 
-        // 检查 SDK 路径
-        result.sdkPathValid = this.checkSdkPath(sdkPath);
-        if (!result.sdkPathValid) {
-            result.errors.push(`HoneyGUI SDK 路径无效: ${sdkPath}`);
+        // 检查内置库路径
+        result.libSimValid = this.checkLibSimPath(libSimPath);
+        if (!result.libSimValid) {
+            result.errors.push(`内置库路径无效: ${libSimPath}`);
             result.success = false;
         }
 
@@ -83,18 +84,18 @@ export class EnvironmentChecker {
     }
 
     /**
-     * 检查 SDK 路径是否有效
+     * 检查内置库路径是否有效
      */
-    private checkSdkPath(sdkPath: string): boolean {
-        if (!sdkPath || !fs.existsSync(sdkPath)) {
+    private checkLibSimPath(libSimPath: string): boolean {
+        if (!libSimPath || !fs.existsSync(libSimPath)) {
             return false;
         }
 
-        // 检查关键目录是否存在
-        const realgui = fs.existsSync(`${sdkPath}/realgui`);
-        const win32sim = fs.existsSync(`${sdkPath}/win32_sim`);
+        // 检查关键目录/文件是否存在
+        const win32sim = fs.existsSync(`${libSimPath}/win32_sim`);
+        const include = fs.existsSync(`${libSimPath}/include`);
 
-        return realgui && win32sim;
+        return win32sim && include;
     }
 
     /**
@@ -121,9 +122,9 @@ export class EnvironmentChecker {
             lines.push('');
         }
 
-        if (!result.sdkPathValid) {
-            lines.push('3. HoneyGUI SDK 路径');
-            lines.push('   请在项目配置或 VSCode 设置中配置正确的 SDK 路径');
+        if (!result.libSimValid) {
+            lines.push('3. 内置库文件缺失');
+            lines.push('   请重新安装插件');
             lines.push('');
         }
 
