@@ -1,45 +1,82 @@
 #!/bin/bash
-# 从 SDK 准备插件内置库文件
-# 用法: ./scripts/prepare-lib-sim.sh [SDK_PATH]
+# 从 SDK 准备插件内置库文件 - 操作指南
 
-SDK_PATH="${1:-$HOME/.HoneyGUI-SDK}"
-LIB_SIM="./lib/sim"
+cat << 'EOF'
+================================================================================
+  HoneyGUI 插件内置库准备指南
+================================================================================
 
-if [ ! -d "$SDK_PATH" ]; then
-    echo "错误: SDK 路径不存在: $SDK_PATH"
-    echo "用法: $0 [SDK_PATH]"
-    exit 1
-fi
+插件已不依赖外部 SDK，但打包前需要从 HoneyGUI SDK 准备以下文件到 lib/sim/
 
-echo "从 SDK 准备内置库文件..."
-echo "SDK 路径: $SDK_PATH"
-echo "目标路径: $LIB_SIM"
+--------------------------------------------------------------------------------
+第一步：拷贝仿真端源码
+--------------------------------------------------------------------------------
+从 SDK 拷贝 win32_sim 目录（包含 .config 配置文件）：
 
-# 1. 拷贝 win32_sim（仿真端代码）
-echo "1. 拷贝 win32_sim..."
-rm -rf "$LIB_SIM/win32_sim"
-cp -r "$SDK_PATH/win32_sim" "$LIB_SIM/"
+  cp -r /path/to/HoneyGUI-SDK/win32_sim ./lib/sim/
 
-# 2. 拷贝头文件
-echo "2. 拷贝头文件..."
-rm -rf "$LIB_SIM/include"
-mkdir -p "$LIB_SIM/include"
-cp -r "$SDK_PATH/realgui/engine"/*.h "$LIB_SIM/include/" 2>/dev/null || true
-cp -r "$SDK_PATH/realgui/widget"/*.h "$LIB_SIM/include/" 2>/dev/null || true
-cp -r "$SDK_PATH/realgui/server"/*.h "$LIB_SIM/include/" 2>/dev/null || true
-cp -r "$SDK_PATH/realgui/3rd"/*.h "$LIB_SIM/include/" 2>/dev/null || true
+--------------------------------------------------------------------------------
+第二步：拷贝头文件
+--------------------------------------------------------------------------------
+从 SDK 拷贝 GUI 框架头文件到 include 目录：
 
-# 3. 拷贝构建工具
-echo "3. 拷贝构建工具..."
-rm -rf "$LIB_SIM/tool"
-mkdir -p "$LIB_SIM/tool"
-cp -r "$SDK_PATH/tool/scons-tool" "$LIB_SIM/tool/"
+  mkdir -p ./lib/sim/include
+  cp /path/to/HoneyGUI-SDK/realgui/engine/*.h ./lib/sim/include/
+  cp /path/to/HoneyGUI-SDK/realgui/widget/*.h ./lib/sim/include/
+  cp /path/to/HoneyGUI-SDK/realgui/server/*.h ./lib/sim/include/
+  cp /path/to/HoneyGUI-SDK/realgui/3rd/*.h ./lib/sim/include/
 
-echo ""
-echo "✓ 文件拷贝完成"
-echo ""
-echo "接下来需要手动编译预编译库："
-echo "  Linux: cd $SDK_PATH/win32_sim && scons --buildlib=gui && cp build/libgui.a $PWD/$LIB_SIM/linux/"
-echo "  Windows: 在 Windows 环境下编译 libgui.a 并放到 $LIB_SIM/win32/"
-echo ""
-echo "SDL2 静态库已存在于 $LIB_SIM/SDL2-2.26.0-STATIC/"
+--------------------------------------------------------------------------------
+第三步：拷贝构建工具
+--------------------------------------------------------------------------------
+从 SDK 拷贝 SCons 构建脚本：
+
+  mkdir -p ./lib/sim/tool
+  cp -r /path/to/HoneyGUI-SDK/tool/scons-tool ./lib/sim/tool/
+
+注意：mkromfs 已用 TypeScript 重写，位于 tools/mkromfs.ts，无需拷贝
+
+--------------------------------------------------------------------------------
+第四步：编译预编译库（Linux）
+--------------------------------------------------------------------------------
+在 Linux 环境下编译 libgui.a：
+
+  cd /path/to/HoneyGUI-SDK/win32_sim
+  scons --buildlib=gui
+  cp build/libgui.a /path/to/plugin/lib/sim/linux/
+
+--------------------------------------------------------------------------------
+第五步：编译预编译库（Windows）
+--------------------------------------------------------------------------------
+在 Windows + MinGW 环境下编译 libgui.a：
+
+  cd C:\path\to\HoneyGUI-SDK\win32_sim
+  scons --buildlib=gui
+  copy build\libgui.a C:\path\to\plugin\lib\sim\win32\
+
+--------------------------------------------------------------------------------
+第六步：验证文件完整性
+--------------------------------------------------------------------------------
+检查以下文件是否存在：
+
+  ✓ lib/sim/win32_sim/main.c
+  ✓ lib/sim/win32_sim/.config
+  ✓ lib/sim/include/gui_api.h
+  ✓ lib/sim/tool/scons-tool/building.py
+  ✓ lib/sim/linux/libgui.a (~3.7 MB)
+  ✓ lib/sim/win32/libgui.a (~4 MB)
+  ✓ lib/sim/SDL2-2.26.0-STATIC/ (已内置)
+
+--------------------------------------------------------------------------------
+第七步：打包插件
+--------------------------------------------------------------------------------
+编译并打包插件：
+
+  npm run compile
+  npm run build:webview
+  vsce package
+
+生成：honeygui-visual-designer-x.x.x.vsix
+
+================================================================================
+EOF
