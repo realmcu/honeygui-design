@@ -34,7 +34,6 @@ echo "3. 拷贝构建工具..."
 rm -rf "$LIB_SIM/tool"
 mkdir -p "$LIB_SIM/tool"
 cp -r "$SDK_PATH/tool/scons-tool" "$LIB_SIM/tool/"
-cp -r "$SDK_PATH/tool/mkromfs" "$LIB_SIM/tool/"
 
 echo ""
 echo "✓ 文件拷贝完成"
