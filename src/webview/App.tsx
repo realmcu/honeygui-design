@@ -137,18 +137,26 @@ const App: React.FC = () => {
           break;
 
         case 'updateImagePath':
-          // 更新图片组件的路径
+          // 更新图片组件的路径和尺寸
           if (message.componentId && message.path) {
             const store = useDesignerStore.getState();
             const component = store.components.find(c => c.id === message.componentId);
             if (component) {
-              store.updateComponent(message.componentId, {
+              const updates: any = {
                 data: {
                   ...component.data,
                   src: message.path
                 }
-              });
-              console.log(`[Webview App] 更新图片路径: ${message.path}`);
+              };
+              // 如果有图片尺寸，同时更新组件尺寸（尺寸在 position 中）
+              if (message.imageSize) {
+                updates.position = {
+                  ...component.position,
+                  width: message.imageSize.width,
+                  height: message.imageSize.height
+                };
+              }
+              store.updateComponent(message.componentId, updates);
             }
           }
           break;

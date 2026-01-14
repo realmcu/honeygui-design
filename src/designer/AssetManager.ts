@@ -539,11 +539,13 @@ export class AssetManager {
                     imageSize
                 });
             } else if (componentId) {
-                // 如果提供了 componentId，则更新现有组件的图片路径
+                // 如果提供了 componentId，则更新现有组件的图片路径和尺寸
+                const imageSize = this.getImageSize(filePath);
                 this._panel.webview.postMessage({
                     command: 'updateImagePath',
                     componentId: componentId,
-                    path: hmlRelativePath
+                    path: hmlRelativePath,
+                    imageSize
                 });
             }
 
@@ -637,6 +639,42 @@ export class AssetManager {
                 imagePath,
                 dropPosition,
                 targetContainerId,
+                imageSize
+            });
+        } catch (error) {
+            logger.error(`[AssetManager] 获取图片尺寸失败: ${error}`);
+        }
+    }
+
+    /**
+     * 处理获取图片尺寸并更新现有组件
+     */
+    public handleGetImageSizeForComponent(
+        componentId: string,
+        imagePath: string,
+        currentFilePath: string | undefined
+    ): void {
+        try {
+            if (!currentFilePath || !componentId || !imagePath) {
+                return;
+            }
+
+            const projectRoot = ProjectUtils.findProjectRoot(currentFilePath);
+            if (!projectRoot) {
+                return;
+            }
+
+            const absolutePath = path.join(projectRoot, imagePath);
+            if (!fs.existsSync(absolutePath)) {
+                return;
+            }
+
+            const imageSize = this.getImageSize(absolutePath);
+
+            this._panel.webview.postMessage({
+                command: 'updateImagePath',
+                componentId,
+                path: imagePath,
                 imageSize
             });
         } catch (error) {

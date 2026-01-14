@@ -25,6 +25,19 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
     });
   };
 
+  // 当图片路径变更时，请求后端获取图片尺寸并更新组件
+  const handleImageSrcChange = (value: string) => {
+    handleDataChange('src', value);
+    // 如果路径有效，请求后端获取尺寸
+    if (value && value.startsWith('assets/')) {
+      window.vscodeAPI?.postMessage({
+        command: 'getImageSizeForComponent',
+        componentId: component.id,
+        imagePath: value
+      });
+    }
+  };
+
   const handleTransformChange = (property: string, value: any) => {
     const transform = component.style?.transform || {};
     onUpdate({
@@ -70,6 +83,17 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
           type="text"
           value={value || ''}
           onChange={(e) => onChange(e.target.value)}
+          onBlur={(e) => {
+            // 失去焦点时获取图片尺寸
+            const val = e.target.value;
+            if (val && val.startsWith('assets/')) {
+              window.vscodeAPI?.postMessage({
+                command: 'getImageSizeForComponent',
+                componentId: component.id,
+                imagePath: val
+              });
+            }
+          }}
           placeholder="图片路径"
           style={{
             flex: 1,

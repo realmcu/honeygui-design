@@ -214,6 +214,14 @@ export class MessageHandler {
                 );
                 break;
 
+            case 'getImageSizeForComponent':
+                this._assetManager.handleGetImageSizeForComponent(
+                    message.componentId,
+                    message.imagePath,
+                    this._fileManager.currentFilePath
+                );
+                break;
+
             case 'create3DComponent':
                 this._assetManager.handleCreate3DComponent(
                     message.modelPath,
