@@ -76,7 +76,7 @@ export class GlassGenerator {
     }
 
     /**
-     * 解析SVG内容中的路径数据（支持 path 和 polygon）
+     * 解析SVG内容中的路径数据（支持 path、polygon、polyline、circle、ellipse）
      * 对应Python: parse_svg_paths()
      */
     parseSvgPaths(svgContent: string): string[] {
@@ -118,7 +118,94 @@ export class GlassGenerator {
             }
         }
         
+        // 解析 <circle cx="..." cy="..." r="..."> 元素
+        const circlePattern = /<circle[^>]*>/gi;
+        while ((match = circlePattern.exec(svgContent)) !== null) {
+            const circleTag = match[0];
+            const pathD = this.circleToPathD(circleTag);
+            if (pathD) {
+                paths.push(pathD);
+            }
+        }
+        
+        // 解析 <ellipse cx="..." cy="..." rx="..." ry="..."> 元素
+        const ellipsePattern = /<ellipse[^>]*>/gi;
+        while ((match = ellipsePattern.exec(svgContent)) !== null) {
+            const ellipseTag = match[0];
+            const pathD = this.ellipseToPathD(ellipseTag);
+            if (pathD) {
+                paths.push(pathD);
+            }
+        }
+        
         return paths;
+    }
+
+    /**
+     * 将 <circle> 元素转换为 path d 格式
+     * 使用 4 段三次贝塞尔曲线近似圆形
+     * @param circleTag circle 元素的完整标签
+     */
+    private circleToPathD(circleTag: string): string | null {
+        // 提取 cx, cy, r 属性
+        const cxMatch = circleTag.match(/\bcx\s*=\s*["']?(-?\d+\.?\d*)["']?/i);
+        const cyMatch = circleTag.match(/\bcy\s*=\s*["']?(-?\d+\.?\d*)["']?/i);
+        const rMatch = circleTag.match(/\br\s*=\s*["']?(-?\d+\.?\d*)["']?/i);
+        
+        const cx = cxMatch ? parseFloat(cxMatch[1]) : 0;
+        const cy = cyMatch ? parseFloat(cyMatch[1]) : 0;
+        const r = rMatch ? parseFloat(rMatch[1]) : 0;
+        
+        if (r <= 0) return null;
+        
+        return this.ellipseToPath(cx, cy, r, r);
+    }
+
+    /**
+     * 将 <ellipse> 元素转换为 path d 格式
+     * @param ellipseTag ellipse 元素的完整标签
+     */
+    private ellipseToPathD(ellipseTag: string): string | null {
+        // 提取 cx, cy, rx, ry 属性
+        const cxMatch = ellipseTag.match(/\bcx\s*=\s*["']?(-?\d+\.?\d*)["']?/i);
+        const cyMatch = ellipseTag.match(/\bcy\s*=\s*["']?(-?\d+\.?\d*)["']?/i);
+        const rxMatch = ellipseTag.match(/\brx\s*=\s*["']?(-?\d+\.?\d*)["']?/i);
+        const ryMatch = ellipseTag.match(/\bry\s*=\s*["']?(-?\d+\.?\d*)["']?/i);
+        
+        const cx = cxMatch ? parseFloat(cxMatch[1]) : 0;
+        const cy = cyMatch ? parseFloat(cyMatch[1]) : 0;
+        const rx = rxMatch ? parseFloat(rxMatch[1]) : 0;
+        const ry = ryMatch ? parseFloat(ryMatch[1]) : 0;
+        
+        if (rx <= 0 || ry <= 0) return null;
+        
+        return this.ellipseToPath(cx, cy, rx, ry);
+    }
+
+    /**
+     * 将椭圆/圆形转换为 path d 格式
+     * 使用 4 段三次贝塞尔曲线近似，精度约 0.027%
+     * 魔数 k = 0.5522847498 ≈ (4/3) * tan(π/8)
+     */
+    private ellipseToPath(cx: number, cy: number, rx: number, ry: number): string {
+        const k = 0.5522847498;
+        const kx = k * rx;
+        const ky = k * ry;
+        
+        // 从右侧点开始，顺时针绘制 4 段贝塞尔曲线
+        // 起点: (cx + rx, cy)
+        // 第1段: 右 → 下
+        // 第2段: 下 → 左
+        // 第3段: 左 → 上
+        // 第4段: 上 → 右（回到起点）
+        return [
+            `M ${cx + rx} ${cy}`,
+            `C ${cx + rx} ${cy + ky} ${cx + kx} ${cy + ry} ${cx} ${cy + ry}`,
+            `C ${cx - kx} ${cy + ry} ${cx - rx} ${cy + ky} ${cx - rx} ${cy}`,
+            `C ${cx - rx} ${cy - ky} ${cx - kx} ${cy - ry} ${cx} ${cy - ry}`,
+            `C ${cx + kx} ${cy - ry} ${cx + rx} ${cy - ky} ${cx + rx} ${cy}`,
+            'Z'
+        ].join(' ');
     }
 
     /**

@@ -6,13 +6,13 @@ import { getAbsolutePosition } from '../../utils/componentUtils';
 import { Component } from '../../types';
 
 /**
- * 解析 SVG 路径数据
+ * 解析 SVG 路径数据（支持 path、polygon、polyline、circle、ellipse）
  */
 function parseSvgPaths(svgContent: string): string[] {
   const paths: string[] = [];
   
   const pathPattern = /<path[^>]*\sd="([^"]*)"[^>]*>/gi;
-  let match;
+  let match: RegExpExecArray | null;
   while ((match = pathPattern.exec(svgContent)) !== null) {
     const pathData = match[1].trim();
     if (pathData) paths.push(pathData);
@@ -22,15 +22,43 @@ function parseSvgPaths(svgContent: string): string[] {
   while ((match = polygonPattern.exec(svgContent)) !== null) {
     const pointsData = match[1].trim();
     if (pointsData) {
-      const pathD = polygonPointsToPathD(pointsData);
+      const pathD = polygonPointsToPathD(pointsData, true);
       if (pathD) paths.push(pathD);
     }
+  }
+  
+  // 解析 <polyline> 元素（不闭合）
+  const polylinePattern = /<polyline[^>]*\spoints="([^"]*)"[^>]*>/gi;
+  while ((match = polylinePattern.exec(svgContent)) !== null) {
+    const pointsData = match[1].trim();
+    if (pointsData) {
+      const pathD = polygonPointsToPathD(pointsData, false);
+      if (pathD) paths.push(pathD);
+    }
+  }
+  
+  // 解析 <circle> 元素
+  const circlePattern = /<circle[^>]*>/gi;
+  while ((match = circlePattern.exec(svgContent)) !== null) {
+    const pathD = circleToPathD(match[0]);
+    if (pathD) paths.push(pathD);
+  }
+  
+  // 解析 <ellipse> 元素
+  const ellipsePattern = /<ellipse[^>]*>/gi;
+  while ((match = ellipsePattern.exec(svgContent)) !== null) {
+    const pathD = ellipseToPathD(match[0]);
+    if (pathD) paths.push(pathD);
   }
   
   return paths;
 }
 
-function polygonPointsToPathD(pointsData: string): string | null {
+/**
+ * 将 polygon/polyline 的 points 转换为 path d 格式
+ * @param close 是否闭合路径（polygon=true, polyline=false）
+ */
+function polygonPointsToPathD(pointsData: string, close: boolean = true): string | null {
   const numbers = pointsData.match(/-?\d+\.?\d*/g)?.map(Number);
   if (!numbers || numbers.length < 4) return null;
   
@@ -45,16 +73,95 @@ function polygonPointsToPathD(pointsData: string): string | null {
   for (let i = 1; i < points.length; i++) {
     d += ` L ${points[i].x} ${points[i].y}`;
   }
-  d += ' Z';
+  if (close) {
+    d += ' Z';
+  }
   
   return d;
+}
+
+/**
+ * 将 <circle> 元素转换为 path d 格式
+ */
+function circleToPathD(circleTag: string): string | null {
+  const cxMatch = circleTag.match(/\bcx\s*=\s*["']?(-?\d+\.?\d*)["']?/i);
+  const cyMatch = circleTag.match(/\bcy\s*=\s*["']?(-?\d+\.?\d*)["']?/i);
+  const rMatch = circleTag.match(/\br\s*=\s*["']?(-?\d+\.?\d*)["']?/i);
+  
+  const cx = cxMatch ? parseFloat(cxMatch[1]) : 0;
+  const cy = cyMatch ? parseFloat(cyMatch[1]) : 0;
+  const r = rMatch ? parseFloat(rMatch[1]) : 0;
+  
+  if (r <= 0) return null;
+  
+  return ellipseToPath(cx, cy, r, r);
+}
+
+/**
+ * 将 <ellipse> 元素转换为 path d 格式
+ */
+function ellipseToPathD(ellipseTag: string): string | null {
+  const cxMatch = ellipseTag.match(/\bcx\s*=\s*["']?(-?\d+\.?\d*)["']?/i);
+  const cyMatch = ellipseTag.match(/\bcy\s*=\s*["']?(-?\d+\.?\d*)["']?/i);
+  const rxMatch = ellipseTag.match(/\brx\s*=\s*["']?(-?\d+\.?\d*)["']?/i);
+  const ryMatch = ellipseTag.match(/\bry\s*=\s*["']?(-?\d+\.?\d*)["']?/i);
+  
+  const cx = cxMatch ? parseFloat(cxMatch[1]) : 0;
+  const cy = cyMatch ? parseFloat(cyMatch[1]) : 0;
+  const rx = rxMatch ? parseFloat(rxMatch[1]) : 0;
+  const ry = ryMatch ? parseFloat(ryMatch[1]) : 0;
+  
+  if (rx <= 0 || ry <= 0) return null;
+  
+  return ellipseToPath(cx, cy, rx, ry);
+}
+
+/**
+ * 将椭圆/圆形转换为 path d 格式
+ * 使用 4 段三次贝塞尔曲线近似
+ */
+function ellipseToPath(cx: number, cy: number, rx: number, ry: number): string {
+  const k = 0.5522847498;
+  const kx = k * rx;
+  const ky = k * ry;
+  
+  return [
+    `M ${cx + rx} ${cy}`,
+    `C ${cx + rx} ${cy + ky} ${cx + kx} ${cy + ry} ${cx} ${cy + ry}`,
+    `C ${cx - kx} ${cy + ry} ${cx - rx} ${cy + ky} ${cx - rx} ${cy}`,
+    `C ${cx - rx} ${cy - ky} ${cx - kx} ${cy - ry} ${cx} ${cy - ry}`,
+    `C ${cx + kx} ${cy - ry} ${cx + rx} ${cy - ky} ${cx + rx} ${cy}`,
+    'Z'
+  ].join(' ');
+}
+
+/**
+ * 计算三次贝塞尔曲线上的点
+ */
+function cubicBezierPoint(
+  t: number,
+  p0: {x: number, y: number},
+  p1: {x: number, y: number},
+  p2: {x: number, y: number},
+  p3: {x: number, y: number}
+): {x: number, y: number} {
+  const t2 = t * t;
+  const t3 = t2 * t;
+  const mt = 1 - t;
+  const mt2 = mt * mt;
+  const mt3 = mt2 * mt;
+  
+  return {
+    x: mt3 * p0.x + 3 * mt2 * t * p1.x + 3 * mt * t2 * p2.x + t3 * p3.x,
+    y: mt3 * p0.y + 3 * mt2 * t * p1.y + 3 * mt * t2 * p2.y + t3 * p3.y
+  };
 }
 
 function svgPathToPoints(pathData: string): Array<{x: number, y: number}> {
   const points: Array<{x: number, y: number}> = [];
   const commandPattern = /([MLHVCSQTAZ])\s*([^MLHVCSQTAZ]*)/gi;
   let currentX = 0, currentY = 0;
-  let match;
+  let match: RegExpExecArray | null;
 
   while ((match = commandPattern.exec(pathData)) !== null) {
     const cmd = match[1].toUpperCase();
@@ -83,10 +190,21 @@ function svgPathToPoints(pathData: string): Array<{x: number, y: number}> {
         }
         break;
       case 'C':
+        // 三次贝塞尔曲线：采样多个点以获得平滑曲线
         if (numbers.length >= 6) {
+          const p0 = { x: currentX, y: currentY };
+          const p1 = { x: numbers[0], y: numbers[1] };
+          const p2 = { x: numbers[2], y: numbers[3] };
+          const p3 = { x: numbers[4], y: numbers[5] };
+          
+          // 采样 16 个点
+          for (let i = 1; i <= 16; i++) {
+            const t = i / 16;
+            points.push(cubicBezierPoint(t, p0, p1, p2, p3));
+          }
+          
           currentX = numbers[4];
           currentY = numbers[5];
-          points.push({ x: currentX, y: currentY });
         }
         break;
       case 'Q':
@@ -245,19 +363,6 @@ function rectsOverlap(
 ): boolean {
   return !(r1.x + r1.w <= r2.x || r2.x + r2.w <= r1.x || 
            r1.y + r1.h <= r2.y || r2.y + r2.h <= r1.y);
-}
-
-/**
- * 加载图片并返回 Promise
- */
-function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = src;
-  });
 }
 
 /**
