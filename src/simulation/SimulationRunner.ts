@@ -274,7 +274,7 @@ export class SimulationRunner {
         const buildDir = path.join(this.projectRoot, 'build');
         if (fs.existsSync(buildDir)) {
             this.log(`清理 build 目录: ${buildDir}`);
-            await fs.promises.rm(buildDir, { recursive: true, force: true });
+            await this.removeDirectoryWithRetry(buildDir, 5, 500);
         }
 
         if (deep) {
@@ -282,18 +282,131 @@ export class SimulationRunner {
             const srcDir = path.join(this.projectRoot, 'src');
             if (fs.existsSync(srcDir)) {
                 this.log(`清理 src 目录: ${srcDir}`);
-                await fs.promises.rm(srcDir, { recursive: true, force: true });
+                await this.removeDirectoryWithRetry(srcDir, 5, 500);
             }
         } else {
             // 普通清理：只清理 src/ui 目录
             const uiDir = path.join(this.projectRoot, 'src', 'ui');
             if (fs.existsSync(uiDir)) {
                 this.log(`清理 src/ui 目录: ${uiDir}`);
-                await fs.promises.rm(uiDir, { recursive: true, force: true });
+                await this.removeDirectoryWithRetry(uiDir, 5, 500);
             }
         }
 
         this.log('清理完成');
+    }
+
+    /**
+     * 带重试机制的目录删除
+     * 解决 Windows 上文件被占用导致的 EBUSY 错误
+     * @param dirPath 目录路径
+     * @param maxRetries 最大重试次数
+     * @param delayMs 每次重试的延迟（毫秒）
+     */
+    private async removeDirectoryWithRetry(dirPath: string, maxRetries: number, delayMs: number): Promise<void> {
+        let lastError: Error | null = null;
+        
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                await fs.promises.rm(dirPath, { recursive: true, force: true });
+                
+                // 成功，记录日志并返回
+                if (attempt > 1) {
+                    this.log(`目录删除成功（第 ${attempt} 次尝试）`);
+                }
+                return;
+                
+            } catch (error) {
+                lastError = error as Error;
+                const errorCode = (error as any)?.code;
+                
+                // 如果不是文件占用错误，直接抛出
+                if (errorCode !== 'EBUSY' && errorCode !== 'EPERM' && errorCode !== 'EACCES') {
+                    throw error;
+                }
+                
+                // 如果是最后一次尝试，抛出错误
+                if (attempt === maxRetries) {
+                    this.log(`目录删除失败，已重试 ${maxRetries} 次`);
+                    break;
+                }
+                
+                // 等待后重试
+                this.log(`目录删除失败（第 ${attempt} 次尝试），${delayMs}ms 后重试... 错误: ${errorCode}`);
+                await new Promise(resolve => setTimeout(resolve, delayMs));
+                
+                // 指数退避：每次重试延迟翻倍
+                delayMs *= 2;
+            }
+        }
+        
+        // 所有重试都失败，尝试逐个删除文件
+        try {
+            this.log('尝试逐个删除文件...');
+            await this.removeDirectoryRecursively(dirPath);
+            this.log('逐个删除成功');
+            return;
+        } catch (recursiveError) {
+            this.log(`逐个删除也失败: ${(recursiveError as Error).message}`);
+        }
+        
+        // 抛出详细的错误信息
+        throw new Error(
+            `无法删除目录 ${dirPath}\n\n` +
+            `错误: ${lastError?.message || '未知错误'}\n\n` +
+            `可能原因：\n` +
+            `1. 文件被其他进程占用（如编译进程、文件浏览器、杀毒软件）\n` +
+            `2. 文件权限不足\n` +
+            `3. 磁盘错误\n\n` +
+            `建议：\n` +
+            `1. 关闭所有可能占用文件的程序（如文件浏览器）\n` +
+            `2. 暂时关闭杀毒软件的实时保护\n` +
+            `3. 手动删除 build 目录后重试\n` +
+            `4. 重启 VSCode`
+        );
+    }
+
+    /**
+     * 递归删除目录（逐个删除文件）
+     * 作为备用方案，当批量删除失败时使用
+     */
+    private async removeDirectoryRecursively(dirPath: string): Promise<void> {
+        if (!fs.existsSync(dirPath)) {
+            return;
+        }
+
+        const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
+        
+        for (const entry of entries) {
+            const fullPath = path.join(dirPath, entry.name);
+            
+            if (entry.isDirectory()) {
+                // 递归删除子目录
+                await this.removeDirectoryRecursively(fullPath);
+            } else {
+                // 删除文件，带重试
+                for (let i = 0; i < 3; i++) {
+                    try {
+                        await fs.promises.unlink(fullPath);
+                        break;
+                    } catch (error) {
+                        if (i === 2) throw error;
+                        await new Promise(resolve => setTimeout(resolve, 200));
+                    }
+                }
+            }
+        }
+        
+        // 删除空目录，带重试
+        for (let i = 0; i < 3; i++) {
+            try {
+                await fs.promises.rmdir(dirPath);
+                break;
+            } catch (error) {
+                if (i === 2) throw error;
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
+        }
     }
 
     /**
