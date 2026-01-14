@@ -10,7 +10,7 @@ import { ViewRelationModal } from './components/ViewRelationModal';
 import { Component, ComponentType } from './types';
 import useKeyboardShortcuts from './utils/keyboardShortcuts';
 import { getAbsolutePosition, findComponentAtPosition, isDropTargetType, isContainerType } from './utils/componentUtils';
-import { createImageComponentAtPosition, create3DComponentAtPosition, createVideoComponentAtPosition, createSvgComponentAtPosition } from './services/messageHandler';
+import { createImageComponentAtPosition, create3DComponentAtPosition, createVideoComponentAtPosition, createSvgComponentAtPosition, createGlassComponentAtPosition } from './services/messageHandler';
 import { processImageFiles } from './utils/fileUtils';
 import { parseObjDependencies, parseMtlDependencies, findDependencyFiles } from './utils/objDependencyParser';
 import './App.css';
@@ -215,6 +215,20 @@ const App: React.FC = () => {
             const store = useDesignerStore.getState();
             createSvgComponentAtPosition(
               message.svgPath,
+              message.dropPosition,
+              message.targetContainerId,
+              store.components,
+              store.addComponent,
+              message.size
+            );
+          }
+          break;
+
+        case 'createGlassComponent':
+          if (message.glassPath && message.targetContainerId && message.dropPosition) {
+            const store = useDesignerStore.getState();
+            createGlassComponentAtPosition(
+              message.glassPath,
               message.dropPosition,
               message.targetContainerId,
               store.components,
@@ -533,6 +547,7 @@ const App: React.FC = () => {
         const is3DModel = ext && ['obj', 'gltf', 'glb'].includes(ext);
         const isVideo = ext && ['mp4', 'avi', 'mov', 'mkv', 'webm'].includes(ext);
         const isSvg = ext === 'svg';
+        const isGlass = ext === 'glass';  // .glass 文件作为 SVG 处理
         
         if (is3DModel) {
           // 3D 模型：直接创建组件
@@ -555,6 +570,14 @@ const App: React.FC = () => {
           api.postMessage({
             command: 'createSvgComponent',
             svgPath: `assets/${assetPath}`,
+            dropPosition: { x, y },
+            targetContainerId: targetContainer.id
+          });
+        } else if (isGlass) {
+          // Glass：创建 Glass 组件
+          api.postMessage({
+            command: 'createGlassComponent',
+            glassPath: `assets/${assetPath}`,
             dropPosition: { x, y },
             targetContainerId: targetContainer.id
           });

@@ -18,6 +18,7 @@ import { ArcWidget } from './ArcWidget';
 import { CircleWidget } from './CircleWidget';
 import { RectWidget } from './RectWidget';
 import { SvgWidget } from './SvgWidget';
+import { GlassWidget } from './GlassWidget';
 import { LottieWidget } from './LottieWidget';
 
 export { WidgetProps } from './types';
@@ -46,5 +47,6 @@ export const widgetRegistry: Record<string, React.FC<WidgetProps>> = {
   hg_circle: CircleWidget,
   hg_rect: RectWidget,
   hg_svg: SvgWidget,
+  hg_glass: GlassWidget,
   hg_lottie: LottieWidget,
 };

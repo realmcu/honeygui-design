@@ -38,7 +38,8 @@ export type ComponentType =
   | 'hg_circle'
   | 'hg_rect'
   | 'hg_svg'
-  | 'hg_lottie';
+  | 'hg_lottie'
+  | 'hg_glass';
 
 export interface ComponentDefinition {
   type: ComponentType;
@@ -90,7 +91,7 @@ export interface DesignerState {
   undoStack: any[];
   redoStack: any[];
   projectConfig?: any; // Project configuration (resolution, etc.)
-  assetCategory: 'all' | 'images' | 'svgs' | 'videos' | 'models' | 'fonts'; // 资源面板分类
+  assetCategory: 'all' | 'images' | 'svgs' | 'videos' | 'models' | 'fonts' | 'glass'; // 资源面板分类
 }
 
 export interface VSCodeAPI {

@@ -14,9 +14,10 @@ const SVG_EXTS = ['svg'];
 const VIDEO_EXTS = ['mp4', 'avi', 'mov', 'mkv', 'webm'];
 const MODEL_EXTS = ['gltf', 'glb', 'obj'];  // 3D 模型主文件
 const FONT_EXTS = ['ttf', 'otf', 'woff', 'woff2'];  // 字体文件
+const GLASS_EXTS = ['glass'];  // 玻璃效果文件
 const MODEL_DEP_EXTS = ['mtl', 'bin'];  // 3D 模型依赖文件（材质文件、二进制数据）
 
-type AssetCategory = 'all' | 'images' | 'svgs' | 'videos' | 'models' | 'fonts';
+type AssetCategory = 'all' | 'images' | 'svgs' | 'videos' | 'models' | 'fonts' | 'glass';
 
 // 视频预览组件
 const VideoPreview: React.FC<{ videoPath: string }> = ({ videoPath }) => {
@@ -317,6 +318,38 @@ const Model3DPreview: React.FC<{ modelPath: string }> = ({ modelPath }) => {
   return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />;
 };
 
+// Glass 文件预览组件（将 .glass 文件作为 SVG 显示）
+const GlassPreview: React.FC<{ glassPath: string }> = ({ glassPath }) => {
+  const [svgDataUrl, setSvgDataUrl] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    // 通过 fetch 获取 .glass 文件内容，然后转换为 data URL
+    fetch(glassPath)
+      .then(response => response.text())
+      .then(svgContent => {
+        // 创建 SVG data URL
+        const dataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgContent)}`;
+        setSvgDataUrl(dataUrl);
+      })
+      .catch(() => setError(true));
+  }, [glassPath]);
+
+  if (error || !svgDataUrl) {
+    return <div className="file-icon" style={{ fontSize: '48px' }}>🔮</div>;
+  }
+
+  return (
+    <img
+      src={svgDataUrl}
+      alt="Glass Preview"
+      draggable={false}
+      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+      onError={() => setError(true)}
+    />
+  );
+};
+
 // 获取文件扩展名
 const getFileExt = (name: string): string => {
   return name.split('.').pop()?.toLowerCase() || '';
@@ -330,6 +363,7 @@ const getAssetCategory = (name: string): AssetCategory | null => {
   if (VIDEO_EXTS.includes(ext)) return 'videos';
   if (MODEL_EXTS.includes(ext)) return 'models';
   if (FONT_EXTS.includes(ext)) return 'fonts';
+  if (GLASS_EXTS.includes(ext)) return 'glass';
   return null;
 };
 
@@ -380,7 +414,8 @@ const AssetsPanel: React.FC = () => {
       svgs: [],
       videos: [],
       models: [],
-      fonts: []
+      fonts: [],
+      glass: []
     };
     
     // 递归扁平化所有文件，用于统计各分类数量
@@ -428,7 +463,8 @@ const AssetsPanel: React.FC = () => {
     svgs: categorizedAssets.svgs.length,
     videos: categorizedAssets.videos.length,
     models: categorizedAssets.models.length,
-    fonts: categorizedAssets.fonts.length
+    fonts: categorizedAssets.fonts.length,
+    glass: categorizedAssets.glass.length
   }), [categorizedAssets]);
 
   useEffect(() => {
@@ -475,6 +511,7 @@ const AssetsPanel: React.FC = () => {
     const isVideo = VIDEO_EXTS.includes(ext);
     const isModel = MODEL_EXTS.includes(ext);
     const isFont = FONT_EXTS.includes(ext);
+    const isGlass = GLASS_EXTS.includes(ext);  // 玻璃效果文件
     const isModelDep = MODEL_DEP_EXTS.includes(ext);  // 模型依赖文件（.mtl, .bin）
     
     return (
@@ -498,6 +535,7 @@ const AssetsPanel: React.FC = () => {
               }}
             />
           )}
+          {isGlass && <GlassPreview glassPath={asset.path} />}
           {isModel && <Model3DPreview modelPath={asset.path} />}
           {isVideo && <VideoPreview videoPath={asset.path} />}
           {isFont && <div className="file-icon" style={{ fontSize: '48px' }}>🔤</div>}
@@ -637,7 +675,8 @@ const AssetsPanel: React.FC = () => {
     activeCategory === 'images' ? '暂无图片资源' :
     activeCategory === 'svgs' ? '暂无SVG资源' :
     activeCategory === 'videos' ? '暂无视频资源' : 
-    activeCategory === 'models' ? '暂无3D模型资源' : '暂无字体资源';
+    activeCategory === 'models' ? '暂无3D模型资源' :
+    activeCategory === 'fonts' ? '暂无字体资源' : '暂无玻璃资源';
 
   // 切换分类时重置路径
   const handleCategoryChange = (category: AssetCategory) => {
@@ -661,6 +700,7 @@ const AssetsPanel: React.FC = () => {
           <option value="videos">视频 ({counts.videos})</option>
           <option value="models">3D ({counts.models})</option>
           <option value="fonts">字体 ({counts.fonts})</option>
+          <option value="glass">玻璃 ({counts.glass})</option>
         </select>
         <button 
           className="upload-btn" 
@@ -680,7 +720,7 @@ const AssetsPanel: React.FC = () => {
           ref={fileInputRef}
           type="file"
           multiple
-          accept=".png,.jpg,.jpeg,.gif,.bmp,.svg,.webp,.mp4,.avi,.mov,.mkv,.webm,.gltf,.glb,.obj,.mtl,.bin,.ttf,.otf,.woff,.woff2"
+          accept=".png,.jpg,.jpeg,.gif,.bmp,.svg,.webp,.mp4,.avi,.mov,.mkv,.webm,.gltf,.glb,.obj,.mtl,.bin,.ttf,.otf,.woff,.woff2,.glass"
           style={{ display: 'none' }}
           onChange={handleFileSelect}
         />

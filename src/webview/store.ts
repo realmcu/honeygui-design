@@ -153,7 +153,7 @@ export interface DesignerStore extends DesignerState {
   setShowAlignmentGuides: (show: boolean) => void;
 
   // Assets
-  setAssetCategory: (category: 'all' | 'images' | 'svgs' | 'videos' | 'models' | 'fonts') => void;
+  setAssetCategory: (category: 'all' | 'images' | 'svgs' | 'videos' | 'models' | 'fonts' | 'glass') => void;
 
   // Drag and drop
   startDrag: (componentId: string, mousePos: { x: number; y: number }) => void;
@@ -242,7 +242,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   undoStack: [],
   redoStack: [],
   vscodeAPI: null,
-  assetCategory: 'all' as 'all' | 'images' | 'svgs' | 'videos' | 'models' | 'fonts', // 资源面板分类
+  assetCategory: 'all' as 'all' | 'images' | 'svgs' | 'videos' | 'models' | 'fonts' | 'glass', // 资源面板分类
   clipboard: null, // 剪贴板
   clipboardMultiple: [], // 多选剪贴板
 

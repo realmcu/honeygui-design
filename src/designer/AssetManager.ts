@@ -85,6 +85,7 @@ export class AssetManager {
                 const modelExts = ['.gltf', '.glb', '.obj'];
                 const modelDepExts = ['.mtl', '.bin'];  // 3D 模型依赖文件（不显示在资源栏）
                 const fontExts = ['.ttf', '.otf', '.woff', '.woff2'];
+                const glassExts = ['.glass'];  // 玻璃效果文件
                 
                 // 跳过 3D 模型依赖文件，不显示在资源栏
                 if (modelDepExts.includes(ext)) {
@@ -102,6 +103,8 @@ export class AssetManager {
                     assetType = 'model3d';
                 } else if (fontExts.includes(ext)) {
                     assetType = 'font';
+                } else if (glassExts.includes(ext)) {
+                    assetType = 'glass';
                 }
                 
                 if (assetType) {
@@ -784,6 +787,37 @@ export class AssetManager {
             });
         } catch (error) {
             logger.error(`[AssetManager] 创建 SVG 组件失败: ${error}`);
+        }
+    }
+
+    /**
+     * 处理创建 Glass 组件请求
+     */
+    public handleCreateGlassComponent(
+        glassPath: string,
+        dropPosition: { x: number; y: number },
+        targetContainerId: string,
+        currentFilePath: string | undefined
+    ): void {
+        try {
+            if (!currentFilePath) {
+                return;
+            }
+
+            // 获取 Glass 文件尺寸（按 SVG 格式解析）
+            const projectRoot = path.dirname(path.dirname(currentFilePath));
+            const fullPath = path.join(projectRoot, glassPath);
+            const size = this.getSvgSize(fullPath);
+
+            this._panel.webview.postMessage({
+                command: 'createGlassComponent',
+                glassPath,
+                dropPosition,
+                targetContainerId,
+                size
+            });
+        } catch (error) {
+            logger.error(`[AssetManager] 创建 Glass 组件失败: ${error}`);
         }
     }
 

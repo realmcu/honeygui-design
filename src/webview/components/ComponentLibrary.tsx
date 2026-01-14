@@ -237,6 +237,17 @@ const componentDefinitions: ComponentDefinition[] = [
       { name: 'loop', label: '循环播放', type: 'boolean', defaultValue: true, group: 'general' },
     ],
   },
+  {
+    type: 'hg_glass',
+    name: '玻璃效果',
+    icon: '🔮',
+    defaultSize: { width: 150, height: 150 },
+    properties: [
+      { name: 'src', label: '形状路径', type: 'string', group: 'data' },
+      { name: 'distortion', label: '扭曲强度(%)', type: 'number', defaultValue: 10, group: 'data' },
+      { name: 'region', label: '效果范围(%)', type: 'number', defaultValue: 50, group: 'data' },
+    ],
+  },
 ];
 
 // 组件分类
@@ -255,7 +266,7 @@ const componentCategories = [
   },
   {
     name: '图形',
-    types: ['hg_arc', 'hg_circle', 'hg_rect', 'hg_svg']
+    types: ['hg_arc', 'hg_circle', 'hg_rect', 'hg_svg', 'hg_glass']
   },
   {
     name: '多媒体',

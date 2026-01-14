@@ -171,6 +171,51 @@ export const createSvgComponentAtPosition = (
 };
 
 /**
+ * 创建 Glass 组件的统一函数
+ */
+export const createGlassComponentAtPosition = (
+  glassPath: string,
+  dropPosition: { x: number; y: number },
+  targetContainerId: string,
+  components: Component[],
+  addComponent: (component: Component) => void,
+  size?: { width: number; height: number }
+): void => {
+  const targetContainer = components.find(c => c.id === targetContainerId);
+  if (!targetContainer) return;
+
+  const targetAbsPos = getAbsolutePosition(targetContainer, components);
+  const relativeX = Math.max(0, dropPosition.x - targetAbsPos.x);
+  const relativeY = Math.max(0, dropPosition.y - targetAbsPos.y);
+
+  const glassComponent: Component = {
+    id: `hg_glass_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+    type: 'hg_glass',
+    name: `glass_${Date.now().toString().substr(-4)}`,
+    position: { 
+      x: relativeX, 
+      y: relativeY, 
+      width: size?.width || 150, 
+      height: size?.height || 150 
+    },
+    visible: true,
+    enabled: true,
+    locked: false,
+    zIndex: 1,
+    children: [],
+    parent: targetContainerId,
+    style: {},
+    data: { 
+      src: glassPath,
+      distortion: 10,  // 默认扭曲强度 10%
+      region: 50       // 默认效果区域 50%
+    },
+  };
+
+  addComponent(glassComponent);
+};
+
+/**
  * 处理从后端接收的消息
  */
 export const handleBackendMessage = (
