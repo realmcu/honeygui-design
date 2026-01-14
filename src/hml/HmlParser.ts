@@ -641,6 +641,10 @@ export class HmlParser {
         if (key === 'enableEndCap') {
           value = value === 'true' || value === true;
         }
+        // enableBlur 需要转换为布尔值
+        if (key === 'enableBlur') {
+          value = value === 'true' || value === true;
+        }
         data[key] = value;
       }
     });

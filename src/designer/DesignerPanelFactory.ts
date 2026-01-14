@@ -56,16 +56,6 @@ export class DesignerPanelFactory {
                 logger.info(`[DesignerPanelFactory] 未找到project.json，使用父目录: ${parentDir}`);
             }
         }
-        
-        // 同时添加 workspace 根目录（如果存在且不同）
-        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-        if (workspaceRoot) {
-            const alreadyAdded = localRoots.some(r => r.fsPath === workspaceRoot);
-            if (!alreadyAdded) {
-                localRoots.push(vscode.Uri.file(workspaceRoot));
-                logger.info(`[DesignerPanelFactory] 添加workspace: ${workspaceRoot}`);
-            }
-        }
 
         const panel = vscode.window.createWebviewPanel(
             DesignerPanel.viewType,

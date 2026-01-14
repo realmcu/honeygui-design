@@ -150,6 +150,7 @@ export class ViewGenerator implements ComponentCodeGenerator {
 
   /**
    * 收集当前 view 下所有带时间格式的 label 组件
+   * 注意：跳过 hg_window 子容器，因为 WindowGenerator 会自己处理
    */
   private collectTimeLabels(component: Component, context: GeneratorContext): string[] {
     const timeLabels: string[] = [];
@@ -160,11 +161,11 @@ export class ViewGenerator implements ComponentCodeGenerator {
         timeLabels.push(comp.id);
       }
       
-      // 递归检查子组件
+      // 递归检查子组件，但跳过 hg_window（它有自己的时间初始化逻辑）
       if (comp.children) {
         comp.children.forEach(childId => {
           const child = context.componentMap.get(childId);
-          if (child) {
+          if (child && child.type !== 'hg_window') {
             collectRecursive(child);
           }
         });
