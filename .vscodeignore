@@ -89,3 +89,4 @@ node_modules/**
 !node_modules/sax/**
 *.kiro
 rm-sdk.kiro
+AGENTS.md
