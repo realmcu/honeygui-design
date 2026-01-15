@@ -223,9 +223,12 @@ export class BuildCore {
         const mkromfsScript = path.join(__dirname, '..', '..', '..', 'tools', 'mkromfs_for_honeygui.py');
         const { execSync } = require('child_process');
         
+        // Windows 使用 python，Linux/Mac 使用 python3
+        const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
+        
         // 生成 C 文件
         try {
-            execSync(`python3 "${mkromfsScript}" -i "${assetsDir}" -o "${romfsOutput}" -a ${baseAddr}`, {
+            execSync(`${pythonCmd} "${mkromfsScript}" -i "${assetsDir}" -o "${romfsOutput}" -a ${baseAddr}`, {
                 stdio: 'inherit'
             });
             this.logger.log('romfs C 文件生成完成');
@@ -235,7 +238,7 @@ export class BuildCore {
 
         // 生成二进制文件（用于 UART 下载）
         try {
-            execSync(`python3 "${mkromfsScript}" -i "${assetsDir}" -o "${romfsBinOutput}" -a ${baseAddr} -b`, {
+            execSync(`${pythonCmd} "${mkromfsScript}" -i "${assetsDir}" -o "${romfsBinOutput}" -a ${baseAddr} -b`, {
                 stdio: 'inherit'
             });
             this.logger.log(`romfs 二进制文件生成完成 (基地址: ${baseAddr})`);
