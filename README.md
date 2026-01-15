@@ -46,19 +46,19 @@
 
 点击左侧 HoneyGUI 图标 → **新建项目**
 
-![Create Project](https://raw.githubusercontent.com/realmcu/HoneyGUI/master/honeygui-design/resources/screenshots/create-project.png)
+![Create Project](https://gitee.com/realmcu_admin/honeygui-design/raw/master/resources/screenshots/create-project.png)
 
 ### 2. 设计界面
 
 双击 `.hml` 文件打开设计器，从组件库拖拽组件到画布
 
-![Design UI](https://raw.githubusercontent.com/realmcu/HoneyGUI/master/honeygui-design/resources/screenshots/design-ui.png)
+![Design UI](https://gitee.com/realmcu_admin/honeygui-design/raw/master/resources/screenshots/design-ui.png)
 
 ### 3. 编译仿真
 
 点击工具栏 **▶ 编译仿真** 按钮
 
-![Compile](https://raw.githubusercontent.com/realmcu/HoneyGUI/master/honeygui-design/resources/screenshots/compile.png)
+![Compile](https://gitee.com/realmcu_admin/honeygui-design/raw/master/resources/screenshots/compile.png)
 
 ## 资源转换工具
 
