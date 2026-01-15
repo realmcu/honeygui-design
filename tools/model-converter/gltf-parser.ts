@@ -161,7 +161,7 @@ export class GLTFParser {
         }
 
         // 3. 解析材质
-        model.materials = this.parseMaterials(gltfData, baseDir, outputDir);
+        model.materials = this.parseMaterials(gltfData, baseDir, gltfPath, outputDir);
 
         // 4. 解析网格和图元
         model.meshes = this.parseMeshes(gltfData, buffers, model.materials);
@@ -210,7 +210,7 @@ export class GLTFParser {
         return nodes;
     }
 
-    private parseMaterials(gltfData: any, baseDir: string, outputDir?: string): Material[] {
+    private parseMaterials(gltfData: any, baseDir: string, gltfPath: string, outputDir?: string): Material[] {
         if (!gltfData.materials) return [];
 
         const materials: Material[] = [];
@@ -238,29 +238,49 @@ export class GLTFParser {
                     const texture = gltfData.textures[texIndex];
                     const image = gltfData.images[texture.source];
 
-                    if (image.uri) {
+                    if (image.uri && outputDir) {
                         console.log(`[GLTF Parser] Found texture URI: ${image.uri}`);
-                        const imagePath = path.join(baseDir, image.uri);
-                        let binPath = imagePath.replace(/\.(png|jpg|jpeg)$/i, '.bin');
-                        console.log(`[GLTF Parser] Initial bin path: ${binPath}`);
-
-                        // 如果提供了 outputDir，直接在 build/assets 根目录查找纹理bin（不保持子目录结构）
-                        if (outputDir) {
-                            const textureFileName = path.basename(image.uri).replace(/\.(png|jpg|jpeg)$/i, '.bin');
-                            const outputBinPath = path.join(outputDir, textureFileName);
-                            console.log(`[GLTF Parser] Checking output bin path: ${outputBinPath}`);
-                            if (fs.existsSync(outputBinPath)) {
-                                binPath = outputBinPath;
-                                console.log(`[GLTF Parser] Using output bin path`);
-                            }
+                        
+                        // GLTF 中的纹理路径是相对于 GLTF 文件的，需要转换为相对于 assets 根目录的路径
+                        // 例如：
+                        // - GLTF: project/assets/3D/flag.gltf
+                        // - GLTF 中: textures/flag.png (相对于 GLTF)
+                        // - 实际图片: project/assets/3D/textures/flag.png
+                        // - 需要查找: build/assets/3D/textures/flag.bin
+                        
+                        // 1. 将 GLTF 中的相对路径解析为绝对路径（相对于 GLTF 文件目录）
+                        const textureAbsPath = path.join(baseDir, image.uri);
+                        
+                        // 2. 查找 assets 目录（向上查找）
+                        const gltfDir = path.dirname(gltfPath);
+                        let assetsRoot = gltfDir;
+                        while (assetsRoot && path.basename(assetsRoot) !== 'assets') {
+                            const parent = path.dirname(assetsRoot);
+                            if (parent === assetsRoot) break; // 到达根目录
+                            assetsRoot = parent;
                         }
+                        
+                        // 3. 计算纹理相对于 assets 的路径
+                        let relativeTexturePath: string;
+                        if (path.basename(assetsRoot) === 'assets') {
+                            relativeTexturePath = path.relative(assetsRoot, textureAbsPath);
+                        } else {
+                            // 如果找不到 assets 目录，使用纹理文件名
+                            relativeTexturePath = path.basename(image.uri);
+                        }
+                        
+                        // 4. 替换扩展名为 .bin
+                        const textureBinPath = relativeTexturePath.replace(/\.(png|jpg|jpeg)$/i, '.bin');
+                        const binPath = path.join(outputDir, textureBinPath);
+                        console.log(`[GLTF Parser] Looking for texture bin: ${binPath}`);
 
-                        console.log(`[GLTF Parser] Final bin path: ${binPath}`);
                         if (fs.existsSync(binPath)) {
                             material.textureData = fs.readFileSync(binPath);
                             console.log(`[GLTF Parser] ✓ Loaded texture data: ${material.textureData.length} bytes`);
                         } else {
                             console.warn(`[GLTF Parser] ✗ Texture bin not found: ${binPath}`);
+                            console.warn(`[GLTF Parser]   GLTF texture URI: ${image.uri}`);
+                            console.warn(`[GLTF Parser]   Resolved to: ${relativeTexturePath}`);
                         }
                     }
                 }

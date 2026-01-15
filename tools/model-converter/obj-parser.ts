@@ -118,23 +118,50 @@ export class OBJParser {
         const textures: Buffer[] = [];
         for (const mat of materials) {
             const texturePath = (mat as any).texturePath;
-            if (texturePath) {
-                const fullPath = path.join(dir, texturePath);
-                let binPath = fullPath.replace(/\.(png|jpe?g|bmp)$/i, '.bin');
+            if (texturePath && outputDir) {
+                // MTL 中的纹理路径是相对于 MTL 文件的，需要转换为相对于 assets 根目录的路径
+                // 例如：
+                // - OBJ: project/assets/3D/butterfly.obj
+                // - MTL 中: butterfly_03.png (相对于 MTL)
+                // - 实际图片: project/assets/3D/butterfly_03.png
+                // - 需要查找: build/assets/3D/butterfly_03.bin
                 
-                // 如果提供了 outputDir，直接在 build/assets 根目录查找纹理bin（不保持子目录结构）
-                if (outputDir) {
-                    const textureFileName = path.basename(texturePath).replace(/\.(png|jpe?g|bmp)$/i, '.bin');
-                    const outputBinPath = path.join(outputDir, textureFileName);
-                    if (fs.existsSync(outputBinPath)) {
-                        binPath = outputBinPath;
-                    }
+                // 1. 将 MTL 中的相对路径解析为绝对路径（相对于 OBJ 文件目录）
+                const textureAbsPath = path.join(dir, texturePath);
+                
+                // 2. 计算相对于 assets 根目录的路径
+                // 假设 outputDir 是 build/assets，那么对应的源目录应该是 project/assets
+                // 我们需要从 OBJ 文件路径推断 assets 根目录
+                const objDir = path.dirname(filePath);
+                
+                // 3. 查找 assets 目录（向上查找）
+                let assetsRoot = objDir;
+                while (assetsRoot && path.basename(assetsRoot) !== 'assets') {
+                    const parent = path.dirname(assetsRoot);
+                    if (parent === assetsRoot) break; // 到达根目录
+                    assetsRoot = parent;
                 }
+                
+                // 4. 计算纹理相对于 assets 的路径
+                let relativeTexturePath: string;
+                if (path.basename(assetsRoot) === 'assets') {
+                    relativeTexturePath = path.relative(assetsRoot, textureAbsPath);
+                } else {
+                    // 如果找不到 assets 目录，使用纹理文件名
+                    relativeTexturePath = path.basename(texturePath);
+                }
+                
+                // 5. 替换扩展名为 .bin
+                const textureBinPath = relativeTexturePath.replace(/\.(png|jpe?g|bmp)$/i, '.bin');
+                const binPath = path.join(outputDir, textureBinPath);
                 
                 if (fs.existsSync(binPath)) {
                     textures.push(fs.readFileSync(binPath));
+                    console.log(`[OBJ Parser] ✓ Loaded texture: ${binPath}`);
                 } else {
-                    console.warn(`Texture bin not found: ${binPath}`);
+                    console.warn(`[OBJ Parser] ✗ Texture bin not found: ${binPath}`);
+                    console.warn(`[OBJ Parser]   MTL texture path: ${texturePath}`);
+                    console.warn(`[OBJ Parser]   Resolved to: ${relativeTexturePath}`);
                     textures.push(Buffer.alloc(0));
                 }
             } else {
