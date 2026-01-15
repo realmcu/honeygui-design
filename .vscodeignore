@@ -87,3 +87,5 @@ node_modules/**
 
 # xml-js 依赖
 !node_modules/sax/**
+*.kiro
+rm-sdk.kiro
