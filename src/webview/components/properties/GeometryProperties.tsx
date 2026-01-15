@@ -4,6 +4,7 @@ import { PropertyEditor } from './PropertyEditor';
 import { BaseProperties } from './BaseProperties';
 import { EventsPanel } from './EventsPanel';
 import { componentDefinitions } from '../ComponentLibrary';
+import { t } from '../../i18n';
 
 interface GradientStop {
   position: number;  // 0.0 - 1.0
@@ -21,23 +22,23 @@ export const GeometryProperties: React.FC<PropertyPanelProps> = ({ component, on
   // 获取渐变类型/方向的提示文本
   const getGradientHint = () => {
     if (component.type === 'hg_arc') {
-      return '弧形使用角度渐变，颜色沿弧线方向变化';
+      return t('Arc uses angular gradient, color changes along the arc direction');
     } else if (component.type === 'hg_circle') {
       const gradientType = component.style?.gradientType || 'radial';
       if (gradientType === 'radial') {
-        return '径向渐变：颜色从圆心向边缘辐射变化';
+        return t('Radial gradient: color radiates from center to edge');
       } else {
-        return '角度渐变：颜色沿圆周方向变化（需配合起始/结束角度）';
+        return t('Angular gradient: color changes along circumference (requires start/end angle)');
       }
     } else if (component.type === 'hg_rect') {
       const direction = component.style?.gradientDirection || 'horizontal';
       const directionMap: Record<string, string> = {
-        'horizontal': '水平渐变：从左到右',
-        'vertical': '垂直渐变：从上到下',
-        'diagonal_tl_br': '对角渐变：从左上到右下',
-        'diagonal_tr_bl': '对角渐变：从右上到左下'
+        'horizontal': t('Horizontal gradient: left to right'),
+        'vertical': t('Vertical gradient: top to bottom'),
+        'diagonal_tl_br': t('Diagonal gradient: top-left to bottom-right'),
+        'diagonal_tr_bl': t('Diagonal gradient: top-right to bottom-left')
       };
-      return directionMap[direction] || '线性渐变';
+      return directionMap[direction] || t('Linear gradient');
     }
     return '';
   };
@@ -89,13 +90,13 @@ export const GeometryProperties: React.FC<PropertyPanelProps> = ({ component, on
           className={activeTab === 'properties' ? 'active' : ''}
           onClick={() => setActiveTab('properties')}
         >
-          属性
+          {t('Properties')}
         </button>
         <button
           className={activeTab === 'events' ? 'active' : ''}
           onClick={() => setActiveTab('events')}
         >
-          事件
+          {t('Events')}
         </button>
       </div>
 
@@ -132,7 +133,7 @@ export const GeometryProperties: React.FC<PropertyPanelProps> = ({ component, on
             {useGradient && (
               <div className="property-group">
                 <div className="property-group-title">
-                  渐变设置
+                  {t('Gradient Settings')}
                   <button
                     onClick={handleAddGradientStop}
                     style={{
@@ -146,7 +147,7 @@ export const GeometryProperties: React.FC<PropertyPanelProps> = ({ component, on
                       cursor: 'pointer',
                     }}
                   >
-                    + 添加色标
+                    + {t('Add Color Stop')}
                   </button>
                 </div>
 
@@ -168,7 +169,7 @@ export const GeometryProperties: React.FC<PropertyPanelProps> = ({ component, on
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                       <div>
                         <label style={{ fontSize: '12px', display: 'block', marginBottom: '4px' }}>
-                          渐变起始角度
+                          {t('Gradient Start Angle')}
                         </label>
                         <PropertyEditor
                           type="number"
@@ -178,7 +179,7 @@ export const GeometryProperties: React.FC<PropertyPanelProps> = ({ component, on
                       </div>
                       <div>
                         <label style={{ fontSize: '12px', display: 'block', marginBottom: '4px' }}>
-                          渐变结束角度
+                          {t('Gradient End Angle')}
                         </label>
                         <PropertyEditor
                           type="number"
@@ -193,7 +194,7 @@ export const GeometryProperties: React.FC<PropertyPanelProps> = ({ component, on
                       color: 'var(--vscode-descriptionForeground)',
                       fontStyle: 'italic'
                     }}>
-                      💡 提示：对于完整圆弧（如 270-270），SDK 会自动补偿渐变角度以绘制圆角封端
+                      💡 {t('Tip: For full arcs (e.g. 270-270), SDK auto-compensates gradient angle for rounded caps')}
                     </div>
                   </div>
                 )}
@@ -233,7 +234,7 @@ export const GeometryProperties: React.FC<PropertyPanelProps> = ({ component, on
                     fontSize: '12px',
                     textAlign: 'center'
                   }}>
-                    点击"添加色标"开始配置渐变
+                    {t('Click Add Color Stop to configure gradient')}
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

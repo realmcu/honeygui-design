@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { PropertyPanelProps } from './types';
 import { PropertyEditor } from './PropertyEditor';
 import { EventsPanel } from './EventsPanel';
+import { t } from '../../i18n';
 
 /**
  * hg_list_item 属性面板
@@ -18,13 +19,13 @@ export const ListItemProperties: React.FC<PropertyPanelProps> = ({ component, on
           className={activeTab === 'properties' ? 'active' : ''}
           onClick={() => setActiveTab('properties')}
         >
-          属性
+          {t('Properties')}
         </button>
         <button
           className={activeTab === 'events' ? 'active' : ''}
           onClick={() => setActiveTab('events')}
         >
-          事件
+          {t('Events')}
         </button>
       </div>
 
@@ -34,7 +35,7 @@ export const ListItemProperties: React.FC<PropertyPanelProps> = ({ component, on
             {/* 基本信息 */}
             <div className="property-group">
               <div className="property-item">
-                <label>名称</label>
+                <label>{t('Name')}</label>
                 <PropertyEditor
                   type="string"
                   value={component.name}
@@ -53,10 +54,10 @@ export const ListItemProperties: React.FC<PropertyPanelProps> = ({ component, on
               </div>
 
               <div className="property-item">
-                <label>父对象</label>
+                <label>{t('Parent')}</label>
                 <input
                   type="text"
-                  value={parentComponent ? `${parentComponent.name} (${parentComponent.type})` : '无'}
+                  value={parentComponent ? `${parentComponent.name} (${parentComponent.type})` : t('None')}
                   disabled
                   style={{
                     width: '100%',
@@ -71,7 +72,7 @@ export const ListItemProperties: React.FC<PropertyPanelProps> = ({ component, on
               </div>
 
               <div className="property-item">
-                <label>索引</label>
+                <label>{t('Index')}</label>
                 <PropertyEditor
                   type="number"
                   value={component.data?.index ?? 0}
@@ -84,9 +85,9 @@ export const ListItemProperties: React.FC<PropertyPanelProps> = ({ component, on
             {/* 位置与大小（只读） */}
             <div className="property-group">
               <div className="property-item">
-                <label>位置与大小</label>
+                <label>{t('Position & Size')}</label>
                 <div style={{ fontSize: '12px', color: 'var(--vscode-descriptionForeground)', marginTop: '4px' }}>
-                  由父列表自动管理，不可修改
+                  {t('Managed by parent list, cannot be modified')}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '8px' }}>
                   <div>
@@ -98,11 +99,11 @@ export const ListItemProperties: React.FC<PropertyPanelProps> = ({ component, on
                     <PropertyEditor type="number" value={component.position.y} onChange={() => {}} disabled />
                   </div>
                   <div>
-                    <label style={{ fontSize: '12px' }}>宽度</label>
+                    <label style={{ fontSize: '12px' }}>{t('Width')}</label>
                     <PropertyEditor type="number" value={component.position.width} onChange={() => {}} disabled />
                   </div>
                   <div>
-                    <label style={{ fontSize: '12px' }}>高度</label>
+                    <label style={{ fontSize: '12px' }}>{t('Height')}</label>
                     <PropertyEditor type="number" value={component.position.height} onChange={() => {}} disabled />
                   </div>
                 </div>

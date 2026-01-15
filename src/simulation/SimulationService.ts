@@ -21,7 +21,7 @@ export class SimulationService {
         
         // 创建状态栏
         this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
-        this.statusBarItem.text = '$(rocket) 编译仿真: 未运行';
+        this.statusBarItem.text = `$(rocket) ${vscode.l10n.t('Compile & Simulate: Not Running')}`;
         this.statusBarItem.command = 'honeygui.simulation';
         this.statusBarItem.show();
 
@@ -29,7 +29,7 @@ export class SimulationService {
         this.cleanStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
         this.cleanStatusBarItem.text = '$(trash) Clean';
         this.cleanStatusBarItem.command = 'honeygui.simulation.clean';
-        this.cleanStatusBarItem.tooltip = '清理编译产物';
+        this.cleanStatusBarItem.tooltip = vscode.l10n.t('Clean build artifacts');
         this.cleanStatusBarItem.show();
 
         // 创建输出通道
@@ -58,15 +58,15 @@ export class SimulationService {
         this.context.subscriptions.push(
             vscode.commands.registerCommand('honeygui.simulation.clean', async () => {
                 const choice = await vscode.window.showInformationMessage(
-                    '选择清理方式',
+                    vscode.l10n.t('Select cleanup method'),
                     { modal: true },
-                    '普通清理',
-                    '深度清理'
+                    vscode.l10n.t('Normal Clean'),
+                    vscode.l10n.t('Deep Clean')
                 );
                 
-                if (choice === '普通清理') {
+                if (choice === vscode.l10n.t('Normal Clean')) {
                     await this.cleanSimulation(false);
-                } else if (choice === '深度清理') {
+                } else if (choice === vscode.l10n.t('Deep Clean')) {
                     await this.cleanSimulation(true);
                 }
             })
@@ -81,7 +81,7 @@ export class SimulationService {
             // 获取项目根目录
             const projectRoot = await this.getProjectRoot();
             if (!projectRoot) {
-                vscode.window.showErrorMessage('无法找到项目根目录（project.json）');
+                vscode.window.showErrorMessage(vscode.l10n.t('Cannot find project root (project.json)'));
                 return;
             }
 
@@ -99,13 +99,13 @@ export class SimulationService {
             this.setupRunnerListeners();
 
             // 启动仿真
-            this.updateStatusBar('$(sync~spin) 编译仿真: 启动中...');
+            this.updateStatusBar('$(sync~spin) Simulation: Starting...');
             await this.runner.start();
 
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            vscode.window.showErrorMessage(`编译仿真失败:\n${message}`);
-            this.updateStatusBar('$(rocket) 编译仿真: 未运行');
+            vscode.window.showErrorMessage(vscode.l10n.t('Compilation failed: {0}', message));
+            this.updateStatusBar('$(rocket) Simulation: Not Running');
         }
     }
 
@@ -117,8 +117,8 @@ export class SimulationService {
             await this.runner.stop();
             this.runner.dispose();
             this.runner = null;
-            this.updateStatusBar('$(rocket) 编译仿真: 未运行');
-            vscode.window.showInformationMessage('编译仿真已停止');
+            this.updateStatusBar('$(rocket) Simulation: Not Running');
+            vscode.window.showInformationMessage(vscode.l10n.t('Simulation stopped'));
         }
     }
 
@@ -145,7 +145,7 @@ export class SimulationService {
         }
 
         if (!projectRoot) {
-            vscode.window.showErrorMessage('未找到项目根目录（project.json）');
+            vscode.window.showErrorMessage(vscode.l10n.t('Cannot find project root (project.json)'));
             return;
         }
 
@@ -157,7 +157,7 @@ export class SimulationService {
             }
         });
         await runner.clean(deep);
-        vscode.window.showInformationMessage(deep ? '深度清理完成' : '清理完成');
+        vscode.window.showInformationMessage(deep ? vscode.l10n.t('Deep clean completed') : vscode.l10n.t('Clean completed'));
     }
 
     /**
@@ -176,7 +176,7 @@ export class SimulationService {
         // 2. 尝试从工作区查找
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (!workspaceFolders || workspaceFolders.length === 0) {
-            vscode.window.showErrorMessage('没有打开的工作区');
+            vscode.window.showErrorMessage(vscode.l10n.t('No workspace opened'));
             return undefined;
         }
 
@@ -193,7 +193,7 @@ export class SimulationService {
         }));
 
         const selected = await vscode.window.showQuickPick(items, {
-            placeHolder: '选择要编译的项目'
+            placeHolder: vscode.l10n.t('Select project to compile')
         });
 
         return selected ? ProjectUtils.findProjectRoot(selected.folder.uri.fsPath) : undefined;
@@ -209,25 +209,25 @@ export class SimulationService {
 
         this.runner.setListener({
             onStart: () => {
-                this.updateStatusBar('$(sync~spin) 编译仿真: 启动中...');
+                this.updateStatusBar('$(sync~spin) Simulation: Starting...');
                 this.outputChannel.clear();
                 this.outputChannel.show(true);
             },
             
             onSuccess: () => {
-                this.updateStatusBar('$(rocket) 编译仿真: 运行中');
-                vscode.window.showInformationMessage('编译仿真已成功启动');
+                this.updateStatusBar('$(rocket) Simulation: Running');
+                vscode.window.showInformationMessage(vscode.l10n.t('Simulation started successfully'));
             },
             
             onError: (error) => {
-                this.updateStatusBar('$(error) 编译仿真: 错误');
-                this.outputChannel.appendLine(`[错误] ${error.message}`);
+                this.updateStatusBar('$(error) Simulation: Error');
+                this.outputChannel.appendLine(`[Error] ${error.message}`);
             },
             
             onExit: (code) => {
-                this.updateStatusBar('$(rocket) 编译仿真: 未运行');
+                this.updateStatusBar('$(rocket) Simulation: Not Running');
                 if (code !== null && code !== 0) {
-                    vscode.window.showWarningMessage(`编译仿真异常退出，退出码: ${code}`);
+                    vscode.window.showWarningMessage(vscode.l10n.t('Simulation exited abnormally, exit code: {0}', code));
                 }
             },
             
@@ -244,12 +244,12 @@ export class SimulationService {
         this.statusBarItem.text = text;
         
         // 根据状态切换命令
-        if (text.includes('运行中')) {
+        if (text.includes('Running')) {
             this.statusBarItem.command = 'honeygui.simulation.stop';
-            this.statusBarItem.tooltip = '点击停止仿真';
+            this.statusBarItem.tooltip = vscode.l10n.t('Click to stop simulation');
         } else {
             this.statusBarItem.command = 'honeygui.simulation';
-            this.statusBarItem.tooltip = '点击启动编译仿真';
+            this.statusBarItem.tooltip = vscode.l10n.t('Click to start simulation');
         }
     }
 

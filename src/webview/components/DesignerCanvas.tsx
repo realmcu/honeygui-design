@@ -12,6 +12,7 @@ import { ViewConnectionLayer } from './ViewConnectionLayer';
 import { AlignmentGuides, AlignmentLine } from './AlignmentGuides';
 import { calculateAlignment } from '../utils/alignmentHelper';
 import { getAbsolutePosition, findComponentAtPosition, isContainerType } from '../utils/componentUtils';
+import { t } from '../i18n';
 import './DesignerCanvas.css';
 
 interface DesignerCanvasProps {
@@ -447,10 +448,11 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
 
       // 当按下delete或backspace键，并且有选中的组件时，删除该组件
       if ((e.key === 'Delete' || e.key === 'Backspace') && (selectedComponent || (selectedComponents && selectedComponents.length > 0))) {
-        // 阻止默认行为，避免在某些浏览器中可能的页面后退或其他默认操作
         e.preventDefault();
         const ids = selectedComponents && selectedComponents.length ? selectedComponents : [selectedComponent!];
-        const confirmMsg = ids.length > 1 ? `确认删除选中的 ${ids.length} 个控件？` : '确认删除选中的控件？';
+        const confirmMsg = ids.length > 1 
+          ? t('Confirm delete N components').replace('{n}', String(ids.length))
+          : t('Confirm delete selected component');
         const shouldDelete = window.confirm ? window.confirm(confirmMsg) : true;
         if (shouldDelete) {
           if (ids.length > 1) {
@@ -576,8 +578,10 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
           e.preventDefault();
           const ids = selectedComponents && selectedComponents.length ? selectedComponents : (selectedComponent ? [selectedComponent] : []);
           if (ids.length === 0) return;
-          const label = ids.length > 1 ? `删除选中的 ${ids.length} 个控件` : '删除选中控件';
-          const ok = window.confirm(`${label}？`);
+          const label = ids.length > 1 
+            ? t('Delete N components').replace('{n}', String(ids.length))
+            : t('Delete selected component');
+          const ok = window.confirm(label + '?');
           if (ok) {
             if (ids.length > 1) {
               removeComponents(ids);
@@ -602,11 +606,10 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
               pointerEvents: 'none',
               zIndex: 1000
             }}>
-              Ctrl+滚轮缩放 ({Math.round(zoom * 100)}%)
+              {t('Ctrl+Scroll to zoom')} ({Math.round(zoom * 100)}%)
             </div>
           )}
           
-        {/* Components and Grid Container - 无限画布 */}
         <div
           style={{
             position: 'absolute',

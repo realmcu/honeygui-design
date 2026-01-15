@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useDesignerStore } from '../store';
 import { Save, Code, Play, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, GitBranch, Palette, AlignLeft, Grid, Download } from 'lucide-react';
 import { AlignType, DistributeType, ResizeType, getAlignmentConfigsByCategory } from '../utils/alignmentUtils';
+import { t } from '../i18n';
 import './Toolbar.css';
 
 const Toolbar: React.FC = () => {
@@ -115,10 +116,10 @@ const Toolbar: React.FC = () => {
         <button
           className="toolbar-button"
           onClick={handleSave}
-          title="保存 (Ctrl+S)"
+          title={`${t('Save')} (Ctrl+S)`}
         >
           <Save size={16} />
-          <span>保存</span>
+          <span>{t('Save')}</span>
         </button>
       </div>
 
@@ -128,20 +129,20 @@ const Toolbar: React.FC = () => {
         <button
           className="toolbar-button"
           onClick={handleUndo}
-          title="撤销 (Ctrl+Z)"
+          title={`${t('Undo')} (Ctrl+Z)`}
           disabled={!canUndo()}
         >
           <RotateCcw size={16} />
-          <span>撤销</span>
+          <span>{t('Undo')}</span>
         </button>
         <button
           className="toolbar-button"
           onClick={handleRedo}
-          title="重做 (Ctrl+Y)"
+          title={`${t('Redo')} (Ctrl+Y)`}
           disabled={!canRedo()}
         >
           <RotateCw size={16} />
-          <span>重做</span>
+          <span>{t('Redo')}</span>
         </button>
       </div>
 
@@ -153,31 +154,31 @@ const Toolbar: React.FC = () => {
         <button
           className="toolbar-button"
           onClick={handleToggleViewConnections}
-          title="查看视图关系图"
+          title={t('View Relations')}
         >
           <GitBranch size={16} />
-          <span>关系图</span>
+          <span>{t('Relations')}</span>
         </button>
         
         <button
           className={`toolbar-button ${showAlignmentGuides ? 'active' : ''}`}
           onClick={() => setShowAlignmentGuides(!showAlignmentGuides)}
-          title={showAlignmentGuides ? '隐藏智能辅助线' : '显示智能辅助线'}
+          title={showAlignmentGuides ? t('Hide guides') : t('Show guides')}
         >
           <Grid size={16} />
-          <span>辅助线</span>
+          <span>{t('Guides')}</span>
         </button>
         
-        {/* 对齐按钮 - 多选时启用 */}
+        {/* Align button */}
         <div className="align-menu-container" ref={alignMenuRef}>
           <button
             className={`toolbar-button ${selectedComponents.length < 2 ? 'disabled' : ''}`}
             onClick={() => selectedComponents.length >= 2 && setShowAlignMenu(!showAlignMenu)}
-            title={selectedComponents.length < 2 ? '请选择至少2个组件' : '对齐和分布'}
+            title={selectedComponents.length < 2 ? t('Select at least 2 components') : t('Align and distribute')}
             disabled={selectedComponents.length < 2}
           >
             <AlignLeft size={16} />
-            <span>对齐</span>
+            <span>{t('Align')}</span>
             {selectedComponents.length >= 2 && (
               <span className="selection-badge">{selectedComponents.length}</span>
             )}
@@ -185,7 +186,7 @@ const Toolbar: React.FC = () => {
           {showAlignMenu && selectedComponents.length >= 2 && (
             <div className="align-dropdown-menu">
               <div className="align-menu-section">
-                <div className="align-menu-title">对齐</div>
+                <div className="align-menu-title">{t('Align')}</div>
                 {getAlignmentConfigsByCategory('align').map(config => (
                   <button
                     key={config.type}
@@ -202,7 +203,7 @@ const Toolbar: React.FC = () => {
               </div>
               <div className="align-menu-divider" />
               <div className="align-menu-section">
-                <div className="align-menu-title">分布</div>
+                <div className="align-menu-title">{t('Distribute')}</div>
                 {getAlignmentConfigsByCategory('distribute').map(config => (
                   <button
                     key={config.type}
@@ -214,7 +215,7 @@ const Toolbar: React.FC = () => {
                       }
                     }}
                     disabled={selectedComponents.length < config.minComponents}
-                    title={selectedComponents.length < config.minComponents ? `需要至少${config.minComponents}个组件` : ''}
+                    title={selectedComponents.length < config.minComponents ? `${t('Requires at least')} ${config.minComponents}` : ''}
                   >
                     <span>{config.label}</span>
                     {config.shortcut && <span className="shortcut">{config.shortcut}</span>}
@@ -223,7 +224,7 @@ const Toolbar: React.FC = () => {
               </div>
               <div className="align-menu-divider" />
               <div className="align-menu-section">
-                <div className="align-menu-title">尺寸</div>
+                <div className="align-menu-title">{t('Size')}</div>
                 {getAlignmentConfigsByCategory('resize').map(config => (
                   <button
                     key={config.type}
@@ -245,36 +246,36 @@ const Toolbar: React.FC = () => {
           <button
             className="toolbar-button"
             onClick={() => setShowColorPicker(!showColorPicker)}
-            title="画布背景色"
+            title={t('Background Color')}
           >
             <Palette size={16} />
-            <span>背景</span>
+            <span>{t('Background')}</span>
           </button>
           {showColorPicker && (
             <div className="color-picker-dropdown">
               <button
                 className={`color-option ${canvasBackgroundColor === '#ffffff' ? 'active' : ''}`}
                 onClick={() => handleBackgroundColorChange('#ffffff')}
-                title="白色"
+                title={t('White')}
               >
                 <div className="color-preview" style={{ backgroundColor: '#ffffff', border: '1px solid #ccc' }} />
-                <span>白色</span>
+                <span>{t('White')}</span>
               </button>
               <button
                 className={`color-option ${canvasBackgroundColor === '#000000' ? 'active' : ''}`}
                 onClick={() => handleBackgroundColorChange('#000000')}
-                title="黑色"
+                title={t('Black')}
               >
                 <div className="color-preview" style={{ backgroundColor: '#000000' }} />
-                <span>黑色</span>
+                <span>{t('Black')}</span>
               </button>
               <button
                 className={`color-option ${canvasBackgroundColor === '#3c3c3c' ? 'active' : ''}`}
                 onClick={() => handleBackgroundColorChange('#3c3c3c')}
-                title="深灰 (RGB 60,60,60)"
+                title={t('Dark Gray')}
               >
                 <div className="color-preview" style={{ backgroundColor: '#3c3c3c' }} />
-                <span>深灰</span>
+                <span>{t('Dark Gray')}</span>
               </button>
             </div>
           )}
@@ -287,7 +288,7 @@ const Toolbar: React.FC = () => {
         <button
           className="toolbar-button"
           onClick={handleZoomOut}
-          title="缩小"
+          title={t('Zoom Out')}
         >
           <ZoomOut size={16} />
         </button>
@@ -295,14 +296,14 @@ const Toolbar: React.FC = () => {
         <button
           className="toolbar-button"
           onClick={handleZoomIn}
-          title="放大"
+          title={t('Zoom In')}
         >
           <ZoomIn size={16} />
         </button>
         <button
           className="toolbar-button"
           onClick={handleZoomFit}
-          title="适应屏幕"
+          title={t('Fit to Screen')}
         >
           <Maximize2 size={16} />
         </button>
@@ -314,26 +315,26 @@ const Toolbar: React.FC = () => {
         <button
           className="toolbar-button primary"
           onClick={handleGenerateAllCode}
-          title="生成代码"
+          title={t('Generate Code')}
         >
           <Code size={16} />
-          <span>生成代码</span>
+          <span>{t('Generate Code')}</span>
         </button>
         <button
           className="toolbar-button primary"
           onClick={handlePreview}
-          title="预览"
+          title={t('Preview')}
         >
           <Play size={16} />
-          <span>预览</span>
+          <span>{t('Preview')}</span>
         </button>
         <button
           className="toolbar-button"
           onClick={handleUartDownload}
-          title="UART 下载到开发板"
+          title={t('UART Download')}
         >
           <Download size={16} />
-          <span>下载</span>
+          <span>{t('Download')}</span>
         </button>
       </div>
     </div>

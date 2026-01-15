@@ -3,6 +3,7 @@ import { PropertyPanelProps } from './types';
 import { PropertyEditor } from './PropertyEditor';
 import { BaseProperties } from './BaseProperties';
 import { EventsPanel } from './EventsPanel';
+import { t } from '../../i18n';
 
 export const HgViewProperties: React.FC<PropertyPanelProps> = ({ component, onUpdate, components }) => {
   const [activeTab, setActiveTab] = useState<'properties' | 'events'>('properties');
@@ -35,13 +36,13 @@ export const HgViewProperties: React.FC<PropertyPanelProps> = ({ component, onUp
           className={activeTab === 'properties' ? 'active' : ''}
           onClick={() => setActiveTab('properties')}
         >
-          属性
+          {t('Properties')}
         </button>
         <button
           className={activeTab === 'events' ? 'active' : ''}
           onClick={() => setActiveTab('events')}
         >
-          事件
+          {t('Events')}
         </button>
       </div>
 
@@ -53,15 +54,15 @@ export const HgViewProperties: React.FC<PropertyPanelProps> = ({ component, onUp
               onUpdate={onUpdate}
               components={components}
               disableSize={true}
-              sizeTooltip="hg_view 的宽高由项目分辨率决定，不可修改"
+              sizeTooltip={t('hg_view size is determined by project resolution and cannot be modified')}
               hideParent={true}
             />
 
             {/* Style Properties */}
             <div className="property-group">
-              <div className="property-group-title">样式</div>
+              <div className="property-group-title">{t('Style')}</div>
               <div className="property-item">
-                <label>背景色</label>
+                <label>{t('Background Color')}</label>
                 <PropertyEditor
                   type="color"
                   value={component.style?.backgroundColor}
@@ -72,9 +73,9 @@ export const HgViewProperties: React.FC<PropertyPanelProps> = ({ component, onUp
 
             {/* View Specific Properties */}
             <div className="property-group">
-              <div className="property-group-title">视图属性</div>
+              <div className="property-group-title">{t('View Properties')}</div>
               <div className="property-item">
-                <label>常驻内存</label>
+                <label>{t('Resident Memory')}</label>
                 <PropertyEditor
                   type="boolean"
                   value={component.data?.residentMemory || false}
@@ -82,7 +83,7 @@ export const HgViewProperties: React.FC<PropertyPanelProps> = ({ component, onUp
                 />
               </div>
               <div className="property-item">
-                <label>动画步长</label>
+                <label>{t('Animation Step')}</label>
                 <PropertyEditor
                   type="number"
                   value={component.data?.animateStep ?? defaultAnimateStep}
@@ -90,7 +91,7 @@ export const HgViewProperties: React.FC<PropertyPanelProps> = ({ component, onUp
                 />
               </div>
               <div className="property-item">
-                <label>透明度 (0-255)</label>
+                <label>{t('Opacity (0-255)')}</label>
                 <PropertyEditor
                   type="number"
                   value={component.data?.opacity ?? 255}

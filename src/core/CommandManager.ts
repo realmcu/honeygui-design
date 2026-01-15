@@ -37,7 +37,7 @@ export class CommandManager {
                 await CreateProjectPanel.createOrShow(this.context);
             } catch (error) {
                 logger.error(`新建项目失败: ${error instanceof Error ? error.message : String(error)}`);
-                vscode.window.showErrorMessage(`新建项目失败: ${error instanceof Error ? error.message : '未知错误'}`);
+                vscode.window.showErrorMessage(vscode.l10n.t('Failed to create project: {0}', error instanceof Error ? error.message : vscode.l10n.t('Unknown error')));
             }
         });
 
@@ -48,7 +48,7 @@ export class CommandManager {
                 ToolsPanel.createOrShow(this.context.extensionUri);
             } catch (error) {
                 logger.error(`打开资源转换工具失败: ${error instanceof Error ? error.message : String(error)}`);
-                vscode.window.showErrorMessage(`打开资源转换工具失败: ${error instanceof Error ? error.message : '未知错误'}`);
+                vscode.window.showErrorMessage(vscode.l10n.t('Failed to open resource conversion tools: {0}', error instanceof Error ? error.message : vscode.l10n.t('Unknown error')));
             }
         });
 
@@ -58,7 +58,7 @@ export class CommandManager {
                 logger.info('执行命令: honeygui.welcome');
                 const panel = vscode.window.createWebviewPanel(
                     'honeyguiWelcome',
-                    'HoneyGUI 欢迎',
+                    vscode.l10n.t('HoneyGUI Welcome'),
                     vscode.ViewColumn.One,
                     {
                         enableScripts: true,
@@ -69,7 +69,7 @@ export class CommandManager {
                 panel.webview.html = this.getWelcomeHtml();
             } catch (error) {
                 logger.error(`打开欢迎页面失败: ${error instanceof Error ? error.message : String(error)}`);
-                vscode.window.showErrorMessage(`打开欢迎页面失败: ${error instanceof Error ? error.message : '未知错误'}`);
+                vscode.window.showErrorMessage(vscode.l10n.t('Failed to open welcome page: {0}', error instanceof Error ? error.message : vscode.l10n.t('Unknown error')));
             }
         });
 
@@ -96,10 +96,10 @@ export class CommandManager {
                 }
 
                 logger.clearCache();
-                vscode.window.showInformationMessage('缓存已清理');
+                vscode.window.showInformationMessage(vscode.l10n.t('Cache cleared'));
             } catch (error) {
                 logger.error(`清理缓存失败: ${error instanceof Error ? error.message : String(error)}`);
-                vscode.window.showErrorMessage(`清理缓存失败: ${error instanceof Error ? error.message : '未知错误'}`);
+                vscode.window.showErrorMessage(vscode.l10n.t('Failed to clear cache: {0}', error instanceof Error ? error.message : vscode.l10n.t('Unknown error')));
             }
         });
 
@@ -114,7 +114,7 @@ export class CommandManager {
                 });
             } catch (error) {
                 logger.error(`文本编辑器打开失败: ${error instanceof Error ? error.message : String(error)}`);
-                vscode.window.showErrorMessage(`文本编辑器打开失败: ${error instanceof Error ? error.message : '未知错误'}`);
+                vscode.window.showErrorMessage(vscode.l10n.t('Failed to open in text editor: {0}', error instanceof Error ? error.message : vscode.l10n.t('Unknown error')));
             }
         });
 
@@ -126,20 +126,20 @@ export class CommandManager {
                 // 验证URI参数
                 if (!uri) {
                     logger.error('设计器打开失败: URI参数为空');
-                    vscode.window.showErrorMessage('设计器打开失败: 未提供文件路径');
+                    vscode.window.showErrorMessage(vscode.l10n.t('Failed to open designer: file path not provided'));
                     return;
                 }
                 
                 // 验证文件存在且为HML文件
                 if (!fs.existsSync(uri.fsPath)) {
                     logger.error(`设计器打开失败: 文件不存在 - ${uri.fsPath}`);
-                    vscode.window.showErrorMessage(`设计器打开失败: 文件不存在 - ${path.basename(uri.fsPath)}`);
+                    vscode.window.showErrorMessage(vscode.l10n.t('Failed to open designer: file does not exist - {0}', path.basename(uri.fsPath)));
                     return;
                 }
                 
                 if (!uri.fsPath.endsWith('.hml')) {
                     logger.error(`设计器打开失败: 不是HML文件 - ${uri.fsPath}`);
-                    vscode.window.showErrorMessage('设计器打开失败: 请选择HML文件');
+                    vscode.window.showErrorMessage(vscode.l10n.t('Failed to open designer: please select an HML file'));
                     return;
                 }
                 
@@ -164,7 +164,7 @@ export class CommandManager {
             } catch (error) {
                 logger.error(`设计器打开失败: ${error instanceof Error ? error.message : String(error)}`);
                 logger.error(`错误堆栈: ${error instanceof Error ? error.stack : '无堆栈信息'}`);
-                vscode.window.showErrorMessage(`设计器打开失败: ${error instanceof Error ? error.message : '未知错误'}`);
+                vscode.window.showErrorMessage(vscode.l10n.t('Failed to open designer: {0}', error instanceof Error ? error.message : vscode.l10n.t('Unknown error')));
             }
         });
 
@@ -174,7 +174,7 @@ export class CommandManager {
                 logger.info('执行命令: honeygui.openDesigner');
                 const active = vscode.window.activeTextEditor;
                 if (!active || !active.document.fileName.endsWith('.hml')) {
-                    vscode.window.showWarningMessage('请在文本编辑器中打开一个HML文件后再执行该命令');
+                    vscode.window.showWarningMessage(vscode.l10n.t('Please open an HML file in text editor first'));
                     return;
                 }
                 await vscode.commands.executeCommand(
@@ -184,7 +184,7 @@ export class CommandManager {
                 );
             } catch (error) {
                 logger.error(`打开设计器失败: ${error instanceof Error ? error.message : String(error)}`);
-                vscode.window.showErrorMessage(`打开设计器失败: ${error instanceof Error ? error.message : '未知错误'}`);
+                vscode.window.showErrorMessage(vscode.l10n.t('Failed to open designer: {0}', error instanceof Error ? error.message : vscode.l10n.t('Unknown error')));
             }
         });
 
@@ -194,7 +194,7 @@ export class CommandManager {
                 logger.info('执行命令: honeygui.codegen');
                 const panel = (DesignerPanel as any).currentPanel as DesignerPanel | undefined;
                 if (!panel) {
-                    vscode.window.showWarningMessage('请先打开HoneyGUI设计器');
+                    vscode.window.showWarningMessage(vscode.l10n.t('Please open HoneyGUI designer first'));
                     return;
                 }
                 // 读取用户配置中的语言选项
@@ -203,7 +203,7 @@ export class CommandManager {
                 await (panel as any).generateCode(language);
             } catch (error) {
                 logger.error(`代码生成失败: ${error instanceof Error ? error.message : String(error)}`);
-                vscode.window.showErrorMessage(`代码生成失败: ${error instanceof Error ? error.message : '未知错误'}`);
+                vscode.window.showErrorMessage(vscode.l10n.t('Code generation failed: {0}', error instanceof Error ? error.message : vscode.l10n.t('Unknown error')));
             }
         });
 
@@ -211,10 +211,10 @@ export class CommandManager {
         this.registerCommand('honeygui.switchView', async () => {
             try {
                 logger.info('执行命令: honeygui.switchView');
-                vscode.window.showInformationMessage('视图切换功能开发中...');
+                vscode.window.showInformationMessage(vscode.l10n.t('View switch feature is under development...'));
             } catch (error) {
                 logger.error(`视图切换失败: ${error instanceof Error ? error.message : String(error)}`);
-                vscode.window.showErrorMessage(`视图切换失败: ${error instanceof Error ? error.message : '未知错误'}`);
+                vscode.window.showErrorMessage(vscode.l10n.t('Failed to switch view: {0}', error instanceof Error ? error.message : vscode.l10n.t('Unknown error')));
             }
         });
 
@@ -226,7 +226,7 @@ export class CommandManager {
                 // 获取工作区文件夹
                 const workspaceFolders = vscode.workspace.workspaceFolders;
                 if (!workspaceFolders || workspaceFolders.length === 0) {
-                    vscode.window.showErrorMessage('请先打开一个工作区');
+                    vscode.window.showErrorMessage(vscode.l10n.t('Please open a workspace first'));
                     return;
                 }
                 
@@ -241,17 +241,17 @@ export class CommandManager {
                 
                 // 输入设计稿名称
                 const designName = await vscode.window.showInputBox({
-                    prompt: '请输入设计稿名称',
+                    prompt: vscode.l10n.t('Enter design name'),
                     placeHolder: 'untitled',
                     value: 'untitled',
                     validateInput: (value) => {
-                        if (!value.trim()) return '设计稿名称不能为空';
+                        if (!value.trim()) return vscode.l10n.t('Design name cannot be empty');
                         // 必须是合法的 C 变量名（字母或下划线开头）
                         if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(value)) {
-                            return '名称只能包含字母、数字、下划线，且必须以字母或下划线开头';
+                            return vscode.l10n.t('Name can only contain letters, numbers, underscores, and must start with a letter or underscore');
                         }
                         const targetFile = path.join(uiDir, `${value}.hml`);
-                        if (fs.existsSync(targetFile)) return '设计稿文件已存在';
+                        if (fs.existsSync(targetFile)) return vscode.l10n.t('Design file already exists');
                         return null;
                     }
                 });
@@ -266,7 +266,7 @@ export class CommandManager {
                     
                     // 检查文件是否已存在
                     if (fs.existsSync(hmlFilePath)) {
-                        vscode.window.showErrorMessage(`文件已存在: ${designName}.hml`);
+                        vscode.window.showErrorMessage(vscode.l10n.t('File already exists: {0}', `${designName}.hml`));
                         return;
                     }
                     
@@ -284,11 +284,11 @@ export class CommandManager {
                     // 在设计器中打开新创建的文件
                     await vscode.commands.executeCommand('honeygui.openInDesigner', vscode.Uri.file(hmlFilePath));
                     
-                    vscode.window.showInformationMessage(`设计稿已创建: ${designName}`);
+                    vscode.window.showInformationMessage(vscode.l10n.t('Design created: {0}', designName));
                 }
             } catch (error) {
                 logger.error(`创建设计稿失败: ${error instanceof Error ? error.message : String(error)}`);
-                vscode.window.showErrorMessage(`创建设计稿失败: ${error instanceof Error ? error.message : '未知错误'}`);
+                vscode.window.showErrorMessage(vscode.l10n.t('Failed to create design: {0}', error instanceof Error ? error.message : vscode.l10n.t('Unknown error')));
             }
         });
 
@@ -300,7 +300,7 @@ export class CommandManager {
                     canSelectFolders: true,
                     canSelectFiles: false,
                     canSelectMany: false,
-                    openLabel: '选择项目文件夹'
+                    openLabel: vscode.l10n.t('Select project folder')
                 };
                 
                 const folderUri = await vscode.window.showOpenDialog(options);
@@ -319,7 +319,7 @@ export class CommandManager {
                 }
             } catch (error) {
                 logger.error(`打开项目失败: ${error instanceof Error ? error.message : String(error)}`);
-                vscode.window.showErrorMessage(`打开项目失败: ${error instanceof Error ? error.message : '未知错误'}`);
+                vscode.window.showErrorMessage(vscode.l10n.t('Failed to open project: {0}', error instanceof Error ? error.message : vscode.l10n.t('Unknown error')));
             }
         });
 
@@ -327,10 +327,10 @@ export class CommandManager {
         this.registerCommand('honeygui.startProject', async () => {
             try {
                 logger.info('执行命令: honeygui.startProject');
-                vscode.window.showInformationMessage('项目启动功能开发中...');
+                vscode.window.showInformationMessage(vscode.l10n.t('Project start feature is under development...'));
             } catch (error) {
                 logger.error(`启动项目失败: ${error instanceof Error ? error.message : String(error)}`);
-                vscode.window.showErrorMessage(`启动项目失败: ${error instanceof Error ? error.message : '未知错误'}`);
+                vscode.window.showErrorMessage(vscode.l10n.t('Failed to start project: {0}', error instanceof Error ? error.message : vscode.l10n.t('Unknown error')));
             }
         });
 
@@ -338,10 +338,10 @@ export class CommandManager {
         this.registerCommand('honeygui.stopProject', async () => {
             try {
                 logger.info('执行命令: honeygui.stopProject');
-                vscode.window.showInformationMessage('项目停止功能开发中...');
+                vscode.window.showInformationMessage(vscode.l10n.t('Project stop feature is under development...'));
             } catch (error) {
                 logger.error(`停止项目失败: ${error instanceof Error ? error.message : String(error)}`);
-                vscode.window.showErrorMessage(`停止项目失败: ${error instanceof Error ? error.message : '未知错误'}`);
+                vscode.window.showErrorMessage(vscode.l10n.t('Failed to stop project: {0}', error instanceof Error ? error.message : vscode.l10n.t('Unknown error')));
             }
         });
 
@@ -349,10 +349,10 @@ export class CommandManager {
         this.registerCommand('honeygui.restartProject', async () => {
             try {
                 logger.info('执行命令: honeygui.restartProject');
-                vscode.window.showInformationMessage('项目重启功能开发中...');
+                vscode.window.showInformationMessage(vscode.l10n.t('Project restart feature is under development...'));
             } catch (error) {
                 logger.error(`重启项目失败: ${error instanceof Error ? error.message : String(error)}`);
-                vscode.window.showErrorMessage(`重启项目失败: ${error instanceof Error ? error.message : '未知错误'}`);
+                vscode.window.showErrorMessage(vscode.l10n.t('Failed to restart project: {0}', error instanceof Error ? error.message : vscode.l10n.t('Unknown error')));
             }
         });
 
@@ -361,13 +361,13 @@ export class CommandManager {
             try {
                 const activeEditor = vscode.window.activeTextEditor;
                 if (!activeEditor) {
-                    vscode.window.showWarningMessage('请先打开一个文件');
+                    vscode.window.showWarningMessage(vscode.l10n.t('Please open a file first'));
                     return;
                 }
                 
                 const currentUri = activeEditor.document.uri;
                 if (!currentUri.fsPath.endsWith('.hml')) {
-                    vscode.window.showWarningMessage('只能在HML文件上切换编辑器模式');
+                    vscode.window.showWarningMessage(vscode.l10n.t('Can only switch editor mode on HML files'));
                     return;
                 }
                 
@@ -389,7 +389,7 @@ export class CommandManager {
                 logger.info(`编辑器切换成功: ${currentUri.fsPath}`);
             } catch (error) {
                 logger.error(`编辑器切换失败: ${error instanceof Error ? error.message : String(error)}`);
-                vscode.window.showErrorMessage(`编辑器切换失败: ${error instanceof Error ? error.message : '未知错误'}`);
+                vscode.window.showErrorMessage(vscode.l10n.t('Failed to switch editor: {0}', error instanceof Error ? error.message : vscode.l10n.t('Unknown error')));
             }
         });
 
@@ -402,32 +402,32 @@ export class CommandManager {
             try {
                 const service = CollaborationService.getInstance();
                 if (service.isConnected) {
-                    vscode.window.showWarningMessage('当前已处于协同模式，请先停止');
+                    vscode.window.showWarningMessage(vscode.l10n.t('Already in collaboration mode, please stop first'));
                     return;
                 }
 
                 const portInput = await vscode.window.showInputBox({
-                    prompt: '请输入监听端口 (默认: 3000)',
+                    prompt: vscode.l10n.t('Enter listening port (default: 3000)'),
                     value: '3000',
                     validateInput: (value) => {
                         const port = parseInt(value);
-                        return (!isNaN(port) && port > 1024 && port < 65535) ? null : '请输入有效的端口号 (1024-65535)';
+                        return (!isNaN(port) && port > 1024 && port < 65535) ? null : vscode.l10n.t('Please enter a valid port number (1024-65535)');
                     }
                 });
 
                 if (!portInput) return;
 
                 const address = await service.startHost(parseInt(portInput));
-                vscode.window.showInformationMessage(`协同服务已启动，请邀请他人连接: ${address}`);
+                vscode.window.showInformationMessage(vscode.l10n.t('Collaboration service started, invite others to connect: {0}', address));
                 
                 // 复制地址到剪贴板
                 await vscode.env.clipboard.writeText(address);
-                vscode.window.setStatusBarMessage('协同地址已复制到剪贴板', 3000);
+                vscode.window.setStatusBarMessage(vscode.l10n.t('Collaboration address copied to clipboard'), 3000);
 
                 this.statusBarManager.updateCollaborationStatus('Host', address);
             } catch (error) {
                 logger.error(`启动协同失败: ${error}`);
-                vscode.window.showErrorMessage(`启动协同失败: ${error}`);
+                vscode.window.showErrorMessage(vscode.l10n.t('Failed to start collaboration: {0}', String(error)));
             }
         });
 
@@ -436,18 +436,18 @@ export class CommandManager {
             try {
                 const service = CollaborationService.getInstance();
                 if (service.isConnected) {
-                    vscode.window.showWarningMessage('当前已处于协同模式，请先停止');
+                    vscode.window.showWarningMessage(vscode.l10n.t('Already in collaboration mode, please stop first'));
                     return;
                 }
 
                 const addressInput = await vscode.window.showInputBox({
-                    prompt: '请输入主机地址 (IP:Port)',
+                    prompt: vscode.l10n.t('Enter host address (IP:Port)'),
                     placeHolder: '192.168.1.x:3000',
                     validateInput: (value) => {
                         const parts = value.split(':');
-                        if (parts.length !== 2) return '格式错误，请输入 IP:Port';
+                        if (parts.length !== 2) return vscode.l10n.t('Invalid format, please enter IP:Port');
                         const port = parseInt(parts[1]);
-                        if (isNaN(port) || port < 1 || port > 65535) return '端口无效 (1-65535)';
+                        if (isNaN(port) || port < 1 || port > 65535) return vscode.l10n.t('Invalid port (1-65535)');
                         return null;
                     }
                 });
@@ -455,14 +455,14 @@ export class CommandManager {
                 if (!addressInput) return;
 
                 await service.joinSession(addressInput);
-                vscode.window.showInformationMessage(`成功加入协同: ${addressInput}`);
+                vscode.window.showInformationMessage(vscode.l10n.t('Successfully joined collaboration: {0}', addressInput));
                 this.statusBarManager.updateCollaborationStatus('Guest', addressInput);
 
                 // 自动打开设计器
                 DesignerPanelFactory.createOrShow(this.context);
             } catch (error) {
                 logger.error(`加入协同失败: ${error}`);
-                vscode.window.showErrorMessage(`加入协同失败: ${error}`);
+                vscode.window.showErrorMessage(vscode.l10n.t('Failed to join collaboration: {0}', String(error)));
             }
         });
 
@@ -471,7 +471,7 @@ export class CommandManager {
             const service = CollaborationService.getInstance();
             if (service.isConnected) {
                 service.stop();
-                vscode.window.showInformationMessage('已停止协同会话');
+                vscode.window.showInformationMessage(vscode.l10n.t('Collaboration session stopped'));
                 this.statusBarManager.updateCollaborationStatus('None');
             }
         });

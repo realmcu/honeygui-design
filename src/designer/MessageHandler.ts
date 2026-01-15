@@ -113,7 +113,7 @@ export class MessageHandler {
                 const undoSuccess = await this._fileManager.undo();
                 this._fileManager.sendUndoRedoState();
                 if (!undoSuccess) {
-                    vscode.window.showInformationMessage('没有可撤销的操作');
+                    vscode.window.showInformationMessage(vscode.l10n.t('No undo action available'));
                 }
                 break;
 
@@ -122,7 +122,7 @@ export class MessageHandler {
                 const redoSuccess = await this._fileManager.redo();
                 this._fileManager.sendUndoRedoState();
                 if (!redoSuccess) {
-                    vscode.window.showInformationMessage('没有可重做的操作');
+                    vscode.window.showInformationMessage(vscode.l10n.t('No redo action available'));
                 }
                 break;
 
@@ -318,7 +318,7 @@ export class MessageHandler {
                 : undefined;
             
             if (!projectRoot) {
-                vscode.window.showErrorMessage('未找到项目根目录');
+                vscode.window.showErrorMessage(vscode.l10n.t('Cannot find project root (project.json)'));
                 return;
             }
 
@@ -333,7 +333,7 @@ export class MessageHandler {
             // 打开文件选择对话框
             const uris = await vscode.window.showOpenDialog({
                 canSelectMany: false,
-                openLabel: '选择文件',
+                openLabel: 'Select File',
                 filters: fileFilters,
                 defaultUri: vscode.Uri.file(projectRoot)
             });
@@ -350,7 +350,7 @@ export class MessageHandler {
             }
         } catch (error) {
             logger.error(`[MessageHandler] 文件浏览失败: ${error}`);
-            vscode.window.showErrorMessage(`文件浏览失败: ${error instanceof Error ? error.message : '未知错误'}`);
+            vscode.window.showErrorMessage(vscode.l10n.t('File browse failed: {0}', error instanceof Error ? error.message : vscode.l10n.t('Unknown error')));
         }
     }
 
@@ -363,10 +363,10 @@ export class MessageHandler {
             this._hmlController.parseContent(content);
             
             // TODO: 实现预览逻辑
-            vscode.window.showInformationMessage('预览功能开发中...');
+            vscode.window.showInformationMessage(vscode.l10n.t('Preview feature is under development...'));
         } catch (error) {
             logger.error(`预览失败: ${error}`);
-            vscode.window.showErrorMessage(`预览失败: ${error instanceof Error ? error.message : '未知错误'}`);
+            vscode.window.showErrorMessage(vscode.l10n.t('Preview failed: {0}', error instanceof Error ? error.message : vscode.l10n.t('Unknown error')));
         }
     }
 
@@ -418,7 +418,7 @@ export class MessageHandler {
             logger.info(`[MessageHandler] 文件切换完成: ${path.basename(filePath)}`);
         } catch (error) {
             logger.error(`[MessageHandler] 切换文件失败: ${error}`);
-            vscode.window.showErrorMessage(`切换文件失败: ${error instanceof Error ? error.message : '未知错误'}`);
+            vscode.window.showErrorMessage(vscode.l10n.t('Failed to switch file: {0}', error instanceof Error ? error.message : vscode.l10n.t('Unknown error')));
         }
     }
 
@@ -429,14 +429,14 @@ export class MessageHandler {
         try {
             const currentFile = this._fileManager.currentFilePath;
             if (!currentFile) {
-                vscode.window.showErrorMessage('未找到当前HML文件');
+                vscode.window.showErrorMessage(vscode.l10n.t('Current HML file not found'));
                 return;
             }
 
             // 获取项目根目录
             const projectRoot = ProjectUtils.findProjectRoot(currentFile);
             if (!projectRoot) {
-                vscode.window.showErrorMessage('未找到项目根目录');
+                vscode.window.showErrorMessage(vscode.l10n.t('Cannot find project root (project.json)'));
                 return;
             }
 
@@ -449,11 +449,11 @@ export class MessageHandler {
             // 检查文件是否存在，如果不存在则先生成代码
             if (!fs.existsSync(callbackFile)) {
                 const result = await vscode.window.showInformationMessage(
-                    '回调文件不存在，是否先生成代码？',
-                    '生成', '取消'
+                    vscode.l10n.t('The callback file already exists. Do you want to overwrite it?'),
+                    vscode.l10n.t('Overwrite'), vscode.l10n.t('Cancel')
                 );
                 
-                if (result === '生成') {
+                if (result === vscode.l10n.t('Overwrite')) {
                     await this.handleGenerateCode();
                     // 等待一下确保文件生成完成
                     await new Promise(resolve => setTimeout(resolve, 500));
@@ -477,12 +477,12 @@ export class MessageHandler {
                 editor.selection = new vscode.Selection(position, position);
                 editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenter);
             } else {
-                vscode.window.showWarningMessage(`未找到函数 ${functionName}，请检查代码生成是否正确`);
+                vscode.window.showWarningMessage(vscode.l10n.t('Function {0} not found, please check if code generation is correct', functionName));
             }
 
         } catch (error) {
             logger.error(`[MessageHandler] 跳转到槽函数失败: ${error}`);
-            vscode.window.showErrorMessage(`跳转失败: ${error}`);
+            vscode.window.showErrorMessage(vscode.l10n.t('Jump failed: {0}', String(error)));
         }
     }
 }

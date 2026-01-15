@@ -4,6 +4,7 @@ import { PropertyEditor } from './PropertyEditor';
 import { BaseProperties } from './BaseProperties';
 import { EventsPanel } from './EventsPanel';
 import { useDesignerStore } from '../../store';
+import { t } from '../../i18n';
 
 export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUpdate, components }) => {
   const [activeTab, setActiveTab] = useState<'properties' | 'events'>('properties');
@@ -182,13 +183,13 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
           className={activeTab === 'properties' ? 'active' : ''}
           onClick={() => setActiveTab('properties')}
         >
-          属性
+          {t('Properties')}
         </button>
         <button
           className={activeTab === 'events' ? 'active' : ''}
           onClick={() => setActiveTab('events')}
         >
-          事件
+          {t('Events')}
         </button>
       </div>
 
@@ -217,7 +218,7 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
             {/* 列表总长度显示（仅显示，不生成代码） */}
             <div className="property-group">
               <div className="property-item">
-                <label>列表总长度（{direction === 'VERTICAL' ? '高度' : '宽度'}）</label>
+                <label>{t('List Total Length')}（{direction === 'VERTICAL' ? t('Height') : t('Width')}）</label>
                 <div style={{
                   padding: '4px 8px',
                   backgroundColor: 'var(--vscode-input-background)',
@@ -230,21 +231,21 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
                   {calculateTotalLength()} px
                 </div>
                 <div style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '4px' }}>
-                  计算公式：项{direction === 'VERTICAL' ? '高度' : '宽度'} × 项数量 + 间距 × (项数量 - 1)
+                  {t('Formula')}：{direction === 'VERTICAL' ? t('Height') : t('Width')} × {t('Item Count')} + {t('Item Spacing')} × ({t('Item Count')} - 1)
                 </div>
               </div>
             </div>
 
             {/* 样式属性 */}
             <div className="property-group">
-              <div className="property-group-title">样式</div>
+              <div className="property-group-title">{t('Style')}</div>
 
               {/* 项尺寸 */}
               <div className="property-item">
-                <label>项尺寸</label>
+                <label>{t('Item Size')}</label>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
                   <div>
-                    <label style={{ fontSize: '12px' }}>宽度</label>
+                    <label style={{ fontSize: '12px' }}>{t('Width')}</label>
                     <PropertyEditor
                       type="number"
                       value={itemWidth}
@@ -267,7 +268,7 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: '12px' }}>高度</label>
+                    <label style={{ fontSize: '12px' }}>{t('Height')}</label>
                     <PropertyEditor
                       type="number"
                       value={itemHeight}
@@ -292,19 +293,19 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
                 </div>
                 {direction === 'VERTICAL' && (
                   <div style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '4px' }}>
-                    垂直方向：项宽度 = 列表宽度（联动）
+                    {t('Vertical direction: item width = list width (linked)')}
                   </div>
                 )}
                 {direction === 'HORIZONTAL' && (
                   <div style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '4px' }}>
-                    水平方向：项高度 = 列表高度（联动）
+                    {t('Horizontal direction: item height = list height (linked)')}
                   </div>
                 )}
               </div>
 
               {/* 项间距 */}
               <div className="property-item">
-                <label>项间距</label>
+                <label>{t('Item Spacing')}</label>
                 <PropertyEditor
                   type="number"
                   value={space}
@@ -314,7 +315,7 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
 
               {/* 方向 */}
               <div className="property-item">
-                <label>方向</label>
+                <label>{t('Direction')}</label>
                 <PropertyEditor
                   type="select"
                   value={direction}
@@ -325,7 +326,7 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
 
               {/* 样式 */}
               <div className="property-item">
-                <label>样式</label>
+                <label>{t('Style')}</label>
                 <PropertyEditor
                   type="select"
                   value={style}
@@ -334,7 +335,7 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
                 />
                 {loop && style === 'LIST_CARD' && (
                   <div style={{ fontSize: '11px', color: 'var(--vscode-errorForeground)', marginTop: '4px' }}>
-                    ⚠️ 循环滚动时不支持 LIST_CARD 样式
+                    ⚠️ {t('Loop scroll does not support LIST_CARD style')}
                   </div>
                 )}
               </div>
@@ -342,14 +343,14 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
               {/* LIST_CARD 样式特有属性：堆叠位置 */}
               {style === 'LIST_CARD' && (
                 <div className="property-item">
-                  <label>堆叠位置距离 ({direction === 'VERTICAL' ? '底部' : '右侧'})</label>
+                  <label>{t('Stack Location Distance')} ({direction === 'VERTICAL' ? t('bottom') : t('right')})</label>
                   <PropertyEditor
                     type="number"
                     value={cardStackLocation}
                     onChange={(value) => handleStyleChange('cardStackLocation', value)}
                   />
                   <div style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '4px' }}>
-                    卡片堆叠到{direction === 'VERTICAL' ? '底部' : '右侧'}的距离
+                    {t('Card stack distance from')}{direction === 'VERTICAL' ? t('bottom') : t('right')}
                   </div>
                 </div>
               )}
@@ -357,11 +358,11 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
 
             {/* 数据属性 */}
             <div className="property-group">
-              <div className="property-group-title">数据</div>
+              <div className="property-group-title">{t('Data')}</div>
 
               {/* 项数量 */}
               <div className="property-item">
-                <label>项数量</label>
+                <label>{t('Item Count')}</label>
                 <PropertyEditor
                   type="number"
                   value={noteNum}
@@ -371,7 +372,7 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
 
               {/* 初始偏移 */}
               <div className="property-item">
-                <label>初始偏移</label>
+                <label>{t('Initial Offset')}</label>
                 <PropertyEditor
                   type="number"
                   value={offset}
@@ -381,7 +382,7 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
 
               {/* 超出范围 */}
               <div className="property-item">
-                <label>超出范围</label>
+                <label>{t('Out of Scope')}</label>
                 <PropertyEditor
                   type="number"
                   value={outScope}
@@ -389,7 +390,7 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
                 />
                 {(loop || style === 'LIST_CARD') && outScope !== 0 && (
                   <div style={{ fontSize: '11px', color: 'var(--vscode-errorForeground)', marginTop: '4px' }}>
-                    ⚠️ {loop ? '循环滚动' : 'LIST_CARD 样式'}时超出范围必须为 0
+                    ⚠️ {t('Out of scope must be 0 when')} {loop ? t('loop scroll') : 'LIST_CARD'}
                   </div>
                 )}
               </div>
@@ -397,11 +398,11 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
 
             {/* 通用属性 */}
             <div className="property-group">
-              <div className="property-group-title">通用</div>
+              <div className="property-group-title">{t('General')}</div>
 
               {/* 自动对齐 */}
               <div className="property-item">
-                <label>自动对齐</label>
+                <label>{t('Auto Align')}</label>
                 <PropertyEditor
                   type="boolean"
                   value={autoAlign}
@@ -411,7 +412,7 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
 
               {/* 惯性滚动 */}
               <div className="property-item">
-                <label>惯性滚动</label>
+                <label>{t('Inertia Scroll')}</label>
                 <PropertyEditor
                   type="boolean"
                   value={inertia}
@@ -421,7 +422,7 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
 
               {/* 循环滚动 */}
               <div className="property-item">
-                <label>循环滚动</label>
+                <label>{t('Loop Scroll')}</label>
                 <PropertyEditor
                   type="boolean"
                   value={loop}
@@ -429,14 +430,14 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
                 />
                 {style === 'LIST_CARD' && (
                   <div style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '4px' }}>
-                    LIST_CARD 样式不支持循环滚动
+                    {t('LIST_CARD style does not support loop scroll')}
                   </div>
                 )}
               </div>
 
               {/* 显示滚动条 */}
               <div className="property-item">
-                <label>显示滚动条</label>
+                <label>{t('Show Scrollbar')}</label>
                 <PropertyEditor
                   type="boolean"
                   value={createBar}
@@ -444,7 +445,7 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
                 />
                 {loop && (
                   <div style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '4px' }}>
-                    循环滚动时不支持滚动条
+                    {t('Loop scroll does not support scrollbar')}
                   </div>
                 )}
               </div>

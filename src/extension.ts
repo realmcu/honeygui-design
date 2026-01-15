@@ -3,27 +3,27 @@ import { logger } from './utils/Logger';
 import { ExtensionManager } from './core/ExtensionManager';
 
 /**
- * HoneyGUI Visual Designer扩展入口
- * 这是一个离线版本的VS Code插件，用于HoneyGUI嵌入式GUI框架的可视化设计
+ * HoneyGUI Visual Designer Extension Entry
+ * Offline VSCode extension for HoneyGUI embedded GUI framework visual design
  */
 
 let extensionManager: ExtensionManager | undefined;
 
 /**
- * 扩展激活函数
- * VS Code会在扩展首次加载时调用此函数
+ * Extension activation function
+ * Called by VSCode when the extension is first loaded
  */
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
     try {
-        logger.info('HoneyGUI Visual Designer 正在激活...');
+        logger.info(vscode.l10n.t('Extension activating'));
         
-        // 创建扩展管理器
+        // Create extension manager
         extensionManager = new ExtensionManager(context);
         
-        // 初始化扩展
+        // Initialize extension
         await extensionManager.initialize();
         
-        // 检查是否有待激活的新建项目
+        // Check for pending new project activation
         const pendingActivation = context.globalState.get<{
             projectPath: string;
             projectName: string;
@@ -31,12 +31,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         }>('pendingProjectActivation');
         
         if (pendingActivation) {
-            // 清除标记
+            // Clear the flag
             await context.globalState.update('pendingProjectActivation', undefined);
             
-            // 检查时间戳，避免处理过期的激活请求（5分钟内有效）
+            // Check timestamp to avoid processing expired activation requests (valid within 5 minutes)
             if (Date.now() - pendingActivation.timestamp < 5 * 60 * 1000) {
-                // 延迟打开主 HML 文件，等待 VSCode 完全加载
+                // Delay opening main HML file, wait for VSCode to fully load
                 setTimeout(async () => {
                     try {
                         const { ProjectUtils } = await import('./utils/ProjectUtils');
@@ -48,34 +48,34 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
                             await vscode.commands.executeCommand('honeygui.openInDesigner', mainHmlPath);
                         }
                     } catch (err) {
-                        logger.error(`打开主设计文件失败: ${err}`);
+                        logger.error(vscode.l10n.t('Failed to open main design file: {0}', String(err)));
                     }
                 }, 1000);
             }
         }
         
-        logger.info('HoneyGUI Visual Designer 激活成功');
+        logger.info(vscode.l10n.t('Extension activated'));
         
     } catch (error) {
-        logger.error(`扩展激活失败: ${error instanceof Error ? error.message : String(error)}`);
+        logger.error(vscode.l10n.t('Activation failed: {0}', error instanceof Error ? error.message : String(error)));
         vscode.window.showErrorMessage(
-            `HoneyGUI扩展激活失败: ${error instanceof Error ? error.message : '未知错误'}`
+            vscode.l10n.t('Activation failed: {0}', error instanceof Error ? error.message : vscode.l10n.t('Unknown error'))
         );
         throw error;
     }
 }
 
 /**
- * 扩展停用函数
- * VS Code会在扩展被停用时调用此函数
+ * Extension deactivation function
+ * Called by VSCode when the extension is deactivated
  */
 export function deactivate(): void {
-    logger.info('HoneyGUI Visual Designer 正在停用...');
+    logger.info(vscode.l10n.t('Extension deactivating'));
     
     if (extensionManager) {
         extensionManager.dispose();
         extensionManager = undefined;
     }
     
-    logger.info('HoneyGUI Visual Designer 已停用');
+    logger.info(vscode.l10n.t('Extension deactivated'));
 }

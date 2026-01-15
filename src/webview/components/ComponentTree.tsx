@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useDesignerStore } from '../store';
 import { ChevronDown, ChevronRight, Eye, EyeOff, Lock, Unlock } from 'lucide-react';
+import { t } from '../i18n';
 import './ComponentTree.css';
 
 interface ComponentTreeNodeProps {
@@ -352,14 +353,14 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
           <div
             className="tree-action-button"
             onClick={handleToggleVisibility}
-            title={component.visible ? '隐藏' : '显示'}
+            title={component.visible ? t('Hide') : t('Show')}
           >
             {component.visible ? <Eye size={14} /> : <EyeOff size={14} />}
           </div>
           <div
             className="tree-action-button"
             onClick={handleToggleLock}
-            title={component.locked ? '解锁' : '锁定'}
+            title={component.locked ? t('Unlock') : t('Lock')}
           >
             {component.locked ? <Lock size={14} /> : <Unlock size={14} />}
           </div>
@@ -417,9 +418,9 @@ const ComponentTree: React.FC<{ onContextMenu?: (e: React.MouseEvent, componentI
       <div className="tree-content">
         {rootComponents.length === 0 ? (
           <div className="tree-empty">
-            暂无组件
+            {t('No components')}
             <div className="tree-empty-tip">
-              从组件库拖拽添加组件
+              {t('Drag from component library to add')}
             </div>
           </div>
         ) : (

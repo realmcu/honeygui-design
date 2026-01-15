@@ -3,6 +3,7 @@ import { PropertyPanelProps } from './types';
 import { BaseProperties } from './BaseProperties';
 import { PropertyEditor } from './PropertyEditor';
 import { EventsPanel } from './EventsPanel';
+import { t } from '../../i18n';
 
 export const HgWindowProperties: React.FC<PropertyPanelProps> = ({ component, onUpdate, components }) => {
   const [activeTab, setActiveTab] = useState<'properties' | 'events'>('properties');
@@ -26,13 +27,13 @@ export const HgWindowProperties: React.FC<PropertyPanelProps> = ({ component, on
           className={activeTab === 'properties' ? 'active' : ''}
           onClick={() => setActiveTab('properties')}
         >
-          属性
+          {t('Properties')}
         </button>
         <button
           className={activeTab === 'events' ? 'active' : ''}
           onClick={() => setActiveTab('events')}
         >
-          事件
+          {t('Events')}
         </button>
       </div>
 
@@ -47,9 +48,9 @@ export const HgWindowProperties: React.FC<PropertyPanelProps> = ({ component, on
 
             {/* 样式属性 */}
             <div className="property-group">
-              <div className="property-group-title">样式</div>
+              <div className="property-group-title">{t('Style')}</div>
               <div className="property-item">
-                <label>背景色</label>
+                <label>{t('Background Color')}</label>
                 <PropertyEditor
                   type="color"
                   value={backgroundColor}
@@ -60,11 +61,11 @@ export const HgWindowProperties: React.FC<PropertyPanelProps> = ({ component, on
 
             {/* Blur 效果 */}
             <div className="property-group">
-              <div className="property-group-title">模糊效果</div>
+              <div className="property-group-title">{t('Blur Effect')}</div>
               
               <div className="property-item">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <label>启用模糊</label>
+                  <label>{t('Enable Blur')}</label>
                   <PropertyEditor
                     type="boolean"
                     value={enableBlur}
@@ -75,7 +76,7 @@ export const HgWindowProperties: React.FC<PropertyPanelProps> = ({ component, on
 
               {enableBlur && (
                 <div className="property-item">
-                  <label>模糊程度 (0-255)</label>
+                  <label>{t('Blur Degree')} (0-255)</label>
                   <PropertyEditor
                     type="number"
                     value={blurDegree}
@@ -85,7 +86,7 @@ export const HgWindowProperties: React.FC<PropertyPanelProps> = ({ component, on
                     }}
                   />
                   <div style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '4px' }}>
-                    默认值: 225
+                    {t('Default value: 225')}
                   </div>
                 </div>
               )}

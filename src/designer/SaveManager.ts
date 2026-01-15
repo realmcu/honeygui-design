@@ -135,7 +135,7 @@ export class SaveManager {
             this.endTransaction();
 
             // 6. 通知用户
-            vscode.window.showInformationMessage(`设计已保存到 ${path.basename(filePath)}`);
+            vscode.window.showInformationMessage(vscode.l10n.t('Design saved to {0}', path.basename(filePath)));
 
         } catch (error) {
             logger.error(`[SaveManager] 保存失败: ${error}`);

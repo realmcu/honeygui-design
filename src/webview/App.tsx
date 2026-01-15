@@ -13,6 +13,7 @@ import { getAbsolutePosition, findComponentAtPosition, isDropTargetType, isConta
 import { createImageComponentAtPosition, create3DComponentAtPosition, createVideoComponentAtPosition, createSvgComponentAtPosition, createGlassComponentAtPosition } from './services/messageHandler';
 import { processImageFiles } from './utils/fileUtils';
 import { parseObjDependencies, parseMtlDependencies, findDependencyFiles } from './utils/objDependencyParser';
+import { setLocale, t } from './i18n';
 import './App.css';
 
 // 从types.ts导入已有的Window接口扩展
@@ -59,7 +60,7 @@ const App: React.FC = () => {
       console.error('[HoneyGUI Designer] Global error:', e.error);
       const errorDiv = document.createElement('div');
       errorDiv.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#c62828;color:white;padding:10px;z-index:9999;font-family:monospace;font-size:12px;white-space:pre-wrap;';
-      errorDiv.textContent = '错误: ' + (e.error?.message || 'Unknown error') + '\n' + (e.error?.stack || 'No stack trace');
+      errorDiv.textContent = t('Error') + ': ' + (e.error?.message || 'Unknown error') + '\n' + (e.error?.stack || 'No stack trace');
       document.body.appendChild(errorDiv);
     };
 
@@ -89,9 +90,21 @@ const App: React.FC = () => {
       const message = event.data;
 
       switch (message.command) {
+        case 'setLocale':
+          // Set locale from extension
+          if (message.locale) {
+            setLocale(message.locale);
+          }
+          break;
+
         case 'loadHml':
           // 直接使用store方法，避免闭包问题
           const store = useDesignerStore.getState();
+          
+          // Set locale if provided
+          if (message.locale) {
+            setLocale(message.locale);
+          }
           
           store.setProjectConfig(message.projectConfig || null);
           
@@ -290,7 +303,7 @@ const App: React.FC = () => {
         console.error('[HoneyGUI Designer] React app did not render!');
         const errorDiv = document.createElement('div');
         errorDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#c62828;color:white;padding:20px;border-radius:4px;font-family:monospace;';
-        errorDiv.innerHTML = '<h3>React App 未渲染</h3><p>请检查控制台查看错误详情</p>';
+        errorDiv.innerHTML = `<h3>${t('React App not rendered')}</h3><p>${t('Please check console for error details')}</p>`;
         document.body.appendChild(errorDiv);
       }
     }, 2000);
@@ -350,7 +363,7 @@ const App: React.FC = () => {
         if (api) {
           api.postMessage({
             command: 'error',
-            text: '请将图片拖放到容器内（View/Panel/Window）'
+            text: t('Please drop image into container (View/Window)')
           });
         }
         return;
@@ -386,7 +399,7 @@ const App: React.FC = () => {
       if (api) {
         api.postMessage({
           command: 'error',
-          text: '请将 3D 模型拖放到容器内（View/Window）'
+          text: t('Please drop 3D model into container (View/Window)')
         });
       }
       return;
@@ -531,7 +544,7 @@ const App: React.FC = () => {
         if (api) {
           api.postMessage({
             command: 'error',
-            text: '请将资源拖放到容器内（View/Window）'
+            text: t('Please drop asset into container (View/Window)')
           });
         }
         return;
@@ -771,9 +784,9 @@ const App: React.FC = () => {
         const api = useDesignerStore.getState().vscodeAPI;
         if (api) {
           // 针对不同组件类型提供特定的错误提示
-          let errorMessage = '请将组件拖放到容器内（View/Window）';
+          let errorMessage = t('Please drop component into container (View/Window)');
           if (isNestedContainer) {
-            errorMessage = `${componentType} 必须放置在容器组件（hg_view 或 hg_window）内`;
+            errorMessage = `${componentType} must be placed inside a container (hg_view or hg_window)`;
           }
           api.postMessage({
             command: 'error',
@@ -927,19 +940,19 @@ const App: React.FC = () => {
               className={`tab-header ${activeTab === 'components' ? 'active' : ''}`}
               onClick={() => setActiveTab('components')}
             >
-              组件库
+              {t('Component Library')}
             </button>
             <button 
               className={`tab-header ${activeTab === 'assets' ? 'active' : ''}`}
               onClick={() => setActiveTab('assets')}
             >
-              资源
+              {t('Assets')}
             </button>
             <button 
               className={`tab-header ${activeTab === 'tree' ? 'active' : ''}`}
               onClick={() => setActiveTab('tree')}
             >
-              组件树
+              {t('Component Tree')}
             </button>
           </div>
 

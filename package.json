@@ -1,9 +1,10 @@
 {
   "name": "honeygui-visual-designer",
-  "displayName": "HoneyGUI Visual Designer",
-  "description": "VS Code 插件，提供 HoneyGUI 可视化界面设计、HML 编辑、C 代码生成与实时仿真功能。",
+  "displayName": "%displayName%",
+  "description": "%description%",
   "version": "1.6.7",
   "license": "MIT",
+  "l10n": "./l10n",
   "repository": {
     "type": "git",
     "url": "https://github.com/realmcu/HoneyGUI.git"
@@ -98,7 +99,7 @@
     "viewsWelcome": [
       {
         "view": "honeygui.welcome",
-        "contents": "[$(add) 新建项目](command:honeygui.newProject)\n[$(file-add) 新建设计](command:honeygui.createNewHmlInWorkspace)\n[$(folder-opened) 打开项目](command:honeygui.openProject)\n[$(tools) 资源转换工具](command:honeygui.tools)\n\n协同开发:\n[$(broadcast) 开启协同 (主机)](command:honeygui.collaboration.startHost)\n[$(plug) 加入协同 (访客)](command:honeygui.collaboration.joinSession)"
+        "contents": "[$(add) New Project](command:honeygui.newProject)\n[$(file-add) New Design](command:honeygui.createNewHmlInWorkspace)\n[$(folder-opened) Open Project](command:honeygui.openProject)\n[$(tools) Resource Conversion Tools](command:honeygui.tools)\n\nCollaboration:\n[$(broadcast) Start Host](command:honeygui.collaboration.startHost)\n[$(plug) Join Session](command:honeygui.collaboration.joinSession)"
       }
     ],
     "menus": {
@@ -140,78 +141,78 @@
     "commands": [
       {
         "command": "honeygui.createNewHmlInWorkspace",
-        "title": "HoneyGUI: 新建设计",
+        "title": "%command.createNewHml%",
         "category": "HoneyGUI"
       },
       {
         "command": "honeygui.tools",
-        "title": "HoneyGUI: 资源转换工具",
+        "title": "%command.tools%",
         "category": "HoneyGUI"
       },
       {
         "command": "honeygui.openInTextEditor",
-        "title": "Open with Text Editor",
+        "title": "%command.openInTextEditor%",
         "category": "HoneyGUI"
       },
       {
         "command": "honeygui.openInDesigner",
-        "title": "Open with HoneyGUI Designer",
+        "title": "%command.openInDesigner%",
         "category": "HoneyGUI"
       },
       {
         "command": "honeygui.newProject",
-        "title": "HoneyGUI: New Project",
+        "title": "%command.newProject%",
         "category": "HoneyGUI"
       },
       {
         "command": "honeygui.openProject",
-        "title": "HoneyGUI: Open Project",
+        "title": "%command.openProject%",
         "category": "HoneyGUI"
       },
       {
         "command": "honeygui.codegen",
-        "title": "HoneyGUI: Generate Code",
+        "title": "%command.codegen%",
         "category": "HoneyGUI"
       },
       {
         "command": "honeygui.preview",
-        "title": "HoneyGUI: Preview",
+        "title": "%command.preview%",
         "category": "HoneyGUI",
         "icon": "$(eye)"
       },
       {
         "command": "honeygui.simulation",
-        "title": "HoneyGUI: Compile & Simulate",
+        "title": "%command.simulation%",
         "category": "HoneyGUI",
         "icon": "$(rocket)"
       },
       {
         "command": "honeygui.simulation.stop",
-        "title": "HoneyGUI: Stop Simulation",
+        "title": "%command.simulationStop%",
         "category": "HoneyGUI",
         "icon": "$(debug-stop)"
       },
       {
         "command": "honeygui.collaboration.startHost",
-        "title": "Start Host",
+        "title": "%command.startHost%",
         "category": "HoneyGUI",
         "icon": "$(broadcast)"
       },
       {
         "command": "honeygui.collaboration.joinSession",
-        "title": "Join Session",
+        "title": "%command.joinSession%",
         "category": "HoneyGUI",
         "icon": "$(plug)"
       },
       {
         "command": "honeygui.collaboration.stop",
-        "title": "Stop Collaboration",
+        "title": "%command.stopCollaboration%",
         "category": "HoneyGUI",
         "icon": "$(debug-stop)"
       },
       {
         "command": "honeygui.environment.refresh",
-        "title": "Refresh Environment Check",
+        "title": "%command.refreshEnvironment%",
         "category": "HoneyGUI",
         "icon": "$(refresh)"
       }

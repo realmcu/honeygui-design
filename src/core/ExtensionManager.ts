@@ -219,18 +219,18 @@ class QuickViewDataProvider implements vscode.TreeDataProvider<vscode.TreeItem> 
         // 返回快速视图的数据项
         const quickItems: vscode.TreeItem[] = [];
         
-        const startProjectItem = new vscode.TreeItem('启动项目', vscode.TreeItemCollapsibleState.None);
-        startProjectItem.command = { command: 'honeygui.startProject', title: '启动项目' };
+        const startProjectItem = new vscode.TreeItem(vscode.l10n.t('Start Project'), vscode.TreeItemCollapsibleState.None);
+        startProjectItem.command = { command: 'honeygui.startProject', title: vscode.l10n.t('Start Project') };
         startProjectItem.iconPath = new vscode.ThemeIcon('play');
         quickItems.push(startProjectItem);
         
-        const stopProjectItem = new vscode.TreeItem('停止项目', vscode.TreeItemCollapsibleState.None);
-        stopProjectItem.command = { command: 'honeygui.stopProject', title: '停止项目' };
+        const stopProjectItem = new vscode.TreeItem(vscode.l10n.t('Stop Project'), vscode.TreeItemCollapsibleState.None);
+        stopProjectItem.command = { command: 'honeygui.stopProject', title: vscode.l10n.t('Stop Project') };
         stopProjectItem.iconPath = new vscode.ThemeIcon('stop');
         quickItems.push(stopProjectItem);
         
-        const restartProjectItem = new vscode.TreeItem('重启项目', vscode.TreeItemCollapsibleState.None);
-        restartProjectItem.command = { command: 'honeygui.restartProject', title: '重启项目' };
+        const restartProjectItem = new vscode.TreeItem(vscode.l10n.t('Restart Project'), vscode.TreeItemCollapsibleState.None);
+        restartProjectItem.command = { command: 'honeygui.restartProject', title: vscode.l10n.t('Restart Project') };
         restartProjectItem.iconPath = new vscode.ThemeIcon('refresh');
         quickItems.push(restartProjectItem);
         

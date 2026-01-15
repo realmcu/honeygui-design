@@ -15,6 +15,7 @@ import {
   SWITCH_OUT_STYLES,
   SWITCH_IN_STYLES,
 } from '../../../hml/eventTypes';
+import { t } from '../../i18n';
 import './EventsPanel.css';
 
 interface EventsPanelProps {
@@ -208,7 +209,7 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
           <button
             className="action-remove-btn"
             onClick={() => handleRemoveAction(eventIndex, actionIndex)}
-            title="删除动作"
+            title={t('Delete action')}
           >
             ×
           </button>
@@ -219,12 +220,12 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
           {action.type === 'switchView' && (
             <>
               <div className="param-row">
-                <label>目标界面</label>
+                <label>{t('Target View')}</label>
                 <select
                   value={action.target || ''}
                   onChange={(e) => handleActionUpdate(eventIndex, actionIndex, { target: e.target.value })}
                 >
-                  <option value="">-- 选择 --</option>
+                  <option value="">-- {t('Select')} --</option>
                   {views.map(v => (
                     <option key={v.id} value={v.id}>
                       {v.name} {v.file !== '当前文件' ? `(${v.file})` : ''}
@@ -233,7 +234,7 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
                 </select>
               </div>
               <div className="param-row">
-                <label>退出动画</label>
+                <label>{t('Exit Animation')}</label>
                 <select
                   value={action.switchOutStyle || 'SWITCH_OUT_TO_LEFT_USE_TRANSLATION'}
                   onChange={(e) => handleActionUpdate(eventIndex, actionIndex, { switchOutStyle: e.target.value })}
@@ -244,7 +245,7 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
                 </select>
               </div>
               <div className="param-row">
-                <label>进入动画</label>
+                <label>{t('Enter Animation')}</label>
                 <select
                   value={action.switchInStyle || 'SWITCH_IN_FROM_RIGHT_USE_TRANSLATION'}
                   onChange={(e) => handleActionUpdate(eventIndex, actionIndex, { switchInStyle: e.target.value })}
@@ -260,12 +261,12 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
           {/* sendMessage - 发送消息 */}
           {action.type === 'sendMessage' && (
             <div className="param-row">
-              <label>消息名</label>
+              <label>{t('Message Name')}</label>
               <input
                 type="text"
                 value={action.message || ''}
                 onChange={(e) => handleActionUpdate(eventIndex, actionIndex, { message: e.target.value })}
-                placeholder="如: button_clicked"
+                placeholder="button_clicked"
               />
             </div>
           )}
@@ -273,12 +274,12 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
           {/* callFunction - 调用函数 */}
           {action.type === 'callFunction' && (
             <div className="param-row">
-              <label>函数名</label>
+              <label>{t('Function Name')}</label>
               <input
                 type="text"
                 value={action.functionName || ''}
                 onChange={(e) => handleActionUpdate(eventIndex, actionIndex, { functionName: e.target.value })}
-                placeholder="如: on_button_click"
+                placeholder="on_button_click"
               />
             </div>
           )}
@@ -290,7 +291,7 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
   return (
     <div className="events-panel">
       {eventConfigs.length === 0 ? (
-        <div className="events-empty">暂无事件配置</div>
+        <div className="events-empty">{t('No events configured')}</div>
       ) : (
         eventConfigs.map((event, eventIndex) => (
           <div key={eventIndex} className="event-item">
@@ -317,9 +318,9 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
                   e.stopPropagation();
                   handleRemoveEvent(eventIndex);
                 }}
-                title="删除事件"
+                title={t('Delete event')}
               >
-                删除
+                {t('Delete')}
               </button>
             </div>
 
@@ -329,21 +330,21 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
                 {event.type === 'onMessage' && (
                   <>
                     <div className="message-input">
-                      <label>监听消息</label>
+                      <label>{t('Listen Message')}</label>
                       <input
                         type="text"
                         value={event.message || ''}
                         onChange={(e) => handleMessageChange(eventIndex, e.target.value)}
-                        placeholder="消息名称"
+                        placeholder={t('Message Name')}
                       />
                     </div>
                     <div className="handler-input">
-                      <label>回调函数名</label>
+                      <label>{t('Callback Function Name')}</label>
                       <input
                         type="text"
                         value={event.handler || getDefaultHandler(eventIndex)}
                         onChange={(e) => handleHandlerChange(eventIndex, e.target.value)}
-                        placeholder="回调函数名"
+                        placeholder={t('Callback Function Name')}
                         className={handlerError ? 'input-error' : ''}
                       />
                       {handlerError && <span className="error-hint">{handlerError}</span>}
@@ -361,9 +362,9 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
                 <button
                   className="add-action-btn"
                   onClick={() => handleAddAction(eventIndex)}
-                  title={event.actions.some(a => a.type === 'switchView') ? '提示：一个事件只能有一个"跳转界面"动作' : '添加动作'}
+                  title={event.actions.some(a => a.type === 'switchView') ? t('Tip: Only one switch view action per event') : t('Add Action')}
                 >
-                  + 添加动作
+                  + {t('Add Action')}
                 </button>
               </div>
             )}
@@ -372,7 +373,7 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
       )}
 
       <button className="add-event-btn" onClick={handleAddEvent}>
-        + 添加事件
+        + {t('Add Event')}
       </button>
     </div>
   );

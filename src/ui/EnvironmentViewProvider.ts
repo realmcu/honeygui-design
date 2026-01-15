@@ -4,7 +4,7 @@ import { EnvironmentChecker, EnvironmentCheckResult } from '../simulation/Enviro
 // 安装指引
 const INSTALL_GUIDES: Record<string, { windows: string; linux: string; url?: string }> = {
     python: {
-        windows: '下载安装: https://www.python.org/downloads/',
+        windows: 'https://www.python.org/downloads/',
         linux: 'sudo apt-get install python3',
         url: 'https://www.python.org/downloads/'
     },
@@ -13,17 +13,17 @@ const INSTALL_GUIDES: Record<string, { windows: string; linux: string; url?: str
         linux: 'pip install scons'
     },
     gcc: {
-        windows: '下载 MinGW: https://www.mingw-w64.org/',
+        windows: 'https://www.mingw-w64.org/',
         linux: 'sudo apt-get install build-essential',
         url: 'https://www.mingw-w64.org/'
     },
     sdl2: {
-        windows: '下载 SDL2: https://www.libsdl.org/',
+        windows: 'https://www.libsdl.org/',
         linux: 'sudo apt-get install libsdl2-dev',
         url: 'https://www.libsdl.org/'
     },
     ffmpeg: {
-        windows: '下载: https://ffmpeg.org/download.html',
+        windows: 'https://ffmpeg.org/download.html',
         linux: 'sudo apt-get install ffmpeg',
         url: 'https://ffmpeg.org/download.html'
     }
@@ -57,27 +57,30 @@ export class EnvironmentViewProvider implements vscode.TreeDataProvider<Environm
     getChildren(element?: EnvironmentItem): Thenable<EnvironmentItem[]> {
         if (!this.checkResult) {
             return Promise.resolve([
-                new EnvironmentItem('检查中...', 'loading', false)
+                new EnvironmentItem(vscode.l10n.t('Checking...'), 'loading', false)
             ]);
         }
 
+        const installed = vscode.l10n.t('Installed');
+        const notInstalled = vscode.l10n.t('Not Installed');
+
         const items: EnvironmentItem[] = [
             new EnvironmentItem(
-                'Python',
+                `Python: ${this.checkResult.pythonInstalled ? '✓ ' + installed : '✗ ' + notInstalled}`,
                 this.checkResult.pythonInstalled ? 'pass' : 'error',
                 this.checkResult.pythonInstalled,
                 this.checkResult.pythonVersion,
                 'python'
             ),
             new EnvironmentItem(
-                'SCons',
+                `SCons: ${this.checkResult.sconsInstalled ? '✓ ' + installed : '✗ ' + notInstalled}`,
                 this.checkResult.sconsInstalled ? 'pass' : 'error',
                 this.checkResult.sconsInstalled,
                 this.checkResult.sconsVersion,
                 'scons'
             ),
             new EnvironmentItem(
-                'GCC',
+                `GCC: ${this.checkResult.compilerInstalled ? '✓ ' + installed : '✗ ' + notInstalled}`,
                 this.checkResult.compilerInstalled ? 'pass' : 'error',
                 this.checkResult.compilerInstalled,
                 this.checkResult.compilerVersion,
@@ -88,7 +91,7 @@ export class EnvironmentViewProvider implements vscode.TreeDataProvider<Environm
         // 仅在 Linux/WSL 下显示 SDL
         if (this.checkResult.sdlInstalled !== undefined) {
             items.push(new EnvironmentItem(
-                'SDL2',
+                `SDL2: ${this.checkResult.sdlInstalled ? '✓ ' + installed : '✗ ' + notInstalled}`,
                 this.checkResult.sdlInstalled ? 'pass' : 'error',
                 this.checkResult.sdlInstalled,
                 this.checkResult.sdlVersion,
@@ -97,7 +100,7 @@ export class EnvironmentViewProvider implements vscode.TreeDataProvider<Environm
         }
 
         items.push(new EnvironmentItem(
-            'FFmpeg',
+            `FFmpeg: ${this.checkResult.ffmpegInstalled ? '✓ ' + installed : '✗ ' + notInstalled}`,
             this.checkResult.ffmpegInstalled ? 'pass' : 'warning',
             this.checkResult.ffmpegInstalled,
             this.checkResult.ffmpegVersion,
@@ -117,19 +120,21 @@ export class EnvironmentViewProvider implements vscode.TreeDataProvider<Environm
         const isWindows = process.platform === 'win32';
         const instruction = isWindows ? guide.windows : guide.linux;
 
-        const actions: string[] = ['复制命令'];
+        const copyCmd = vscode.l10n.t('Copy Command');
+        const openPage = vscode.l10n.t('Open Download Page');
+        const actions: string[] = [copyCmd];
         if (guide.url) {
-            actions.push('打开下载页面');
+            actions.push(openPage);
         }
 
         vscode.window.showInformationMessage(
-            `安装 ${toolId.toUpperCase()}: ${instruction}`,
+            vscode.l10n.t('Install {0}: {1}', toolId.toUpperCase(), instruction),
             ...actions
         ).then(selection => {
-            if (selection === '复制命令') {
+            if (selection === copyCmd) {
                 vscode.env.clipboard.writeText(instruction);
-                vscode.window.showInformationMessage('已复制到剪贴板');
-            } else if (selection === '打开下载页面' && guide.url) {
+                vscode.window.showInformationMessage(vscode.l10n.t('Copied to clipboard'));
+            } else if (selection === openPage && guide.url) {
                 vscode.env.openExternal(vscode.Uri.parse(guide.url));
             }
         });
@@ -138,16 +143,13 @@ export class EnvironmentViewProvider implements vscode.TreeDataProvider<Environm
 
 class EnvironmentItem extends vscode.TreeItem {
     constructor(
-        name: string,
+        label: string,
         private status: 'pass' | 'error' | 'warning' | 'loading',
         installed: boolean,
         version?: string,
         public readonly toolId?: string
     ) {
-        super(
-            `${name}: ${status === 'loading' ? '检查中...' : (installed ? '✓ 已安装' : '✗ 未安装')}`,
-            vscode.TreeItemCollapsibleState.None
-        );
+        super(label, vscode.TreeItemCollapsibleState.None);
 
         if (version) {
             this.description = version;
@@ -157,10 +159,10 @@ class EnvironmentItem extends vscode.TreeItem {
         if (!installed && toolId) {
             this.command = {
                 command: 'honeygui.environment.showGuide',
-                title: '显示安装指引',
+                title: vscode.l10n.t('Click to view installation instructions'),
                 arguments: [toolId]
             };
-            this.tooltip = '点击查看安装方法';
+            this.tooltip = vscode.l10n.t('Click to view installation instructions');
         }
 
         switch (status) {

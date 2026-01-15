@@ -313,7 +313,7 @@ export class FileManager {
 
         } catch (error) {
             logger.error(`创建新文档失败: ${error}`);
-            vscode.window.showErrorMessage(`创建新文档失败: ${error instanceof Error ? error.message : '未知错误'}`);
+            vscode.window.showErrorMessage(vscode.l10n.t('Failed to create new document: {0}', error instanceof Error ? error.message : vscode.l10n.t('Unknown error')));
         }
     }
 
@@ -347,7 +347,7 @@ export class FileManager {
 
         } catch (error) {
             logger.error(`从文档加载HML失败: ${error}`);
-            vscode.window.showErrorMessage(`加载HML文件失败: ${error instanceof Error ? error.message : '未知错误'}`);
+            vscode.window.showErrorMessage(vscode.l10n.t('Failed to load HML file: {0}', error instanceof Error ? error.message : vscode.l10n.t('Unknown error')));
             this.createNewDocument();
         }
     }
@@ -440,7 +440,7 @@ export class FileManager {
 
         } catch (error) {
             logger.error(`[FileManager] 保存失败: ${error}`);
-            vscode.window.showErrorMessage(`保存文件失败: ${error instanceof Error ? error.message : '未知错误'}`);
+            vscode.window.showErrorMessage(vscode.l10n.t('Failed to save file: {0}', error instanceof Error ? error.message : vscode.l10n.t('Unknown error')));
             return false;
         }
     }
@@ -492,6 +492,9 @@ export class FileManager {
         // 扫描所有 HML 文件
         const allHmlFiles = this.scanAllHmlFiles(this._filePath!);
         
+        // 获取当前 VSCode 语言设置
+        const locale = vscode.env.language;
+        
         this._panel.webview.postMessage({
             command: 'loadHml',
             content: hmlContent,
@@ -508,7 +511,8 @@ export class FileManager {
             projectRoot: projectRoot,
             allViews: allViews,
             allHmlFiles: allHmlFiles,
-            currentFilePath: this._filePath
+            currentFilePath: this._filePath,
+            locale: locale
         });
     }
 

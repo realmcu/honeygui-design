@@ -91,7 +91,7 @@ export class PreviewService {
       }
       
       if (!currentHmlFile) {
-        vscode.window.showErrorMessage('请先打开一个 HML 文件');
+        vscode.window.showErrorMessage(vscode.l10n.t('Please open an HML file first'));
         return;
       }
 
@@ -101,7 +101,7 @@ export class PreviewService {
       // 2. 获取项目根目录
       const projectRoot = ProjectUtils.findProjectRoot(currentHmlFile);
       if (!projectRoot) {
-        vscode.window.showErrorMessage('无法找到项目根目录（project.json）');
+        vscode.window.showErrorMessage(vscode.l10n.t('Cannot find project root (project.json)'));
         return;
       }
 
@@ -155,7 +155,7 @@ export class PreviewService {
 
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      vscode.window.showErrorMessage(`预览失败: ${message}`);
+      vscode.window.showErrorMessage(vscode.l10n.t('Preview failed: {0}', message));
     }
   }
 
@@ -608,7 +608,7 @@ GUI_INIT_APP_EXPORT(app_init);
     }
 
     this.outputChannel.appendLine('[运行] 仿真器已在终端中启动');
-    vscode.window.showInformationMessage(`预览已启动: ${hmlFileName}`);
+    vscode.window.showInformationMessage(vscode.l10n.t('Preview started: {0}', hmlFileName));
   }
 
   /**

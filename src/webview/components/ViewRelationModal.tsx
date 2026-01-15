@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { X, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import { useDesignerStore } from '../store';
+import { t } from '../i18n';
 import type { ViewInfo } from '../types';
 import './ViewRelationModal.css';
 
@@ -33,7 +34,7 @@ const eventTypeToLabel: Record<string, string> = {
   'onSwipeRight': '→',
   'onSwipeUp': '↑',
   'onSwipeDown': '↓',
-  'onClick': '点击',
+  'onClick': 'Click',
 };
 
 // 基于方向的智能布局
@@ -255,13 +256,13 @@ export const ViewRelationModal: React.FC<ViewRelationModalProps> = ({ visible, o
         <div className="vrm-header">
           <div className="vrm-title">
             <span className="vrm-icon">🔗</span>
-            视图导航关系
+            {t('View Navigation Relations')}
           </div>
           <div className="vrm-toolbar">
-            <button onClick={() => setZoom(z => Math.min(2, z * 1.2))} title="放大"><ZoomIn size={16} /></button>
+            <button onClick={() => setZoom(z => Math.min(2, z * 1.2))} title={t('Zoom In')}><ZoomIn size={16} /></button>
             <span className="vrm-zoom">{Math.round(zoom * 100)}%</span>
-            <button onClick={() => setZoom(z => Math.max(0.3, z / 1.2))} title="缩小"><ZoomOut size={16} /></button>
-            <button onClick={handleReset} title="适应窗口"><Maximize2 size={16} /></button>
+            <button onClick={() => setZoom(z => Math.max(0.3, z / 1.2))} title={t('Zoom Out')}><ZoomOut size={16} /></button>
+            <button onClick={handleReset} title={t('Fit to window')}><Maximize2 size={16} /></button>
             <div className="vrm-divider" />
             <button className="vrm-close" onClick={onClose}><X size={18} /></button>
           </div>
@@ -280,7 +281,7 @@ export const ViewRelationModal: React.FC<ViewRelationModalProps> = ({ visible, o
           {views.length === 0 ? (
             <div className="vrm-empty">
               <div className="vrm-empty-icon">📭</div>
-              <div>暂无视图</div>
+              <div>{t('No views')}</div>
             </div>
           ) : (
             <svg width="100%" height="100%">
@@ -377,13 +378,13 @@ export const ViewRelationModal: React.FC<ViewRelationModalProps> = ({ visible, o
         
         <div className="vrm-footer">
           <div className="vrm-legend">
-            <span className="vrm-legend-item"><span className="vrm-dot vrm-dot-current" />当前文件</span>
-            <span className="vrm-legend-item"><span className="vrm-dot vrm-dot-other" />其他文件</span>
-            <span className="vrm-legend-item"><span className="vrm-line vrm-line-valid" />有效连接</span>
-            <span className="vrm-legend-item"><span className="vrm-line vrm-line-invalid" />无效连接</span>
+            <span className="vrm-legend-item"><span className="vrm-dot vrm-dot-current" />{t('Current file')}</span>
+            <span className="vrm-legend-item"><span className="vrm-dot vrm-dot-other" />{t('Other files')}</span>
+            <span className="vrm-legend-item"><span className="vrm-line vrm-line-valid" />{t('Valid connection')}</span>
+            <span className="vrm-legend-item"><span className="vrm-line vrm-line-invalid" />{t('Invalid connection')}</span>
           </div>
           <div className="vrm-stats">
-            视图 {views.length} · 连接 {edges.length}
+            {t('Views')} {views.length} · {t('Connections')} {edges.length}
           </div>
         </div>
       </div>

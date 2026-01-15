@@ -3,6 +3,7 @@ import { PropertyPanelProps } from './types';
 import { PropertyEditor } from './PropertyEditor';
 import { BaseProperties } from './BaseProperties';
 import { EventsPanel } from './EventsPanel';
+import { t } from '../../i18n';
 
 export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onUpdate, components }) => {
   const [activeTab, setActiveTab] = useState<'properties' | 'events'>('properties');
@@ -127,43 +128,40 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
 
   return (
     <div className="properties-content">
-      {/* Tab 切换 */}
       <div className="properties-tabs">
         <button
           className={`tab-button ${activeTab === 'properties' ? 'active' : ''}`}
           onClick={() => setActiveTab('properties')}
         >
-          属性
+          {t('Properties')}
         </button>
         <button
           className={`tab-button ${activeTab === 'events' ? 'active' : ''}`}
           onClick={() => setActiveTab('events')}
         >
-          事件
+          {t('Events')}
         </button>
       </div>
 
       {activeTab === 'properties' ? (
         <>
-          {/* 基础属性 */}
           <BaseProperties component={component} onUpdate={onUpdate} components={components} disableSize={true} sizeTooltip="图片尺寸由源文件决定" />
 
-          {/* 图片源 */}
           <div className="property-group">
-            <div className="property-group-header">图片</div>
+            <div className="property-group-header">{t('Image')}</div>
             <div className="property-item">
-              <label>图片路径</label>
+              <label>{t('Image Path')}</label>
               {renderImageProperty(component.data?.src, (value) => handleDataChange('src', value))}
             </div>
           </div>
 
           {/* 变换属性 */}
           <div className="property-group">
-            <div className="property-group-header">变换</div>
+            <div className="property-group-header">{t('Transform')}</div>
             
             {/* 缩放 */}
             <div className="property-item">
-              <label>缩放</label>
+              <label>{t('Scale')}</label>
               <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)' }}>X</label>
@@ -204,7 +202,7 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
 
             {/* 旋转 */}
             <div className="property-item">
-              <label>旋转角度 (°)</label>
+              <label>{t('Rotation Angle (°)')}</label>
               <input
                 type="number"
                 step="1"
@@ -224,7 +222,7 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
 
             {/* 平移 */}
             <div className="property-item">
-              <label>平移</label>
+              <label>{t('Translation')}</label>
               <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)' }}>X</label>
@@ -265,7 +263,7 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
 
             {/* 倾斜 */}
             <div className="property-item">
-              <label>倾斜角度 (°)</label>
+              <label>{t('Skew Angle (°)')}</label>
               <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)' }}>X</label>
@@ -306,7 +304,7 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
 
             {/* 变换中心点 */}
             <div className="property-item">
-              <label>变换中心</label>
+              <label>{t('Transform Center')}</label>
               <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)' }}>X</label>
@@ -346,13 +344,13 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
                 </div>
               </div>
               <div style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '4px' }}>
-                留空则使用默认（旋转：图片中心，缩放：左上角）
+                {t('Leave empty to use default (rotation: image center, scale: top-left)')}
               </div>
             </div>
 
             {/* 透明度 */}
             <div className="property-item">
-              <label>透明度 (0-255)</label>
+              <label>{t('Opacity (0-255)')}</label>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px' }}>
                 <input
                   type="range"

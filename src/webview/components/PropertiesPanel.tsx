@@ -1,6 +1,7 @@
 import React from 'react';
 import { useDesignerStore } from '../store';
 import { propertyPanelRegistry } from './properties';
+import { t } from '../i18n';
 import './PropertiesPanel.css';
 
 const PropertiesPanel: React.FC = () => {
@@ -11,10 +12,10 @@ const PropertiesPanel: React.FC = () => {
     return (
       <div className="properties-panel">
         <div className="properties-header">
-          <h3>属性</h3>
+          <h3>{t('Properties')}</h3>
         </div>
         <div className="properties-content">
-          <div className="no-selection">请选择一个组件</div>
+          <div className="no-selection">{t('Please select a component')}</div>
         </div>
       </div>
     );
@@ -30,14 +31,14 @@ const PropertiesPanel: React.FC = () => {
   return (
     <div className="properties-panel">
       <div className="properties-header">
-        <h3>属性</h3>
+        <h3>{t('Properties')}</h3>
       </div>
 
       {PropertyPanel ? (
         <PropertyPanel component={selected} onUpdate={handleUpdate} components={components} />
       ) : (
         <div className="properties-content">
-          <div className="no-selection">未知组件类型: {selected.type}</div>
+          <div className="no-selection">{t('Unknown component type')}: {selected.type}</div>
         </div>
       )}
     </div>

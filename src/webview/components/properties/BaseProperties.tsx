@@ -4,6 +4,7 @@ import { PropertyEditor } from './PropertyEditor';
 import { isContainerType } from '../../utils/componentUtils';
 import { validateComponentId } from '../../utils/validation';
 import { useDesignerStore } from '../../store';
+import { t } from '../../i18n';
 
 interface BasePropertiesProps extends PropertyPanelProps {
   disableSize?: boolean;
@@ -129,16 +130,16 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
     const success = renameComponent(component.id, editingId);
     if (!success) {
       setEditingId(component.id);
-      setIdError('重命名失败');
+      setIdError(t('Rename failed'));
     }
   };
 
   return (
     <>
-      {/* 名称（即 ID） */}
+      {/* Name (ID) */}
       <div className="property-group">
         <div className="property-item">
-          <label>名称</label>
+          <label>{t('Name')}</label>
           <input
             type="text"
             value={editingId}
@@ -169,10 +170,10 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
           )}
         </div>
 
-        {/* 父对象选择 */}
+        {/* Parent selection */}
         {!hideParent && (
           <div className="property-item">
-            <label>父对象</label>
+            <label>{t('Parent')}</label>
             <select
               value={component.parent || ''}
               onChange={(e) => handleParentChange(e.target.value || null)}
@@ -186,8 +187,8 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
                 borderRadius: '2px',
               }}
             >
-              <option value="">无</option>
-              {/* 如果当前父对象不在可选列表中，也要显示它 */}
+              <option value="">{t('None')}</option>
+              {/* If current parent is not in available list, show it anyway */}
               {currentParent && !availableParents.find(p => p.id === currentParent.id) && (
                 <option key={currentParent.id} value={currentParent.id}>
                   {currentParent.name} ({currentParent.type})
@@ -206,7 +207,7 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
       {/* Position and Size */}
       <div className="property-group">
         <div className="property-item">
-          <label>位置与大小</label>
+          <label>{t('Position & Size')}</label>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '8px' }}>
             <div>
               <label style={{ fontSize: '12px' }}>X</label>
@@ -225,7 +226,7 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
               />
             </div>
             <div>
-              <label style={{ fontSize: '12px' }}>宽度</label>
+              <label style={{ fontSize: '12px' }}>{t('Width')}</label>
               <PropertyEditor
                 type="number"
                 value={component.position.width}
@@ -235,7 +236,7 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
               />
             </div>
             <div>
-              <label style={{ fontSize: '12px' }}>高度</label>
+              <label style={{ fontSize: '12px' }}>{t('Height')}</label>
               <PropertyEditor
                 type="number"
                 value={component.position.height}
@@ -248,10 +249,10 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
         </div>
       </div>
 
-      {/* Visibility and State - 三个开关放在一行 */}
+      {/* Visibility and State */}
       <div className="property-group">
         <div className="property-item">
-          <label>状态</label>
+          <label>{t('State')}</label>
           <div style={{ display: 'flex', gap: '16px', marginTop: '4px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <PropertyEditor
@@ -259,7 +260,7 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
                 value={component.visible}
                 onChange={(value) => onUpdate({ visible: value })}
               />
-              <span style={{ fontSize: '12px' }}>可见</span>
+              <span style={{ fontSize: '12px' }}>{t('Visible')}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <PropertyEditor
@@ -267,7 +268,7 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
                 value={component.enabled}
                 onChange={(value) => onUpdate({ enabled: value })}
               />
-              <span style={{ fontSize: '12px' }}>启用</span>
+              <span style={{ fontSize: '12px' }}>{t('Enabled')}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <PropertyEditor
@@ -275,16 +276,16 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
                 value={component.locked}
                 onChange={(value) => onUpdate({ locked: value })}
               />
-              <span style={{ fontSize: '12px' }}>锁定</span>
+              <span style={{ fontSize: '12px' }}>{t('Locked')}</span>
             </div>
           </div>
         </div>
 
-        {/* 只为非顶层容器（hg_list、hg_canvas、hg_list_item）显示超出父容器开关 */}
+        {/* Show overflow toggle for non-top-level containers */}
         {['hg_list', 'hg_canvas', 'hg_list_item'].includes(component.type) && (
           <div className="property-item">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <label>超出父容器</label>
+              <label>{t('Show Overflow')}</label>
               <PropertyEditor
                 type="boolean"
                 value={component.showOverflow ?? false}

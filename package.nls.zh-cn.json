@@ -1,0 +1,92 @@
+{
+  "displayName": "HoneyGUI 可视化设计器",
+  "description": "VS Code 插件，提供 HoneyGUI 可视化界面设计、HML 编辑、C 代码生成与实时仿真功能。",
+  
+  "command.newProject": "HoneyGUI: 新建项目",
+  "command.openProject": "HoneyGUI: 打开项目",
+  "command.createNewHml": "HoneyGUI: 新建设计",
+  "command.tools": "HoneyGUI: 资源转换工具",
+  "command.codegen": "HoneyGUI: 生成代码",
+  "command.preview": "HoneyGUI: 预览",
+  "command.simulation": "HoneyGUI: 编译仿真",
+  "command.simulationStop": "HoneyGUI: 停止仿真",
+  "command.openInTextEditor": "用文本编辑器打开",
+  "command.openInDesigner": "用 HoneyGUI 设计器打开",
+  "command.startHost": "开启协同 (主机)",
+  "command.joinSession": "加入协同 (访客)",
+  "command.stopCollaboration": "停止协同",
+  "command.refreshEnvironment": "刷新环境检查",
+
+  "view.welcome": "欢迎",
+  "view.environment": "环境",
+  "view.quick": "快捷操作",
+
+  "welcome.newProject": "新建项目",
+  "welcome.newDesign": "新建设计",
+  "welcome.openProject": "打开项目",
+  "welcome.tools": "资源转换工具",
+  "welcome.collaboration": "协同开发:",
+  "welcome.startHost": "开启协同 (主机)",
+  "welcome.joinSession": "加入协同 (访客)",
+
+  "env.python": "Python",
+  "env.scons": "SCons",
+  "env.gcc": "GCC",
+  "env.sdl2": "SDL2",
+  "env.ffmpeg": "FFmpeg",
+  "env.installed": "已安装",
+  "env.notInstalled": "未安装",
+  "env.checking": "检查中...",
+
+  "msg.extensionActivating": "HoneyGUI 可视化设计器正在激活...",
+  "msg.extensionActivated": "HoneyGUI 可视化设计器激活成功",
+  "msg.extensionDeactivating": "HoneyGUI 可视化设计器正在停用...",
+  "msg.extensionDeactivated": "HoneyGUI 可视化设计器已停用",
+  "msg.activationFailed": "扩展激活失败",
+  "msg.unknownError": "未知错误",
+
+  "msg.projectCreated": "项目创建成功",
+  "msg.projectOpenFailed": "打开项目失败",
+  "msg.noWorkspace": "没有打开的工作区",
+  "msg.noProjectConfig": "未找到项目配置文件",
+
+  "msg.codegenSuccess": "代码生成完成",
+  "msg.codegenFailed": "代码生成失败",
+
+  "msg.compileStart": "开始编译...",
+  "msg.compileSuccess": "编译完成",
+  "msg.compileFailed": "编译失败",
+
+  "msg.simulationStart": "启动仿真...",
+  "msg.simulationStop": "仿真已停止",
+
+  "msg.envCheckStart": "环境检查开始...",
+  "msg.envCheckPass": "环境检查通过",
+  "msg.envCheckFailed": "环境检查失败",
+
+  "msg.pythonNotInstalled": "Python 未安装。请从 https://www.python.org/ 下载安装",
+  "msg.sconsNotInstalled": "SCons 未安装。请运行: pip install scons",
+  "msg.gccNotInstalled": "GCC 未安装。请安装 C 编译器。",
+  "msg.sdl2NotInstalled": "SDL2 未安装。请运行: sudo apt-get install libsdl2-dev",
+  "msg.ffmpegNotInstalled": "FFmpeg 未安装。视频转换功能将不可用。",
+
+  "msg.saveFile": "正在保存文件...",
+  "msg.fileSaved": "文件已保存",
+
+  "msg.previewStart": "启动预览...",
+  "msg.previewFailed": "预览失败",
+
+  "msg.copiedToClipboard": "已复制到剪贴板",
+  "msg.openDownloadPage": "打开下载页面",
+  "msg.copyCommand": "复制命令",
+
+  "install.python.windows": "下载安装: https://www.python.org/downloads/",
+  "install.python.linux": "sudo apt-get install python3",
+  "install.scons": "pip install scons",
+  "install.gcc.windows": "下载 MinGW: https://www.mingw-w64.org/",
+  "install.gcc.linux": "sudo apt-get install build-essential",
+  "install.sdl2.windows": "下载 SDL2: https://www.libsdl.org/",
+  "install.sdl2.linux": "sudo apt-get install libsdl2-dev",
+  "install.ffmpeg.windows": "下载: https://ffmpeg.org/download.html",
+  "install.ffmpeg.linux": "sudo apt-get install ffmpeg"
+}

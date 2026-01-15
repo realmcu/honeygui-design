@@ -1,6 +1,7 @@
 import React from 'react';
 import { Component } from '../types';
 import { getMenuItems, getMenuItemLabel, MenuItem } from '../config/contextMenuConfig';
+import { t } from '../i18n';
 
 interface ContextMenuProps {
   visible: boolean;
@@ -60,12 +61,11 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
 
   const menuItems = getMenuItems(component.type, hasClipboard, multiSelectCount);
   
-  // 多选时修改菜单项文本
   const getItemLabel = (item: MenuItem) => {
     const label = getMenuItemLabel(item, component);
     if (multiSelectCount > 1) {
-      if (item.id === 'copy') return `复制 ${multiSelectCount} 个组件 (Ctrl+C)`;
-      if (item.id === 'cut') return `剪切 ${multiSelectCount} 个组件 (Ctrl+X)`;
+      if (item.id === 'copy') return t('Copy N components').replace('{n}', String(multiSelectCount));
+      if (item.id === 'cut') return t('Cut N components').replace('{n}', String(multiSelectCount));
     }
     return label;
   };

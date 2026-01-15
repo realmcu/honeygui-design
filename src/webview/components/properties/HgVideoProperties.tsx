@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { PropertyPanelProps } from './types';
 import { BaseProperties } from './BaseProperties';
 import { EventsPanel } from './EventsPanel';
+import { t } from '../../i18n';
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -83,28 +84,28 @@ export const HgVideoProperties: React.FC<PropertyPanelProps> = ({ component, onU
           className={activeTab === 'properties' ? 'active' : ''}
           onClick={() => setActiveTab('properties')}
         >
-          属性
+          {t('Properties')}
         </button>
         <button
           className={activeTab === 'events' ? 'active' : ''}
           onClick={() => setActiveTab('events')}
         >
-          事件
+          {t('Events')}
         </button>
       </div>
 
       <div className="properties-content">
         {activeTab === 'properties' && (
           <>
-            <h3 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 600 }}>视频属性</h3>
+            <h3 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 600 }}>{t('Video Properties')}</h3>
             
-            <BaseProperties component={component} onUpdate={onUpdate} components={components} disableSize={true} sizeTooltip="视频尺寸由源文件决定" />
+            <BaseProperties component={component} onUpdate={onUpdate} components={components} disableSize={true} sizeTooltip={t('Video size is determined by source file')} />
             
             {/* 视频设置 */}
             <div style={{ marginTop: '16px' }}>
-              <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', fontWeight: 600 }}>视频设置</h4>
+              <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', fontWeight: 600 }}>{t('Video Settings')}</h4>
               
-              <label style={labelStyle}>视频路径</label>
+              <label style={labelStyle}>{t('Video Path')}</label>
               <input
                 type="text"
                 value={src}
@@ -112,14 +113,14 @@ export const HgVideoProperties: React.FC<PropertyPanelProps> = ({ component, onU
                 placeholder="assets/video.mp4"
                 style={inputStyle}
               />
-              <small style={helpTextStyle}>从资源面板拖拽视频文件到画布</small>
+              <small style={helpTextStyle}>{t('Drag video file from assets panel to canvas')}</small>
             </div>
 
             {/* 视频转换设置 */}
             <div style={{ marginTop: '16px' }}>
-              <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', fontWeight: 600 }}>转换设置</h4>
+              <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', fontWeight: 600 }}>{t('Conversion Settings')}</h4>
               
-              <label style={labelStyle}>输出格式</label>
+              <label style={labelStyle}>{t('Output Format')}</label>
               <select
                 value={format}
                 onChange={(e) => handlePropertyChange('format', e.target.value)}
@@ -129,9 +130,9 @@ export const HgVideoProperties: React.FC<PropertyPanelProps> = ({ component, onU
                 <option value="avi">AVI (MJPEG)</option>
                 <option value="h264">H.264</option>
               </select>
-              <small style={helpTextStyle}>编译时将视频转换为此格式</small>
+              <small style={helpTextStyle}>{t('Video will be converted to this format during compilation')}</small>
 
-              <label style={labelStyle}>帧率 (FPS)</label>
+              <label style={labelStyle}>{t('Frame Rate (FPS)')}</label>
               <input
                 type="number"
                 min="1"
@@ -140,11 +141,11 @@ export const HgVideoProperties: React.FC<PropertyPanelProps> = ({ component, onU
                 onChange={(e) => handlePropertyChange('frameRate', parseInt(e.target.value) || 30)}
                 style={inputStyle}
               />
-              <small style={helpTextStyle}>输出视频帧率</small>
+              <small style={helpTextStyle}>{t('Output video frame rate')}</small>
 
               {(format === 'mjpeg' || format === 'avi') && (
                 <>
-                  <label style={labelStyle}>质量 (1-31)</label>
+                  <label style={labelStyle}>{t('Quality (1-31)')}</label>
                   <input
                     type="number"
                     min="1"
@@ -153,13 +154,13 @@ export const HgVideoProperties: React.FC<PropertyPanelProps> = ({ component, onU
                     onChange={(e) => handlePropertyChange('quality', parseInt(e.target.value) || 1)}
                     style={inputStyle}
                   />
-                  <small style={helpTextStyle}>JPEG 压缩质量，1=最高质量，31=最低质量</small>
+                  <small style={helpTextStyle}>{t('JPEG compression quality, 1=highest, 31=lowest')}</small>
                 </>
               )}
 
               {format === 'h264' && (
                 <>
-                  <label style={labelStyle}>CRF 质量 (0-51)</label>
+                  <label style={labelStyle}>{t('CRF Quality (0-51)')}</label>
                   <input
                     type="number"
                     min="0"
@@ -168,14 +169,14 @@ export const HgVideoProperties: React.FC<PropertyPanelProps> = ({ component, onU
                     onChange={(e) => handlePropertyChange('quality', parseInt(e.target.value) || 23)}
                     style={inputStyle}
                   />
-                  <small style={helpTextStyle}>H.264 CRF 值，0=无损，23=默认，51=最低质量</small>
+                  <small style={helpTextStyle}>{t('H.264 CRF value, 0=lossless, 23=default, 51=lowest')}</small>
                 </>
               )}
             </div>
 
             {/* 播放设置 */}
             <div style={{ marginTop: '16px' }}>
-              <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', fontWeight: 600 }}>播放设置</h4>
+              <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', fontWeight: 600 }}>{t('Playback Settings')}</h4>
 
               <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                 <input

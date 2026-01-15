@@ -261,16 +261,16 @@ export class AssetManager {
                     });
                 }
                 
-                vscode.window.showInformationMessage('资源文件已删除');
+                vscode.window.showInformationMessage(vscode.l10n.t('Asset file deleted'));
                 // 重新加载资源列表
                 this.handleLoadAssets(currentFilePath);
             } else {
                 logger.warn(`[删除资源] 文件不存在: ${filePath}`);
-                vscode.window.showErrorMessage('资源文件不存在');
+                vscode.window.showErrorMessage(vscode.l10n.t('Asset file does not exist'));
             }
         } catch (error) {
             logger.error(`删除资源文件失败: ${error}`);
-            vscode.window.showErrorMessage('删除资源文件失败');
+            vscode.window.showErrorMessage(vscode.l10n.t('Failed to delete asset file'));
         }
     }
 
@@ -429,17 +429,17 @@ export class AssetManager {
             const newPath = path.join(dir, newName);
             
             if (fs.existsSync(newPath)) {
-                vscode.window.showErrorMessage('文件名已存在');
+                vscode.window.showErrorMessage(vscode.l10n.t('File name already exists'));
                 return;
             }
             
             fs.renameSync(oldPath, newPath);
-            vscode.window.showInformationMessage('资源文件已重命名');
+            vscode.window.showInformationMessage(vscode.l10n.t('Asset file renamed'));
             // 重新加载资源列表
             this.handleLoadAssets(currentFilePath);
         } catch (error) {
             logger.error(`重命名资源文件失败: ${error}`);
-            vscode.window.showErrorMessage('重命名资源文件失败');
+            vscode.window.showErrorMessage(vscode.l10n.t('Failed to rename asset file'));
         }
     }
 
@@ -449,13 +449,13 @@ export class AssetManager {
     public async handleOpenAssetsFolder(currentFilePath: string | undefined): Promise<void> {
         try {
             if (!currentFilePath) {
-                vscode.window.showErrorMessage('请先保存设计稿');
+                vscode.window.showErrorMessage(vscode.l10n.t('Please save the design first'));
                 return;
             }
 
             const projectRoot = ProjectUtils.findProjectRoot(currentFilePath);
             if (!projectRoot) {
-                vscode.window.showErrorMessage('未找到项目根目录');
+                vscode.window.showErrorMessage(vscode.l10n.t('Cannot find project root (project.json)'));
                 return;
             }
 
@@ -471,7 +471,7 @@ export class AssetManager {
             await vscode.commands.executeCommand('revealFileInOS', uri);
         } catch (error) {
             logger.error(`打开assets文件夹失败: ${error}`);
-            vscode.window.showErrorMessage('打开assets文件夹失败');
+            vscode.window.showErrorMessage(vscode.l10n.t('Failed to open assets folder'));
         }
     }
 
@@ -489,13 +489,13 @@ export class AssetManager {
     ): Promise<void> {
         try {
             if (!currentFilePath) {
-                vscode.window.showErrorMessage('请先保存设计稿');
+                vscode.window.showErrorMessage(vscode.l10n.t('Please save the design first'));
                 return;
             }
 
             const projectRoot = ProjectUtils.findProjectRoot(currentFilePath);
             if (!projectRoot) {
-                vscode.window.showErrorMessage('未找到项目根目录');
+                vscode.window.showErrorMessage(vscode.l10n.t('Cannot find project root (project.json)'));
                 return;
             }
 
@@ -552,10 +552,10 @@ export class AssetManager {
             // 重新加载资源列表
             this.handleLoadAssets(currentFilePath);
 
-            vscode.window.showInformationMessage(`图片已保存到 ${hmlRelativePath}`);
+            vscode.window.showInformationMessage(vscode.l10n.t('Image saved to {0}', hmlRelativePath));
         } catch (error) {
             logger.error(`保存图片到assets失败: ${error}`);
-            vscode.window.showErrorMessage('保存图片失败');
+            vscode.window.showErrorMessage(vscode.l10n.t('Failed to save image'));
         }
     }
     
@@ -580,13 +580,13 @@ export class AssetManager {
                 const fileName = path.basename(filePath);
                 
                 if (!currentFilePath) {
-                    vscode.window.showErrorMessage('无法确定项目路径');
+                    vscode.window.showErrorMessage(vscode.l10n.t('Cannot determine project path'));
                     return;
                 }
 
                 const projectRoot = ProjectUtils.findProjectRoot(currentFilePath);
                 if (!projectRoot) {
-                    vscode.window.showErrorMessage('无法找到项目根目录');
+                    vscode.window.showErrorMessage(vscode.l10n.t('Cannot find project root (project.json)'));
                     return;
                 }
 
@@ -609,7 +609,7 @@ export class AssetManager {
             }
         } catch (error) {
             logger.error(`[AssetManager] 选择图片失败: ${error}`);
-            vscode.window.showErrorMessage('选择图片失败');
+            vscode.window.showErrorMessage(vscode.l10n.t('Failed to select image'));
         }
     }
 

@@ -155,6 +155,13 @@ HmlEditorProvider.resolveCustomTextEditor()
      6. Push to Gitee
      7. 执行 `vsce publish` 发布到 VSCode 插件市场
 9. **实验工程**：测试用的实验工程, 也是模板工程位于 `./template-projects/smartwatch` 目录
+10. **国际化 (i18n)**：所有用户可见的文本必须支持多语言
+    - **Extension 端**：使用 `vscode.l10n.t('key')` 进行翻译
+      - 翻译文件：`l10n/bundle.l10n.json`（英文）、`l10n/bundle.l10n.zh-cn.json`（中文）
+    - **Webview 端**：使用 `t('key')` 函数（从 `../i18n` 导入）
+      - 翻译文件：`src/webview/i18n/locales/en.ts`（英文）、`src/webview/i18n/locales/zh-cn.ts`（中文）
+    - **package.json**：命令标题使用 `%key%` 语法，配合 `package.nls.json` 和 `package.nls.zh-cn.json`
+    - **注意**：`viewsWelcome` 不支持 NLS 语法，需使用纯文本
 
 ### 不要做的事
 - ❌ 不要修改单元测试（除非用户明确要求）

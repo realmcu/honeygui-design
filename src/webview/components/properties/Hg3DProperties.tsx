@@ -3,6 +3,7 @@ import { PropertyPanelProps } from './types';
 import { BaseProperties } from './BaseProperties';
 import { PropertyEditor } from './PropertyEditor';
 import { EventsPanel } from './EventsPanel';
+import { t } from '../../i18n';
 
 export const Hg3DProperties: React.FC<PropertyPanelProps> = ({ component, onUpdate, components }) => {
   const [activeTab, setActiveTab] = useState<'properties' | 'events'>('properties');
@@ -25,13 +26,13 @@ export const Hg3DProperties: React.FC<PropertyPanelProps> = ({ component, onUpda
           className={activeTab === 'properties' ? 'active' : ''}
           onClick={() => setActiveTab('properties')}
         >
-          属性
+          {t('Properties')}
         </button>
         <button
           className={activeTab === 'events' ? 'active' : ''}
           onClick={() => setActiveTab('events')}
         >
-          事件
+          {t('Events')}
         </button>
       </div>
 
@@ -41,16 +42,16 @@ export const Hg3DProperties: React.FC<PropertyPanelProps> = ({ component, onUpda
             <BaseProperties component={component} onUpdate={onUpdate} components={components} />
 
             <div className="property-section">
-              <h4>模型设置</h4>
+              <h4>{t('Model Settings')}</h4>
 
               <div className="property-item">
-                <label>模型路径</label>
+                <label>{t('Model Path')}</label>
                 <div style={{ display: 'flex', gap: '4px' }}>
                   <PropertyEditor
                     type="string"
                     value={component.data?.modelPath}
                     onChange={(value) => onUpdate({ data: { ...component.data, modelPath: value } })}
-                    title="模型文件路径，如: assets/model.obj"
+                    title="assets/model.obj"
                   />
                   <button
                     onClick={handleBrowseModel}
@@ -64,21 +65,21 @@ export const Hg3DProperties: React.FC<PropertyPanelProps> = ({ component, onUpda
                       fontSize: '12px',
                       whiteSpace: 'nowrap'
                     }}
-                    title="浏览文件"
+                    title={t('Browse')}
                   >
                     📁
                   </button>
                 </div>
                 <div style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '2px' }}>
-                  OBJ格式：MTL材质和纹理需在同目录
+                  {t('OBJ format: MTL material and textures must be in the same directory')}
                 </div>
                 <div style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '2px' }}>
-                  GLTF格式：BIN文件和纹理需在同目录
+                  {t('GLTF format: BIN file and textures must be in the same directory')}
                 </div>
               </div>
 
               <div className="property-item">
-                <label>绘制类型</label>
+                <label>{t('Draw Type')}</label>
                 <PropertyEditor
                   type="select"
                   value={component.data?.drawType ?? 'L3_DRAW_FRONT_AND_SORT'}
@@ -86,16 +87,16 @@ export const Hg3DProperties: React.FC<PropertyPanelProps> = ({ component, onUpda
                   options={['L3_DRAW_FRONT_ONLY', 'L3_DRAW_FRONT_AND_BACK', 'L3_DRAW_FRONT_AND_SORT']}
                 />
                 <div style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '2px' }}>
-                  仅正面 / 正面和背面 / 正面并排序（默认）
+                  {t('Front only / Front and back / Front and sort (default)')}
                 </div>
               </div>
             </div>
 
             <div className="property-section">
-              <h4>相机设置</h4>
+              <h4>{t('Camera Settings')}</h4>
 
               <div className="property-item">
-                <label>相机位置</label>
+                <label>{t('Camera Position')}</label>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginTop: '8px' }}>
                   <div>
                     <label style={{ fontSize: '12px' }}>X</label>
@@ -125,7 +126,7 @@ export const Hg3DProperties: React.FC<PropertyPanelProps> = ({ component, onUpda
               </div>
 
               <div className="property-item">
-                <label>相机朝向</label>
+                <label>{t('Camera Direction')}</label>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginTop: '8px' }}>
                   <div>
                     <label style={{ fontSize: '12px' }}>X</label>
@@ -156,10 +157,10 @@ export const Hg3DProperties: React.FC<PropertyPanelProps> = ({ component, onUpda
             </div>
 
             <div className="property-section">
-              <h4>世界坐标系设置</h4>
+              <h4>{t('World Coordinate Settings')}</h4>
 
               <div className="property-item">
-                <label>平移</label>
+                <label>{t('Translation')}</label>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginTop: '8px' }}>
                   <div>
                     <label style={{ fontSize: '12px' }}>X</label>
@@ -189,10 +190,10 @@ export const Hg3DProperties: React.FC<PropertyPanelProps> = ({ component, onUpda
               </div>
 
               <div className="property-item">
-                <label>旋转 (度)</label>
+                <label>{t('Rotation (degrees)')}</label>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginTop: '8px' }}>
                   <div>
-                    <label style={{ fontSize: '12px' }}>X轴</label>
+                    <label style={{ fontSize: '12px' }}>{t('X-axis')}</label>
                     <PropertyEditor
                       type="number"
                       value={component.data?.rotationX ?? 0}
@@ -200,7 +201,7 @@ export const Hg3DProperties: React.FC<PropertyPanelProps> = ({ component, onUpda
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: '12px' }}>Y轴</label>
+                    <label style={{ fontSize: '12px' }}>{t('Y-axis')}</label>
                     <PropertyEditor
                       type="number"
                       value={component.data?.rotationY ?? 0}
@@ -208,7 +209,7 @@ export const Hg3DProperties: React.FC<PropertyPanelProps> = ({ component, onUpda
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: '12px' }}>Z轴</label>
+                    <label style={{ fontSize: '12px' }}>{t('Z-axis')}</label>
                     <PropertyEditor
                       type="number"
                       value={component.data?.rotationZ ?? 0}
@@ -219,7 +220,7 @@ export const Hg3DProperties: React.FC<PropertyPanelProps> = ({ component, onUpda
               </div>
 
               <div className="property-item">
-                <label>缩放</label>
+                <label>{t('Scale')}</label>
                 <PropertyEditor
                   type="number"
                   value={component.data?.scale ?? 5}
@@ -229,7 +230,7 @@ export const Hg3DProperties: React.FC<PropertyPanelProps> = ({ component, onUpda
             </div>
 
             <div className="property-section">
-              <h4>交互动画</h4>
+              <h4>{t('Interactive Animation')}</h4>
 
               <div className="property-item">
                 <label>
@@ -239,17 +240,17 @@ export const Hg3DProperties: React.FC<PropertyPanelProps> = ({ component, onUpda
                     onChange={(e) => onUpdate({ data: { ...component.data, touchRotationEnabled: e.target.checked } })}
                     style={{ marginRight: '8px' }}
                   />
-                  启用触摸旋转
+                  {t('Enable Touch Rotation')}
                 </label>
                 <div style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '2px' }}>
-                  在设计器中可用鼠标中键拖拽预览，在设备上响应触摸
+                  {t('In designer, use middle mouse button to preview; on device, responds to touch')}
                 </div>
               </div>
 
               {component.data?.touchRotationEnabled && (
                 <>
                   <div className="property-item">
-                    <label>旋转轴</label>
+                    <label>{t('Rotation Axis')}</label>
                     <PropertyEditor
                       type="select"
                       value={component.data?.touchRotationAxis ?? 'y'}
@@ -259,14 +260,14 @@ export const Hg3DProperties: React.FC<PropertyPanelProps> = ({ component, onUpda
                   </div>
 
                   <div className="property-item">
-                    <label>灵敏度</label>
+                    <label>{t('Sensitivity')}</label>
                     <PropertyEditor
                       type="number"
                       value={component.data?.touchRotationSensitivity ?? 5.0}
                       onChange={(value) => onUpdate({ data: { ...component.data, touchRotationSensitivity: value } })}
                     />
                     <div style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '2px' }}>
-                      值越大旋转越慢（默认 5.0）
+                      {t('Higher value = slower rotation (default 5.0)')}
                     </div>
                   </div>
                 </>
@@ -280,14 +281,14 @@ export const Hg3DProperties: React.FC<PropertyPanelProps> = ({ component, onUpda
                     onChange={(e) => onUpdate({ data: { ...component.data, autoRotationEnabled: e.target.checked } })}
                     style={{ marginRight: '8px' }}
                   />
-                  启用自动旋转
+                  {t('Enable Auto Rotation')}
                 </label>
               </div>
 
               {component.data?.autoRotationEnabled && (
                 <>
                   <div className="property-item">
-                    <label>旋转轴</label>
+                    <label>{t('Rotation Axis')}</label>
                     <PropertyEditor
                       type="select"
                       value={component.data?.autoRotationAxis ?? 'y'}
@@ -297,14 +298,14 @@ export const Hg3DProperties: React.FC<PropertyPanelProps> = ({ component, onUpda
                   </div>
 
                   <div className="property-item">
-                    <label>旋转速度</label>
+                    <label>{t('Rotation Speed')}</label>
                     <PropertyEditor
                       type="number"
                       value={component.data?.autoRotationSpeed ?? 1.0}
                       onChange={(value) => onUpdate({ data: { ...component.data, autoRotationSpeed: value } })}
                     />
                     <div style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '2px' }}>
-                      每帧旋转的角度，正值逆时针（默认 1.0）
+                      {t('Rotation angle per frame, positive = counterclockwise (default 1.0)')}
                     </div>
                   </div>
                 </>

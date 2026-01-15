@@ -214,7 +214,7 @@ export class CreateProjectPanel {
                     this._panel.webview.postMessage({
                         command: 'cloneProgress',
                         percent: Math.min(90, 10 + percent * 0.8),
-                        text: `正在克隆... ${percent}%`
+                        text: vscode.l10n.t('Cloning... {0}%', percent)
                     });
                 }
             });
@@ -224,7 +224,7 @@ export class CreateProjectPanel {
                     this._panel.webview.postMessage({
                         command: 'cloneProgress',
                         percent: 100,
-                        text: '克隆完成!'
+                        text: vscode.l10n.t('Clone completed!')
                     });
                     setTimeout(() => {
                         this._panel.webview.postMessage({
@@ -233,11 +233,11 @@ export class CreateProjectPanel {
                             target: target
                         });
                     }, 500);
-                    vscode.window.showInformationMessage(`SDK 克隆成功: ${targetPath}`);
+                    vscode.window.showInformationMessage(vscode.l10n.t('SDK cloned successfully: {0}', targetPath));
                 } else {
                     this._panel.webview.postMessage({
                         command: 'cloneError',
-                        text: `克隆失败 (exit code: ${code})`,
+                        text: vscode.l10n.t('Clone failed (exit code: {0})', code),
                         target: target
                     });
                 }
@@ -247,7 +247,7 @@ export class CreateProjectPanel {
                 logger.error(`克隆 SDK 失败: ${err.message}`);
                 this._panel.webview.postMessage({
                     command: 'cloneError',
-                    text: `克隆失败: ${err.message}\n\n请确保已安装 Git`,
+                    text: vscode.l10n.t('Clone failed: {0}\n\nPlease make sure Git is installed', err.message),
                     target: target
                 });
             });
@@ -287,7 +287,7 @@ export class CreateProjectPanel {
                 logger.error('[CreateProjectPanel] Validation failed: Missing required fields');
                 this._panel.webview.postMessage({
                     command: 'error',
-                    text: '请填写所有必填字段 (项目名称、保存位置、APP ID)'
+                    text: vscode.l10n.t('Please fill in all required fields (Project Name, Save Location, APP ID)')
                 });
                 return;
             }
@@ -297,7 +297,7 @@ export class CreateProjectPanel {
                 logger.error(`[CreateProjectPanel] Invalid project name: ${projectName}`);
                 this._panel.webview.postMessage({
                     command: 'error',
-                    text: '项目名称只能包含字母、数字、下划线，且必须以字母或下划线开头'
+                    text: vscode.l10n.t('Project name can only contain letters, numbers, underscores, and must start with a letter or underscore')
                 });
                 return;
             }
@@ -313,14 +313,14 @@ export class CreateProjectPanel {
                         logger.error(`[CreateProjectPanel] Project directory already exists: ${projectPath}`);
                         this._panel.webview.postMessage({
                             command: 'error',
-                            text: `项目已存在: "${projectName}"\n\n目录 "${projectPath}" 已存在。\n\n请选择其他名称或删除现有项目。`
+                            text: vscode.l10n.t('Project already exists: "{0}"\n\nDirectory "{1}" already exists.\n\nPlease choose another name or delete the existing project.', projectName, projectPath)
                         });
                         return;
                     } else {
                         logger.error(`[CreateProjectPanel] Path exists but is not a directory: ${projectPath}`);
                         this._panel.webview.postMessage({
                             command: 'error',
-                            text: `无法创建项目: "${projectPath}" 已存在且不是一个目录`
+                            text: vscode.l10n.t('Cannot create project: "{0}" exists and is not a directory', projectPath)
                         });
                         return;
                     }
@@ -329,7 +329,7 @@ export class CreateProjectPanel {
                 logger.error(`[CreateProjectPanel] Error checking path existence: ${error}`);
                 this._panel.webview.postMessage({
                     command: 'error',
-                    text: `检查项目路径时出错: ${error instanceof Error ? error.message : '未知错误'}`
+                    text: vscode.l10n.t('Error checking project path: {0}', error instanceof Error ? error.message : vscode.l10n.t('Unknown error'))
                 });
                 return;
             }
@@ -478,7 +478,7 @@ export class CreateProjectPanel {
                 logger.error('[CreateProjectPanel] Validation failed: Missing required fields');
                 this._panel.webview.postMessage({
                     command: 'error',
-                    text: '请填写所有必填字段并选择模板'
+                    text: vscode.l10n.t('Please fill in all required fields and select a template')
                 });
                 return;
             }
@@ -488,7 +488,7 @@ export class CreateProjectPanel {
                 logger.error(`[CreateProjectPanel] Invalid project name: ${projectName}`);
                 this._panel.webview.postMessage({
                     command: 'error',
-                    text: '项目名称只能包含字母、数字、下划线，且必须以字母或下划线开头'
+                    text: vscode.l10n.t('Project name can only contain letters, numbers, underscores, and must start with a letter or underscore')
                 });
                 return;
             }
@@ -500,7 +500,7 @@ export class CreateProjectPanel {
                 logger.error(`[CreateProjectPanel] Project directory already exists: ${projectPath}`);
                 this._panel.webview.postMessage({
                     command: 'error',
-                    text: `项目已存在: "${projectName}"\n\n目录 "${projectPath}" 已存在。\n\n请选择其他名称或删除现有项目。`
+                    text: vscode.l10n.t('Project already exists: "{0}"\n\nDirectory "{1}" already exists.\n\nPlease choose another name or delete the existing project.', projectName, projectPath)
                 });
                 return;
             }
@@ -511,7 +511,7 @@ export class CreateProjectPanel {
                 // 用户取消下载
                 this._panel.webview.postMessage({
                     command: 'error',
-                    text: '已取消创建项目'
+                    text: vscode.l10n.t('Project creation cancelled')
                 });
                 return;
             }

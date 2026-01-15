@@ -1,0 +1,92 @@
+{
+  "displayName": "HoneyGUI Visual Designer",
+  "description": "VS Code extension for HoneyGUI visual interface design, HML editing, C code generation and real-time simulation.",
+  
+  "command.newProject": "HoneyGUI: New Project",
+  "command.openProject": "HoneyGUI: Open Project",
+  "command.createNewHml": "HoneyGUI: New Design",
+  "command.tools": "HoneyGUI: Resource Conversion Tools",
+  "command.codegen": "HoneyGUI: Generate Code",
+  "command.preview": "HoneyGUI: Preview",
+  "command.simulation": "HoneyGUI: Compile & Simulate",
+  "command.simulationStop": "HoneyGUI: Stop Simulation",
+  "command.openInTextEditor": "Open with Text Editor",
+  "command.openInDesigner": "Open with HoneyGUI Designer",
+  "command.startHost": "Start Host",
+  "command.joinSession": "Join Session",
+  "command.stopCollaboration": "Stop Collaboration",
+  "command.refreshEnvironment": "Refresh Environment Check",
+
+  "view.welcome": "WELCOME",
+  "view.environment": "ENVIRONMENT",
+  "view.quick": "QUICK",
+
+  "welcome.newProject": "New Project",
+  "welcome.newDesign": "New Design",
+  "welcome.openProject": "Open Project",
+  "welcome.tools": "Resource Conversion Tools",
+  "welcome.collaboration": "Collaboration:",
+  "welcome.startHost": "Start Host (Host)",
+  "welcome.joinSession": "Join Session (Guest)",
+
+  "env.python": "Python",
+  "env.scons": "SCons",
+  "env.gcc": "GCC",
+  "env.sdl2": "SDL2",
+  "env.ffmpeg": "FFmpeg",
+  "env.installed": "Installed",
+  "env.notInstalled": "Not Installed",
+  "env.checking": "Checking...",
+
+  "msg.extensionActivating": "HoneyGUI Visual Designer is activating...",
+  "msg.extensionActivated": "HoneyGUI Visual Designer activated successfully",
+  "msg.extensionDeactivating": "HoneyGUI Visual Designer is deactivating...",
+  "msg.extensionDeactivated": "HoneyGUI Visual Designer deactivated",
+  "msg.activationFailed": "Extension activation failed",
+  "msg.unknownError": "Unknown error",
+
+  "msg.projectCreated": "Project created successfully",
+  "msg.projectOpenFailed": "Failed to open project",
+  "msg.noWorkspace": "No workspace opened",
+  "msg.noProjectConfig": "Project configuration file not found",
+
+  "msg.codegenSuccess": "Code generation completed",
+  "msg.codegenFailed": "Code generation failed",
+
+  "msg.compileStart": "Starting compilation...",
+  "msg.compileSuccess": "Compilation completed",
+  "msg.compileFailed": "Compilation failed",
+
+  "msg.simulationStart": "Starting simulation...",
+  "msg.simulationStop": "Simulation stopped",
+
+  "msg.envCheckStart": "Environment check started...",
+  "msg.envCheckPass": "Environment check passed",
+  "msg.envCheckFailed": "Environment check failed",
+
+  "msg.pythonNotInstalled": "Python is not installed. Please download from https://www.python.org/",
+  "msg.sconsNotInstalled": "SCons is not installed. Please run: pip install scons",
+  "msg.gccNotInstalled": "GCC is not installed. Please install C compiler.",
+  "msg.sdl2NotInstalled": "SDL2 is not installed. Please run: sudo apt-get install libsdl2-dev",
+  "msg.ffmpegNotInstalled": "FFmpeg is not installed. Video conversion will not be available.",
+
+  "msg.saveFile": "Saving file...",
+  "msg.fileSaved": "File saved",
+
+  "msg.previewStart": "Starting preview...",
+  "msg.previewFailed": "Preview failed",
+
+  "msg.copiedToClipboard": "Copied to clipboard",
+  "msg.openDownloadPage": "Open Download Page",
+  "msg.copyCommand": "Copy Command",
+
+  "install.python.windows": "Download: https://www.python.org/downloads/",
+  "install.python.linux": "sudo apt-get install python3",
+  "install.scons": "pip install scons",
+  "install.gcc.windows": "Download MinGW: https://www.mingw-w64.org/",
+  "install.gcc.linux": "sudo apt-get install build-essential",
+  "install.sdl2.windows": "Download SDL2: https://www.libsdl.org/",
+  "install.sdl2.linux": "sudo apt-get install libsdl2-dev",
+  "install.ffmpeg.windows": "Download: https://ffmpeg.org/download.html",
+  "install.ffmpeg.linux": "sudo apt-get install ffmpeg"
+}

@@ -1,6 +1,7 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs';
+import * as vscode from 'vscode';
 import { ProjectUtils } from '../utils/ProjectUtils';
 
 const execAsync = promisify(exec);
@@ -173,48 +174,48 @@ export class EnvironmentChecker {
      * 生成安装指南
      */
     getInstallGuide(result: EnvironmentCheckResult): string {
-        const lines: string[] = ['编译仿真环境检查失败，请安装以下工具：\n'];
+        const lines: string[] = [vscode.l10n.t('Environment check failed, please install the following tools:') + '\n'];
 
         if (!result.pythonInstalled) {
             lines.push('1. Python');
-            lines.push('   下载地址: https://www.python.org/');
+            lines.push(`   ${vscode.l10n.t('Download URL')}: https://www.python.org/`);
             lines.push('');
         }
 
         if (!result.sconsInstalled) {
-            lines.push('2. SCons 构建工具');
-            lines.push('   安装命令: pip install scons');
+            lines.push(`2. ${vscode.l10n.t('SCons build tool')}`);
+            lines.push(`   ${vscode.l10n.t('Install command')}: pip install scons`);
             lines.push('');
         }
 
         if (!result.compilerInstalled) {
             if (process.platform === 'win32') {
-                lines.push('3. MinGW 编译器');
-                lines.push('   下载地址: https://www.mingw-w64.org/');
+                lines.push(`3. ${vscode.l10n.t('MinGW compiler')}`);
+                lines.push(`   ${vscode.l10n.t('Download URL')}: https://www.mingw-w64.org/`);
             } else {
-                lines.push('3. GCC 编译器');
-                lines.push('   安装命令: sudo apt-get install build-essential (Ubuntu/Debian)');
-                lines.push('   安装命令: sudo yum groupinstall "Development Tools" (CentOS/RHEL)');
+                lines.push(`3. ${vscode.l10n.t('GCC compiler')}`);
+                lines.push(`   ${vscode.l10n.t('Install command')}: sudo apt-get install build-essential (Ubuntu/Debian)`);
+                lines.push(`   ${vscode.l10n.t('Install command')}: sudo yum groupinstall "Development Tools" (CentOS/RHEL)`);
             }
             lines.push('');
         }
 
         if (result.sdlInstalled === false) {
-            lines.push('4. SDL2 开发库');
-            lines.push('   安装命令: sudo apt-get install libsdl2-dev (Ubuntu/Debian)');
-            lines.push('   安装命令: sudo yum install SDL2-devel (CentOS/RHEL)');
+            lines.push(`4. ${vscode.l10n.t('SDL2 development library')}`);
+            lines.push(`   ${vscode.l10n.t('Install command')}: sudo apt-get install libsdl2-dev (Ubuntu/Debian)`);
+            lines.push(`   ${vscode.l10n.t('Install command')}: sudo yum install SDL2-devel (CentOS/RHEL)`);
             lines.push('');
         }
 
         if (!result.ffmpegInstalled) {
-            lines.push('5. FFmpeg (可选，用于视频转换)');
-            lines.push('   下载地址: https://ffmpeg.org/');
+            lines.push(`5. ${vscode.l10n.t('FFmpeg (optional, for video conversion)')}`);
+            lines.push(`   ${vscode.l10n.t('Download URL')}: https://ffmpeg.org/`);
             lines.push('');
         }
 
         if (!result.libSimValid) {
-            lines.push('6. 内置库文件缺失');
-            lines.push('   请重新安装插件');
+            lines.push(`6. ${vscode.l10n.t('Built-in library files missing')}`);
+            lines.push(`   ${vscode.l10n.t('Please reinstall the extension')}`);
             lines.push('');
         }
 

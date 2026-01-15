@@ -5,6 +5,7 @@ import { BaseProperties } from './BaseProperties';
 import { EventsPanel } from './EventsPanel';
 import { componentDefinitions } from '../ComponentLibrary';
 import { useDesignerStore } from '../../store';
+import { t } from '../../i18n';
 
 // 字体文件扩展名
 const FONT_EXTS = ['ttf', 'otf', 'woff', 'woff2', 'bin'];
@@ -234,13 +235,13 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
           className={activeTab === 'properties' ? 'active' : ''}
           onClick={() => setActiveTab('properties')}
         >
-          属性
+          {t('Properties')}
         </button>
         <button
           className={activeTab === 'events' ? 'active' : ''}
           onClick={() => setActiveTab('events')}
         >
-          事件
+          {t('Events')}
         </button>
       </div>
 
@@ -252,7 +253,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
               onUpdate={onUpdate} 
               components={components}
               disableSize={component.type === 'hg_list'}
-              sizeTooltip={component.type === 'hg_list' ? '列表尺寸由项数量、项长度和间距自动计算' : undefined}
+              sizeTooltip={component.type === 'hg_list' ? t('List size is auto-calculated') : undefined}
             />
 
             {/* Style Properties */}
@@ -263,10 +264,10 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                 {component.type === 'hg_list' ? (
                   <>
                     <div className="property-item">
-                      <label>项尺寸</label>
+                      <label>{t('Item Size')}</label>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
                         <div>
-                          <label style={{ fontSize: '12px' }}>宽度</label>
+                          <label style={{ fontSize: '12px' }}>{t('Width')}</label>
                           <PropertyEditor
                             type="number"
                             value={(component.style as any)?.itemWidth ?? 100}
@@ -274,7 +275,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                           />
                         </div>
                         <div>
-                          <label style={{ fontSize: '12px' }}>高度</label>
+                          <label style={{ fontSize: '12px' }}>{t('Height')}</label>
                           <PropertyEditor
                             type="number"
                             value={(component.style as any)?.itemHeight ?? 100}
@@ -301,10 +302,10 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                   <>
                     {/* hg_label 特殊处理：对齐方式在一行 */}
                     <div className="property-item">
-                      <label>对齐</label>
+                      <label>{t('Alignment')}</label>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
                         <div>
-                          <label style={{ fontSize: '12px' }}>水平</label>
+                          <label style={{ fontSize: '12px' }}>{t('Horizontal')}</label>
                           <PropertyEditor
                             type="select"
                             value={(component.style as any)?.hAlign || 'LEFT'}
@@ -313,7 +314,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                           />
                         </div>
                         <div>
-                          <label style={{ fontSize: '12px' }}>竖直</label>
+                          <label style={{ fontSize: '12px' }}>{t('Vertical')}</label>
                           <PropertyEditor
                             type="select"
                             value={(component.style as any)?.vAlign || 'TOP'}
@@ -337,9 +338,9 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                           />
                         </div>
                       ))}
-                    {/* 自动换行和断词保护在一行 */}
+                    {/* Word wrap and word break */}
                     <div className="property-item">
-                      <label>换行</label>
+                      <label>{t('Line Break')}</label>
                       <div style={{ display: 'flex', gap: '16px', marginTop: '4px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <PropertyEditor
@@ -347,24 +348,24 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                             value={(component.style as any)?.wordWrap ?? false}
                             onChange={(value) => handleStyleChange('wordWrap', value)}
                           />
-                          <span style={{ fontSize: '12px' }}>自动换行</span>
+                          <span style={{ fontSize: '12px' }}>{t('Word Wrap')}</span>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }} title="英文按空格断词，避免单词被截断">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }} title={t('Break at word boundaries')}>
                           <PropertyEditor
                             type="boolean"
                             value={(component.style as any)?.wordBreak ?? false}
                             onChange={(value) => handleStyleChange('wordBreak', value)}
                           />
-                          <span style={{ fontSize: '12px' }}>按词换行</span>
+                          <span style={{ fontSize: '12px' }}>{t('Word Break')}</span>
                         </div>
                       </div>
                     </div>
-                    {/* 字间距和行间距在一行 */}
+                    {/* Letter and line spacing */}
                     <div className="property-item">
-                      <label>间距</label>
+                      <label>{t('Spacing')}</label>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
                         <div>
-                          <label style={{ fontSize: '12px' }}>字间距</label>
+                          <label style={{ fontSize: '12px' }}>{t('Letter Spacing')}</label>
                           <PropertyEditor
                             type="number"
                             value={(component.style as any)?.letterSpacing ?? 0}
@@ -372,7 +373,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                           />
                         </div>
                         <div>
-                          <label style={{ fontSize: '12px' }}>行间距</label>
+                          <label style={{ fontSize: '12px' }}>{t('Line Spacing')}</label>
                           <PropertyEditor
                             type="number"
                             value={(component.style as any)?.lineSpacing ?? 0}
@@ -481,10 +482,10 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
             {/* Font Properties - 仅对 hg_label 显示 */}
             {definition && component.type === 'hg_label' && definition.properties.filter(p => p.group === 'font').length > 0 && (
               <div className="property-group">
-                <div className="property-group-title">字体</div>
+                <div className="property-group-title">{t('Font')}</div>
                 {/* 字体文件 */}
                 <div className="property-item">
-                  <label>字体文件</label>
+                  <label>{t('Font File')}</label>
                   {renderFontProperty(
                     (component.data as any)?.fontFile,
                     (value) => handleDataChange('fontFile', value)
@@ -492,7 +493,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                 </div>
                 {/* 字体大小 */}
                 <div className="property-item">
-                  <label>字体大小</label>
+                  <label>{t('Font Size')}</label>
                   <PropertyEditor
                     type="number"
                     value={(component.data as any)?.fontSize || 16}
@@ -501,7 +502,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                 </div>
                 {/* 字体类型 */}
                 <div className="property-item">
-                  <label>字体类型</label>
+                  <label>{t('Font Type')}</label>
                   <PropertyEditor
                     type="select"
                     value={(component.data as any)?.fontType || 'bitmap'}
@@ -509,13 +510,13 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                     options={['bitmap', 'vector']}
                   />
                   <span style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '2px' }}>
-                    {(component.data as any)?.fontType === 'vector' ? '矢量字体' : '点阵字体'}
+                    {(component.data as any)?.fontType === 'vector' ? t('Vector font') : t('Bitmap font')}
                   </span>
                 </div>
                 {/* 渲染模式 - 仅点阵字体显示 */}
                 {((component.data as any)?.fontType || 'bitmap') === 'bitmap' && (
                   <div className="property-item">
-                    <label>渲染模式</label>
+                    <label>{t('Render Mode')}</label>
                     <PropertyEditor
                       type="select"
                       value={(component.data as any)?.renderMode || '4'}
@@ -523,13 +524,13 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                       options={['1', '2', '4', '8']}
                     />
                     <span style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '2px' }}>
-                      {(component.data as any)?.renderMode || '4'}-bit 灰度
+                      {(component.data as any)?.renderMode || '4'}-bit {t('grayscale')}
                     </span>
                   </div>
                 )}
                 {/* 预览模式开关 */}
                 <div className="property-item">
-                  <label>预览模式（不改变实际渲染效果）</label>
+                  <label>{t('Preview mode (does not change actual rendering)')}</label>
                   <div style={{ marginTop: '4px' }}>
                     {/* 精确预览选项 */}
                     <div 
@@ -554,7 +555,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                         style={{ margin: 0 }}
                       />
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '12px', fontWeight: 500 }}>精确预览</div>
+                        <div style={{ fontSize: '12px', fontWeight: 500 }}>{t('Accurate Preview')}</div>
                         <div style={{ fontSize: '10px', color: 'var(--vscode-descriptionForeground)', marginTop: '2px' }}>
                           真实渲染效果，与仿真环境和嵌入式环境一致
                         </div>
@@ -582,7 +583,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                         style={{ margin: 0 }}
                       />
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '12px', fontWeight: 500 }}>设计预览</div>
+                        <div style={{ fontSize: '12px', fontWeight: 500 }}>{t('Design Preview')}</div>
                         <div style={{ fontSize: '10px', color: 'var(--vscode-descriptionForeground)', marginTop: '2px' }}>
                           设计参考，与 Figma/Sketch 等工具一致
                         </div>

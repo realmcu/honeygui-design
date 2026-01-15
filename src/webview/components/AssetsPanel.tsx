@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Trash2, Edit2, Upload, FolderUp } from 'lucide-react';
 import { AssetFile } from '../types';
 import { useDesignerStore } from '../store';
+import { t } from '../i18n';
 import './AssetsPanel.css';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -559,10 +560,10 @@ const AssetsPanel: React.FC = () => {
             <span className="asset-name" title={asset.name}>{asset.name}</span>
           )}
           <div className="asset-actions">
-            <button onClick={() => handleRename(asset.path)} title="重命名" className="action-btn">
+            <button onClick={() => handleRename(asset.path)} title={t('Rename')} className="action-btn">
               <Edit2 size={12} />
             </button>
-            <button onClick={() => handleDelete(asset.path)} title="删除" className="action-btn delete">
+            <button onClick={() => handleDelete(asset.path)} title={t('Delete')} className="action-btn delete">
               <Trash2 size={12} />
             </button>
           </div>
@@ -671,12 +672,12 @@ const AssetsPanel: React.FC = () => {
 
   const currentAssets = categorizedAssets[activeCategory];
   const { folders } = getCurrentFolderContent;
-  const emptyMessage = activeCategory === 'all' ? '暂无资源' : 
-    activeCategory === 'images' ? '暂无图片资源' :
-    activeCategory === 'svgs' ? '暂无SVG资源' :
-    activeCategory === 'videos' ? '暂无视频资源' : 
-    activeCategory === 'models' ? '暂无3D模型资源' :
-    activeCategory === 'fonts' ? '暂无字体资源' : '暂无玻璃资源';
+  const emptyMessage = activeCategory === 'all' ? t('No assets') : 
+    activeCategory === 'images' ? t('No images') :
+    activeCategory === 'svgs' ? t('No SVGs') :
+    activeCategory === 'videos' ? t('No videos') : 
+    activeCategory === 'models' ? t('No 3D models') :
+    activeCategory === 'fonts' ? t('No fonts') : t('No glass assets');
 
   // 切换分类时重置路径
   const handleCategoryChange = (category: AssetCategory) => {
@@ -694,25 +695,25 @@ const AssetsPanel: React.FC = () => {
           value={activeCategory}
           onChange={(e) => handleCategoryChange(e.target.value as AssetCategory)}
         >
-          <option value="all">全部 ({counts.all})</option>
-          <option value="images">图片 ({counts.images})</option>
+          <option value="all">{t('All')} ({counts.all})</option>
+          <option value="images">{t('Images')} ({counts.images})</option>
           <option value="svgs">SVG ({counts.svgs})</option>
-          <option value="videos">视频 ({counts.videos})</option>
+          <option value="videos">{t('Videos')} ({counts.videos})</option>
           <option value="models">3D ({counts.models})</option>
-          <option value="fonts">字体 ({counts.fonts})</option>
-          <option value="glass">玻璃 ({counts.glass})</option>
+          <option value="fonts">{t('Fonts')} ({counts.fonts})</option>
+          <option value="glass">{t('Glass')} ({counts.glass})</option>
         </select>
         <button 
           className="upload-btn" 
           onClick={() => fileInputRef.current?.click()}
-          title="上传文件"
+          title={t('Upload files')}
         >
           <Upload size={16} />
         </button>
         <button 
           className="upload-btn" 
           onClick={() => folderInputRef.current?.click()}
-          title="上传文件夹"
+          title={t('Upload folder')}
         >
           <FolderUp size={16} />
         </button>
@@ -740,9 +741,9 @@ const AssetsPanel: React.FC = () => {
           <span 
             className="breadcrumb-item" 
             onClick={() => setCurrentPath([])}
-            title="返回根目录"
+            title={t('Back to root')}
           >
-            🏠 根目录
+            🏠 {t('Root')}
           </span>
           {currentPath.map((folder, index) => (
             <React.Fragment key={index}>
@@ -779,13 +780,11 @@ const AssetsPanel: React.FC = () => {
         {folders.length === 0 && currentAssets.length === 0 ? (
           <div className="empty-state">
             <p>{emptyMessage}</p>
-            <p className="hint">拖拽文件到此处</p>
+            <p className="hint">{t('Drag files here')}</p>
           </div>
         ) : (
           <div className="assets-grid" style={{ gridTemplateColumns: `repeat(${gridColumns}, 1fr)` }}>
-            {/* 先显示文件夹（仅在"全部"分类时显示） */}
             {activeCategory === 'all' && folders.map(folder => renderFolderItem(folder))}
-            {/* 再显示文件 */}
             {currentAssets.map(asset => renderAssetItem(asset))}
           </div>
         )}

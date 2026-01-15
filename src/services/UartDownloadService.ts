@@ -29,9 +29,9 @@ export class UartDownloadService {
         this.mpcliPath = path.join(context.extensionPath, 'tools', 'mpcli_meta_tool_py_v4.0.0.4');
 
         this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
-        this.statusBarItem.text = '$(cloud-download) UART下载';
+        this.statusBarItem.text = `$(cloud-download) ${vscode.l10n.t('UART Download')}`;
         this.statusBarItem.command = 'honeygui.uartDownload';
-        this.statusBarItem.tooltip = 'UART 下载 romfs.bin 到开发板';
+        this.statusBarItem.tooltip = vscode.l10n.t('UART download romfs.bin to board');
         this.statusBarItem.show();
 
         this.outputChannel = vscode.window.createOutputChannel('HoneyGUI UART');
@@ -96,15 +96,18 @@ export class UartDownloadService {
     async showDownloadDialog(): Promise<void> {
         const projectRoot = await this.getProjectRoot();
         if (!projectRoot) {
-            vscode.window.showErrorMessage('未找到项目根目录');
+            vscode.window.showErrorMessage(vscode.l10n.t('Cannot find project root (project.json)'));
             return;
         }
 
         // 检查 romfs.bin
         const romfsPath = path.join(projectRoot, 'build', 'app_romfs.bin');
         if (!fs.existsSync(romfsPath)) {
-            const choice = await vscode.window.showErrorMessage('romfs.bin 不存在，请先编译项目', '编译项目');
-            if (choice === '编译项目') {
+            const choice = await vscode.window.showErrorMessage(
+                vscode.l10n.t('romfs.bin does not exist, please compile the project first'), 
+                vscode.l10n.t('Compile Project')
+            );
+            if (choice === vscode.l10n.t('Compile Project')) {
                 vscode.commands.executeCommand('honeygui.simulation');
             }
             return;
@@ -173,9 +176,9 @@ export class UartDownloadService {
             const label = selected.label;
 
             // 点击开始下载
-            if (label.includes('开始下载')) {
+            if (label.includes('开始下载') || label.includes('Start Download')) {
                 if (!selectedPort) {
-                    vscode.window.showWarningMessage('请选择或输入串口');
+                    vscode.window.showWarningMessage(vscode.l10n.t('Please select or enter a serial port'));
                     return;
                 }
                 quickPick.hide();
@@ -192,7 +195,7 @@ export class UartDownloadService {
             }
 
             // 手动输入串口
-            if (label.includes('手动输入')) {
+            if (label.includes('手动输入') || label.includes('Manual Input')) {
                 quickPick.hide();
                 const inputPort = await vscode.window.showInputBox({
                     prompt: '输入串口号',
@@ -241,7 +244,7 @@ export class UartDownloadService {
     async quickDownload(): Promise<void> {
         const projectRoot = await this.getProjectRoot();
         if (!projectRoot) {
-            vscode.window.showErrorMessage('未找到项目根目录');
+            vscode.window.showErrorMessage(vscode.l10n.t('Cannot find project root (project.json)'));
             return;
         }
 
@@ -254,7 +257,7 @@ export class UartDownloadService {
         // 验证串口
         const ports = await this.scanPorts();
         if (!ports.includes(savedConfig.port)) {
-            vscode.window.showWarningMessage(`串口 ${savedConfig.port} 不可用，请重新选择`);
+            vscode.window.showWarningMessage(vscode.l10n.t('Please select or enter a serial port'));
             await this.showDownloadDialog();
             return;
         }
@@ -273,48 +276,48 @@ export class UartDownloadService {
      */
     async download(projectRoot: string, uartConfig: UartConfig): Promise<void> {
         if (this.isDownloading) {
-            vscode.window.showWarningMessage('下载正在进行中');
+            vscode.window.showWarningMessage(vscode.l10n.t('Download in progress'));
             return;
         }
 
         const romfsPath = path.join(projectRoot, 'build', 'app_romfs.bin');
         if (!fs.existsSync(romfsPath)) {
-            vscode.window.showErrorMessage('romfs.bin 不存在，请先编译项目');
+            vscode.window.showErrorMessage(vscode.l10n.t('romfs.bin does not exist, please compile the project first'));
             return;
         }
 
         // 检查 mpcli 工具
         if (!fs.existsSync(this.mpcliPath)) {
-            vscode.window.showErrorMessage(`mpcli 工具不存在: ${this.mpcliPath}`);
+            vscode.window.showErrorMessage(vscode.l10n.t('mpcli tool not found: {0}', this.mpcliPath));
             return;
         }
 
         this.isDownloading = true;
-        this.updateStatusBar('$(sync~spin) 下载中...');
+        this.updateStatusBar('$(sync~spin) Downloading...');
         this.outputChannel.show(true);
         this.outputChannel.clear();
 
         const fileSize = fs.statSync(romfsPath).size;
-        this.log(`===== UART 下载 =====`);
-        this.log(`芯片: ${uartConfig.chipType}`);
-        this.log(`串口: ${uartConfig.port}`);
-        this.log(`地址: ${uartConfig.flashAddress}`);
-        this.log(`文件: ${romfsPath}`);
-        this.log(`大小: ${(fileSize / 1024).toFixed(2)} KB`);
+        this.log(`===== UART Download =====`);
+        this.log(`Chip: ${uartConfig.chipType}`);
+        this.log(`Port: ${uartConfig.port}`);
+        this.log(`Address: ${uartConfig.flashAddress}`);
+        this.log(`File: ${romfsPath}`);
+        this.log(`Size: ${(fileSize / 1024).toFixed(2)} KB`);
         this.log(`---------------------`);
 
         try {
             await this.downloadWithMpcli(romfsPath, uartConfig);
             this.log(`---------------------`);
-            this.log('下载完成!');
-            vscode.window.showInformationMessage('UART 下载完成');
+            this.log('Download completed!');
+            vscode.window.showInformationMessage(vscode.l10n.t('UART download completed'));
         } catch (error) {
             const msg = error instanceof Error ? error.message : String(error);
-            this.log(`下载失败: ${msg}`, true);
-            vscode.window.showErrorMessage(`下载失败: ${msg}`);
+            this.log(`Download failed: ${msg}`, true);
+            vscode.window.showErrorMessage(vscode.l10n.t('Download failed: {0}', msg));
         } finally {
             this.isDownloading = false;
-            this.updateStatusBar('$(cloud-download) UART下载');
+            this.updateStatusBar('$(cloud-download) UART Download');
         }
     }
 
