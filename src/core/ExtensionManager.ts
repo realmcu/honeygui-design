@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { logger } from '../utils/Logger';
 import { CommandManager } from './CommandManager';
 import { HmlEditorProvider } from '../hml/HmlEditorProvider';
+import { EnvironmentViewProvider } from '../ui/EnvironmentViewProvider';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -135,7 +136,6 @@ export class ExtensionManager {
      */
     private registerViewProviders(): void {
         // 注册环境检查视图
-        const { EnvironmentViewProvider } = require('../ui/EnvironmentViewProvider');
         const envProvider = new EnvironmentViewProvider();
         const envRegistration = vscode.window.registerTreeDataProvider('honeygui.environment', envProvider);
         this.disposables.push(envRegistration);
@@ -147,6 +147,13 @@ export class ExtensionManager {
         });
         this.disposables.push(refreshCommand);
         this.context.subscriptions.push(refreshCommand);
+
+        // 注册显示安装指引命令
+        const guideCommand = vscode.commands.registerCommand('honeygui.environment.showGuide', (toolId: string) => {
+            EnvironmentViewProvider.showInstallGuide(toolId);
+        });
+        this.disposables.push(guideCommand);
+        this.context.subscriptions.push(guideCommand);
 
         // 注册快速操作视图提供者
         const quickProvider = new QuickViewDataProvider();
