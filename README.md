@@ -43,49 +43,22 @@
 ## 快速开始
 
 ### 1. 创建项目
-```
-Ctrl+Shift+P → HoneyGUI: New Project
-```
 
-生成的项目结构：
-```
-my-project/
-├── ui/main/main.hml      # 设计文件
-├── src/                  # 源代码
-├── assets/               # 资源文件
-├── build/                # 编译产物
-└── project.json          # 项目配置
-```
+点击左侧 HoneyGUI 图标 → **新建项目**
+
+![Create Project](resources/screenshots/create-project.png)
 
 ### 2. 设计界面
-1. 双击 `.hml` 文件打开设计器
-2. 从左侧组件库拖拽组件到画布
-3. 在右侧属性面板编辑属性
-4. `Ctrl+S` 保存
 
-**快捷键**：
-| 快捷键 | 功能 |
-|--------|------|
-| `Ctrl+Z/Y` | 撤销/重做 |
-| `Delete` | 删除组件 |
-| `Ctrl+D` | 复制组件 |
-| `方向键` | 微调位置 |
-| `Ctrl+拖动` | 平移画布 |
+双击 `.hml` 文件打开设计器，从组件库拖拽组件到画布
 
-### 3. 生成代码
-点击工具栏"生成代码"按钮，自动生成 C 代码。
+![Design UI](resources/screenshots/design-ui.png)
 
-**文件覆盖策略**：
-| 文件 | 策略 |
-|------|------|
-| `*_ui.c/h` | 每次覆盖 |
-| `*_callbacks.c` | 保护区机制 |
-| `user/*.c` | 只生成一次 |
+### 3. 编译仿真
 
-### 4. 编译仿真
-```
-Ctrl+Shift+P → HoneyGUI: Compile & Simulate
-```
+点击工具栏 **▶ 编译仿真** 按钮
+
+![Compile](resources/screenshots/compile.png)
 
 ## 资源转换工具
 

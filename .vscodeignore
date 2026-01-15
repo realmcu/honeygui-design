@@ -31,6 +31,8 @@ scripts/**
 docs/**
 tools/**
 !tools/mpcli_meta_tool_py_v4.0.0.4/**
+!tools/video-convert-tool/**
+!tools/mkromfs_for_honeygui.py
 
 # 其他
 azure.png
