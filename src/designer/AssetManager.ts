@@ -614,6 +614,59 @@ export class AssetManager {
     }
 
     /**
+     * 处理选择玻璃形状路径
+     */
+    public async handleSelectGlassPath(componentId: string, currentFilePath: string | undefined): Promise<void> {
+        try {
+            const options: vscode.OpenDialogOptions = {
+                canSelectFiles: true,
+                canSelectFolders: false,
+                canSelectMany: false,
+                filters: {
+                    'Glass Shape': ['glass']
+                },
+                openLabel: '选择玻璃形状文件'
+            };
+
+            const fileUri = await vscode.window.showOpenDialog(options);
+            if (fileUri && fileUri.length > 0) {
+                const filePath = fileUri[0].fsPath;
+                const fileName = path.basename(filePath);
+                
+                if (!currentFilePath) {
+                    vscode.window.showErrorMessage('无法确定项目路径');
+                    return;
+                }
+
+                const projectRoot = ProjectUtils.findProjectRoot(currentFilePath);
+                if (!projectRoot) {
+                    vscode.window.showErrorMessage('无法找到项目根目录');
+                    return;
+                }
+
+                const assetsDir = path.join(projectRoot, 'assets');
+                const targetPath = path.join(assetsDir, fileName);
+
+                // 复制文件到 assets 目录
+                await fs.promises.copyFile(filePath, targetPath);
+                
+                // 发送相对路径到webview
+                const relativePath = `assets/${fileName}`;
+                this._panel.webview.postMessage({
+                    command: 'updateGlassPath',
+                    componentId: componentId,
+                    path: relativePath
+                });
+                
+                logger.info(`[AssetManager] 玻璃形状文件已复制到: ${relativePath}`);
+            }
+        } catch (error) {
+            logger.error(`[AssetManager] 选择玻璃形状文件失败: ${error}`);
+            vscode.window.showErrorMessage('选择玻璃形状文件失败');
+        }
+    }
+
+    /**
      * 处理获取图片尺寸请求
      */
     public handleGetImageSize(
@@ -866,7 +919,18 @@ export class AssetManager {
     private getSvgSize(filePath: string): { width: number; height: number } {
         try {
             const content = fs.readFileSync(filePath, 'utf-8');
-            // 匹配 width 和 height 属性
+            
+            // 解析 SVG 中的图形元素，计算实际边界
+            const bbox = this.calculateSvgGraphicsBoundingBox(content);
+            if (bbox) {
+                const width = Math.ceil(bbox.maxX - bbox.minX);
+                const height = Math.ceil(bbox.maxY - bbox.minY);
+                if (width > 0 && height > 0) {
+                    return { width, height };
+                }
+            }
+            
+            // 如果无法计算边界，回退到 SVG 属性
             const widthMatch = content.match(/width\s*=\s*["']?(\d+)/);
             const heightMatch = content.match(/height\s*=\s*["']?(\d+)/);
             
@@ -877,6 +941,223 @@ export class AssetManager {
         } catch (error) {
             return { width: 100, height: 100 };
         }
+    }
+
+    /**
+     * 计算 SVG 图形元素的边界框（与 glass generator 逻辑一致）
+     */
+    private calculateSvgGraphicsBoundingBox(svgContent: string): { minX: number; minY: number; maxX: number; maxY: number } | null {
+        const points: Array<{x: number, y: number}> = [];
+        
+        // 解析 <path d="..."> 元素
+        const pathPattern = /<path[^>]*\sd="([^"]*)"[^>]*>/gi;
+        let match;
+        while ((match = pathPattern.exec(svgContent)) !== null) {
+            const pathData = match[1].trim();
+            if (pathData) {
+                points.push(...this.svgPathToPoints(pathData));
+            }
+        }
+        
+        // 解析 <polygon points="..."> 元素
+        const polygonPattern = /<polygon[^>]*\spoints="([^"]*)"[^>]*>/gi;
+        while ((match = polygonPattern.exec(svgContent)) !== null) {
+            const pointsData = match[1].trim();
+            if (pointsData) {
+                points.push(...this.parsePolygonPoints(pointsData));
+            }
+        }
+        
+        // 解析 <polyline points="..."> 元素
+        const polylinePattern = /<polyline[^>]*\spoints="([^"]*)"[^>]*>/gi;
+        while ((match = polylinePattern.exec(svgContent)) !== null) {
+            const pointsData = match[1].trim();
+            if (pointsData) {
+                points.push(...this.parsePolygonPoints(pointsData));
+            }
+        }
+        
+        // 解析 <circle> 元素
+        const circlePattern = /<circle[^>]*>/gi;
+        while ((match = circlePattern.exec(svgContent)) !== null) {
+            const circlePoints = this.parseCirclePoints(match[0]);
+            if (circlePoints) {
+                points.push(...circlePoints);
+            }
+        }
+        
+        // 解析 <ellipse> 元素
+        const ellipsePattern = /<ellipse[^>]*>/gi;
+        while ((match = ellipsePattern.exec(svgContent)) !== null) {
+            const ellipsePoints = this.parseEllipsePoints(match[0]);
+            if (ellipsePoints) {
+                points.push(...ellipsePoints);
+            }
+        }
+        
+        if (points.length === 0) {
+            return null;
+        }
+        
+        // 计算边界
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (const p of points) {
+            if (p.x < minX) minX = p.x;
+            if (p.y < minY) minY = p.y;
+            if (p.x > maxX) maxX = p.x;
+            if (p.y > maxY) maxY = p.y;
+        }
+        
+        return { minX, minY, maxX, maxY };
+    }
+
+    /**
+     * 将 SVG path d 属性转换为点数组
+     */
+    private svgPathToPoints(pathData: string): Array<{x: number, y: number}> {
+        const points: Array<{x: number, y: number}> = [];
+        const commandPattern = /([MLHVCSQTAZ])\s*([^MLHVCSQTAZ]*)/gi;
+        let currentX = 0, currentY = 0;
+        let match;
+
+        while ((match = commandPattern.exec(pathData)) !== null) {
+            const cmd = match[1].toUpperCase();
+            const params = match[2].trim();
+            const numbers = params.match(/-?\d+\.?\d*/g)?.map(Number) || [];
+
+            switch (cmd) {
+                case 'M':
+                case 'L':
+                    if (numbers.length >= 2) {
+                        currentX = numbers[0];
+                        currentY = numbers[1];
+                        points.push({ x: currentX, y: currentY });
+                    }
+                    break;
+                case 'H':
+                    if (numbers.length >= 1) {
+                        currentX = numbers[0];
+                        points.push({ x: currentX, y: currentY });
+                    }
+                    break;
+                case 'V':
+                    if (numbers.length >= 1) {
+                        currentY = numbers[0];
+                        points.push({ x: currentX, y: currentY });
+                    }
+                    break;
+                case 'C':
+                    // 三次贝塞尔曲线：采样多个点
+                    if (numbers.length >= 6) {
+                        const p0 = { x: currentX, y: currentY };
+                        const p1 = { x: numbers[0], y: numbers[1] };
+                        const p2 = { x: numbers[2], y: numbers[3] };
+                        const p3 = { x: numbers[4], y: numbers[5] };
+                        
+                        for (let i = 1; i <= 16; i++) {
+                            const t = i / 16;
+                            points.push(this.cubicBezierPoint(t, p0, p1, p2, p3));
+                        }
+                        
+                        currentX = numbers[4];
+                        currentY = numbers[5];
+                    }
+                    break;
+                case 'Q':
+                    if (numbers.length >= 4) {
+                        currentX = numbers[2];
+                        currentY = numbers[3];
+                        points.push({ x: currentX, y: currentY });
+                    }
+                    break;
+            }
+        }
+
+        return points;
+    }
+
+    /**
+     * 计算三次贝塞尔曲线上的点
+     */
+    private cubicBezierPoint(
+        t: number,
+        p0: {x: number, y: number},
+        p1: {x: number, y: number},
+        p2: {x: number, y: number},
+        p3: {x: number, y: number}
+    ): {x: number, y: number} {
+        const t2 = t * t;
+        const t3 = t2 * t;
+        const mt = 1 - t;
+        const mt2 = mt * mt;
+        const mt3 = mt2 * mt;
+        
+        return {
+            x: mt3 * p0.x + 3 * mt2 * t * p1.x + 3 * mt * t2 * p2.x + t3 * p3.x,
+            y: mt3 * p0.y + 3 * mt2 * t * p1.y + 3 * mt * t2 * p2.y + t3 * p3.y
+        };
+    }
+
+    /**
+     * 解析 polygon/polyline 的 points 属性
+     */
+    private parsePolygonPoints(pointsData: string): Array<{x: number, y: number}> {
+        const numbers = pointsData.match(/-?\d+\.?\d*/g)?.map(Number);
+        if (!numbers || numbers.length < 4) return [];
+        
+        const points: Array<{x: number, y: number}> = [];
+        for (let i = 0; i < numbers.length - 1; i += 2) {
+            points.push({ x: numbers[i], y: numbers[i + 1] });
+        }
+        return points;
+    }
+
+    /**
+     * 解析 circle 元素的边界点
+     */
+    private parseCirclePoints(circleTag: string): Array<{x: number, y: number}> | null {
+        const cxMatch = circleTag.match(/\bcx\s*=\s*["']?(-?\d+\.?\d*)["']?/i);
+        const cyMatch = circleTag.match(/\bcy\s*=\s*["']?(-?\d+\.?\d*)["']?/i);
+        const rMatch = circleTag.match(/\br\s*=\s*["']?(-?\d+\.?\d*)["']?/i);
+        
+        const cx = cxMatch ? parseFloat(cxMatch[1]) : 0;
+        const cy = cyMatch ? parseFloat(cyMatch[1]) : 0;
+        const r = rMatch ? parseFloat(rMatch[1]) : 0;
+        
+        if (r <= 0) return null;
+        
+        // 返回圆的四个极值点
+        return [
+            { x: cx - r, y: cy },
+            { x: cx + r, y: cy },
+            { x: cx, y: cy - r },
+            { x: cx, y: cy + r }
+        ];
+    }
+
+    /**
+     * 解析 ellipse 元素的边界点
+     */
+    private parseEllipsePoints(ellipseTag: string): Array<{x: number, y: number}> | null {
+        const cxMatch = ellipseTag.match(/\bcx\s*=\s*["']?(-?\d+\.?\d*)["']?/i);
+        const cyMatch = ellipseTag.match(/\bcy\s*=\s*["']?(-?\d+\.?\d*)["']?/i);
+        const rxMatch = ellipseTag.match(/\brx\s*=\s*["']?(-?\d+\.?\d*)["']?/i);
+        const ryMatch = ellipseTag.match(/\bry\s*=\s*["']?(-?\d+\.?\d*)["']?/i);
+        
+        const cx = cxMatch ? parseFloat(cxMatch[1]) : 0;
+        const cy = cyMatch ? parseFloat(cyMatch[1]) : 0;
+        const rx = rxMatch ? parseFloat(rxMatch[1]) : 0;
+        const ry = ryMatch ? parseFloat(ryMatch[1]) : 0;
+        
+        if (rx <= 0 || ry <= 0) return null;
+        
+        // 返回椭圆的四个极值点
+        return [
+            { x: cx - rx, y: cy },
+            { x: cx + rx, y: cy },
+            { x: cx, y: cy - ry },
+            { x: cx, y: cy + ry }
+        ];
     }
 
     /**

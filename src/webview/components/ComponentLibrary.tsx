@@ -250,6 +250,8 @@ const componentDefinitions: ComponentDefinition[] = [
       { name: 'src', label: 'Shape Path', type: 'string', group: 'data' },
       { name: 'distortion', label: 'Distortion (%)', type: 'number', defaultValue: 10, group: 'data' },
       { name: 'region', label: 'Effect Range (%)', type: 'number', defaultValue: 50, group: 'data' },
+      { name: 'movable', label: 'Movable', type: 'boolean', defaultValue: false, group: 'interaction' },
+      { name: 'click', label: 'Click', type: 'boolean', defaultValue: false, group: 'interaction' },
     ],
   },
 ];

@@ -17,7 +17,7 @@ class ComponentRegistry {
     'hg_button', 'hg_text', 'hg_image', 'hg_input',
     'hg_checkbox', 'hg_radio', 'hg_progressbar', 'hg_slider',
     'hg_switch', 'hg_canvas', 'hg_list', 'hg_list_item', 'hg_grid', 'hg_tab',
-    'hg_label',
+    'hg_label', 'hg_glass',
     
     // 容器组件
     'hg_window', 'hg_dialog', 'hg_container', 'hg_view'
@@ -568,7 +568,9 @@ export class HmlParser {
       // hg_view 特有属性
       'residentMemory', 'animateStep',
       // 双态按钮属性
-      'toggleMode', 'imageOn', 'imageOff', 'initialState'
+      'toggleMode', 'imageOn', 'imageOff', 'initialState',
+      // hg_glass 特有属性
+      'movable', 'click'
     ]);
 
     const metaProps = new Set([
@@ -610,8 +612,8 @@ export class HmlParser {
         style[key] = value;
       } else if (dataProps.has(key)) {
         let value = attributes[key];
-        // 布尔值转换（loop, createBar, autoAlign, inertia, toggleMode 等）
-        if (['loop', 'createBar', 'autoAlign', 'inertia', 'toggleMode'].includes(key)) {
+        // 布尔值转换（loop, createBar, autoAlign, inertia, toggleMode, movable, click 等）
+        if (['loop', 'createBar', 'autoAlign', 'inertia', 'toggleMode', 'movable', 'click'].includes(key)) {
           value = value === 'true' || value === true;
         }
         // 数字类型属性转换（包括 opacity）

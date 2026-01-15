@@ -191,6 +191,15 @@ export class HoneyGuiApiMapper {
       eventHandlers: [],
       includeHeader: 'gui_list.h'
     });
+
+    // 玻璃效果
+    this.mappings.set('hg_glass', {
+      componentType: 'hg_glass',
+      createFunction: 'gui_glass_create_from_fs',
+      propertySetters: [],
+      eventHandlers: [],
+      includeHeader: 'gui_glass.h'
+    });
   }
 
   /**

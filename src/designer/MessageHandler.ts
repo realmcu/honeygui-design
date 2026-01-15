@@ -130,6 +130,10 @@ export class MessageHandler {
                 this._assetManager.handleSelectImagePath(message.componentId, message.propertyName, this._fileManager.currentFilePath);
                 break;
 
+            case 'selectGlassPath':
+                this._assetManager.handleSelectGlassPath(message.componentId, this._fileManager.currentFilePath);
+                break;
+
             case 'preview':
                 this._handlePreview(message.content);
                 break;

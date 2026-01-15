@@ -65,6 +65,13 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
     });
   };
 
+  const handleSelectGlassPath = () => {
+    window.vscodeAPI?.postMessage({
+      command: 'selectGlassPath',
+      componentId: component.id
+    });
+  };
+
   // 请求字体文件列表
   const handleOpenFontPicker = () => {
     window.vscodeAPI?.postMessage({ command: 'getFontFiles' });
@@ -129,6 +136,42 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
             fontSize: '12px'
           }}
           title="选择图片文件"
+        >
+          📁
+        </button>
+      </div>
+    );
+  };
+
+  const renderGlassProperty = (value: any, onChange: (value: any) => void) => {
+    return (
+      <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
+        <input
+          type="text"
+          value={value || ''}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="形状路径 (.glass)"
+          style={{
+            flex: 1,
+            padding: '4px 6px',
+            backgroundColor: 'var(--vscode-input-background)',
+            color: 'var(--vscode-input-foreground)',
+            border: '1px solid var(--vscode-input-border)',
+            borderRadius: '2px',
+          }}
+        />
+        <button
+          onClick={handleSelectGlassPath}
+          style={{
+            padding: '4px 8px',
+            backgroundColor: 'var(--vscode-button-background)',
+            color: 'var(--vscode-button-foreground)',
+            border: 'none',
+            borderRadius: '2px',
+            cursor: 'pointer',
+            fontSize: '12px'
+          }}
+          title="选择玻璃形状文件"
         >
           📁
         </button>
@@ -423,6 +466,11 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                           (value) => handleDataChange(property.name, value),
                           property.name
                         )
+                      ) : property.name === 'src' && component.type === 'hg_glass' ? (
+                        renderGlassProperty(
+                          (component.data as any)?.[property.name],
+                          (value) => handleDataChange(property.name, value)
+                        )
                       ) : property.name === 'fontFile' ? (
                         renderFontProperty(
                           (component.data as any)?.[property.name],
@@ -476,6 +524,30 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                       />
                     </div>
                   ))}
+              </div>
+            )}
+
+            {/* Interaction Properties - 水平排列 */}
+            {definition && definition.properties.filter(p => p.group === 'interaction').length > 0 && (
+              <div className="property-group">
+                <div className="property-group-title">交互</div>
+                <div className="property-item">
+                  <div style={{ display: 'flex', gap: '16px', marginTop: '4px' }}>
+                    {definition.properties
+                      .filter(p => p.group === 'interaction')
+                      .map((property) => (
+                        <div key={property.name} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <PropertyEditor
+                            type={property.type as any}
+                            value={(component.data as any)?.[property.name]}
+                            onChange={(value) => handleDataChange(property.name, value)}
+                            options={property.options as string[]}
+                          />
+                          <span style={{ fontSize: '12px' }}>{property.label}</span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
               </div>
             )}
 

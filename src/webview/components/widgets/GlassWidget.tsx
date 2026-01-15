@@ -413,7 +413,18 @@ export const GlassWidget: React.FC<WidgetProps> = ({ component, style, handlers 
         if (paths.length > 0) {
           const points = svgPathToPoints(paths[0]);
           if (points.length >= 3) {
-            setSvgPoints(points);
+            // 计算边界框并将坐标归一化到从 (0,0) 开始（与 generator 一致）
+            let minX = Infinity, minY = Infinity;
+            for (const p of points) {
+              if (p.x < minX) minX = p.x;
+              if (p.y < minY) minY = p.y;
+            }
+            // 偏移所有点，使边界从 (0,0) 开始
+            const normalizedPoints = points.map(p => ({
+              x: p.x - minX,
+              y: p.y - minY
+            }));
+            setSvgPoints(normalizedPoints);
           } else {
             setError(true);
           }

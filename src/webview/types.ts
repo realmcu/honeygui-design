@@ -55,7 +55,7 @@ export interface PropertyDefinition {
   type: 'string' | 'number' | 'boolean' | 'color' | 'select' | 'options';
   defaultValue?: any;
   options?: string[] | any[];
-  group: 'general' | 'style' | 'data' | 'events' | 'font';
+  group: 'general' | 'style' | 'data' | 'events' | 'font' | 'interaction';
 }
 
 // 视图跳转边信息

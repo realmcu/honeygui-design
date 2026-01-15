@@ -5,6 +5,7 @@ import { ImageConverterService } from '../services/ImageConverterService';
 import { VideoConverterService } from '../services/VideoConverterService';
 import { Model3DConverterService } from '../services/Model3DConverterService';
 import { FontConverterService, FontConvertOptions } from '../services/FontConverterService';
+import { GlassConverterService, GlassConvertOptions, GlassConvertResult } from '../services/GlassConverterService';
 import { ProjectConfig, DEFAULT_ROMFS_BASE_ADDR } from '../common/ProjectConfig';
 import { RomfsConfig } from '../common/RomfsConfig';
 import { buildSConstruct } from './SConstructTemplate';
@@ -188,6 +189,17 @@ export class BuildCore {
             this.logger.log(`警告: ${fontFailed.length} 个字体转换失败`, true);
         }
         this.logger.log(`字体转换完成: ${fontResults.filter(r => r.success).length} 个`);
+
+        // 转换玻璃效果资源
+        this.logger.log('转换玻璃效果资源...');
+        const glassResults = await this.convertGlassWithComponentConfig(assetsDir, outputDir);
+        const glassFailed = glassResults.filter(r => !r.success);
+        if (glassFailed.length > 0) {
+            for (const f of glassFailed) {
+                this.logger.log(`玻璃效果转换失败: ${f.inputPath} - ${f.error}`, true);
+            }
+        }
+        this.logger.log(`玻璃效果转换完成: ${glassResults.filter(r => r.success).length} 个`);
 
         // 拷贝 ui 目录到 build/assets
         const uiSrcDir = path.join(this.projectRoot, 'ui');
@@ -874,6 +886,225 @@ export class BuildCore {
             renderMode: group.renderMode,
             characters: Array.from(group.charSet).join('')
         }));
+    }
+
+    /**
+     * 根据 Glass 组件配置转换玻璃效果资源
+     * 
+     * 从 HML 文件中提取所有 hg_glass 组件的配置，
+     * 使用组件的 distortion 和 region 参数进行转换
+     * 相同 src 但不同参数的组件会生成带数字后缀的文件（如 circle1.bin, circle2.bin）
+     */
+    private async convertGlassWithComponentConfig(
+        assetsDir: string,
+        outputDir: string
+    ): Promise<GlassConvertResult[]> {
+        // 获取项目中所有 Glass 组件的配置
+        const glassConfigs = await this.getGlassComponentConfigs();
+        
+        if (glassConfigs.length === 0) {
+            this.logger.log('未找到需要转换的玻璃效果配置');
+            return [];
+        }
+
+        const glassConverter = new GlassConverterService();
+        const results: GlassConvertResult[] = [];
+        
+        // 记录每个 src 文件已生成的数量，用于生成带数字后缀的文件名
+        const srcCountMap = new Map<string, number>();
+
+        for (const config of glassConfigs) {
+            // 处理 src 路径，移除 assets/ 前缀
+            let srcPath = config.src;
+            if (srcPath.startsWith('assets/')) {
+                srcPath = srcPath.substring(7);
+            }
+            
+            const inputPath = path.join(assetsDir, srcPath);
+            
+            // 检查源文件是否存在
+            if (!fs.existsSync(inputPath)) {
+                this.logger.log(`玻璃效果源文件不存在: ${srcPath}`, true);
+                results.push({
+                    success: false,
+                    inputPath,
+                    outputPath: outputDir,
+                    error: '源文件不存在'
+                });
+                continue;
+            }
+
+            // 确定输出路径（保持原始目录结构，将 .glass 改为 .bin）
+            const srcDir = path.dirname(srcPath);
+            const srcName = path.basename(srcPath, '.glass');
+            const outputSubDir = srcDir ? path.join(outputDir, srcDir) : outputDir;
+            
+            // 获取当前 src 的计数，生成带数字后缀的文件名
+            const currentCount = (srcCountMap.get(srcPath) || 0) + 1;
+            srcCountMap.set(srcPath, currentCount);
+            
+            // 生成输出文件名：第一个不带数字，后续带数字（如 circle.bin, circle2.bin, circle3.bin）
+            const outputFileName = currentCount === 1 
+                ? `${srcName}.bin` 
+                : `${srcName}${currentCount}.bin`;
+            const outputPath = path.join(outputSubDir, outputFileName);
+
+            // 确保输出目录存在
+            if (!fs.existsSync(outputSubDir)) {
+                fs.mkdirSync(outputSubDir, { recursive: true });
+            }
+
+            // 转换参数：
+            // distortion 存储为百分比 (0-100)，需要转换为实际值: distortion / 500
+            // region 存储为百分比 (0-100)，需要转换为实际值: region / 100
+            const distortion = (config.distortion ?? 10) / 500;
+            const region = (config.region ?? 50) / 100;
+
+            const options: GlassConvertOptions = {
+                blurRadius: config.region ?? 50,
+                blurIntensity: config.distortion ?? 10,
+                distortion,
+                region
+            };
+
+            this.logger.log(`转换玻璃效果: ${srcPath} -> ${outputFileName} (distortion=${config.distortion}%, region=${config.region}%)`);
+
+            try {
+                const result = await glassConverter.convert(inputPath, outputPath, options);
+                results.push(result);
+                
+                if (result.success) {
+                    this.logger.log(`  ✓ 成功: ${outputPath}`);
+                } else {
+                    this.logger.log(`  ✗ 失败: ${result.error}`, true);
+                }
+            } catch (error: any) {
+                results.push({
+                    success: false,
+                    inputPath,
+                    outputPath,
+                    error: error.message
+                });
+                this.logger.log(`  ✗ 异常: ${error.message}`, true);
+            }
+        }
+
+        return results;
+    }
+
+    /**
+     * 获取项目中所有 Glass 组件的配置
+     */
+    private async getGlassComponentConfigs(): Promise<Array<{
+        src: string;
+        distortion: number;
+        region: number;
+    }>> {
+        const configs: Array<{
+            src: string;
+            distortion: number;
+            region: number;
+        }> = [];
+        
+        try {
+            // 扫描 ui 目录
+            const uiDir = path.join(this.projectRoot, 'ui');
+            if (fs.existsSync(uiDir)) {
+                await this.scanHmlFilesForGlassConfigs(uiDir, configs);
+            }
+            
+            // 扫描项目根目录下的 HML 文件
+            const rootEntries = fs.readdirSync(this.projectRoot, { withFileTypes: true });
+            for (const entry of rootEntries) {
+                if (!entry.isDirectory() && entry.name.endsWith('.hml')) {
+                    const fullPath = path.join(this.projectRoot, entry.name);
+                    try {
+                        const content = fs.readFileSync(fullPath, 'utf-8');
+                        this.extractGlassConfigsFromHml(content, configs);
+                    } catch (err) {
+                        this.logger.log(`读取 HML 文件失败: ${fullPath} - ${err}`, true);
+                    }
+                }
+            }
+        } catch (error) {
+            this.logger.log(`读取 Glass 组件配置时出错: ${error}`, true);
+        }
+        
+        return configs;
+    }
+
+    /**
+     * 扫描 HML 文件中的 Glass 组件配置
+     */
+    private async scanHmlFilesForGlassConfigs(dir: string, configs: Array<{
+        src: string;
+        distortion: number;
+        region: number;
+    }>): Promise<void> {
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        
+        for (const entry of entries) {
+            const fullPath = path.join(dir, entry.name);
+            
+            if (entry.isDirectory()) {
+                await this.scanHmlFilesForGlassConfigs(fullPath, configs);
+            } else if (entry.name.endsWith('.hml')) {
+                try {
+                    const content = fs.readFileSync(fullPath, 'utf-8');
+                    this.extractGlassConfigsFromHml(content, configs);
+                } catch (error) {
+                    this.logger.log(`读取 HML 文件失败: ${fullPath} - ${error}`, true);
+                }
+            }
+        }
+    }
+
+    /**
+     * 从 HML 内容中提取 Glass 组件的配置
+     */
+    private extractGlassConfigsFromHml(hmlContent: string, configs: Array<{
+        src: string;
+        distortion: number;
+        region: number;
+    }>): void {
+        // 匹配 hg_glass 标签
+        const glassTagRegex = /<hg_glass[^>]*>/g;
+        let match;
+        
+        while ((match = glassTagRegex.exec(hmlContent)) !== null) {
+            const tagContent = match[0];
+            
+            // 提取 src 属性
+            const srcMatch = tagContent.match(/src\s*=\s*["']([^"']+)["']/);
+            if (!srcMatch) {
+                continue; // 没有指定源文件，跳过
+            }
+            
+            const config: {
+                src: string;
+                distortion: number;
+                region: number;
+            } = {
+                src: srcMatch[1],
+                distortion: 10,  // 默认值
+                region: 50       // 默认值
+            };
+            
+            // 提取 distortion 属性
+            const distortionMatch = tagContent.match(/distortion\s*=\s*["']?(\d+(?:\.\d+)?)["']?/);
+            if (distortionMatch) {
+                config.distortion = parseFloat(distortionMatch[1]);
+            }
+            
+            // 提取 region 属性
+            const regionMatch = tagContent.match(/region\s*=\s*["']?(\d+(?:\.\d+)?)["']?/);
+            if (regionMatch) {
+                config.region = parseFloat(regionMatch[1]);
+            }
+            
+            // 直接添加配置，不合并（相同 src 不同参数会生成不同的输出文件）
+            configs.push(config);
+        }
     }
 
     protected copyDirectory(src: string, dest: string): void {

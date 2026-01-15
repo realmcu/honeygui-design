@@ -19,6 +19,7 @@ import { CircleGenerator } from './CircleGenerator';
 import { RectGenerator } from './RectGenerator';
 import { SvgGenerator } from './SvgGenerator';
 import { LottieGenerator } from './LottieGenerator';
+import { GlassGenerator } from './GlassGenerator';
 import { DefaultGenerator } from './DefaultGenerator';
 
 export class ComponentGeneratorFactory {
@@ -52,6 +53,7 @@ export class ComponentGeneratorFactory {
     this.generators.set('hg_circle', new CircleGenerator());
     this.generators.set('hg_rect', new RectGenerator());
     this.generators.set('hg_svg', new SvgGenerator());
+    this.generators.set('hg_glass', new GlassGenerator());
   }
 
   static getGenerator(componentType: string): ComponentCodeGenerator {

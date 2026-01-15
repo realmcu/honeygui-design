@@ -176,6 +176,22 @@ const App: React.FC = () => {
           }
           break;
 
+        case 'updateGlassPath':
+          // 更新玻璃组件的形状路径
+          if (message.componentId && message.path) {
+            const store = useDesignerStore.getState();
+            const component = store.components.find(c => c.id === message.componentId);
+            if (component) {
+              store.updateComponent(message.componentId, {
+                data: {
+                  ...component.data,
+                  src: message.path
+                }
+              });
+            }
+          }
+          break;
+
         case 'createImageComponent':
           if (message.imagePath && message.targetContainerId && message.dropPosition) {
             const store = useDesignerStore.getState();
