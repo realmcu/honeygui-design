@@ -233,15 +233,17 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
         y: mouseY - draggableComponent.position.y,
       });
       
-      // 多选拖拽：记录所有选中组件的偏移量
+      // 多选拖拽：记录所有选中组件的偏移量（使用绝对坐标）
       if (selectedComponents.length > 1 && selectedComponents.includes(componentId)) {
         const offsets = new Map<string, { x: number; y: number }>();
         selectedComponents.forEach(id => {
           const comp = components.find(c => c.id === id);
           if (comp && !comp.locked) {
+            // 使用绝对坐标计算偏移量
+            const absPos = getAbsolutePosition(comp, components);
             offsets.set(id, {
-              x: mouseX - comp.position.x,
-              y: mouseY - comp.position.y,
+              x: mouseX - absPos.x,
+              y: mouseY - absPos.y,
             });
           }
         });
@@ -292,8 +294,22 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
         multiDragOffsets.forEach((offset, id) => {
           const comp = components.find(c => c.id === id);
           if (comp) {
-            const newX = Math.round(mouseX - offset.x);
-            const newY = Math.round(mouseY - offset.y);
+            // 计算新的绝对位置
+            const newAbsX = Math.round(mouseX - offset.x);
+            const newAbsY = Math.round(mouseY - offset.y);
+            
+            // 转换为相对于父组件的坐标
+            let newX = newAbsX;
+            let newY = newAbsY;
+            if (comp.parent) {
+              const parent = components.find(c => c.id === comp.parent);
+              if (parent) {
+                const parentAbsPos = getAbsolutePosition(parent, components);
+                newX = newAbsX - parentAbsPos.x;
+                newY = newAbsY - parentAbsPos.y;
+              }
+            }
+            
             updateComponent(id, {
               position: { ...comp.position, x: newX, y: newY },
             });
@@ -520,10 +536,10 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
         return child ? renderComponent(child, componentList) : null;
       });
 
-      return <Widget component={component} style={style} handlers={handlers}>{children}</Widget>;
+      return <Widget key={component.id} component={component} style={style} handlers={handlers}>{children}</Widget>;
     }
 
-    return <Widget component={component} style={style} handlers={handlers} />;
+    return <Widget key={component.id} component={component} style={style} handlers={handlers} />;
   };
 
   // 扩展画布区域，使其成为可滚动的大型画布

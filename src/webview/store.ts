@@ -256,6 +256,11 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     set((state) => {
       const newComponents = [...state.components];
 
+      // 检查是否已存在相同ID的组件
+      if (newComponents.some(c => c.id === component.id)) {
+        return state;
+      }
+
       // 如果是 hg_view，检查是否是第一个，设置 entry 属性
       if (component.type === 'hg_view') {
         const existingViews = newComponents.filter(c => c.type === 'hg_view');
@@ -836,7 +841,8 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
 
   // Clipboard operations
   copyComponent: (id) => {
-    const component = get().components.find((c) => c.id === id);
+    const { components } = get();
+    const component = components.find((c) => c.id === id);
     if (!component) return;
     
     // 禁止复制列表项
@@ -850,7 +856,25 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       return;
     }
     
-    set({ clipboard: component });
+    // 递归获取所有子组件
+    const getAllChildren = (parentId: string): Component[] => {
+      const children = components.filter(c => c.parent === parentId);
+      const result: Component[] = [...children];
+      children.forEach(child => {
+        result.push(...getAllChildren(child.id));
+      });
+      return result;
+    };
+    
+    // 收集组件及其所有子组件
+    const allComponents = [component, ...getAllChildren(component.id)];
+    
+    // 如果有子组件，使用 clipboardMultiple；否则使用 clipboard
+    if (allComponents.length > 1) {
+      set({ clipboardMultiple: allComponents, clipboard: null });
+    } else {
+      set({ clipboard: component, clipboardMultiple: [] });
+    }
   },
 
   cutComponent: (id) => {
@@ -880,24 +904,62 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       const newIds: string[] = [];
       const timestamp = Date.now();
       
-      // 计算所有组件的边界框
-      const minX = Math.min(...clipboardMultiple.map(c => c.position.x));
-      const minY = Math.min(...clipboardMultiple.map(c => c.position.y));
+      // 创建旧ID到新ID的映射表
+      const idMap = new Map<string, string>();
+      clipboardMultiple.forEach((comp, index) => {
+        const newId = `${comp.id}_copy_${timestamp}_${index}`;
+        idMap.set(comp.id, newId);
+      });
+      
+      // 找出所有顶层组件（没有父组件或父组件不在复制列表中）
+      const topLevelComponents = clipboardMultiple.filter(comp => 
+        !comp.parent || !idMap.has(comp.parent)
+      );
+      
+      // 计算顶层组件的边界框
+      const minX = Math.min(...topLevelComponents.map(c => c.position.x));
+      const minY = Math.min(...topLevelComponents.map(c => c.position.y));
       
       clipboardMultiple.forEach((comp, index) => {
-        const parentExists = comp.parent 
-          ? components.some((c) => c.id === comp.parent)
-          : true;
+        const newId = idMap.get(comp.id)!;
         
-        const offsetX = comp.position.x - minX;
-        const offsetY = comp.position.y - minY;
+        // 检查父组件是否在复制的组件中
+        let newParent: string | null = null;
+        if (comp.parent) {
+          if (idMap.has(comp.parent)) {
+            // 父组件也在复制列表中，使用新的父组件ID
+            newParent = idMap.get(comp.parent)!;
+          } else if (components.some((c) => c.id === comp.parent)) {
+            // 父组件不在复制列表中，但存在于画布中，保持原父组件
+            newParent = comp.parent;
+          }
+          // 否则 newParent 为 null（父组件不存在）
+        }
         
-        const newComponent: Component = {
-          ...comp,
-          id: `${comp.id}_copy_${timestamp}_${index}`,
-          name: `${comp.name}_copy`,
-          parent: parentExists ? comp.parent : null,
-          position: position ? {
+        // 更新 children 数组中的 ID
+        let newChildren: string[] | undefined = undefined;
+        if (comp.children && comp.children.length > 0) {
+          newChildren = comp.children
+            .map(childId => idMap.get(childId))
+            .filter((id): id is string => id !== undefined);
+        }
+        
+        // 计算新位置
+        let newPosition;
+        if (newParent && idMap.has(comp.parent!)) {
+          // 子组件：保持相对于父组件的原始位置（不改变）
+          newPosition = {
+            x: comp.position.x,
+            y: comp.position.y,
+            width: comp.position.width,
+            height: comp.position.height,
+          };
+        } else {
+          // 顶层组件：应用偏移量
+          const offsetX = comp.position.x - minX;
+          const offsetY = comp.position.y - minY;
+          
+          newPosition = position ? {
             x: position.x + offsetX,
             y: position.y + offsetY,
             width: comp.position.width,
@@ -907,7 +969,16 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
             y: comp.position.y + 20,
             width: comp.position.width,
             height: comp.position.height,
-          },
+          };
+        }
+        
+        const newComponent: Component = {
+          ...comp,
+          id: newId,
+          name: `${comp.name}_copy`,
+          parent: newParent,
+          children: newChildren,
+          position: newPosition,
         };
         
         get().addComponent(newComponent);
@@ -951,11 +1022,12 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     const { selectedComponents, components } = get();
     if (!selectedComponents.length) return;
     
-    const componentsToCopy = components.filter((c) => 
+    // 获取所有选中的组件（排除列表项）
+    const directlySelected = components.filter((c) => 
       selectedComponents.includes(c.id) && c.type !== 'hg_list_item'
     );
     
-    if (componentsToCopy.length === 0) {
+    if (directlySelected.length === 0) {
       if (vscodeAPI) {
         vscodeAPI.postMessage({
           command: 'showInfo',
@@ -965,7 +1037,41 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       return;
     }
     
-    set({ clipboardMultiple: componentsToCopy, clipboard: null });
+    // 递归获取所有子组件
+    const getAllChildren = (parentId: string): Component[] => {
+      const children = components.filter(c => c.parent === parentId);
+      const result: Component[] = [...children];
+      children.forEach(child => {
+        result.push(...getAllChildren(child.id));
+      });
+      return result;
+    };
+    
+    // 收集所有需要复制的组件（包括子组件）
+    const componentsToCopy = new Set<Component>(directlySelected);
+    directlySelected.forEach(comp => {
+      const children = getAllChildren(comp.id);
+      children.forEach(child => componentsToCopy.add(child));
+    });
+    
+    // 按照层级顺序排序（父组件在前，子组件在后）
+    const sortedComponents = Array.from(componentsToCopy).sort((a, b) => {
+      // 如果 a 是 b 的祖先，a 应该在前
+      let current: Component | undefined = b;
+      while (current) {
+        if (current.parent === a.id) return -1;
+        current = components.find(c => c.id === current!.parent);
+      }
+      // 如果 b 是 a 的祖先，b 应该在前
+      current = a;
+      while (current) {
+        if (current.parent === b.id) return 1;
+        current = components.find(c => c.id === current!.parent);
+      }
+      return 0;
+    });
+    
+    set({ clipboardMultiple: sortedComponents, clipboard: null });
   },
 
   cutSelectedComponents: () => {
