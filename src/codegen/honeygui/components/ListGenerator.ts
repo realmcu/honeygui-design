@@ -327,32 +327,59 @@ export class ListGenerator implements ComponentCodeGenerator {
         throw new Error(`No generator found for component type: ${component.type}`);
       }
 
-      code += generator.generateCreation(component, indent, modifiedContext);
-
-      // 生成属性设置代码
-      code += generator.generatePropertySetters(component, indent, modifiedContext);
-
-      // 生成事件绑定代码
-      const eventGenerator = EventGeneratorFactory.getGenerator(component.type);
-      if (eventGenerator && component.eventConfigs && component.eventConfigs.length > 0) {
-        code += eventGenerator.generateEventBindings(component, indent, context.componentMap);
-      }
-
-      // 递归生成子组件（如果有）
-      if (component.children && component.children.length > 0) {
-        component.children.forEach(childId => {
-          const child = context.componentMap.get(childId);
-          if (child) {
-            try {
-              code += this.generateChildComponentCode(child, context, getGenerator, indent);
-            } catch (nestedError) {
-              const nestedErrorMsg = nestedError instanceof Error ? nestedError.message : String(nestedError);
-              console.error(`[ListGenerator] Failed to generate nested child component ${childId}: ${nestedErrorMsg}`);
-              code += `${indentStr}// ERROR: Failed to generate nested child ${childId}\n`;
-              code += `${indentStr}// Reason: ${nestedErrorMsg}\n`;
+      let creationCode = generator.generateCreation(component, indent, modifiedContext);
+      
+      // 对于 hg_view 和 hg_window，需要处理子组件占位符
+      if (component.type === 'hg_view' || component.type === 'hg_window') {
+        let childrenCode = '';
+        if (component.children && component.children.length > 0) {
+          childrenCode += '\n';
+          component.children.forEach(childId => {
+            const child = context.componentMap.get(childId);
+            if (child) {
+              try {
+                childrenCode += this.generateChildComponentCode(child, context, getGenerator, indent);
+              } catch (nestedError) {
+                const nestedErrorMsg = nestedError instanceof Error ? nestedError.message : String(nestedError);
+                console.error(`[ListGenerator] Failed to generate nested child component ${childId}: ${nestedErrorMsg}`);
+                childrenCode += `${indentStr}// ERROR: Failed to generate nested child ${childId}\n`;
+                childrenCode += `${indentStr}// Reason: ${nestedErrorMsg}\n`;
+              }
             }
-          }
-        });
+          });
+        }
+        // 替换占位符
+        creationCode = creationCode.replace(/__CHILDREN_PLACEHOLDER__/g, childrenCode);
+        code += creationCode;
+      } else {
+        // 普通组件：直接添加创建代码
+        code += creationCode;
+        
+        // 生成属性设置代码
+        code += generator.generatePropertySetters(component, indent, modifiedContext);
+
+        // 生成事件绑定代码
+        const eventGenerator = EventGeneratorFactory.getGenerator(component.type);
+        if (eventGenerator && component.eventConfigs && component.eventConfigs.length > 0) {
+          code += eventGenerator.generateEventBindings(component, indent, context.componentMap);
+        }
+
+        // 递归生成子组件（如果有）
+        if (component.children && component.children.length > 0) {
+          component.children.forEach(childId => {
+            const child = context.componentMap.get(childId);
+            if (child) {
+              try {
+                code += this.generateChildComponentCode(child, context, getGenerator, indent);
+              } catch (nestedError) {
+                const nestedErrorMsg = nestedError instanceof Error ? nestedError.message : String(nestedError);
+                console.error(`[ListGenerator] Failed to generate nested child component ${childId}: ${nestedErrorMsg}`);
+                code += `${indentStr}// ERROR: Failed to generate nested child ${childId}\n`;
+                code += `${indentStr}// Reason: ${nestedErrorMsg}\n`;
+              }
+            }
+          });
+        }
       }
 
       return code;
