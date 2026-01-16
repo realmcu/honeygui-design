@@ -118,6 +118,8 @@
 
   "No undo action available": "没有可撤销的操作",
   "No redo action available": "没有可重做的操作",
+  "Select File": "选择文件",
+  "All Files": "所有文件",
   "File browse failed: {0}": "文件浏览失败: {0}",
   "Failed to switch file: {0}": "切换文件失败: {0}",
   "Current HML file not found": "未找到当前HML文件",

@@ -407,6 +407,25 @@ const en = {
   'canvasEditor.editSvg': 'Edit SVG',
   'common.cancel': 'Cancel',
   'common.confirm': 'Confirm',
+
+  // Character Sets
+  'Additional Character Sets': 'Additional Character Sets',
+  'No additional character sets': 'No additional character sets',
+  'Unicode Range': 'Unicode Range',
+  'String': 'String',
+  'CST File': 'CST File',
+  'CodePage': 'CodePage',
+  'Remove': 'Remove',
+  'Unicode character range': 'Unicode character range',
+  'Example: 0x20-0x7E, 0x4E00-0x9FFF': 'Example: 0x20-0x7E, 0x4E00-0x9FFF',
+  'Extract characters from string': 'Extract characters from string',
+  'Example: ABC123你好': 'Example: ABC123你好',
+  'Load characters from CST/TXT file': 'Load characters from CST/TXT file',
+  'Example: charset.cst': 'Example: charset.cst',
+  'Windows CodePage encoding': 'Windows CodePage encoding',
+  'Example: CP936': 'Example: CP936',
+  'Add Character Set': 'Add Character Set',
+  'Additional character sets will be merged with text characters during font conversion': 'Additional character sets will be merged with text characters during font conversion',
 };
 
 export default en;

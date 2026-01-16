@@ -700,13 +700,30 @@ export class BuildCore {
                 renderMode: group.renderMode,
                 outputFormat: group.fontType,
                 characterSets: [
-                    // 使用合并后的字符集（自定义字符）
-                    { type: 'string', value: group.characters }
+                    // 使用合并后的字符集（文本字符）
+                    { type: 'string', value: group.characters },
+                    // 添加附加字符集，将文件路径转换为绝对路径
+                    ...group.additionalCharSets.map(cs => {
+                        if ((cs.type === 'file' || cs.type === 'codepage') && cs.value) {
+                            // 如果是相对路径，转换为相对于项目根目录的绝对路径
+                            const absolutePath = path.isAbsolute(cs.value)
+                                ? cs.value
+                                : path.resolve(this.projectRoot, cs.value);
+                            return { type: cs.type, value: absolutePath };
+                        }
+                        return cs;
+                    })
                 ]
             };
 
             this.logger.log(`转换字体: ${group.fontFile} (${group.fontType}, size=${group.fontSize}, bits=${group.renderMode})`);
-            this.logger.log(`  字符集: "${group.characters.substring(0, 50)}${group.characters.length > 50 ? '...' : ''}" (${group.characters.length} 字符)`);
+            this.logger.log(`  文本字符: "${group.characters.substring(0, 50)}${group.characters.length > 50 ? '...' : ''}" (${group.characters.length} 字符)`);
+            if (group.additionalCharSets.length > 0) {
+                this.logger.log(`  附加字符集: ${group.additionalCharSets.length} 个`);
+                group.additionalCharSets.forEach((cs, idx) => {
+                    this.logger.log(`    [${idx + 1}] ${cs.type}: ${cs.value}`);
+                });
+            }
 
             try {
                 const result = await fontConverter.convert(fontPath, fontOutputDir, options);
@@ -740,6 +757,7 @@ export class BuildCore {
         fontType: 'bitmap' | 'vector';
         renderMode: number;
         text: string;
+        characterSets: Array<{ type: string; value: string }>;
     }>> {
         const configs: Array<any> = [];
         
@@ -799,7 +817,8 @@ export class BuildCore {
                 fontSize: 16,
                 fontType: 'bitmap',
                 renderMode: 4,
-                text: ''
+                text: '',
+                characterSets: []
             };
             
             // 提取 fontSize 属性
@@ -826,6 +845,19 @@ export class BuildCore {
                 config.text = textMatch[1];
             }
             
+            // 提取 characterSets 属性（JSON 数组）
+            const charSetsMatch = tagContent.match(/characterSets\s*=\s*["']([^"']+)["']/);
+            if (charSetsMatch) {
+                try {
+                    const charSets = JSON.parse(charSetsMatch[1].replace(/&quot;/g, '"'));
+                    if (Array.isArray(charSets)) {
+                        config.characterSets = charSets;
+                    }
+                } catch (e) {
+                    this.logger.log(`解析 characterSets 失败: ${e}`, true);
+                }
+            }
+            
             configs.push(config);
         }
     }
@@ -834,7 +866,7 @@ export class BuildCore {
      * 按字体文件和配置分组，合并相同配置的字符集
      * 
      * 相同的字体文件 + fontSize + fontType + renderMode 视为同一组，
-     * 合并它们的文本内容作为字符集
+     * 合并它们的文本内容和附加字符集
      */
     private groupLabelConfigsByFont(configs: Array<{
         fontFile: string;
@@ -842,12 +874,14 @@ export class BuildCore {
         fontType: 'bitmap' | 'vector';
         renderMode: number;
         text: string;
+        characterSets: Array<{ type: string; value: string }>;
     }>): Array<{
         fontFile: string;
         fontSize: number;
         fontType: 'bitmap' | 'vector';
         renderMode: number;
         characters: string;
+        additionalCharSets: Array<{ type: 'range' | 'file' | 'codepage' | 'string'; value: string }>;
     }> {
         const groups = new Map<string, {
             fontFile: string;
@@ -855,6 +889,7 @@ export class BuildCore {
             fontType: 'bitmap' | 'vector';
             renderMode: number;
             charSet: Set<string>;
+            additionalCharSets: Set<string>;
         }>();
 
         for (const config of configs) {
@@ -867,7 +902,8 @@ export class BuildCore {
                     fontSize: config.fontSize,
                     fontType: config.fontType,
                     renderMode: config.renderMode,
-                    charSet: new Set()
+                    charSet: new Set(),
+                    additionalCharSets: new Set()
                 });
             }
             
@@ -875,6 +911,13 @@ export class BuildCore {
             const group = groups.get(key)!;
             for (const char of config.text) {
                 group.charSet.add(char);
+            }
+            
+            // 收集附加字符集（去重）
+            if (config.characterSets && Array.isArray(config.characterSets)) {
+                for (const cs of config.characterSets) {
+                    group.additionalCharSets.add(JSON.stringify(cs));
+                }
             }
         }
 
@@ -884,7 +927,14 @@ export class BuildCore {
             fontSize: group.fontSize,
             fontType: group.fontType,
             renderMode: group.renderMode,
-            characters: Array.from(group.charSet).join('')
+            characters: Array.from(group.charSet).join(''),
+            additionalCharSets: Array.from(group.additionalCharSets).map(s => {
+                const parsed = JSON.parse(s);
+                return {
+                    type: parsed.type as 'range' | 'file' | 'codepage' | 'string',
+                    value: parsed.value
+                };
+            })
         }));
     }
 

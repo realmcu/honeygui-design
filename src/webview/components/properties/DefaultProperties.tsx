@@ -271,6 +271,210 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
     );
   };
 
+  // 渲染字符集列表
+  const renderCharacterSets = () => {
+    const charsets = (component.data as any)?.characterSets || [];
+    
+    // 处理文件浏览
+    const handleBrowseCharsetFile = (index: number, type: 'file' | 'codepage') => {
+      window.vscodeAPI?.postMessage({
+        command: 'browseCharsetFile',
+        componentId: component.id,
+        charsetIndex: index,
+        fileType: type,
+        filters: type === 'file' 
+          ? { 'Charset文件': ['cst', 'txt'] }
+          : {} // CodePage 文件没有后缀，显示所有文件
+      });
+    };
+
+    // 获取显示值（文件类型显示文件名，其他显示完整值）
+    const getDisplayValue = (cs: any) => {
+      if ((cs.type === 'file' || cs.type === 'codepage') && cs.value) {
+        // 提取文件名
+        const parts = cs.value.split('/');
+        return parts[parts.length - 1];
+      }
+      return cs.value || '';
+    };
+    
+    return (
+      <div>
+        <div style={{
+          border: '1px solid var(--vscode-panel-border)',
+          borderRadius: '3px',
+          maxHeight: '200px',
+          overflowY: 'auto',
+          marginBottom: '6px'
+        }}>
+          {charsets.length === 0 ? (
+            <div style={{
+              padding: '12px',
+              textAlign: 'center',
+              fontSize: '11px',
+              color: 'var(--vscode-descriptionForeground)'
+            }}>
+              {t('No additional character sets')}
+            </div>
+          ) : (
+            charsets.map((cs: any, index: number) => (
+              <div key={index} style={{
+                padding: '6px',
+                fontSize: '11px',
+                borderBottom: index < charsets.length - 1 ? '1px solid var(--vscode-panel-border)' : 'none',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <select
+                    value={cs.type || 'range'}
+                    onChange={(e) => {
+                      const newCharsets = [...charsets];
+                      // 切换类型时清空内容
+                      newCharsets[index] = { ...cs, type: e.target.value, value: '' };
+                      handleDataChange('characterSets', newCharsets);
+                    }}
+                    style={{
+                      minWidth: '90px',
+                      padding: '3px 6px',
+                      backgroundColor: 'var(--vscode-input-background)',
+                      color: 'var(--vscode-input-foreground)',
+                      border: '1px solid var(--vscode-input-border)',
+                      borderRadius: '2px',
+                      fontSize: '11px'
+                    }}
+                  >
+                    <option value="range">{t('Unicode Range')}</option>
+                    <option value="string">{t('String')}</option>
+                    <option value="file">{t('CST File')}</option>
+                    <option value="codepage">{t('CodePage')}</option>
+                  </select>
+                  <input
+                    type="text"
+                    value={getDisplayValue(cs)}
+                    onChange={(e) => {
+                      const newCharsets = [...charsets];
+                      newCharsets[index] = { ...cs, value: e.target.value };
+                      handleDataChange('characterSets', newCharsets);
+                    }}
+                    placeholder={
+                      cs.type === 'range' ? '0x20-0x7E' :
+                      cs.type === 'string' ? 'ABC123' :
+                      cs.type === 'file' ? 'charset.cst' :
+                      'CP936'
+                    }
+                    title={cs.value || ''}
+                    style={{
+                      flex: 1,
+                      padding: '3px 6px',
+                      backgroundColor: 'var(--vscode-input-background)',
+                      color: 'var(--vscode-input-foreground)',
+                      border: '1px solid var(--vscode-input-border)',
+                      borderRadius: '2px',
+                      fontSize: '11px'
+                    }}
+                  />
+                  {(cs.type === 'file' || cs.type === 'codepage') && (
+                    <button
+                      onClick={() => handleBrowseCharsetFile(index, cs.type)}
+                      style={{
+                        padding: '3px 6px',
+                        backgroundColor: 'var(--vscode-button-background)',
+                        color: 'var(--vscode-button-foreground)',
+                        border: 'none',
+                        borderRadius: '2px',
+                        cursor: 'pointer',
+                        fontSize: '11px',
+                        whiteSpace: 'nowrap'
+                      }}
+                      title={t('Browse')}
+                    >
+                      📁
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      const newCharsets = charsets.filter((_: any, i: number) => i !== index);
+                      handleDataChange('characterSets', newCharsets);
+                    }}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--vscode-descriptionForeground)',
+                      cursor: 'pointer',
+                      padding: '2px 4px',
+                      fontSize: '12px'
+                    }}
+                    title={t('Remove')}
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div style={{
+                  fontSize: '9px',
+                  color: 'var(--vscode-descriptionForeground)',
+                  paddingLeft: '94px'
+                }}>
+                  {cs.type === 'range' && (
+                    <>
+                      <div>{t('Unicode character range')}</div>
+                      <div>{t('Example: 0x20-0x7E, 0x4E00-0x9FFF')}</div>
+                    </>
+                  )}
+                  {cs.type === 'string' && (
+                    <>
+                      <div>{t('Extract characters from string')}</div>
+                      <div>{t('Example: ABC123你好')}</div>
+                    </>
+                  )}
+                  {cs.type === 'file' && (
+                    <>
+                      <div>{t('Load characters from CST/TXT file')}</div>
+                      <div>{t('Example: charset.cst')}</div>
+                    </>
+                  )}
+                  {cs.type === 'codepage' && (
+                    <>
+                      <div>{t('Windows CodePage encoding')}</div>
+                      <div>{t('Example: CP936')}</div>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+        <button
+          onClick={() => {
+            const newCharsets = [...charsets, { type: 'range', value: '' }];
+            handleDataChange('characterSets', newCharsets);
+          }}
+          style={{
+            padding: '4px 10px',
+            fontSize: '11px',
+            backgroundColor: 'var(--vscode-button-secondaryBackground)',
+            color: 'var(--vscode-button-secondaryForeground)',
+            border: 'none',
+            borderRadius: '3px',
+            cursor: 'pointer',
+            width: '100%'
+          }}
+        >
+          + {t('Add Character Set')}
+        </button>
+        <div style={{
+          fontSize: '10px',
+          color: 'var(--vscode-descriptionForeground)',
+          marginTop: '6px',
+          lineHeight: '1.4'
+        }}>
+          💡 {t('Additional character sets will be merged with text characters during font conversion')}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
       <div className="properties-tabs">
@@ -638,6 +842,13 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                     </span>
                   </div>
                 )}
+                {/* 附加字符集 */}
+                <div className="property-item">
+                  <label>{t('Additional Character Sets')}</label>
+                  <div style={{ marginTop: '4px' }}>
+                    {renderCharacterSets()}
+                  </div>
+                </div>
                 {/* 预览模式开关 */}
                 <div className="property-item">
                   <label>{t('Preview mode (does not change actual rendering)')}</label>

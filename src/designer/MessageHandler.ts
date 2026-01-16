@@ -306,6 +306,10 @@ export class MessageHandler {
             case 'browseFile':
                 this._handleBrowseFile(message.componentId, message.propertyName, message.filters);
                 break;
+
+            case 'browseCharsetFile':
+                this._handleBrowseCharsetFile(message.componentId, message.charsetIndex, message.fileType, message.filters);
+                break;
                 
             default:
                 logger.warn(`[MessageHandler] 未知消息命令: ${message.command}`);
@@ -354,6 +358,79 @@ export class MessageHandler {
             }
         } catch (error) {
             logger.error(`[MessageHandler] 文件浏览失败: ${error}`);
+            vscode.window.showErrorMessage(vscode.l10n.t('File browse failed: {0}', error instanceof Error ? error.message : vscode.l10n.t('Unknown error')));
+        }
+    }
+
+    /**
+     * 处理字符集文件浏览
+     */
+    private async _handleBrowseCharsetFile(componentId: string, charsetIndex: number, fileType: string, filters: any): Promise<void> {
+        try {
+            const projectRoot = this._fileManager.currentFilePath 
+                ? ProjectUtils.findProjectRoot(this._fileManager.currentFilePath)
+                : undefined;
+            
+            if (!projectRoot) {
+                vscode.window.showErrorMessage(vscode.l10n.t('Cannot find project root (project.json)'));
+                return;
+            }
+
+            // 根据文件类型设置默认路径
+            let defaultPath = projectRoot;
+            if (fileType === 'file') {
+                // CST 文件默认路径：tools/font-converter/charset
+                const charsetPath = path.join(projectRoot, 'tools', 'font-converter', 'charset');
+                if (fs.existsSync(charsetPath)) {
+                    defaultPath = charsetPath;
+                }
+            } else if (fileType === 'codepage') {
+                // CodePage 文件默认路径：tools/font-converter/CodePage
+                const codepagePath = path.join(projectRoot, 'tools', 'font-converter', 'CodePage');
+                if (fs.existsSync(codepagePath)) {
+                    defaultPath = codepagePath;
+                }
+            }
+
+            // 构建文件过滤器
+            const fileFilters: { [name: string]: string[] } = {};
+            if (filters && Object.keys(filters).length > 0) {
+                Object.keys(filters).forEach(key => {
+                    fileFilters[key] = filters[key];
+                });
+            } else {
+                // CodePage 文件没有后缀，显示所有文件
+                fileFilters[vscode.l10n.t('All Files')] = ['*'];
+            }
+
+            // 打开文件选择对话框
+            const uris = await vscode.window.showOpenDialog({
+                canSelectMany: false,
+                openLabel: vscode.l10n.t('Select File'),
+                filters: Object.keys(fileFilters).length > 0 ? fileFilters : undefined,
+                defaultUri: vscode.Uri.file(defaultPath)
+            });
+
+            if (uris && uris.length > 0) {
+                const selectedPath = uris[0].fsPath;
+                // 转换为相对于项目根目录的路径
+                let relativePath = path.relative(projectRoot, selectedPath);
+                // 统一使用正斜杠
+                relativePath = relativePath.replace(/\\/g, '/');
+
+                // 获取组件
+                const component = this._hmlController.findComponent(componentId);
+                if (component && component.data) {
+                    const charsets = (component.data as any).characterSets || [];
+                    if (charsetIndex >= 0 && charsetIndex < charsets.length) {
+                        // 更新指定索引的字符集值
+                        charsets[charsetIndex].value = relativePath;
+                        this._componentManager.updateComponentProperty(componentId, 'characterSets', charsets);
+                    }
+                }
+            }
+        } catch (error) {
+            logger.error(`[MessageHandler] 字符集文件浏览失败: ${error}`);
             vscode.window.showErrorMessage(vscode.l10n.t('File browse failed: {0}', error instanceof Error ? error.message : vscode.l10n.t('Unknown error')));
         }
     }

@@ -118,6 +118,8 @@
 
   "No undo action available": "No undo action available",
   "No redo action available": "No redo action available",
+  "Select File": "Select File",
+  "All Files": "All Files",
   "File browse failed: {0}": "File browse failed: {0}",
   "Failed to switch file: {0}": "Failed to switch file: {0}",
   "Current HML file not found": "Current HML file not found",

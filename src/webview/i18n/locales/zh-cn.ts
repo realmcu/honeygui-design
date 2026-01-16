@@ -407,6 +407,25 @@ const zhCN = {
   'canvasEditor.editSvg': '编辑 SVG',
   'common.cancel': '取消',
   'common.confirm': '确定',
+
+  // Character Sets
+  'Additional Character Sets': '附加字符集',
+  'No additional character sets': '暂无附加字符集',
+  'Unicode Range': 'Unicode 范围',
+  'String': '字符串',
+  'CST File': 'CST 文件',
+  'CodePage': '代码页',
+  'Remove': '移除',
+  'Unicode character range': 'Unicode 字符范围',
+  'Example: 0x20-0x7E, 0x4E00-0x9FFF': '示例：0x20-0x7E, 0x4E00-0x9FFF',
+  'Extract characters from string': '从字符串提取字符',
+  'Example: ABC123你好': '示例：ABC123你好',
+  'Load characters from CST/TXT file': '从 CST/TXT 文件加载字符',
+  'Example: charset.cst': '示例：charset.cst',
+  'Windows CodePage encoding': 'Windows 代码页编码',
+  'Example: CP936': '示例：CP936',
+  'Add Character Set': '添加字符集',
+  'Additional character sets will be merged with text characters during font conversion': '附加字符集将在字体转换时与文本字符合并',
 };
 
 export default zhCN;

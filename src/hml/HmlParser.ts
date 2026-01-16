@@ -577,7 +577,7 @@ export class HmlParser {
       // 文本数据属性
       'fontFile', 'timeFormat',
       // 字体配置属性
-      'fontType', 'renderMode', 'fontSize',
+      'fontType', 'renderMode', 'fontSize', 'characterSets',
       // hg_view 特有属性
       'residentMemory', 'animateStep',
       // 双态按钮属性
@@ -620,8 +620,8 @@ export class HmlParser {
             console.warn(`Failed to parse transform JSON: ${value}`);
           }
         }
-        // useGradient 布尔值转换
-        if (key === 'useGradient') {
+        // 布尔值转换（useGradient, wordWrap, wordBreak）
+        if (['useGradient', 'wordWrap', 'wordBreak'].includes(key)) {
           value = value === 'true' || value === true;
         }
         style[key] = value;
@@ -635,6 +635,15 @@ export class HmlParser {
         if (['noteNum', 'offset', 'outScope', 'opacity', 'animateStep'].includes(key) && typeof value === 'string') {
           const num = parseFloat(value);
           value = isNaN(num) ? value : num;
+        }
+        // characterSets 需要从 JSON 字符串解析为数组
+        if (key === 'characterSets' && typeof value === 'string') {
+          try {
+            value = JSON.parse(value);
+          } catch (e) {
+            console.warn(`Failed to parse characterSets JSON: ${value}`);
+            value = [];
+          }
         }
         data[key] = value;
       } else {
@@ -661,6 +670,15 @@ export class HmlParser {
         // enableBlur 需要转换为布尔值
         if (key === 'enableBlur') {
           value = value === 'true' || value === true;
+        }
+        // characterSets 需要从 JSON 字符串解析为数组
+        if (key === 'characterSets' && typeof value === 'string') {
+          try {
+            value = JSON.parse(value);
+          } catch (e) {
+            console.warn(`Failed to parse characterSets JSON: ${value}`);
+            value = [];
+          }
         }
         data[key] = value;
       }
