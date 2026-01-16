@@ -24,12 +24,23 @@ export class ExtensionManager {
      * 初始化扩展
      */
     async initialize(): Promise<void> {
+        logger.info('HoneyGUI扩展初始化开始...');
+
+        // 优先注册命令（确保基本功能可用）
         try {
-            logger.info('HoneyGUI扩展初始化开始...');
-
-            // 注册命令
             this.commandManager.registerCommands();
+        } catch (error) {
+            logger.error(`命令注册失败: ${error instanceof Error ? error.message : String(error)}`);
+        }
 
+        // 注册视图提供者（确保侧边栏视图可用）
+        try {
+            this.registerViewProviders();
+        } catch (error) {
+            logger.error(`视图提供者注册失败: ${error instanceof Error ? error.message : String(error)}`);
+        }
+
+        try {
             // 注册预览服务
             const previewServiceModule = await import('../preview/PreviewService');
             const PreviewService = previewServiceModule.PreviewService;
@@ -56,9 +67,6 @@ export class ExtensionManager {
 
             // 注册文件关联
             this.registerFileAssociations();
-
-            // 注册视图提供者
-            this.registerViewProviders();
 
             // 检查环境
             await this.checkEnvironment();

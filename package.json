@@ -2,7 +2,7 @@
   "name": "honeygui-visual-designer",
   "displayName": "%displayName%",
   "description": "%description%",
-  "version": "1.6.8",
+  "version": "1.6.9",
   "license": "MIT",
   "l10n": "./l10n",
   "repository": {
@@ -30,15 +30,10 @@
     "Embedded UI"
   ],
   "activationEvents": [
-    "onLanguage:hml",
     "onView:honeygui.welcome",
     "onView:honeygui.quick",
-    "onWorkspaceContains:**/*.hml",
-    "onCommand:honeygui.newProject",
-    "onCommand:honeygui.openProject",
-    "onCommand:honeygui.createNewHmlInWorkspace",
-    "onCommand:honeygui.collaboration.startHost",
-    "onCommand:honeygui.collaboration.joinSession"
+    "onView:honeygui.environment",
+    "workspaceContains:**/*.hml"
   ],
   "main": "./out/src/extension.js",
   "contributes": {
