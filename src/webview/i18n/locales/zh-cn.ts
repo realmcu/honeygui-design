@@ -107,6 +107,8 @@ const zhCN = {
   'Stroke Width': '线宽',
   'Opacity': '透明度',
   'Enable Gradient': '启用渐变',
+  'Arc Group': '弧形群组',
+  'Group Name': '群组名称',
   'Fill Color': '填充颜色',
   'Gradient Type': '渐变类型',
   'Gradient Direction': '渐变方向',

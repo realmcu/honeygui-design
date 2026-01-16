@@ -107,6 +107,8 @@ const en = {
   'Stroke Width': 'Stroke Width',
   'Opacity': 'Opacity',
   'Enable Gradient': 'Enable Gradient',
+  'Arc Group': 'Arc Group',
+  'Group Name': 'Group Name',
   'Fill Color': 'Fill Color',
   'Gradient Type': 'Gradient Type',
   'Gradient Direction': 'Gradient Direction',

@@ -193,6 +193,7 @@ const componentDefinitions: ComponentDefinition[] = [
       { name: 'color', label: 'Color', type: 'color', defaultValue: '#007acc', group: 'style' },
       { name: 'opacity', label: 'Opacity', type: 'number', defaultValue: 255, group: 'style' },
       { name: 'useGradient', label: 'Enable Gradient', type: 'boolean', defaultValue: false, group: 'style' },
+      { name: 'arcGroup', label: 'Arc Group', type: 'string', defaultValue: '', group: 'general' },
     ],
   },
   {

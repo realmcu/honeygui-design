@@ -18,6 +18,7 @@ import { EventGeneratorFactory } from './events';
 import { ComponentGeneratorFactory, GeneratorContext } from './components';
 import { ListGenerator } from './components/ListGenerator';
 import { LabelGenerator } from './components/LabelGenerator';
+import { ArcGenerator } from './components/ArcGenerator';
 import { CallbackFileGenerator, UserFileGenerator, ProtectedAreaMerger } from './files';
 
 // Re-export for backward compatibility
@@ -126,6 +127,10 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
     const hasWindow = componentTypes.includes('hg_window');
     const has3D = componentTypes.includes('hg_3d');
     const hasLabel = componentTypes.includes('hg_label');
+    const hasArc = componentTypes.includes('hg_arc');
+    
+    // 检查是否有 arc group
+    const hasArcGroup = this.components.some(c => c.type === 'hg_arc' && c.data?.arcGroup);
 
     let code = `/**
  * ${baseName} UI定义（自动生成，请勿手动修改）
@@ -159,6 +164,11 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       if (hasTouchRotation) {
         code += `#include "tp_algo.h"\n`;
       }
+    }
+    
+    // 如果有 arc group，添加头文件
+    if (hasArcGroup) {
+      code += `#include "gui_arc_group.h"\n`;
     }
 
     headers.forEach(header => {
@@ -386,11 +396,34 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
     if (component.children && component.children.length > 0) {
       childrenCode += '\n';
       
+      // 收集 arc groups
+      const childComponents = component.children
+        .map(id => this.componentMap.get(id))
+        .filter((c): c is Component => c !== undefined);
+      
+      const arcGroups = ArcGenerator.collectArcGroups(childComponents);
+      const processedGroups = new Set<string>();
+      
       // 直接使用 children 数组顺序，不做额外排序
       // 组件树中靠前的组件先创建（显示在底层），靠后的后创建（显示在上层）
       component.children.forEach(childId => {
         const child = this.componentMap.get(childId);
         if (child) {
+          // 检查是否是 arc group 成员
+          if (child.type === 'hg_arc' && child.data?.arcGroup) {
+            const groupKey = `${component.id}_${child.data.arcGroup}`;
+            // 只在第一次遇到该群组时生成群组代码
+            if (!processedGroups.has(groupKey) && arcGroups.has(groupKey)) {
+              const groupInfo = arcGroups.get(groupKey)!;
+              const parentRef = component.type === 'hg_view' ? '(gui_obj_t *)view' : component.id;
+              const childIndent = component.type === 'hg_window' ? indent : indent + 1;
+              childrenCode += ArcGenerator.generateGroupCreation(groupKey, groupInfo, parentRef, childIndent);
+              processedGroups.add(groupKey);
+            }
+            // 跳过群组成员的独立生成
+            return;
+          }
+          
           // hg_window 的子组件缩进需要调整（因为没有 switch_in 回调包裹）
           const childIndent = component.type === 'hg_window' ? indent : indent + 1;
           childrenCode += this.generateComponentTree(child, childIndent);

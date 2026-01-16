@@ -344,6 +344,26 @@ export const GeometryProperties: React.FC<PropertyPanelProps> = ({ component, on
                 )}
               </div>
             )}
+
+            {/* General Properties - 通用属性（如弧形群组） */}
+            {definition && definition.properties.filter(p => p.group === 'general').length > 0 && (
+              <div className="property-group">
+                <div className="property-group-title">{t('General')}</div>
+                {definition.properties
+                  .filter(p => p.group === 'general')
+                  .map((property) => (
+                    <div key={property.name} className="property-item">
+                      <label>{t(property.label as any)}</label>
+                      <PropertyEditor
+                        type={property.type as any}
+                        value={(component.data as any)?.[property.name]}
+                        onChange={(value) => handleDataChange(property.name, value)}
+                        options={property.options as string[]}
+                      />
+                    </div>
+                  ))}
+              </div>
+            )}
           </>
         )}
 
