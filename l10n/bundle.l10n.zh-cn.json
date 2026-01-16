@@ -197,6 +197,7 @@
 
   "Compile & Simulate: Not Running": "编译仿真: 未运行",
   "Compile & Simulate: Running": "编译仿真: 运行中",
+  "Compile & Simulate: Error": "编译仿真: 错误",
   "Click to start simulation": "点击启动编译仿真",
   "Click to stop simulation": "点击停止编译仿真",
   "Clean build artifacts": "清理编译产物",

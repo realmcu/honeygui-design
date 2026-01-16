@@ -197,6 +197,7 @@
 
   "Compile & Simulate: Not Running": "Compile & Simulate: Not Running",
   "Compile & Simulate: Running": "Compile & Simulate: Running",
+  "Compile & Simulate: Error": "Compile & Simulate: Error",
   "Click to start simulation": "Click to start simulation",
   "Click to stop simulation": "Click to stop simulation",
   "Clean build artifacts": "Clean build artifacts",

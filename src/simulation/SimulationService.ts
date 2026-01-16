@@ -15,6 +15,7 @@ export class SimulationService {
     private statusBarItem: vscode.StatusBarItem;
     private cleanStatusBarItem: vscode.StatusBarItem;
     private outputChannel: vscode.OutputChannel;
+    private isRunning: boolean = false;
 
     constructor(context: vscode.ExtensionContext) {
         this.context = context;
@@ -23,6 +24,7 @@ export class SimulationService {
         this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
         this.statusBarItem.text = `$(rocket) ${vscode.l10n.t('Compile & Simulate: Not Running')}`;
         this.statusBarItem.command = 'honeygui.simulation';
+        this.statusBarItem.tooltip = vscode.l10n.t('Click to start simulation');
         this.statusBarItem.show();
 
         // 创建 Clean 状态栏按钮
@@ -99,13 +101,13 @@ export class SimulationService {
             this.setupRunnerListeners();
 
             // 启动仿真
-            this.updateStatusBar('$(sync~spin) Simulation: Starting...');
+            this.updateStatusBar(`$(sync~spin) ${vscode.l10n.t('Starting simulation...')}`);
             await this.runner.start();
 
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             vscode.window.showErrorMessage(vscode.l10n.t('Compilation failed: {0}', message));
-            this.updateStatusBar('$(rocket) Simulation: Not Running');
+            this.updateStatusBar(`$(rocket) ${vscode.l10n.t('Compile & Simulate: Not Running')}`);
         }
     }
 
@@ -117,7 +119,7 @@ export class SimulationService {
             await this.runner.stop();
             this.runner.dispose();
             this.runner = null;
-            this.updateStatusBar('$(rocket) Simulation: Not Running');
+            this.updateStatusBar(`$(rocket) ${vscode.l10n.t('Compile & Simulate: Not Running')}`);
             vscode.window.showInformationMessage(vscode.l10n.t('Simulation stopped'));
         }
     }
@@ -209,23 +211,28 @@ export class SimulationService {
 
         this.runner.setListener({
             onStart: () => {
-                this.updateStatusBar('$(sync~spin) Simulation: Starting...');
+                this.updateStatusBar(`$(sync~spin) ${vscode.l10n.t('Starting simulation...')}`);
                 this.outputChannel.clear();
                 this.outputChannel.show(true);
             },
             
             onSuccess: () => {
-                this.updateStatusBar('$(rocket) Simulation: Running');
-                vscode.window.showInformationMessage(vscode.l10n.t('Simulation started successfully'));
+                this.updateStatusBar(`$(rocket) ${vscode.l10n.t('Compile & Simulate: Running')}`);
+                // 不再显示成功提示，状态栏已经足够
             },
             
             onError: (error) => {
-                this.updateStatusBar('$(error) Simulation: Error');
+                this.updateStatusBar(`$(error) ${vscode.l10n.t('Compile & Simulate: Error')}`);
                 this.outputChannel.appendLine(`[Error] ${error.message}`);
             },
             
             onExit: (code) => {
-                this.updateStatusBar('$(rocket) Simulation: Not Running');
+                this.updateStatusBar(`$(rocket) ${vscode.l10n.t('Compile & Simulate: Not Running')}`);
+                // 清理 runner 引用
+                if (this.runner) {
+                    this.runner.dispose();
+                    this.runner = null;
+                }
                 if (code !== null && code !== 0) {
                     vscode.window.showWarningMessage(vscode.l10n.t('Simulation exited abnormally, exit code: {0}', code));
                 }
@@ -243,13 +250,17 @@ export class SimulationService {
     private updateStatusBar(text: string): void {
         this.statusBarItem.text = text;
         
-        // 根据状态切换命令
-        if (text.includes('Running')) {
-            this.statusBarItem.command = 'honeygui.simulation.stop';
-            this.statusBarItem.tooltip = vscode.l10n.t('Click to stop simulation');
-        } else {
-            this.statusBarItem.command = 'honeygui.simulation';
-            this.statusBarItem.tooltip = vscode.l10n.t('Click to start simulation');
+        // 只在状态真正改变时才更新命令和 tooltip
+        const nowRunning = text.includes('Running');
+        if (nowRunning !== this.isRunning) {
+            this.isRunning = nowRunning;
+            if (nowRunning) {
+                this.statusBarItem.command = 'honeygui.simulation.stop';
+                this.statusBarItem.tooltip = vscode.l10n.t('Click to stop simulation');
+            } else {
+                this.statusBarItem.command = 'honeygui.simulation';
+                this.statusBarItem.tooltip = vscode.l10n.t('Click to start simulation');
+            }
         }
     }
 
