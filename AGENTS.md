@@ -162,6 +162,7 @@ HmlEditorProvider.resolveCustomTextEditor()
       - 翻译文件：`src/webview/i18n/locales/en.ts`（英文）、`src/webview/i18n/locales/zh-cn.ts`（中文）
     - **package.json**：命令标题使用 `%key%` 语法，配合 `package.nls.json` 和 `package.nls.zh-cn.json`
     - **注意**：`viewsWelcome` 不支持 NLS 语法，需使用纯文本
+11. **Bug 日志路径**：Windows 下的插件错误日志位于 `/mnt/c/Users/howie_wang.RSDOMAIN/Desktop/plugin-bug-log`
 
 ### 不要做的事
 - ❌ 不要修改单元测试（除非用户明确要求）
