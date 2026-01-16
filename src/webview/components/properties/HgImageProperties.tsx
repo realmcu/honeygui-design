@@ -125,6 +125,42 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
   };
 
   const transform = component.style?.transform || {};
+  
+  // 渲染模式选项（对应 BLEND_MODE_TYPE 枚举）
+  const blendModeOptions = [
+    { value: 'IMG_BYPASS_MODE', label: 'IMG_BYPASS_MODE' },
+    { value: 'IMG_FILTER_BLACK', label: 'IMG_FILTER_BLACK' },
+    { value: 'IMG_SRC_OVER_MODE', label: 'IMG_SRC_OVER_MODE' },
+    { value: 'IMG_COVER_MODE', label: 'IMG_COVER_MODE' },
+    { value: 'IMG_RECT', label: 'IMG_RECT' },
+    { value: 'IMG_2D_SW_RGB565_ONLY', label: 'IMG_2D_SW_RGB565_ONLY' },
+    { value: 'IMG_2D_SW_SRC_OVER_MODE', label: 'IMG_2D_SW_SRC_OVER_MODE' },
+    { value: 'IMG_2D_SW_FIX_A8_FG', label: 'IMG_2D_SW_FIX_A8_FG' },
+    { value: 'IMG_2D_SW_FIX_A8_BGFG', label: 'IMG_2D_SW_FIX_A8_BGFG' },
+  ];
+
+  // 获取当前渲染模式，默认为 IMG_FILTER_BLACK
+  const currentBlendMode = component.data?.blendMode || 'IMG_FILTER_BLACK';
+  
+  // 判断是否需要显示前景色和背景色设置
+  const showFgColor = currentBlendMode === 'IMG_2D_SW_FIX_A8_FG' || currentBlendMode === 'IMG_2D_SW_FIX_A8_BGFG';
+  const showBgColor = currentBlendMode === 'IMG_2D_SW_FIX_A8_BGFG';
+
+  // 颜色转换函数：将 #RRGGBB 转换为 0xFFRRGGBB 格式
+  const hexToArgb = (hex: string): string => {
+    if (!hex || !hex.startsWith('#')) return '0xFFFFFFFF';
+    const r = hex.substring(1, 3);
+    const g = hex.substring(3, 5);
+    const b = hex.substring(5, 7);
+    return `0xFF${r}${g}${b}`.toUpperCase();
+  };
+
+  // 颜色转换函数：将 0xFFRRGGBB 转换为 #RRGGBB 格式
+  const argbToHex = (argb: string): string => {
+    if (!argb || !argb.startsWith('0x')) return '#FFFFFF';
+    const hex = argb.substring(4); // 去掉 0xFF
+    return `#${hex}`;
+  };
 
   return (
     <div className="properties-content">
@@ -152,6 +188,99 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
             <div className="property-item">
               <label>{t('Image Path')}</label>
               {renderImageProperty(component.data?.src, (value) => handleDataChange('src', value))}
+            </div>
+            
+            {/* 渲染模式 */}
+            <div className="property-item">
+              <label>{t('Blend Mode')}</label>
+              <select
+                value={currentBlendMode}
+                onChange={(e) => handleDataChange('blendMode', e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '4px 6px',
+                  marginTop: '4px',
+                  backgroundColor: 'var(--vscode-input-background)',
+                  color: 'var(--vscode-input-foreground)',
+                  border: '1px solid var(--vscode-input-border)',
+                  borderRadius: '2px',
+                }}
+              >
+                {blendModeOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* 前景色设置（仅在 IMG_2D_SW_FIX_A8_FG 或 IMG_2D_SW_FIX_A8_BGFG 模式下显示） */}
+            {showFgColor && (
+              <div className="property-item">
+                <label>{t('Foreground Color')}</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                  <input
+                    type="color"
+                    value={argbToHex(component.data?.fgColor || '0xFFFFFFFF')}
+                    onChange={(e) => handleDataChange('fgColor', hexToArgb(e.target.value))}
+                    style={{ width: '30px', height: '30px', padding: 0, border: 'none' }}
+                  />
+                  <input
+                    type="text"
+                    value={component.data?.fgColor || '0xFFFFFFFF'}
+                    onChange={(e) => handleDataChange('fgColor', e.target.value)}
+                    placeholder="0xFFRRGGBB"
+                    style={{
+                      flex: 1,
+                      padding: '4px 6px',
+                      backgroundColor: 'var(--vscode-input-background)',
+                      color: 'var(--vscode-input-foreground)',
+                      border: '1px solid var(--vscode-input-border)',
+                      borderRadius: '2px',
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* 背景色设置（仅在 IMG_2D_SW_FIX_A8_BGFG 模式下显示） */}
+            {showBgColor && (
+              <div className="property-item">
+                <label>{t('Background Color')}</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                  <input
+                    type="color"
+                    value={argbToHex(component.data?.bgColor || '0xFFFFFFFF')}
+                    onChange={(e) => handleDataChange('bgColor', hexToArgb(e.target.value))}
+                    style={{ width: '30px', height: '30px', padding: 0, border: 'none' }}
+                  />
+                  <input
+                    type="text"
+                    value={component.data?.bgColor || '0xFFFFFFFF'}
+                    onChange={(e) => handleDataChange('bgColor', e.target.value)}
+                    placeholder="0xFFRRGGBB"
+                    style={{
+                      flex: 1,
+                      padding: '4px 6px',
+                      backgroundColor: 'var(--vscode-input-background)',
+                      color: 'var(--vscode-input-foreground)',
+                      border: '1px solid var(--vscode-input-border)',
+                      borderRadius: '2px',
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* 高质量渲染开关 */}
+            <div className="property-item">
+              <label>{t('High Quality Rendering')}</label>
+              <input
+                type="checkbox"
+                checked={component.data?.highQuality === true}
+                onChange={(e) => handleDataChange('highQuality', e.target.checked)}
+                style={{ marginTop: '4px' }}
+              />
             </div>
           </div>
 

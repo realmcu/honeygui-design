@@ -310,6 +310,9 @@ const zhCN = {
   'Transform Center': '变换中心',
   'Opacity (0-255)': '透明度 (0-255)',
   'Leave empty to use default (rotation: image center, scale: top-left)': '留空则使用默认（旋转：图片中心，缩放：左上角）',
+  'Blend Mode': '渲染模式',
+  'Foreground Color': '前景色',
+  'High Quality Rendering': '抗锯齿',
 
   // HgVideoProperties
   'Video Settings': '视频设置',

@@ -310,6 +310,9 @@ const en = {
   'Transform Center': 'Transform Center',
   'Opacity (0-255)': 'Opacity (0-255)',
   'Leave empty to use default (rotation: image center, scale: top-left)': 'Leave empty to use default (rotation: image center, scale: top-left)',
+  'Blend Mode': 'Blend Mode',
+  'Foreground Color': 'Foreground Color',
+  'High Quality Rendering': 'Anti-aliasing',
 
   // HgVideoProperties
   'Video Settings': 'Video Settings',

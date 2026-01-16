@@ -30,6 +30,28 @@ export class ImageGenerator implements ComponentCodeGenerator {
     let code = '';
     const indentStr = '    '.repeat(indent);
 
+    // 1. 渲染模式设置
+    const blendMode = component.data?.blendMode;
+    if (blendMode && blendMode !== 'IMG_FILTER_BLACK') {
+      code += `${indentStr}gui_img_set_mode((gui_img_t *)${component.id}, ${blendMode});\n`;
+    }
+
+    // 2. A8 图片颜色设置
+    if (blendMode === 'IMG_2D_SW_FIX_A8_FG' || blendMode === 'IMG_2D_SW_FIX_A8_BGFG') {
+      const fgColor = component.data?.fgColor || '0xFFFFFFFF';
+      code += `${indentStr}gui_img_a8_recolor((gui_img_t *)${component.id}, ${fgColor});\n`;
+      
+      if (blendMode === 'IMG_2D_SW_FIX_A8_BGFG') {
+        const bgColor = component.data?.bgColor || '0xFFFFFFFF';
+        code += `${indentStr}gui_img_a8_fix_bg((gui_img_t *)${component.id}, ${bgColor});\n`;
+      }
+    }
+
+    // 3. 高质量渲染设置
+    if (component.data?.highQuality === true) {
+      code += `${indentStr}gui_img_set_quality((gui_img_t *)${component.id}, true);\n`;
+    }
+
     // 获取变换配置
     const transform = component.style?.transform;
     
