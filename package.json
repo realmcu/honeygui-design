@@ -2,7 +2,7 @@
   "name": "honeygui-visual-designer",
   "displayName": "%displayName%",
   "description": "%description%",
-  "version": "1.6.9",
+  "version": "1.6.10",
   "license": "MIT",
   "l10n": "./l10n",
   "repository": {
@@ -30,10 +30,7 @@
     "Embedded UI"
   ],
   "activationEvents": [
-    "onView:honeygui.welcome",
-    "onView:honeygui.quick",
-    "onView:honeygui.environment",
-    "workspaceContains:**/*.hml"
+    "onStartupFinished"
   ],
   "main": "./out/src/extension.js",
   "contributes": {
