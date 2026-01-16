@@ -114,6 +114,7 @@ template-projects/*/.vscode/
 
 # 测试文件
 test-service-output/
+testing/
 test-services.js
 
 # Python cache

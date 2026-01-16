@@ -44,8 +44,8 @@ export const LabelWidget: React.FC<WidgetProps> = ({ component, style, handlers 
   const wordWrap = component.style?.wordWrap || false;
   const wordBreak = component.style?.wordBreak || false;
   
-  // 获取配置的字号
-  const configuredFontSize = component.data?.fontSize || 16;
+  // 获取配置的字号（确保是数字类型）
+  const configuredFontSize = Number(component.data?.fontSize) || 16;
   
   // 是否使用精确预览模式（默认开启）
   const useAccuratePreview = component.data?.useAccuratePreview ?? true;
@@ -59,8 +59,9 @@ export const LabelWidget: React.FC<WidgetProps> = ({ component, style, handlers 
   
   // 计算垂直对齐的 padding
   // 关键：lineHeight 等于 fontSize 时，文本占用空间 = EM 矩形大小
-  const lineHeight = component.style?.lineSpacing 
-    ? actualFontSize + (component.style.lineSpacing as number)
+  const lineSpacingNum = Number(component.style?.lineSpacing) || 0;
+  const lineHeight = lineSpacingNum 
+    ? actualFontSize + lineSpacingNum
     : actualFontSize;
   
   const containerHeight = typeof style?.height === 'number' ? style.height : 0;
@@ -73,7 +74,7 @@ export const LabelWidget: React.FC<WidgetProps> = ({ component, style, handlers 
     fontFamily: fontFamily || 'inherit',
     fontSize: actualFontSize,
     color: component.style?.color || '#ffffff',
-    letterSpacing: component.style?.letterSpacing || 0,
+    letterSpacing: Number(component.style?.letterSpacing) || 0,
     // 关键：lineHeight 必须等于 fontSize（或 fontSize + lineSpacing），确保文本占用空间 = EM 矩形
     lineHeight: `${lineHeight}px`,
     textAlign: hAlign.toLowerCase() as any,
