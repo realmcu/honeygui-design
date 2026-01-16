@@ -299,6 +299,44 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
               sizeTooltip={component.type === 'hg_list' ? t('List size is auto-calculated') : undefined}
             />
 
+            {/* Canvas SVG 编辑按钮 */}
+            {component.type === 'hg_canvas' && (
+              <div className="property-group">
+                <div className="property-group-title">SVG Content</div>
+                <div className="property-item">
+                  <div style={{ 
+                    fontSize: '12px', 
+                    color: 'var(--vscode-descriptionForeground)',
+                    marginBottom: '8px'
+                  }}>
+                    {(component.data as any)?.svgContent 
+                      ? '✓ ' + t('canvasEditor.preview')
+                      : '未配置 SVG 内容'
+                    }
+                  </div>
+                  <button
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent('openCanvasEditor', {
+                        detail: { componentId: component.id }
+                      }));
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '6px 12px',
+                      backgroundColor: 'var(--vscode-button-background)',
+                      color: 'var(--vscode-button-foreground)',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '12px'
+                    }}
+                  >
+                    {t('canvasEditor.editSvg')}
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Style Properties */}
             {definition && definition.properties.filter(p => p.group === 'style').length > 0 && (
               <div className="property-group">

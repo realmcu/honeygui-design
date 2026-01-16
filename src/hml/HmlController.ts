@@ -34,7 +34,7 @@ export class HmlController {
             // 解析文件内容
             // 同步读取文件内容，避免 Promise 相关问题
             const fileContent = fs.readFileSync(filePath, 'utf-8');
-            const document = this.parser.parse(fileContent);
+            const document = this.parser.parse(fileContent, filePath);
 
             // 更新当前文档状态
             this._currentDocument = document;
@@ -54,13 +54,14 @@ export class HmlController {
     /**
      * 从字符串解析HML内容
      * @param content HML内容字符串
+     * @param filePath 可选，HML 文件路径（用于加载相对路径的资源）
      * @returns 解析后的HML文档对象
      */
-    public parseContent(content: string): HmlDocument {
+    public parseContent(content: string, filePath?: string): HmlDocument {
         try {
             logger.debug(`[HmlController] parseContent: 准备解析 HML 内容`);
 
-            const document = this.parser.parse(content);
+            const document = this.parser.parse(content, filePath || this._currentFilePath || undefined);
 
             // 更新当前文档状态
             this._currentDocument = document;
@@ -81,7 +82,7 @@ export class HmlController {
      */
     public applyRemoteUpdate(content: string): void {
         try {
-            const document = this.parser.parse(content);
+            const document = this.parser.parse(content, this._currentFilePath || undefined);
             
             // 更新当前文档状态
             this._currentDocument = document;

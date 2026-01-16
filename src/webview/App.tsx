@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useDesignerStore } from './store';
 import DesignerCanvas from './components/DesignerCanvas';
 import ComponentLibrary, { componentDefinitions } from './components/ComponentLibrary';
@@ -7,6 +7,7 @@ import ComponentTree from './components/ComponentTree';
 import AssetsPanel from './components/AssetsPanel';
 import Toolbar from './components/Toolbar';
 import { ViewRelationModal } from './components/ViewRelationModal';
+import { CanvasEditorModal } from './components/CanvasEditorModal';
 import { Component, ComponentType } from './types';
 import useKeyboardShortcuts from './utils/keyboardShortcuts';
 import { getAbsolutePosition, findComponentAtPosition, isDropTargetType, isContainerType } from './utils/componentUtils';
@@ -36,10 +37,15 @@ const App: React.FC = () => {
     components,
     showViewRelationModal,
     setShowViewRelationModal,
+    updateComponent,
   } = useDesignerStore();
 
   // Tab 切换状态
   const [activeTab, setActiveTab] = React.useState<'components' | 'assets' | 'tree'>('components');
+
+  // Canvas 编辑器弹窗状态
+  const [canvasEditorOpen, setCanvasEditorOpen] = useState(false);
+  const [editingCanvasId, setEditingCanvasId] = useState<string | null>(null);
 
   // 面板状态管理
   const leftPanel = usePanelResize({ defaultWidth: 280, minWidth: 200, maxWidth: 500 });
@@ -50,6 +56,44 @@ const App: React.FC = () => {
 
   // Initialize keyboard shortcuts
   useKeyboardShortcuts();
+
+  // 打开 Canvas 编辑器
+  const openCanvasEditor = useCallback((componentId: string) => {
+    setEditingCanvasId(componentId);
+    setCanvasEditorOpen(true);
+  }, []);
+
+  // 监听来自属性面板的 Canvas 编辑请求
+  useEffect(() => {
+    const handleOpenCanvasEditor = (e: CustomEvent<{ componentId: string }>) => {
+      openCanvasEditor(e.detail.componentId);
+    };
+    window.addEventListener('openCanvasEditor', handleOpenCanvasEditor as EventListener);
+    return () => {
+      window.removeEventListener('openCanvasEditor', handleOpenCanvasEditor as EventListener);
+    };
+  }, [openCanvasEditor]);
+
+  // 保存 Canvas SVG 内容
+  const handleCanvasSvgSave = useCallback((svgContent: string) => {
+    if (editingCanvasId) {
+      const comp = components.find(c => c.id === editingCanvasId);
+      if (comp) {
+        updateComponent(editingCanvasId, {
+          data: { ...comp.data, svgContent },
+        });
+      }
+    }
+  }, [editingCanvasId, components, updateComponent]);
+
+  // 获取当前编辑的 Canvas 的 SVG 内容
+  const getEditingCanvasSvg = useCallback(() => {
+    if (editingCanvasId) {
+      const comp = components.find(c => c.id === editingCanvasId);
+      return (comp?.data?.svgContent as string) || '';
+    }
+    return '';
+  }, [editingCanvasId, components]);
 
   // 安全初始化VSCode API（确保只使用已有的实例）
   useEffect(() => {
@@ -1014,6 +1058,7 @@ const App: React.FC = () => {
             onComponentSelect={handleComponentSelect}
             onDrop={handleCanvasDrop}
             onDragOver={handleCanvasDragOver}
+            onCanvasDoubleClick={openCanvasEditor}
           />
         </div>
 
@@ -1053,6 +1098,14 @@ const App: React.FC = () => {
       <ViewRelationModal
         visible={showViewRelationModal}
         onClose={() => setShowViewRelationModal(false)}
+      />
+
+      {/* Canvas Editor Modal */}
+      <CanvasEditorModal
+        isOpen={canvasEditorOpen}
+        initialSvg={getEditingCanvasSvg()}
+        onSave={handleCanvasSvgSave}
+        onClose={() => setCanvasEditorOpen(false)}
       />
     </div>
   );

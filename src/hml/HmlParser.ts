@@ -62,11 +62,19 @@ export class HmlParser {
     });
   }
 
+  // 当前 HML 文件路径（用于加载相对路径的 SVG 文件）
+  private currentHmlPath: string = '';
+
   /**
    * 解析HML内容
+   * @param content HML 文件内容
+   * @param hmlFilePath 可选，HML 文件路径（用于加载相对路径的 SVG 文件）
    */
-  parse(content: string): Document {
+  parse(content: string, hmlFilePath?: string): Document {
     try {
+      // 保存当前 HML 路径
+      this.currentHmlPath = hmlFilePath || '';
+
       // 使用普通解析器获取 meta
       const parsed = this.xmlParser.parse(content);
       
@@ -236,6 +244,11 @@ export class HmlParser {
     // 应用默认值（针对 list 控件）
     if (tagName === 'hg_list') {
       this._applyListDefaults(style, data);
+    }
+
+    // 对于 hg_canvas，加载 SVG 文件内容
+    if (tagName === 'hg_canvas' && data.svgFile && this.currentHmlPath) {
+      this._loadCanvasSvgContent(data);
     }
 
     // 解析事件配置
@@ -570,7 +583,9 @@ export class HmlParser {
       // 双态按钮属性
       'toggleMode', 'imageOn', 'imageOff', 'initialState',
       // hg_glass 特有属性
-      'movable', 'click'
+      'movable', 'click',
+      // hg_canvas SVG 文件属性
+      'svgFile'
     ]);
 
     const metaProps = new Set([
@@ -823,6 +838,30 @@ export class HmlParser {
    */
   private _generateId(prefix: string): string {
     return `${prefix}_${Date.now()}_${this.idCounter++}`;
+  }
+
+  /**
+   * 加载 Canvas 组件的 SVG 文件内容
+   * @param data 组件的 data 对象
+   */
+  private _loadCanvasSvgContent(data: Record<string, any>): void {
+    if (!data.svgFile || !this.currentHmlPath) return;
+
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const hmlDir = path.dirname(this.currentHmlPath);
+      const svgFilePath = path.join(hmlDir, data.svgFile);
+
+      if (fs.existsSync(svgFilePath)) {
+        data.svgContent = fs.readFileSync(svgFilePath, 'utf8');
+        logger.debug(`[HmlParser] 加载 SVG 文件: ${svgFilePath}`);
+      } else {
+        logger.warn(`[HmlParser] SVG 文件不存在: ${svgFilePath}`);
+      }
+    } catch (error) {
+      logger.error(`[HmlParser] 加载 SVG 文件失败: ${error}`);
+    }
   }
 }
 

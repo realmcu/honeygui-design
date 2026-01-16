@@ -1,0 +1,41 @@
+.canvas-properties {
+  padding: 8px 0;
+}
+
+.canvas-properties .property-group {
+  margin-bottom: 12px;
+}
+
+.canvas-properties .property-label {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  margin-bottom: 4px;
+}
+
+.canvas-properties .svg-status {
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.canvas-properties .status-configured {
+  color: var(--vscode-charts-green);
+}
+
+.canvas-properties .status-empty {
+  color: var(--vscode-descriptionForeground);
+}
+
+.canvas-properties .edit-svg-btn {
+  width: 100%;
+  padding: 6px 12px;
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.canvas-properties .edit-svg-btn:hover {
+  background: var(--vscode-button-hoverBackground);
+}

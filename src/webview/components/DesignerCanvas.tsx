@@ -19,9 +19,10 @@ interface DesignerCanvasProps {
   onComponentSelect: (id: string | null) => void;
   onDrop?: (e: React.DragEvent) => void;
   onDragOver?: (e: React.DragEvent) => void;
+  onCanvasDoubleClick?: (componentId: string) => void;
 }
 
-const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDrop, onDragOver }) => {
+const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDrop, onDragOver, onCanvasDoubleClick }) => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [pendingDragComponent, setPendingDragComponent] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -508,12 +509,20 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
       }
     };
 
+    // 双击处理：仅对 hg_canvas 组件触发编辑器
+    const handleDoubleClick = (e: React.MouseEvent, id: string) => {
+      if (component.type === 'hg_canvas' && onCanvasDoubleClick) {
+        onCanvasDoubleClick(id);
+      }
+    };
+
     const handlers = createComponentHandlers(
       component.id,
       handleComponentMouseDown,
       handleMouseEnter,
       handleMouseLeave,
-      handleComponentContextMenu
+      handleComponentContextMenu,
+      handleDoubleClick
     );
 
     // 使用控件注册表

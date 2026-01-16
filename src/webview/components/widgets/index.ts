@@ -20,6 +20,7 @@ import { RectWidget } from './RectWidget';
 import { SvgWidget } from './SvgWidget';
 import { GlassWidget } from './GlassWidget';
 import { LottieWidget } from './LottieWidget';
+import { CanvasWidget } from './CanvasWidget';
 
 export { WidgetProps } from './types';
 
@@ -38,7 +39,7 @@ export const widgetRegistry: Record<string, React.FC<WidgetProps>> = {
   hg_view: ContainerWidget,
   hg_window: ContainerWidget,
   hg_image: ImageWidget,
-  hg_canvas: ContainerWidget,
+  hg_canvas: CanvasWidget,
   hg_list: ListWidget,
   hg_list_item: ListItemWidget,
   hg_video: VideoWidget,

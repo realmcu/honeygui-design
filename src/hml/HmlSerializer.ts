@@ -10,6 +10,8 @@ import { HmlParser } from './HmlParser';
 export class HmlSerializer {
     // 存储所有组件的ID到组件的映射，用于递归序列化时查找子组件
     private componentMap = new Map<string, Component>();
+    // 当前 HML 文件路径（用于生成 SVG 文件路径）
+    private currentHmlPath: string = '';
 
     /**
      * 将HML文档对象序列化为文件
@@ -20,6 +22,12 @@ export class HmlSerializer {
     public serializeToFile(document: HmlDocument, filePath: string): Promise<void> {
         return new Promise((resolve, reject) => {
             try {
+                // 保存当前 HML 路径，用于生成 SVG 文件路径
+                this.currentHmlPath = filePath;
+
+                // 先保存所有 Canvas 的 SVG 文件
+                this._saveCanvasSvgFiles(document, filePath);
+
                 const content = this.serialize(document);
 
                 // 1) 生成临时路径
@@ -57,6 +65,37 @@ export class HmlSerializer {
                 resolve();
             } catch (error) {
                 reject(new Error(`保存HML文件失败: ${error instanceof Error ? error.message : '未知错误'}`));
+            }
+        });
+    }
+
+    /**
+     * 保存所有 hg_canvas 组件的 SVG 内容到独立文件
+     * @param document HML 文档
+     * @param hmlFilePath HML 文件路径
+     */
+    private _saveCanvasSvgFiles(document: HmlDocument, hmlFilePath: string): void {
+        if (!document.view.components) return;
+
+        const hmlDir = path.dirname(hmlFilePath);
+        const hmlBaseName = path.basename(hmlFilePath, '.hml');
+
+        document.view.components.forEach(component => {
+            if (component.type === 'hg_canvas' && component.data?.svgContent) {
+                const svgContent = component.data.svgContent as string;
+                // 生成 SVG 文件名：hmlBaseName_canvasId.svg
+                const svgFileName = `${hmlBaseName}_${component.id}.svg`;
+                const svgFilePath = path.join(hmlDir, svgFileName);
+
+                try {
+                    fs.writeFileSync(svgFilePath, svgContent, 'utf8');
+                    // 更新组件的 svgFile 属性（相对路径）
+                    component.data.svgFile = svgFileName;
+                    // 清除 svgContent，避免重复存储
+                    delete component.data.svgContent;
+                } catch (error) {
+                    console.error(`[HmlSerializer] 保存 SVG 文件失败: ${svgFilePath}`, error);
+                }
             }
         });
     }

@@ -394,6 +394,17 @@ const zhCN = {
   'Tip: Only one switch view action per event': '提示：一个事件只能有一个"跳转界面"动作',
   'Click Add Color Stop to configure gradient': '点击"添加色标"开始配置渐变',
   'Video Properties': '视频属性',
+
+  // Canvas Editor Modal
+  'canvasEditor.title': '编辑画布',
+  'canvasEditor.textMode': 'SVG 文本',
+  'canvasEditor.designerMode': '设计器',
+  'canvasEditor.placeholder': '在此粘贴或输入 SVG 代码...\n\n示例:\n<svg viewBox="0 0 100 100">\n  <circle cx="50" cy="50" r="40" fill="#ff0000"/>\n</svg>',
+  'canvasEditor.preview': '预览',
+  'canvasEditor.importFile': '导入文件...',
+  'canvasEditor.editSvg': '编辑 SVG',
+  'common.cancel': '取消',
+  'common.confirm': '确定',
 };
 
 export default zhCN;

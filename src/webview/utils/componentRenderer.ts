@@ -177,7 +177,8 @@ export const createComponentHandlers = (
   onMouseDown: (e: React.MouseEvent, id: string) => void,
   onMouseEnter: () => void,
   onMouseLeave: () => void,
-  onContextMenu?: (e: React.MouseEvent, id: string) => void
+  onContextMenu?: (e: React.MouseEvent, id: string) => void,
+  onDoubleClick?: (e: React.MouseEvent, id: string) => void
 ) => ({
   onMouseDown: (e: React.MouseEvent) => {
     // 只响应鼠标左键
@@ -188,4 +189,8 @@ export const createComponentHandlers = (
   onMouseEnter,
   onMouseLeave,
   onContextMenu: onContextMenu ? (e: React.MouseEvent) => onContextMenu(e, componentId) : undefined,
+  onDoubleClick: onDoubleClick ? (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDoubleClick(e, componentId);
+  } : undefined,
 });

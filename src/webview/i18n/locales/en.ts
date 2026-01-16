@@ -394,6 +394,17 @@ const en = {
   'Tip: Only one switch view action per event': 'Tip: Only one "Switch View" action per event',
   'Click Add Color Stop to configure gradient': 'Click "Add Color Stop" to configure gradient',
   'Video Properties': 'Video Properties',
+
+  // Canvas Editor Modal
+  'canvasEditor.title': 'Edit Canvas',
+  'canvasEditor.textMode': 'SVG Text',
+  'canvasEditor.designerMode': 'Designer',
+  'canvasEditor.placeholder': 'Paste or type SVG code here...\n\nExample:\n<svg viewBox="0 0 100 100">\n  <circle cx="50" cy="50" r="40" fill="#ff0000"/>\n</svg>',
+  'canvasEditor.preview': 'Preview',
+  'canvasEditor.importFile': 'Import File...',
+  'canvasEditor.editSvg': 'Edit SVG',
+  'common.cancel': 'Cancel',
+  'common.confirm': 'Confirm',
 };
 
 export default en;

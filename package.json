@@ -250,7 +250,6 @@
           "default": 10000,
           "description": "预览超时时间（毫秒）"
         },
-
         "honeygui.ui.gridSize": {
           "type": "number",
           "default": 8,
@@ -343,6 +342,7 @@
   "dependencies": {
     "bmp-js": "^0.1.0",
     "chokidar": "^3.6.0",
+    "fabric": "^7.1.0",
     "fast-xml-parser": "^4.3.2",
     "html2canvas": "^1.4.1",
     "ini": "^4.1.3",
