@@ -75,6 +75,8 @@ env_params = {
 
 if sys.platform == 'win32':
     env = Environment(tools=['mingw'], **env_params)
+    env['LINK'] = 'g++'
+    env['SHLINK'] = 'g++'
 else:
     env = Environment(tools=['default'], PROGSUFFIX='', **env_params)
     env['LINK'] = 'g++'
