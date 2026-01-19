@@ -31,7 +31,7 @@ const componentDefinitions: ComponentDefinition[] = [
     properties: [
       { name: 'text', label: 'Text', type: 'string', defaultValue: 'Label', group: 'data' },
       { name: 'timeFormat', label: 'Time Format', type: 'select', defaultValue: '', 
-        options: ['', 'HH:mm:ss', 'HH:mm', 'YYYY-MM-DD', 'YYYY-MM-DD HH:mm:ss', 'MM-DD HH:mm'], group: 'data' },
+        options: ['', 'HH:mm:ss', 'HH:mm', 'HH:mm-split', 'YYYY-MM-DD', 'YYYY-MM-DD HH:mm:ss', 'MM-DD HH:mm'], group: 'data' },
       { name: 'hAlign', label: 'Horizontal Align', type: 'select', defaultValue: 'LEFT', 
         options: ['LEFT', 'CENTER', 'RIGHT'], group: 'style' },
       { name: 'vAlign', label: 'Vertical Align', type: 'select', defaultValue: 'TOP', 

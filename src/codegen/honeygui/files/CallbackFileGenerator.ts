@@ -54,9 +54,26 @@ export class CallbackFileGenerator {
 #define ${guardName}
 
 #include "gui_api.h"
+#include "gui_text.h"
 
-// 事件回调函数声明
 `;
+
+    // 为拆分时间组件添加 extern 声明
+    const splitTimeLabels = this.allComponents.filter(c => 
+      c.type === 'hg_label' && c.data?.timeFormat === 'HH:mm-split'
+    );
+    
+    if (splitTimeLabels.length > 0) {
+      code += `// 拆分时间组件全局变量（在 UI 文件中定义）\n`;
+      splitTimeLabels.forEach(label => {
+        code += `extern gui_text_t *${label.id}_hour;\n`;
+        code += `extern gui_text_t *${label.id}_colon;\n`;
+        code += `extern gui_text_t *${label.id}_min;\n`;
+      });
+      code += `\n`;
+    }
+
+    code += `// 事件回调函数声明\n`;
 
     const callbackFunctions = this.collectCallbackFunctions();
     const msgCallbackNames = new Set(this.collectMessageCallbackNames());
@@ -314,8 +331,9 @@ export class CallbackFileGenerator {
    */
   private getTimeBufferSize(timeFormat?: string): number {
     switch (timeFormat) {
-      case 'HH:mm:ss': return 10;  // "HH:MM:SS\0" = 9, 留一点余量
-      case 'HH:mm': return 8;       // "HH:MM\0" = 6
+      case 'HH:mm:ss': return 10;  // "HH:MM:SS\0" = 9
+      case 'HH:mm': return 10;      // "HH:MM\0" = 6，留余量
+      case 'HH:mm-split': return 10; // 拆分时间格式，与 HH:mm 相同，需要访问 str+3
       case 'YYYY-MM-DD': return 12; // "YYYY-MM-DD\0" = 11
       case 'YYYY-MM-DD HH:mm:ss': return 22; // "YYYY-MM-DD HH:MM:SS\0" = 20
       case 'MM-DD HH:mm': return 16; // "MM-DD HH:MM\0" = 13
@@ -335,6 +353,7 @@ export class CallbackFileGenerator {
         formatStr = '%02d:%02d:%02d';
         break;
       case 'HH:mm':
+      case 'HH:mm-split':  // 拆分时间格式使用相同的格式字符串
         formatStr = '%02d:%02d';
         break;
       case 'YYYY-MM-DD':
@@ -352,36 +371,59 @@ export class CallbackFileGenerator {
 
     let code = `void ${componentId}_time_update_cb(void *p)\n`;
     code += `{\n`;
-    code += `    GUI_UNUSED(p);\n`;
-    code += `    \n`;
-    code += `    time_t now = time(NULL);\n`;
-    code += `    struct tm *t = localtime(&now);\n`;
-    code += `    if (t == NULL)\n`;
-    code += `    {\n`;
-    code += `        return;\n`;
-    code += `    }\n`;
-    code += `    \n`;
-
-    // 根据格式生成不同的 sprintf 调用
-    if (timeFormat === 'HH:mm:ss') {
-      code += `    sprintf(${componentId}_time_str, "${formatStr}", t->tm_hour, t->tm_min, t->tm_sec);\n`;
-      //code += `    gui_log("[TIME] Formatted: %s (hour=%d, min=%d, sec=%d)\\n", ${componentId}_time_str, t->tm_hour, t->tm_min, t->tm_sec);\n`;
-    } else if (timeFormat === 'HH:mm') {
+    
+    // 拆分时间格式需要特殊处理
+    if (timeFormat === 'HH:mm-split') {
+      code += `    GUI_UNUSED(p);\n`;
+      code += `    \n`;
+      code += `    time_t now = time(NULL);\n`;
+      code += `    struct tm *t = localtime(&now);\n`;
+      code += `    if (t == NULL)\n`;
+      code += `    {\n`;
+      code += `        return;\n`;
+      code += `    }\n`;
+      code += `    \n`;
+      code += `    // 更新时间字符串\n`;
       code += `    sprintf(${componentId}_time_str, "${formatStr}", t->tm_hour, t->tm_min);\n`;
-      //code += `    gui_log("[TIME] Formatted: %s\\n", ${componentId}_time_str);\n`;
-    } else if (timeFormat === 'YYYY-MM-DD') {
-      code += `    sprintf(${componentId}_time_str, "${formatStr}", t->tm_year + 1900, t->tm_mon + 1, t->tm_mday);\n`;
-      //code += `    gui_log("[TIME] Formatted: %s\\n", ${componentId}_time_str);\n`;
-    } else if (timeFormat === 'YYYY-MM-DD HH:mm:ss') {
-      code += `    sprintf(${componentId}_time_str, "${formatStr}", t->tm_year + 1900, t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);\n`;
-      //code += `    gui_log("[TIME] Formatted: %s\\n", ${componentId}_time_str);\n`;
-    } else if (timeFormat === 'MM-DD HH:mm') {
-      code += `    sprintf(${componentId}_time_str, "${formatStr}", t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min);\n`;
-      //code += `    gui_log("[TIME] Formatted: %s\\n", ${componentId}_time_str);\n`;
-    }
+      code += `    \n`;
+      code += `    // 更新小时组件（前2个字符）\n`;
+      code += `    if (${componentId}_hour) {\n`;
+      code += `        gui_text_content_set(${componentId}_hour, ${componentId}_time_str, 2);\n`;
+      code += `    }\n`;
+      code += `    \n`;
+      code += `    // 更新分钟组件（后2个字符，跳过冒号）\n`;
+      code += `    if (${componentId}_min) {\n`;
+      code += `        gui_text_content_set(${componentId}_min, ${componentId}_time_str + 3, 2);\n`;
+      code += `    }\n`;
+    } else {
+      // 普通时间格式处理
+      code += `    GUI_UNUSED(p);\n`;
+      code += `    \n`;
+      code += `    time_t now = time(NULL);\n`;
+      code += `    struct tm *t = localtime(&now);\n`;
+      code += `    if (t == NULL)\n`;
+      code += `    {\n`;
+      code += `        return;\n`;
+      code += `    }\n`;
+      code += `    \n`;
 
-    code += `    \n`;
-    code += `    gui_text_content_set((gui_text_t *)${componentId}, ${componentId}_time_str, strlen(${componentId}_time_str));\n`;
+      // 根据格式生成不同的 sprintf 调用
+      if (timeFormat === 'HH:mm:ss') {
+        code += `    sprintf(${componentId}_time_str, "${formatStr}", t->tm_hour, t->tm_min, t->tm_sec);\n`;
+      } else if (timeFormat === 'HH:mm') {
+        code += `    sprintf(${componentId}_time_str, "${formatStr}", t->tm_hour, t->tm_min);\n`;
+      } else if (timeFormat === 'YYYY-MM-DD') {
+        code += `    sprintf(${componentId}_time_str, "${formatStr}", t->tm_year + 1900, t->tm_mon + 1, t->tm_mday);\n`;
+      } else if (timeFormat === 'YYYY-MM-DD HH:mm:ss') {
+        code += `    sprintf(${componentId}_time_str, "${formatStr}", t->tm_year + 1900, t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);\n`;
+      } else if (timeFormat === 'MM-DD HH:mm') {
+        code += `    sprintf(${componentId}_time_str, "${formatStr}", t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min);\n`;
+      }
+
+      code += `    \n`;
+      code += `    gui_text_content_set((gui_text_t *)${componentId}, ${componentId}_time_str, strlen(${componentId}_time_str));\n`;
+    }
+    
     code += `}`;
 
     return code;

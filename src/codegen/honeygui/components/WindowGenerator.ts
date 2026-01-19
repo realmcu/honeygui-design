@@ -63,7 +63,12 @@ export class WindowGenerator implements ComponentCodeGenerator {
       code += `\n${indentStr}// 创建时间更新定时器\n`;
       timeLabels.forEach(labelId => {
         const labelComp = context.componentMap.get(labelId);
-        const interval = this.getTimerInterval(labelComp?.data?.timeFormat);
+        const timeFormat = labelComp?.data?.timeFormat;
+        // 跳过拆分时间格式（已在 LabelGenerator 中创建定时器）
+        if (timeFormat === 'HH:mm-split') {
+          return;
+        }
+        const interval = this.getTimerInterval(timeFormat);
         code += `${indentStr}gui_obj_create_timer(GUI_BASE(${labelId}), ${interval}, true, ${labelId}_time_update_cb);\n`;
       });
     }
@@ -134,6 +139,7 @@ export class WindowGenerator implements ComponentCodeGenerator {
           args: 't->tm_hour, t->tm_min, t->tm_sec'
         };
       case 'HH:mm':
+      case 'HH:mm-split':  // 拆分时间格式使用相同的格式
         return {
           format: '%02d:%02d',
           args: 't->tm_hour, t->tm_min'

@@ -19,10 +19,20 @@ export class LabelGenerator implements ComponentCodeGenerator {
       return `${indentStr}// 警告: 未找到 ${component.type} 的API映射\n`;
     }
 
+    // 检查是否是拆分时间格式
+    if (component.data?.timeFormat === 'HH:mm-split') {
+      return this.generateSplitTimeCreation(component, indent, context);
+    }
+
     return `${indentStr}${component.id} = ${mapping.createFunction}(${parentRef}, "${component.name}", ${x}, ${y}, ${width}, ${height});\n`;
   }
 
   generatePropertySetters(component: Component, indent: number, _context: GeneratorContext): string {
+    // 拆分时间格式的属性设置在 generateSplitTimeCreation 中已完成
+    if (component.data?.timeFormat === 'HH:mm-split') {
+      return '';
+    }
+    
     let code = '';
     const indentStr = '    '.repeat(indent);
 
@@ -92,6 +102,239 @@ export class LabelGenerator implements ComponentCodeGenerator {
       code += `${indentStr}gui_obj_show(${component.id}, false);\n`;
     }
 
+    return code;
+  }
+
+  /**
+   * 生成拆分时间格式的代码（小时、冒号、分钟 + 呼吸灯动画）
+   */
+  private generateSplitTimeCreation(component: Component, indent: number, context: GeneratorContext): string {
+    const indentStr = '    '.repeat(indent);
+    const parentRef = context.getParentRef(component);
+    const { x, y, width } = component.position;
+    const fontSize = component.data?.fontSize || 16;
+    const color = component.style?.color || '#ffffff';
+    const rgb = this.colorToRgb(color);
+    
+    // 高度直接使用字体大小（参考 watchface_number.c）
+    // 确保 fontSize 是数字类型
+    const height = Number(fontSize);
+    
+    // 检查是否启用换行
+    const wordWrap = component.style?.wordWrap || false;
+    
+    // 确保坐标是数字类型
+    const numX = Number(x);
+    const numY = Number(y);
+    const numWidth = Number(width);
+    
+    // 计算三个部分的位置和尺寸
+    if (wordWrap) {
+      // 换行模式：小时在第一行，冒号和分钟在第二行
+      // 参考 SDK 示例：
+      // - 小时和分钟使用相同的 x 和宽度（以分钟的 x 为准）
+      // - 冒号宽度 = 字体大小 / 2
+      // - 都使用 MID_CENTER 对齐，数字自然上下对齐
+      const colonWidth = Math.floor(Number(fontSize) / 2);  // 冒号宽度 = 字体大小 / 2
+      const numWidth2 = numWidth - colonWidth;              // 数字部分宽度
+      
+      const hourX = numX + colonWidth;  // 小时 x = 原始 x + 冒号宽度
+      const colonX = numX;              // 冒号在左侧
+      const minX = numX + colonWidth;   // 分钟 x = 原始 x + 冒号宽度（与小时相同）
+      
+      const hourY = numY;
+      const colonY = Number(numY) + Number(height);     // 冒号在第二行
+      const minY = Number(numY) + Number(height);       // 分钟也在第二行
+      
+      return this.generateSplitTimeWithWrap(component, indent, context, 
+        hourX, hourY, numWidth2, colonX, colonY, colonWidth, minX, minY, numWidth2, height);
+    } else {
+      // 不换行模式：小时、冒号、分钟在同一行
+      const hourWidth = Math.floor(numWidth * 0.4);
+      const colonWidth = Math.floor(numWidth * 0.2);
+      const minWidth = Math.floor(numWidth * 0.4);
+      
+      const hourX = numX;
+      const colonX = numX + hourWidth;
+      const minX = numX + hourWidth + colonWidth;
+      
+      return this.generateSplitTimeInline(component, indent, context,
+        hourX, numY, hourWidth, colonX, numY, colonWidth, minX, numY, minWidth, height);
+    }
+  }
+
+  /**
+   * 生成换行模式的拆分时间代码
+   */
+  private generateSplitTimeWithWrap(
+    component: Component, indent: number, context: GeneratorContext,
+    hourX: number, hourY: number, hourWidth: number,
+    colonX: number, colonY: number, colonWidth: number,
+    minX: number, minY: number, minWidth: number,
+    height: number
+  ): string {
+    const indentStr = '    '.repeat(indent);
+    const parentRef = context.getParentRef(component);
+    const fontSize = component.data?.fontSize || 16;
+    const color = component.style?.color || '#ffffff';
+    const rgb = this.colorToRgb(color);
+    
+    // 确定字体类型和文件
+    const fontType = this.getFontType(component);
+    const fontFile = component.data?.fontFile;
+    const convertedFontFile = fontFile ? this.getConvertedFontFileName(component) : '';
+    const fontMode = this.getFontMode();
+    
+    // 拆分时间使用固定的对齐方式
+    // 参考 SDK 示例：小时和分钟都使用 MID_CENTER，数字自然上下对齐
+    const hourTextMode = 'MID_CENTER';
+    const minTextMode = 'MID_CENTER';
+    
+    let code = '';
+    
+    // 生成小时 label
+    code += `${indentStr}// 拆分时间 - 小时\n`;
+    code += `${indentStr}${component.id}_hour = gui_text_create(${parentRef}, "${component.name}_hour", ${hourX}, ${hourY}, ${hourWidth}, ${height});\n`;
+    code += `${indentStr}gui_text_set(${component.id}_hour, ${component.id}_time_str, ${fontType}, gui_rgb(${rgb.r}, ${rgb.g}, ${rgb.b}), 2, ${fontSize});\n`;
+    if (fontFile) {
+      code += `${indentStr}gui_text_type_set(${component.id}_hour, "${convertedFontFile}", ${fontMode});\n`;
+    }
+    code += `${indentStr}gui_text_mode_set(${component.id}_hour, ${hourTextMode});\n`;
+    
+    // 应用字间距和行间距
+    const letterSpacing = component.style?.letterSpacing;
+    if (letterSpacing !== undefined && letterSpacing !== 0) {
+      code += `${indentStr}gui_text_extra_letter_spacing_set(${component.id}_hour, ${letterSpacing});\n`;
+    }
+    const lineSpacing = component.style?.lineSpacing;
+    if (lineSpacing !== undefined && lineSpacing !== 0) {
+      code += `${indentStr}gui_text_extra_line_spacing_set(${component.id}_hour, ${lineSpacing});\n`;
+    }
+    
+    // 生成冒号 label
+    code += `${indentStr}// 拆分时间 - 冒号（带呼吸灯）\n`;
+    code += `${indentStr}${component.id}_colon = gui_text_create(${parentRef}, "${component.name}_colon", ${colonX}, ${colonY}, ${colonWidth}, ${height});\n`;
+    code += `${indentStr}gui_text_set(${component.id}_colon, ":", ${fontType}, gui_rgb(${rgb.r}, ${rgb.g}, ${rgb.b}), 1, ${fontSize});\n`;
+    if (fontFile) {
+      code += `${indentStr}gui_text_type_set(${component.id}_colon, "${convertedFontFile}", ${fontMode});\n`;
+    }
+    code += `${indentStr}gui_text_mode_set(${component.id}_colon, MID_CENTER);\n`;
+    
+    // 生成分钟 label
+    code += `${indentStr}// 拆分时间 - 分钟\n`;
+    code += `${indentStr}${component.id}_min = gui_text_create(${parentRef}, "${component.name}_min", ${minX}, ${minY}, ${minWidth}, ${height});\n`;
+    code += `${indentStr}gui_text_set(${component.id}_min, ${component.id}_time_str + 3, ${fontType}, gui_rgb(${rgb.r}, ${rgb.g}, ${rgb.b}), 2, ${fontSize});\n`;
+    if (fontFile) {
+      code += `${indentStr}gui_text_type_set(${component.id}_min, "${convertedFontFile}", ${fontMode});\n`;
+    }
+    code += `${indentStr}gui_text_mode_set(${component.id}_min, ${minTextMode});\n`;
+    
+    // 应用字间距和行间距到分钟
+    if (letterSpacing !== undefined && letterSpacing !== 0) {
+      code += `${indentStr}gui_text_extra_letter_spacing_set(${component.id}_min, ${letterSpacing});\n`;
+    }
+    if (lineSpacing !== undefined && lineSpacing !== 0) {
+      code += `${indentStr}gui_text_extra_line_spacing_set(${component.id}_min, ${lineSpacing});\n`;
+    }
+    
+    // 创建定时器用于呼吸灯动画
+    code += `${indentStr}// 冒号呼吸灯动画定时器\n`;
+    code += `${indentStr}gui_obj_create_timer(GUI_BASE(${component.id}_colon), 50, true, ${component.id}_breath_anim_cb);\n`;
+    
+    // 创建时间更新定时器
+    code += `${indentStr}// 时间更新定时器\n`;
+    code += `${indentStr}gui_obj_create_timer(${parentRef}, 1000, true, ${component.id}_time_update_cb);\n`;
+    
+    // 主组件 ID 指向小时 label
+    code += `${indentStr}${component.id} = GUI_BASE(${component.id}_hour);\n`;
+    
+    return code;
+  }
+
+  /**
+   * 生成不换行模式的拆分时间代码
+   */
+  private generateSplitTimeInline(
+    component: Component, indent: number, context: GeneratorContext,
+    hourX: number, hourY: number, hourWidth: number,
+    colonX: number, colonY: number, colonWidth: number,
+    minX: number, minY: number, minWidth: number,
+    height: number
+  ): string {
+    const indentStr = '    '.repeat(indent);
+    const parentRef = context.getParentRef(component);
+    const fontSize = Number(component.data?.fontSize) || 16;
+    const color = component.style?.color || '#ffffff';
+    const rgb = this.colorToRgb(color);
+    
+    // 确定字体类型和文件
+    const fontType = this.getFontType(component);
+    const fontFile = component.data?.fontFile;
+    const convertedFontFile = fontFile ? this.getConvertedFontFileName(component) : '';
+    const fontMode = this.getFontMode();
+    
+    // 拆分时间使用固定的对齐方式
+    const hourTextMode = 'MID_LEFT';
+    const minTextMode = 'MID_RIGHT';
+    
+    let code = '';
+    
+    // 生成小时 label
+    code += `${indentStr}// 拆分时间 - 小时\n`;
+    code += `${indentStr}${component.id}_hour = gui_text_create(${parentRef}, "${component.name}_hour", ${hourX}, ${hourY}, ${hourWidth}, ${height});\n`;
+    code += `${indentStr}gui_text_set(${component.id}_hour, ${component.id}_time_str, ${fontType}, gui_rgb(${rgb.r}, ${rgb.g}, ${rgb.b}), 2, ${fontSize});\n`;
+    if (fontFile) {
+      code += `${indentStr}gui_text_type_set(${component.id}_hour, "${convertedFontFile}", ${fontMode});\n`;
+    }
+    code += `${indentStr}gui_text_mode_set(${component.id}_hour, ${hourTextMode});\n`;
+    
+    // 应用字间距和行间距
+    const letterSpacing = component.style?.letterSpacing;
+    if (letterSpacing !== undefined && letterSpacing !== 0) {
+      code += `${indentStr}gui_text_extra_letter_spacing_set(${component.id}_hour, ${letterSpacing});\n`;
+    }
+    const lineSpacing = component.style?.lineSpacing;
+    if (lineSpacing !== undefined && lineSpacing !== 0) {
+      code += `${indentStr}gui_text_extra_line_spacing_set(${component.id}_hour, ${lineSpacing});\n`;
+    }
+    
+    // 生成冒号 label
+    code += `${indentStr}// 拆分时间 - 冒号（带呼吸灯）\n`;
+    code += `${indentStr}${component.id}_colon = gui_text_create(${parentRef}, "${component.name}_colon", ${colonX}, ${colonY}, ${colonWidth}, ${height});\n`;
+    code += `${indentStr}gui_text_set(${component.id}_colon, ":", ${fontType}, gui_rgb(${rgb.r}, ${rgb.g}, ${rgb.b}), 1, ${fontSize});\n`;
+    if (fontFile) {
+      code += `${indentStr}gui_text_type_set(${component.id}_colon, "${convertedFontFile}", ${fontMode});\n`;
+    }
+    code += `${indentStr}gui_text_mode_set(${component.id}_colon, MID_CENTER);\n`;
+    
+    // 生成分钟 label
+    code += `${indentStr}// 拆分时间 - 分钟\n`;
+    code += `${indentStr}${component.id}_min = gui_text_create(${parentRef}, "${component.name}_min", ${minX}, ${minY}, ${minWidth}, ${height});\n`;
+    code += `${indentStr}gui_text_set(${component.id}_min, ${component.id}_time_str + 3, ${fontType}, gui_rgb(${rgb.r}, ${rgb.g}, ${rgb.b}), 2, ${fontSize});\n`;
+    if (fontFile) {
+      code += `${indentStr}gui_text_type_set(${component.id}_min, "${convertedFontFile}", ${fontMode});\n`;
+    }
+    code += `${indentStr}gui_text_mode_set(${component.id}_min, ${minTextMode});\n`;
+    
+    // 应用字间距和行间距到分钟
+    if (letterSpacing !== undefined && letterSpacing !== 0) {
+      code += `${indentStr}gui_text_extra_letter_spacing_set(${component.id}_min, ${letterSpacing});\n`;
+    }
+    if (lineSpacing !== undefined && lineSpacing !== 0) {
+      code += `${indentStr}gui_text_extra_line_spacing_set(${component.id}_min, ${lineSpacing});\n`;
+    }
+    
+    // 创建定时器用于呼吸灯动画
+    code += `${indentStr}// 冒号呼吸灯动画定时器\n`;
+    code += `${indentStr}gui_obj_create_timer(GUI_BASE(${component.id}_colon), 50, true, ${component.id}_breath_anim_cb);\n`;
+    
+    // 创建时间更新定时器
+    code += `${indentStr}// 时间更新定时器\n`;
+    code += `${indentStr}gui_obj_create_timer(${parentRef}, 1000, true, ${component.id}_time_update_cb);\n`;
+    
+    // 主组件 ID 指向小时 label
+    code += `${indentStr}${component.id} = GUI_BASE(${component.id}_hour);\n`;
+    
     return code;
   }
 

@@ -6,7 +6,16 @@ import { useFontGlyphCheck } from '../../hooks/useFontGlyphCheck';
 export const LabelWidget: React.FC<WidgetProps> = ({ component, style, handlers }) => {
   const fontPath = component.data?.fontFile;
   const { fontFamily, isLoading: fontLoading } = useFontLoader(fontPath);
-  const text = component.data?.text || component.name;
+  const timeFormat = component.data?.timeFormat || '';
+  const isSplitTime = timeFormat === 'HH:mm-split';
+  
+  // 拆分时间模式下使用用户设置的文本，如果没有则使用默认示例
+  let displayText = component.data?.text || component.name;
+  if (isSplitTime && !component.data?.text) {
+    displayText = '12:34'; // 拆分时间的默认预览（仅当用户未设置文本时）
+  }
+  
+  const text = displayText;
   const [fontMetrics, setFontMetrics] = React.useState<{ scaleFactor: number } | null>(null);
   
   // 检测字体是否支持文本中的所有字符（传递 fontPath 给后端解析）
@@ -98,6 +107,68 @@ export const LabelWidget: React.FC<WidgetProps> = ({ component, style, handlers 
     wordBreak: 'break-all',
     lineHeight: '1.4',
   };
+
+  // 拆分时间的特殊渲染（仅在 HH:mm-split 格式且启用换行时）
+  if (isSplitTime && wordWrap && text.includes(':')) {
+    const parts = text.split(':');
+    if (parts.length === 2) {
+      const hour = parts[0];
+      const minute = parts[1];
+      
+      // 参考 SDK 示例布局：
+      // - 冒号宽度 = 字体大小 / 2
+      // - 小时和分钟使用相同的 x 和宽度
+      // - 都使用居中对齐
+      const containerWidth = typeof style?.width === 'number' ? style.width : 0;
+      const colonWidth = actualFontSize / 2;  // 冒号宽度 = 字体大小 / 2
+      const numWidth = containerWidth - colonWidth;  // 数字部分宽度
+      
+      return (
+        <div key={component.id} style={{...labelStyle, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: 0}} {...handlers}>
+          {/* 第一行：小时（居中对齐） */}
+          <div style={{ 
+            fontFamily: fontFamily || 'inherit', 
+            lineHeight: `${lineHeight}px`,
+            width: `${numWidth}px`,
+            marginLeft: `${colonWidth}px`,
+            textAlign: 'center'
+          }}>
+            {hour}
+          </div>
+          {/* 第二行：冒号 + 分钟 */}
+          <div style={{ 
+            display: 'flex',
+            width: '100%',
+            lineHeight: `${lineHeight}px`
+          }}>
+            {/* 冒号（居中） */}
+            <div style={{ 
+              fontFamily: fontFamily || 'inherit',
+              width: `${colonWidth}px`,
+              textAlign: 'center'
+            }}>
+              :
+            </div>
+            {/* 分钟（居中对齐，与小时上下对齐） */}
+            <div style={{ 
+              fontFamily: fontFamily || 'inherit',
+              width: `${numWidth}px`,
+              textAlign: 'center'
+            }}>
+              {minute}
+            </div>
+          </div>
+          {/* 显示警告信息 */}
+          {showWarning && (
+            <span style={warningStyle}>
+              ⚠️ 字体缺少字形: {missingChars.slice(0, 5).map(c => `"${c}"`).join(' ')}
+              {missingChars.length > 5 && ` 等${missingChars.length}个字符`}
+            </span>
+          )}
+        </div>
+      );
+    }
+  }
 
   return (
     <div key={component.id} style={labelStyle} {...handlers}>

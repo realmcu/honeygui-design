@@ -195,6 +195,13 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
         else {
           code += `extern gui_obj_t *${comp.id};\n`;
         }
+        
+        // 如果是拆分时间格式的 label，添加子组件声明
+        if (comp.type === 'hg_label' && comp.data?.timeFormat === 'HH:mm-split') {
+          code += `extern gui_text_t *${comp.id}_hour;\n`;
+          code += `extern gui_text_t *${comp.id}_colon;\n`;
+          code += `extern gui_text_t *${comp.id}_min;\n`;
+        }
       }
     });
 
@@ -251,6 +258,13 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
         }
         else {
           code += `gui_obj_t *${comp.id} = NULL;\n`;
+        }
+        
+        // 如果是拆分时间格式的 label，添加子组件定义
+        if (comp.type === 'hg_label' && comp.data?.timeFormat === 'HH:mm-split') {
+          code += `gui_text_t *${comp.id}_hour = NULL;\n`;
+          code += `gui_text_t *${comp.id}_colon = NULL;\n`;
+          code += `gui_text_t *${comp.id}_min = NULL;\n`;
         }
       }
     });
@@ -311,6 +325,15 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
             );
           }
         }
+      });
+    }
+
+    // 生成拆分时间标签的回调函数
+    const splitTimeLabels = this.components.filter(c => c.type === 'hg_label' && c.data?.timeFormat === 'HH:mm-split');
+    if (splitTimeLabels.length > 0) {
+      code += `// 拆分时间标签的回调函数\n`;
+      splitTimeLabels.forEach(label => {
+        code += this.generateSplitTimeCallbacks(label);
       });
     }
 
@@ -639,12 +662,70 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
   }
 
   /**
+   * 生成拆分时间标签的回调函数
+   */
+  private generateSplitTimeCallbacks(component: Component): string {
+    const color = component.style?.color || '#ffffff';
+    const rgb = this.colorToRgb(color);
+    
+    let code = `
+// ${component.id} 拆分时间回调函数
+static int8_t ${component.id}_breath_dir = -1;
+static int16_t ${component.id}_current_alpha = 255;
+
+static void ${component.id}_breath_anim_cb(void *p)
+{
+    gui_text_t *t_colon = (gui_text_t *)p;
+    
+    ${component.id}_current_alpha += (${component.id}_breath_dir * 15);
+
+    if (${component.id}_current_alpha >= 255) {
+        ${component.id}_current_alpha = 255;
+        ${component.id}_breath_dir = -1;
+    } else if (${component.id}_current_alpha <= 50) {
+        ${component.id}_current_alpha = 50;
+        ${component.id}_breath_dir = 1;
+    }
+    
+    gui_color_t new_color = gui_rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, (uint8_t)${component.id}_current_alpha);
+    gui_text_color_set(t_colon, new_color);
+}
+
+`;
+    return code;
+  }
+
+  /**
+   * 将颜色字符串转换为 RGB 对象
+   */
+  private colorToRgb(color: string): { r: number; g: number; b: number } {
+    if (color.startsWith('#')) {
+      const hex = color.slice(1);
+      if (hex.length === 6) {
+        return {
+          r: parseInt(hex.slice(0, 2), 16),
+          g: parseInt(hex.slice(2, 4), 16),
+          b: parseInt(hex.slice(4, 6), 16),
+        };
+      } else if (hex.length === 3) {
+        return {
+          r: parseInt(hex[0] + hex[0], 16),
+          g: parseInt(hex[1] + hex[1], 16),
+          b: parseInt(hex[2] + hex[2], 16),
+        };
+      }
+    }
+    return { r: 255, g: 255, b: 255 };  // 默认白色
+  }
+
+  /**
    * 获取时间格式对应的缓冲区大小
    */
   private getTimeBufferSize(timeFormat?: string): number {
     switch (timeFormat) {
       case 'HH:mm:ss': return 10;
-      case 'HH:mm': return 8;
+      case 'HH:mm': return 10;
+      case 'HH:mm-split': return 10;  // 拆分时间格式，需要访问 str+3，所以需要足够空间
       case 'YYYY-MM-DD': return 12;
       case 'YYYY-MM-DD HH:mm:ss': return 22;
       case 'MM-DD HH:mm': return 16;
