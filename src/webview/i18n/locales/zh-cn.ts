@@ -124,7 +124,12 @@ const zhCN = {
   'Redo': '重做',
   'Generate Code': '生成代码',
   'Compile & Simulate': '编译仿真',
+  'Simulate': '仿真',
   'Preview': '预览',
+  'UART Download': 'UART 下载',
+  'Download': '下载',
+  'Clean Build': '清理编译',
+  'Clean': '清理',
   'Zoom In': '放大',
   'Zoom Out': '缩小',
   'Reset Zoom': '重置缩放',
@@ -151,8 +156,6 @@ const zhCN = {
   'White': '白色',
   'Black': '黑色',
   'Dark Gray': '深灰',
-  'Download': '下载',
-  'UART Download': 'UART 下载到开发板',
 
   // Assets Panel
   'Assets': '资源',

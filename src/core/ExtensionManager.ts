@@ -41,13 +41,6 @@ export class ExtensionManager {
         }
 
         try {
-            // 注册预览服务
-            const previewServiceModule = await import('../preview/PreviewService');
-            const PreviewService = previewServiceModule.PreviewService;
-            const previewService = new PreviewService(this.context);
-            previewService.registerCommands();
-            this.disposables.push(previewService);
-
             // 注册编译仿真服务
             const simulationServiceModule = await import('../simulation/SimulationService');
             const SimulationService = simulationServiceModule.SimulationService;
@@ -224,23 +217,35 @@ class QuickViewDataProvider implements vscode.TreeDataProvider<vscode.TreeItem> 
     }
 
     getChildren(element?: vscode.TreeItem | undefined): vscode.ProviderResult<vscode.TreeItem[]> {
-        // 返回快速视图的数据项
         const quickItems: vscode.TreeItem[] = [];
         
-        const startProjectItem = new vscode.TreeItem(vscode.l10n.t('Start Project'), vscode.TreeItemCollapsibleState.None);
-        startProjectItem.command = { command: 'honeygui.startProject', title: vscode.l10n.t('Start Project') };
-        startProjectItem.iconPath = new vscode.ThemeIcon('play');
-        quickItems.push(startProjectItem);
+        // 编译仿真
+        const simulationItem = new vscode.TreeItem(vscode.l10n.t('Compile & Simulate'), vscode.TreeItemCollapsibleState.None);
+        simulationItem.command = { command: 'honeygui.simulation', title: vscode.l10n.t('Compile & Simulate') };
+        simulationItem.iconPath = new vscode.ThemeIcon('rocket');
+        simulationItem.tooltip = vscode.l10n.t('Compile and run simulation');
+        quickItems.push(simulationItem);
         
-        const stopProjectItem = new vscode.TreeItem(vscode.l10n.t('Stop Project'), vscode.TreeItemCollapsibleState.None);
-        stopProjectItem.command = { command: 'honeygui.stopProject', title: vscode.l10n.t('Stop Project') };
-        stopProjectItem.iconPath = new vscode.ThemeIcon('stop');
-        quickItems.push(stopProjectItem);
+        // 停止仿真
+        const stopSimulationItem = new vscode.TreeItem(vscode.l10n.t('Stop Simulation'), vscode.TreeItemCollapsibleState.None);
+        stopSimulationItem.command = { command: 'honeygui.simulation.stop', title: vscode.l10n.t('Stop Simulation') };
+        stopSimulationItem.iconPath = new vscode.ThemeIcon('debug-stop');
+        stopSimulationItem.tooltip = vscode.l10n.t('Stop running simulation');
+        quickItems.push(stopSimulationItem);
         
-        const restartProjectItem = new vscode.TreeItem(vscode.l10n.t('Restart Project'), vscode.TreeItemCollapsibleState.None);
-        restartProjectItem.command = { command: 'honeygui.restartProject', title: vscode.l10n.t('Restart Project') };
-        restartProjectItem.iconPath = new vscode.ThemeIcon('refresh');
-        quickItems.push(restartProjectItem);
+        // 清理编译
+        const cleanItem = new vscode.TreeItem(vscode.l10n.t('Clean Build'), vscode.TreeItemCollapsibleState.None);
+        cleanItem.command = { command: 'honeygui.simulation.clean', title: vscode.l10n.t('Clean Build') };
+        cleanItem.iconPath = new vscode.ThemeIcon('trash');
+        cleanItem.tooltip = vscode.l10n.t('Clean build artifacts');
+        quickItems.push(cleanItem);
+        
+        // UART 下载
+        const uartItem = new vscode.TreeItem(vscode.l10n.t('UART Download'), vscode.TreeItemCollapsibleState.None);
+        uartItem.command = { command: 'honeygui.uartDownload', title: vscode.l10n.t('UART Download') };
+        uartItem.iconPath = new vscode.ThemeIcon('cloud-download');
+        uartItem.tooltip = vscode.l10n.t('Download to board via UART');
+        quickItems.push(uartItem);
         
         return quickItems;
     }

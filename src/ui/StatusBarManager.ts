@@ -2,12 +2,10 @@ import * as vscode from 'vscode';
 
 export class StatusBarManager {
     private static instance: StatusBarManager | null = null;
-    private statusBarItem: vscode.StatusBarItem;
 
     private constructor(context: vscode.ExtensionContext) {
-        this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-        this.statusBarItem.command = 'honeygui.collaboration.stop';
-        context.subscriptions.push(this.statusBarItem);
+        // 协同状态不再显示在状态栏
+        context.subscriptions.push();
     }
 
     public static getInstance(context?: vscode.ExtensionContext): StatusBarManager {
@@ -21,14 +19,6 @@ export class StatusBarManager {
     }
 
     public updateCollaborationStatus(role: 'Host' | 'Guest' | 'None', info?: string) {
-        if (role === 'None') {
-            this.statusBarItem.hide();
-            return;
-        }
-
-        const icon = role === 'Host' ? '$(broadcast)' : '$(plug)';
-        this.statusBarItem.text = `${icon} HoneyGUI: ${role} (${info || 'Connected'})`;
-        this.statusBarItem.tooltip = 'Click to stop collaboration session';
-        this.statusBarItem.show();
+        // 状态栏已移除，不再更新
     }
 }

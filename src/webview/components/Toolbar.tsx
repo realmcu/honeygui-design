@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useDesignerStore } from '../store';
-import { Save, Code, Play, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, GitBranch, Palette, AlignLeft, Grid, Download } from 'lucide-react';
+import { Save, Code, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, GitBranch, Palette, AlignLeft, Grid, Download, Rocket, Trash2 } from 'lucide-react';
 import { AlignType, DistributeType, ResizeType, getAlignmentConfigsByCategory } from '../utils/alignmentUtils';
 import { t } from '../i18n';
 import './Toolbar.css';
@@ -88,17 +88,24 @@ const Toolbar: React.FC = () => {
     });
   };
 
-  const handlePreview = () => {
-    window.vscodeAPI?.postMessage({
-      command: 'executeCommand',
-      commandId: 'honeygui.preview',
-    });
-  };
-
   const handleUartDownload = () => {
     window.vscodeAPI?.postMessage({
       command: 'executeCommand',
       commandId: 'honeygui.uartDownload',
+    });
+  };
+
+  const handleSimulation = () => {
+    window.vscodeAPI?.postMessage({
+      command: 'executeCommand',
+      commandId: 'honeygui.simulation',
+    });
+  };
+
+  const handleClean = () => {
+    window.vscodeAPI?.postMessage({
+      command: 'executeCommand',
+      commandId: 'honeygui.simulation.clean',
     });
   };
 
@@ -322,11 +329,11 @@ const Toolbar: React.FC = () => {
         </button>
         <button
           className="toolbar-button primary"
-          onClick={handlePreview}
-          title={t('Preview')}
+          onClick={handleSimulation}
+          title={t('Compile & Simulate')}
         >
-          <Play size={16} />
-          <span>{t('Preview')}</span>
+          <Rocket size={16} />
+          <span>{t('Simulate')}</span>
         </button>
         <button
           className="toolbar-button"
@@ -335,6 +342,14 @@ const Toolbar: React.FC = () => {
         >
           <Download size={16} />
           <span>{t('Download')}</span>
+        </button>
+        <button
+          className="toolbar-button"
+          onClick={handleClean}
+          title={t('Clean Build')}
+        >
+          <Trash2 size={16} />
+          <span>{t('Clean')}</span>
         </button>
       </div>
     </div>

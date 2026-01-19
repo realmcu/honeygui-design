@@ -7,7 +7,6 @@
   "command.createNewHml": "HoneyGUI: New Design",
   "command.tools": "HoneyGUI: Resource Conversion Tools",
   "command.codegen": "HoneyGUI: Generate Code",
-  "command.preview": "HoneyGUI: Preview",
   "command.simulation": "HoneyGUI: Compile & Simulate",
   "command.simulationStop": "HoneyGUI: Stop Simulation",
   "command.openInTextEditor": "Open with Text Editor",

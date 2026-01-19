@@ -7,7 +7,6 @@
   "command.createNewHml": "HoneyGUI: 新建设计",
   "command.tools": "HoneyGUI: 资源转换工具",
   "command.codegen": "HoneyGUI: 生成代码",
-  "command.preview": "HoneyGUI: 预览",
   "command.simulation": "HoneyGUI: 编译仿真",
   "command.simulationStop": "HoneyGUI: 停止仿真",
   "command.openInTextEditor": "用文本编辑器打开",

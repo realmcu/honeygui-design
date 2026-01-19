@@ -167,12 +167,6 @@
         "category": "HoneyGUI"
       },
       {
-        "command": "honeygui.preview",
-        "title": "%command.preview%",
-        "category": "HoneyGUI",
-        "icon": "$(eye)"
-      },
-      {
         "command": "honeygui.simulation",
         "title": "%command.simulation%",
         "category": "HoneyGUI",
@@ -240,16 +234,6 @@
           "default": "ui",
           "description": "HML输出目录"
         },
-        "honeygui.preview.runnerPath": {
-          "type": "string",
-          "default": "",
-          "description": "预览Runner路径"
-        },
-        "honeygui.preview.timeoutMs": {
-          "type": "number",
-          "default": 10000,
-          "description": "预览超时时间（毫秒）"
-        },
         "honeygui.ui.gridSize": {
           "type": "number",
           "default": 8,
@@ -269,11 +253,6 @@
           "type": "boolean",
           "default": true,
           "description": "启用调试信息"
-        },
-        "honeygui.preview.autoReload": {
-          "type": "boolean",
-          "default": true,
-          "description": "启用自动重载"
         }
       }
     }

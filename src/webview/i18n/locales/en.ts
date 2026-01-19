@@ -124,7 +124,12 @@ const en = {
   'Redo': 'Redo',
   'Generate Code': 'Generate Code',
   'Compile & Simulate': 'Compile & Simulate',
+  'Simulate': 'Simulate',
   'Preview': 'Preview',
+  'UART Download': 'UART Download',
+  'Download': 'Download',
+  'Clean Build': 'Clean Build',
+  'Clean': 'Clean',
   'Zoom In': 'Zoom In',
   'Zoom Out': 'Zoom Out',
   'Reset Zoom': 'Reset Zoom',
@@ -151,8 +156,6 @@ const en = {
   'White': 'White',
   'Black': 'Black',
   'Dark Gray': 'Dark Gray',
-  'Download': 'Download',
-  'UART Download': 'UART Download',
 
   // Assets Panel
   'Assets': 'Assets',

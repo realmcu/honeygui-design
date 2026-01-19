@@ -19,7 +19,6 @@ const SUPPORTED_CHIPS = ['RTL87X3E', 'RTL87X3EP', 'RTL87X3D', 'RTL87X3G'];
  * 使用 mpcli 工具下载 romfs.bin 到开发板
  */
 export class UartDownloadService {
-    private statusBarItem: vscode.StatusBarItem;
     private outputChannel: vscode.OutputChannel;
     private isDownloading = false;
     private mpcliPath: string;
@@ -28,11 +27,12 @@ export class UartDownloadService {
         // mpcli 工具路径（相对于扩展目录）
         this.mpcliPath = path.join(context.extensionPath, 'tools', 'mpcli_meta_tool_py_v4.0.0.4');
 
-        this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
-        this.statusBarItem.text = `$(cloud-download) ${vscode.l10n.t('UART Download')}`;
-        this.statusBarItem.command = 'honeygui.uartDownload';
-        this.statusBarItem.tooltip = vscode.l10n.t('UART download romfs.bin to board');
-        this.statusBarItem.show();
+        // 移除状态栏按钮，功能移至设计器工具栏
+        // this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
+        // this.statusBarItem.text = `$(cloud-download) ${vscode.l10n.t('UART Download')}`;
+        // this.statusBarItem.command = 'honeygui.uartDownload';
+        // this.statusBarItem.tooltip = vscode.l10n.t('UART download romfs.bin to board');
+        // this.statusBarItem.show();
 
         this.outputChannel = vscode.window.createOutputChannel('HoneyGUI UART');
     }
@@ -429,7 +429,7 @@ export class UartDownloadService {
     }
 
     private updateStatusBar(text: string): void {
-        this.statusBarItem.text = text;
+        // 状态栏已移除
     }
 
     private log(message: string, isError = false): void {
@@ -437,7 +437,6 @@ export class UartDownloadService {
     }
 
     dispose(): void {
-        this.statusBarItem.dispose();
         this.outputChannel.dispose();
     }
 }

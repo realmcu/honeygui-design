@@ -12,27 +12,11 @@ import { ProjectUtils } from '../utils/ProjectUtils';
 export class SimulationService {
     private context: vscode.ExtensionContext;
     private runner: SimulationRunner | null = null;
-    private statusBarItem: vscode.StatusBarItem;
-    private cleanStatusBarItem: vscode.StatusBarItem;
     private outputChannel: vscode.OutputChannel;
     private isRunning: boolean = false;
 
     constructor(context: vscode.ExtensionContext) {
         this.context = context;
-        
-        // 创建状态栏
-        this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
-        this.statusBarItem.text = `$(rocket) ${vscode.l10n.t('Compile & Simulate: Not Running')}`;
-        this.statusBarItem.command = 'honeygui.simulation';
-        this.statusBarItem.tooltip = vscode.l10n.t('Click to start simulation');
-        this.statusBarItem.show();
-
-        // 创建 Clean 状态栏按钮
-        this.cleanStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
-        this.cleanStatusBarItem.text = '$(trash) Clean';
-        this.cleanStatusBarItem.command = 'honeygui.simulation.clean';
-        this.cleanStatusBarItem.tooltip = vscode.l10n.t('Clean build artifacts');
-        this.cleanStatusBarItem.show();
 
         // 创建输出通道
         this.outputChannel = vscode.window.createOutputChannel('HoneyGUI Simulation');
@@ -245,23 +229,12 @@ export class SimulationService {
     }
 
     /**
-     * 更新状态栏
+     * 更新状态栏（已移除）
      */
     private updateStatusBar(text: string): void {
-        this.statusBarItem.text = text;
-        
-        // 只在状态真正改变时才更新命令和 tooltip
+        // 状态栏已移除，功能已移至 QUICK 面板
         const nowRunning = text.includes('Running');
-        if (nowRunning !== this.isRunning) {
-            this.isRunning = nowRunning;
-            if (nowRunning) {
-                this.statusBarItem.command = 'honeygui.simulation.stop';
-                this.statusBarItem.tooltip = vscode.l10n.t('Click to stop simulation');
-            } else {
-                this.statusBarItem.command = 'honeygui.simulation';
-                this.statusBarItem.tooltip = vscode.l10n.t('Click to start simulation');
-            }
-        }
+        this.isRunning = nowRunning;
     }
 
     /**
@@ -269,7 +242,6 @@ export class SimulationService {
      */
     dispose(): void {
         this.stopSimulation();
-        this.statusBarItem.dispose();
         this.outputChannel.dispose();
     }
 }

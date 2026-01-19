@@ -165,6 +165,14 @@
   padding: 6px 8px;
   background: var(--vscode-sideBar-background);
   border-bottom: 1px solid var(--vscode-panel-border);
+  overflow-x: auto;
+  flex-wrap: wrap;
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .tool-btn {
@@ -179,10 +187,16 @@
   border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
+  flex-shrink: 0;
 }
 
-.tool-btn:hover {
+.tool-btn:hover:not(:disabled) {
   background: var(--vscode-button-secondaryHoverBackground);
+}
+
+.tool-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .tool-btn.active {
@@ -195,6 +209,7 @@
   height: 20px;
   background: var(--vscode-panel-border);
   margin: 0 4px;
+  flex-shrink: 0;
 }
 
 .color-picker {
@@ -223,13 +238,23 @@
 }
 
 .stroke-width input[type="number"] {
-  width: 40px;
+  width: 50px;
   padding: 2px 4px;
   background: var(--vscode-input-background);
   color: var(--vscode-input-foreground);
   border: 1px solid var(--vscode-input-border);
   border-radius: 2px;
   font-size: 11px;
+}
+
+.toolbar-group select {
+  padding: 2px 4px;
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border);
+  border-radius: 2px;
+  font-size: 11px;
+  cursor: pointer;
 }
 
 .fabric-container {
