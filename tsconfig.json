@@ -14,7 +14,11 @@
     "noImplicitAny": true,
     "noImplicitReturns": true,
     "noImplicitThis": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "baseUrl": ".",
+    "paths": {
+      "video-converter-ts": ["./node_modules/video-converter-ts/dist/index.d.ts"]
+    }
   },
   "include": [
     "src/**/*",
