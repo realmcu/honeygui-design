@@ -34,10 +34,10 @@ export class Model3DGenerator implements ComponentCodeGenerator {
     // 交互动画配置
     const touchRotationEnabled = component.data?.touchRotationEnabled as boolean ?? false;
     const touchRotationAxis = (component.data?.touchRotationAxis as string) ?? 'y';
-    const touchRotationSensitivity = (component.data?.touchRotationSensitivity as number) ?? 5.0;
+    const touchRotationSensitivity = Number(component.data?.touchRotationSensitivity ?? 5.0);
     const autoRotationEnabled = component.data?.autoRotationEnabled as boolean ?? false;
     const autoRotationAxis = (component.data?.autoRotationAxis as string) ?? 'y';
-    const autoRotationSpeed = (component.data?.autoRotationSpeed as number) ?? 1.0; // 角度/帧
+    const autoRotationSpeed = Number(component.data?.autoRotationSpeed ?? 1.0); // 角度/帧
     
     let code = '';
     
