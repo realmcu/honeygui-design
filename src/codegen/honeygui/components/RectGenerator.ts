@@ -67,6 +67,11 @@ export class RectGenerator implements ComponentCodeGenerator {
       }
     }
 
+    // 可见性
+    if (component.visible === false) {
+      code += `${indentStr}gui_obj_show(${component.id}, false);\n`;
+    }
+
     return code;
   }
 
