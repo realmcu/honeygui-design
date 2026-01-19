@@ -1,0 +1,40 @@
+{
+  "name": "video-converter-ts",
+  "version": "1.0.0",
+  "description": "Video converter with MJPEG, AVI-MJPEG, and H264 output formats",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "video-converter": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "tsc --noEmit",
+    "start": "node dist/cli.js"
+  },
+  "keywords": [
+    "video",
+    "converter",
+    "ffmpeg",
+    "mjpeg",
+    "h264",
+    "avi"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "fast-check": "^3.15.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.1.0"
+  },
+  "dependencies": {
+    "commander": "^12.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
