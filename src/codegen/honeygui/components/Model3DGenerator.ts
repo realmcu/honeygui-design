@@ -131,7 +131,7 @@ export class Model3DGenerator implements ComponentCodeGenerator {
       code += `${indentStr}void *${component.id}_addr = (void *)gui_vfs_get_file_address("${binPath}");\n`;
       code += `${indentStr}l3_model_base_t *${component.id}_model = l3_create_model(${component.id}_addr, ${drawType}, ${x}, ${y}, ${width}, ${height});\n`;
       code += `${indentStr}l3_set_global_transform(${component.id}_model, (l3_global_transform_cb)${callbackName});\n`;
-      code += `${indentStr}gui_lite3d_t *${component.id} = gui_lite3d_create(${parentRef}, "${component.name}", ${component.id}_model, ${x}, ${y}, ${width}, ${height});\n`;
+      code += `${indentStr}gui_lite3d_t *${component.id} = gui_lite3d_create(${parentRef}, "${component.name}", ${component.id}_model, 0, 0, ${width}, ${height});\n`;
       
       // 如果启用了交互动画，添加定时器
       const touchRotationEnabled = component.data?.touchRotationEnabled as boolean ?? false;

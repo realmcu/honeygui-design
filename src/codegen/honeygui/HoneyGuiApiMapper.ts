@@ -82,13 +82,13 @@ export class HoneyGuiApiMapper {
     // 输入框
     this.mappings.set('hg_input', {
       componentType: 'hg_input',
-      createFunction: 'gui_textbox_create',
+      createFunction: 'gui_text_create',
       propertySetters: [
-        { property: 'placeholder', apiFunction: 'gui_textbox_set_placeholder' },
-        { property: 'text', apiFunction: 'gui_textbox_set_text' }
+        { property: 'placeholder', apiFunction: 'gui_text_set' },
+        { property: 'text', apiFunction: 'gui_text_set' }
       ],
       eventHandlers: [],
-      includeHeader: 'gui_textbox.h'
+      includeHeader: 'gui_text.h'
     });
 
     // 开关
