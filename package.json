@@ -320,6 +320,8 @@
     "webpack-dev-server": "^5.2.2"
   },
   "dependencies": {
+    "@csstools/css-parser-algorithms": "^3.0.5",
+    "@csstools/css-tokenizer": "^3.0.4",
     "bmp-js": "^0.1.0",
     "chokidar": "^3.6.0",
     "fabric": "^7.1.0",
