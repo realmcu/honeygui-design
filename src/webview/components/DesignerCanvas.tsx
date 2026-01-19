@@ -633,45 +633,6 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
           {components
             .filter((c) => c.parent === null)
             .map((component) => renderComponent(component))}
-          
-          {/* 拖拽中的组件 - 渲染到顶层（仅非容器组件） */}
-          {draggedComponent && (() => {
-            // 多选拖拽：渲染所有选中的非容器组件
-            const dragIds = multiDragOffsets.size > 1 
-              ? Array.from(multiDragOffsets.keys())
-              : [draggedComponent];
-            
-            return dragIds.map(id => {
-              const comp = components.find(c => c.id === id);
-              if (!comp) return null;
-              
-              // 容器组件不渲染顶层副本
-              const isContainer = isContainerType(comp.type);
-              if (isContainer) return null;
-              
-              const absPos = getAbsolutePosition(comp, components);
-              const Widget = widgetRegistry[comp.type];
-              if (!Widget) return null;
-              
-              const dragStyle: React.CSSProperties = {
-                position: 'absolute',
-                left: absPos.x,
-                top: absPos.y,
-                width: comp.position.width,
-                height: comp.position.height,
-                zIndex: 9999,
-                pointerEvents: 'none',
-              };
-              
-              const emptyHandlers = {
-                onMouseDown: () => {},
-                onMouseEnter: () => {},
-                onMouseLeave: () => {},
-              };
-              
-              return <Widget key={`drag-${comp.id}`} component={comp} style={dragStyle} handlers={emptyHandlers} />;
-            });
-          })()}
         </div>
 
         {/* 视图连接层 - 独立于组件层 */}

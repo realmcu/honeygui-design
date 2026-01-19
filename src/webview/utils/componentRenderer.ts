@@ -80,8 +80,9 @@ export const calculateComponentStyle = (
     overflowValue = 'hidden';
   }
 
-  // 拖拽时隐藏原组件（仅非容器组件，顶层会渲染副本）
+  // 拖拽时提升原组件的 z-index（而不是隐藏并渲染副本）
   const isDragging = draggedComponentId === component.id && !isContainer;
+  const draggingZIndex = isDragging ? 9999 : component.zIndex;
 
   // 图像变换（仅用于预览，实际效果由 SDK 实现）
   let transformValue: string | undefined;
@@ -152,7 +153,7 @@ export const calculateComponentStyle = (
     width: component.position.width,
     height: component.position.height,
     display: component.visible ? 'flex' : 'none',
-    opacity: isDragging ? 0 : (component.style?.transform?.opacity !== undefined ? component.style.transform.opacity / 255 : (component.enabled ? 1 : 0.6)),
+    opacity: component.style?.transform?.opacity !== undefined ? component.style.transform.opacity / 255 : (component.enabled ? 1 : 0.6),
     cursor: editingMode === 'move' ? 'move' : 'pointer',
     outline: border, // 使用 outline 不占用空间
     outlineOffset: '-1px',
@@ -161,7 +162,7 @@ export const calculateComponentStyle = (
     background: component.style?.backgroundColor || 'transparent',
     color: component.style?.color || 'inherit',
     fontSize: component.style?.fontSize ? `${component.style.fontSize}px` : undefined,
-    zIndex: component.zIndex,
+    zIndex: draggingZIndex,
     userSelect: 'none',
     boxSizing: 'border-box',
     transform: transformValue,
