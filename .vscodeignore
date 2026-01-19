@@ -19,6 +19,7 @@ src/**
 # TypeScript 相关
 *.ts
 *.map
+# 排除 source map 但保留编译后的 JS
 out/**/*.map
 
 # 测试
@@ -29,9 +30,10 @@ test-services.js
 # 脚本和文档
 scripts/**
 docs/**
+
+# Tools - 只保留运行时需要的工具
 tools/**
 !tools/mpcli_meta_tool_py_v4.0.0.4/**
-!tools/video-convert-tool/**
 !tools/mkromfs_for_honeygui.py
 
 # 其他
@@ -58,6 +60,7 @@ node_modules/**
 # AUTO-GENERATED-DEPS-START
 !node_modules/bmp-js/**
 !node_modules/chokidar/**
+!node_modules/fabric/**
 !node_modules/fast-xml-parser/**
 !node_modules/html2canvas/**
 !node_modules/ini/**
@@ -65,6 +68,7 @@ node_modules/**
 !node_modules/mp4box/**
 !node_modules/opentype.js/**
 !node_modules/pngjs/**
+!node_modules/video-converter-ts/**
 !node_modules/ws/**
 !node_modules/xml-js/**
 # AUTO-GENERATED-DEPS-END
