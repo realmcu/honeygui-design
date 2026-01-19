@@ -126,7 +126,20 @@ export class SimulationService {
         if (!projectRoot) {
             const workspaceFolders = vscode.workspace.workspaceFolders;
             if (workspaceFolders && workspaceFolders.length > 0) {
-                projectRoot = ProjectUtils.findProjectRoot(workspaceFolders[0].uri.fsPath);
+                const workspaceRoot = workspaceFolders[0].uri.fsPath;
+                
+                // 先检查工作区根目录
+                if (fs.existsSync(path.join(workspaceRoot, 'project.json'))) {
+                    projectRoot = workspaceRoot;
+                } else {
+                    // 向上查找
+                    projectRoot = ProjectUtils.findProjectRoot(workspaceRoot);
+                    
+                    // 如果向上没找到，尝试向下查找
+                    if (!projectRoot) {
+                        projectRoot = ProjectUtils.findProjectRootRecursive(workspaceRoot);
+                    }
+                }
             }
         }
 
@@ -153,10 +166,15 @@ export class SimulationService {
         // 1. 优先使用当前编辑器所在项目
         const activeEditor = vscode.window.activeTextEditor;
         if (activeEditor) {
-            const projectRoot = ProjectUtils.findProjectRoot(activeEditor.document.fileName);
+            const filePath = activeEditor.document.fileName;
+            this.outputChannel.appendLine(`[Debug] Active editor file: ${filePath}`);
+            const projectRoot = ProjectUtils.findProjectRoot(filePath);
             if (projectRoot) {
+                this.outputChannel.appendLine(`[Debug] Found project root from active editor: ${projectRoot}`);
                 return projectRoot;
             }
+        } else {
+            this.outputChannel.appendLine('[Debug] No active editor');
         }
 
         // 2. 尝试从工作区查找
@@ -166,23 +184,69 @@ export class SimulationService {
             return undefined;
         }
 
-        // 单个工作区，直接使用
+        this.outputChannel.appendLine(`[Debug] Workspace folders count: ${workspaceFolders.length}`);
+
+        // 单个工作区，检查是否是项目根目录或查找项目根目录
         if (workspaceFolders.length === 1) {
-            return ProjectUtils.findProjectRoot(workspaceFolders[0].uri.fsPath);
+            const workspaceRoot = workspaceFolders[0].uri.fsPath;
+            this.outputChannel.appendLine(`[Debug] Workspace root: ${workspaceRoot}`);
+            
+            // 先检查工作区根目录本身是否包含 project.json
+            const projectJsonPath = path.join(workspaceRoot, 'project.json');
+            this.outputChannel.appendLine(`[Debug] Checking: ${projectJsonPath}`);
+            
+            if (fs.existsSync(projectJsonPath)) {
+                this.outputChannel.appendLine(`[Debug] Found project.json in workspace root`);
+                return workspaceRoot;
+            }
+            
+            // 如果不是，尝试向上查找
+            this.outputChannel.appendLine(`[Debug] project.json not found in workspace root, searching upward...`);
+            const foundRootUpward = ProjectUtils.findProjectRoot(workspaceRoot);
+            if (foundRootUpward) {
+                this.outputChannel.appendLine(`[Debug] Found project root upward: ${foundRootUpward}`);
+                return foundRootUpward;
+            }
+
+            // 如果向上没找到，尝试递归向下查找
+            this.outputChannel.appendLine(`[Debug] Not found upward, searching downward in workspace...`);
+            const foundRootDownward = ProjectUtils.findProjectRootRecursive(workspaceRoot);
+            if (foundRootDownward) {
+                this.outputChannel.appendLine(`[Debug] Found project root downward: ${foundRootDownward}`);
+                return foundRootDownward;
+            }
+
+            this.outputChannel.appendLine(`[Debug] No project root found`);
+            return undefined;
         }
 
         // 多个工作区，让用户选择
-        const items = workspaceFolders.map(folder => ({
-            label: folder.name,
-            description: folder.uri.fsPath,
-            folder
-        }));
+        const items = workspaceFolders.map(folder => {
+            const workspaceRoot = folder.uri.fsPath;
+            const projectJsonPath = path.join(workspaceRoot, 'project.json');
+            const hasProject = fs.existsSync(projectJsonPath);
+            return {
+                label: folder.name,
+                description: folder.uri.fsPath,
+                detail: hasProject ? vscode.l10n.t('Contains project.json') : undefined,
+                folder
+            };
+        });
 
         const selected = await vscode.window.showQuickPick(items, {
             placeHolder: vscode.l10n.t('Select project to compile')
         });
 
-        return selected ? ProjectUtils.findProjectRoot(selected.folder.uri.fsPath) : undefined;
+        if (!selected) {
+            return undefined;
+        }
+
+        const workspaceRoot = selected.folder.uri.fsPath;
+        const projectJsonPath = path.join(workspaceRoot, 'project.json');
+        if (fs.existsSync(projectJsonPath)) {
+            return workspaceRoot;
+        }
+        return ProjectUtils.findProjectRoot(workspaceRoot);
     }
 
     /**

@@ -39,6 +39,51 @@ export class ProjectUtils {
     }
 
     /**
+     * 在目录中递归向下查找项目根目录（包含project.json的目录）
+     * @param dirPath 起始目录路径
+     * @param maxDepth 最大搜索深度，默认为3
+     * @returns 项目根目录，如果未找到返回undefined
+     */
+    static findProjectRootRecursive(dirPath: string, maxDepth: number = 3): string | undefined {
+        // 检查当前目录是否包含 project.json
+        if (fs.existsSync(path.join(dirPath, 'project.json'))) {
+            return dirPath;
+        }
+
+        // 如果达到最大深度，停止搜索
+        if (maxDepth <= 0) {
+            return undefined;
+        }
+
+        try {
+            // 读取目录内容
+            const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+            
+            // 遍历子目录
+            for (const entry of entries) {
+                if (entry.isDirectory()) {
+                    // 跳过常见的非项目目录
+                    const skipDirs = ['node_modules', '.git', '.vscode', 'out', 'dist', 'build', '.kiro'];
+                    if (skipDirs.includes(entry.name)) {
+                        continue;
+                    }
+
+                    const subDirPath = path.join(dirPath, entry.name);
+                    const result = this.findProjectRootRecursive(subDirPath, maxDepth - 1);
+                    if (result) {
+                        return result;
+                    }
+                }
+            }
+        } catch (error) {
+            // 忽略权限错误等
+            logger.error(`递归查找项目根目录失败: ${error}`);
+        }
+
+        return undefined;
+    }
+
+    /**
      * 读取项目配置
      * @param projectRoot 项目根目录
      * @returns 项目配置，如果读取失败返回默认配置
