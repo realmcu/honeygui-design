@@ -706,9 +706,14 @@ export class BuildCore {
                     ...group.additionalCharSets.map(cs => {
                         if ((cs.type === 'file' || cs.type === 'codepage') && cs.value) {
                             // 如果是相对路径，转换为相对于项目根目录的绝对路径
-                            const absolutePath = path.isAbsolute(cs.value)
-                                ? cs.value
-                                : path.resolve(this.projectRoot, cs.value);
+                            let absolutePath: string;
+                            if (path.isAbsolute(cs.value)) {
+                                absolutePath = cs.value;
+                            } else {
+                                // 规范化路径，移除 ../ 等相对路径符号
+                                const normalizedPath = path.normalize(cs.value);
+                                absolutePath = path.resolve(this.projectRoot, normalizedPath);
+                            }
                             return { type: cs.type, value: absolutePath };
                         }
                         return cs;
@@ -721,7 +726,14 @@ export class BuildCore {
             if (group.additionalCharSets.length > 0) {
                 this.logger.log(`  附加字符集: ${group.additionalCharSets.length} 个`);
                 group.additionalCharSets.forEach((cs, idx) => {
+                    // 显示原始路径
                     this.logger.log(`    [${idx + 1}] ${cs.type}: ${cs.value}`);
+                });
+                // 显示转换后的绝对路径（用于调试）
+                options.characterSets.slice(1).forEach((cs, idx) => {
+                    if (cs.type === 'file' || cs.type === 'codepage') {
+                        this.logger.log(`    [${idx + 1}] file: ${cs.value}`);
+                    }
                 });
             }
 

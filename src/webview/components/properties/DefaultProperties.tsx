@@ -336,7 +336,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                       handleDataChange('characterSets', newCharsets);
                     }}
                     style={{
-                      minWidth: '90px',
+                      minWidth: '70px',
                       padding: '3px 6px',
                       backgroundColor: 'var(--vscode-input-background)',
                       color: 'var(--vscode-input-foreground)',
@@ -414,7 +414,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                 <div style={{
                   fontSize: '9px',
                   color: 'var(--vscode-descriptionForeground)',
-                  paddingLeft: '94px'
+                  paddingLeft: '74px'
                 }}>
                   {cs.type === 'range' && (
                     <>
