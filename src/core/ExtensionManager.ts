@@ -156,6 +156,14 @@ export class ExtensionManager {
         this.disposables.push(guideCommand);
         this.context.subscriptions.push(guideCommand);
 
+        // 注册消息转发命令（用于 SimulationService 向 Webview 发送消息）
+        const sendMessageCommand = vscode.commands.registerCommand('honeygui.sendMessageToWebview', (message: any) => {
+            // 通过 HmlEditorProvider 的静态方法广播消息
+            vscode.commands.executeCommand('_honeygui.broadcastToWebviews', message);
+        });
+        this.disposables.push(sendMessageCommand);
+        this.context.subscriptions.push(sendMessageCommand);
+
         // 注册快速操作视图提供者
         const quickProvider = new QuickViewDataProvider();
         const quickRegistration = vscode.window.registerTreeDataProvider('honeygui.quick', quickProvider);
@@ -212,6 +220,20 @@ export class ExtensionManager {
  * 快速操作视图数据提供者
  */
 class QuickViewDataProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
+    private _onDidChangeTreeData: vscode.EventEmitter<vscode.TreeItem | undefined | null | void> = new vscode.EventEmitter<vscode.TreeItem | undefined | null | void>();
+    readonly onDidChangeTreeData: vscode.Event<vscode.TreeItem | undefined | null | void> = this._onDidChangeTreeData.event;
+
+    constructor() {
+        // 监听仿真状态变化
+        vscode.commands.registerCommand('_honeygui.updateQuickPanel', () => {
+            this.refresh();
+        });
+    }
+
+    refresh(): void {
+        this._onDidChangeTreeData.fire();
+    }
+
     getTreeItem(element: vscode.TreeItem): vscode.TreeItem | Thenable<vscode.TreeItem> {
         return element;
     }
@@ -219,30 +241,35 @@ class QuickViewDataProvider implements vscode.TreeDataProvider<vscode.TreeItem> 
     getChildren(element?: vscode.TreeItem | undefined): vscode.ProviderResult<vscode.TreeItem[]> {
         const quickItems: vscode.TreeItem[] = [];
         
-        // 编译仿真
-        const simulationItem = new vscode.TreeItem(vscode.l10n.t('Compile & Simulate'), vscode.TreeItemCollapsibleState.None);
-        simulationItem.command = { command: 'honeygui.simulation', title: vscode.l10n.t('Compile & Simulate') };
-        simulationItem.iconPath = new vscode.ThemeIcon('rocket');
-        simulationItem.tooltip = vscode.l10n.t('Compile and run simulation');
-        quickItems.push(simulationItem);
+        // 从 SimulationService 获取状态
+        const SimulationService = require('../simulation/SimulationService').SimulationService;
+        const isRunning = SimulationService.isSimulationRunning();
         
-        // 停止仿真
-        const stopSimulationItem = new vscode.TreeItem(vscode.l10n.t('Stop Simulation'), vscode.TreeItemCollapsibleState.None);
-        stopSimulationItem.command = { command: 'honeygui.simulation.stop', title: vscode.l10n.t('Stop Simulation') };
-        stopSimulationItem.iconPath = new vscode.ThemeIcon('debug-stop');
-        stopSimulationItem.tooltip = vscode.l10n.t('Stop running simulation');
-        quickItems.push(stopSimulationItem);
+        // 编译仿真 / 停止仿真（根据状态切换）
+        if (isRunning) {
+            const stopItem = new vscode.TreeItem(vscode.l10n.t('Stop'), vscode.TreeItemCollapsibleState.None);
+            stopItem.command = { command: 'honeygui.simulation.stop', title: vscode.l10n.t('Stop') };
+            stopItem.iconPath = new vscode.ThemeIcon('debug-stop');
+            stopItem.tooltip = vscode.l10n.t('Stop running simulation');
+            quickItems.push(stopItem);
+        } else {
+            const simulationItem = new vscode.TreeItem(vscode.l10n.t('Simulate'), vscode.TreeItemCollapsibleState.None);
+            simulationItem.command = { command: 'honeygui.simulation', title: vscode.l10n.t('Simulate') };
+            simulationItem.iconPath = new vscode.ThemeIcon('rocket');
+            simulationItem.tooltip = vscode.l10n.t('Compile and run simulation');
+            quickItems.push(simulationItem);
+        }
         
         // 清理编译
-        const cleanItem = new vscode.TreeItem(vscode.l10n.t('Clean Build'), vscode.TreeItemCollapsibleState.None);
-        cleanItem.command = { command: 'honeygui.simulation.clean', title: vscode.l10n.t('Clean Build') };
+        const cleanItem = new vscode.TreeItem(vscode.l10n.t('Clean'), vscode.TreeItemCollapsibleState.None);
+        cleanItem.command = { command: 'honeygui.simulation.clean', title: vscode.l10n.t('Clean') };
         cleanItem.iconPath = new vscode.ThemeIcon('trash');
         cleanItem.tooltip = vscode.l10n.t('Clean build artifacts');
         quickItems.push(cleanItem);
         
         // UART 下载
-        const uartItem = new vscode.TreeItem(vscode.l10n.t('UART Download'), vscode.TreeItemCollapsibleState.None);
-        uartItem.command = { command: 'honeygui.uartDownload', title: vscode.l10n.t('UART Download') };
+        const uartItem = new vscode.TreeItem(vscode.l10n.t('Download'), vscode.TreeItemCollapsibleState.None);
+        uartItem.command = { command: 'honeygui.uartDownload', title: vscode.l10n.t('Download') };
         uartItem.iconPath = new vscode.ThemeIcon('cloud-download');
         uartItem.tooltip = vscode.l10n.t('Download to board via UART');
         quickItems.push(uartItem);

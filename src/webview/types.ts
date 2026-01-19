@@ -92,6 +92,7 @@ export interface DesignerState {
   redoStack: any[];
   projectConfig?: any; // Project configuration (resolution, etc.)
   assetCategory: 'all' | 'images' | 'svgs' | 'videos' | 'models' | 'fonts' | 'glass'; // 资源面板分类
+  isSimulationRunning: boolean; // 仿真运行状态
 }
 
 export interface VSCodeAPI {

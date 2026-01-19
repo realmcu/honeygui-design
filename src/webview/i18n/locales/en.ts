@@ -125,6 +125,8 @@ const en = {
   'Generate Code': 'Generate Code',
   'Compile & Simulate': 'Compile & Simulate',
   'Simulate': 'Simulate',
+  'Stop': 'Stop',
+  'Stop Simulation': 'Stop Simulation',
   'Preview': 'Preview',
   'UART Download': 'UART Download',
   'Download': 'Download',

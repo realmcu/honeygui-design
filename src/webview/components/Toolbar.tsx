@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useDesignerStore } from '../store';
-import { Save, Code, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, GitBranch, Palette, AlignLeft, Grid, Download, Rocket, Trash2 } from 'lucide-react';
+import { Save, Code, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, GitBranch, Palette, AlignLeft, Grid, Download, Rocket, Trash2, Square } from 'lucide-react';
 import { AlignType, DistributeType, ResizeType, getAlignmentConfigsByCategory } from '../utils/alignmentUtils';
 import { t } from '../i18n';
 import './Toolbar.css';
@@ -25,6 +25,7 @@ const Toolbar: React.FC = () => {
     redo,
     canUndo,
     canRedo,
+    isSimulationRunning,
   } = useDesignerStore();
 
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -96,10 +97,19 @@ const Toolbar: React.FC = () => {
   };
 
   const handleSimulation = () => {
-    window.vscodeAPI?.postMessage({
-      command: 'executeCommand',
-      commandId: 'honeygui.simulation',
-    });
+    if (isSimulationRunning) {
+      // 停止仿真
+      window.vscodeAPI?.postMessage({
+        command: 'executeCommand',
+        commandId: 'honeygui.simulation.stop',
+      });
+    } else {
+      // 启动仿真
+      window.vscodeAPI?.postMessage({
+        command: 'executeCommand',
+        commandId: 'honeygui.simulation',
+      });
+    }
   };
 
   const handleClean = () => {
@@ -328,12 +338,12 @@ const Toolbar: React.FC = () => {
           <span>{t('Generate Code')}</span>
         </button>
         <button
-          className="toolbar-button primary"
+          className={`toolbar-button primary ${isSimulationRunning ? 'running' : ''}`}
           onClick={handleSimulation}
-          title={t('Compile & Simulate')}
+          title={isSimulationRunning ? t('Stop Simulation') : t('Compile & Simulate')}
         >
-          <Rocket size={16} />
-          <span>{t('Simulate')}</span>
+          {isSimulationRunning ? <Square size={16} /> : <Rocket size={16} />}
+          <span>{isSimulationRunning ? t('Stop') : t('Simulate')}</span>
         </button>
         <button
           className="toolbar-button"

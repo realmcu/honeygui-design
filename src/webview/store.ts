@@ -152,6 +152,9 @@ export interface DesignerStore extends DesignerState {
   showAlignmentGuides: boolean;
   setShowAlignmentGuides: (show: boolean) => void;
 
+  // Simulation status
+  setSimulationRunning: (running: boolean) => void;
+
   // Assets
   setAssetCategory: (category: 'all' | 'images' | 'svgs' | 'videos' | 'models' | 'fonts' | 'glass') => void;
 
@@ -245,6 +248,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   assetCategory: 'all' as 'all' | 'images' | 'svgs' | 'videos' | 'models' | 'fonts' | 'glass', // 资源面板分类
   clipboard: null, // 剪贴板
   clipboardMultiple: [], // 多选剪贴板
+  isSimulationRunning: false, // 仿真运行状态
 
   // Actions
   setComponents: (components) => {
@@ -718,6 +722,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   setShowViewRelationModal: (show) => set({ showViewRelationModal: show }),
   setShowAlignmentGuides: (show) => set({ showAlignmentGuides: show }),
   setAssetCategory: (category) => set({ assetCategory: category }),
+  setSimulationRunning: (running) => set({ isSimulationRunning: running }),
   
   // 将指定组件居中显示在画布上
   centerViewOnCanvas: (componentId) => {

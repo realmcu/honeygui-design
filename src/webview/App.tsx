@@ -350,6 +350,14 @@ const App: React.FC = () => {
             }
           }
           break;
+
+        case 'simulationStatus':
+          // 更新仿真状态
+          if (typeof message.isRunning === 'boolean') {
+            const store = useDesignerStore.getState();
+            store.setSimulationRunning(message.isRunning);
+          }
+          break;
       }
     });
 

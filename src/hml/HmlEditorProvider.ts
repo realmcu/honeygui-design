@@ -10,8 +10,25 @@ import { logger } from '../utils/Logger';
  */
 export class HmlEditorProvider implements vscode.CustomTextEditorProvider {
     public static readonly viewType = 'honeygui.hmlEditor';
+    private static activePanels: Set<DesignerPanel> = new Set();
 
-    constructor(private readonly context: vscode.ExtensionContext) {}
+    constructor(private readonly context: vscode.ExtensionContext) {
+        // 注册广播命令
+        context.subscriptions.push(
+            vscode.commands.registerCommand('_honeygui.broadcastToWebviews', (message: any) => {
+                HmlEditorProvider.broadcastMessage(message);
+            })
+        );
+    }
+
+    /**
+     * 广播消息到所有活动的 Webview
+     */
+    private static broadcastMessage(message: any): void {
+        this.activePanels.forEach(panel => {
+            panel.sendMessage(message.command, message);
+        });
+    }
 
     /**
      * 当用户打开 HML 文件时调用此方法
@@ -59,6 +76,14 @@ export class HmlEditorProvider implements vscode.CustomTextEditorProvider {
         // 创建设计器面板实例
         const designerPanel = new DesignerPanel(webviewPanel, this.context);
         logger.debug(`[HmlEditorProvider] 创建DesignerPanel实例`);
+
+        // 注册到活动面板集合
+        HmlEditorProvider.activePanels.add(designerPanel);
+
+        // 监听面板关闭，从集合中移除
+        webviewPanel.onDidDispose(() => {
+            HmlEditorProvider.activePanels.delete(designerPanel);
+        });
 
         // 加载文档内容到设计器
         logger.info(`[HmlEditorProvider] 开始加载文档内容到设计器: ${document.uri.fsPath}`);

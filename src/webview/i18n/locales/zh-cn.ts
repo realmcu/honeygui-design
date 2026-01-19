@@ -125,6 +125,8 @@ const zhCN = {
   'Generate Code': '生成代码',
   'Compile & Simulate': '编译仿真',
   'Simulate': '仿真',
+  'Stop': '停止',
+  'Stop Simulation': '停止仿真',
   'Preview': '预览',
   'UART Download': 'UART 下载',
   'Download': '下载',
