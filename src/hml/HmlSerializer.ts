@@ -245,6 +245,25 @@ export class HmlSerializer {
                 if (propName === 'interactions' || propName === 'view_switch' || propName === 'events') {
                     return;
                 }
+                
+                // 特殊处理：将 timerActions 数组序列化为 JSON 字符串（旧版兼容）
+                if (propName === 'timerActions') {
+                    const value = component.data![propName];
+                    if (value && Array.isArray(value) && value.length > 0) {
+                        attributesStr += ' ' + propName + '="' + this._escapeXmlValue(JSON.stringify(value)) + '"';
+                    }
+                    return;
+                }
+                
+                // 特殊处理：将 timers 数组序列化为 JSON 字符串（新版）
+                if (propName === 'timers') {
+                    const value = component.data![propName];
+                    if (value && Array.isArray(value) && value.length > 0) {
+                        attributesStr += ' ' + propName + '="' + this._escapeXmlValue(JSON.stringify(value)) + '"';
+                    }
+                    return;
+                }
+                
                 // 保留 list_item 的 index 属性（用于确保顺序正确）
                 const value = component.data![propName];
                 if (value !== undefined && value !== null && value !== '') {

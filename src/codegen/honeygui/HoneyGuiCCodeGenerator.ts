@@ -386,6 +386,9 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       }
     }
 
+    // 生成定时器绑定代码
+    code += this.generateTimerBindings(component, indent);
+
     // 生成事件绑定代码
     code += this.generateEventConfigBindings(component, indent);
 
@@ -521,6 +524,60 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
   private generateEventConfigBindings(component: Component, indent: number): string {
     const generator = EventGeneratorFactory.getGenerator(component.type);
     return generator.generateEventBindings(component, indent, this.componentMap);
+  }
+
+  /**
+   * 生成定时器绑定代码
+   */
+  private generateTimerBindings(component: Component, indent: number): string {
+    const indentStr = '    '.repeat(indent);
+    let code = '';
+
+    // 支持新版 timers 数组
+    if (component.data?.timers && Array.isArray(component.data.timers)) {
+      const enabledTimers = component.data.timers.filter((timer: any) => timer.enabled === true);
+      
+      if (enabledTimers.length > 0) {
+        enabledTimers.forEach((timer: any) => {
+          let callback: string;
+          if (timer.mode === 'preset' && timer.actions && timer.actions.length > 0) {
+            // 预设动作模式：使用定时器 ID 生成回调函数名
+            callback = `${component.id}_${timer.id}_cb`;
+          } else if (timer.mode === 'custom' && timer.callback) {
+            // 自定义函数模式
+            callback = timer.callback;
+          } else {
+            return; // 跳过无效配置
+          }
+          
+          const timerName = timer.name || timer.id;
+          code += `${indentStr}// 绑定定时器: ${timerName}\n`;
+          code += `${indentStr}gui_obj_create_timer((gui_obj_t *)${component.id}, ${timer.interval}, ${timer.reload !== false ? 'true' : 'false'}, ${callback});\n`;
+          code += `${indentStr}gui_obj_start_timer((gui_obj_t *)${component.id});\n`;
+        });
+      }
+    }
+    // 兼容旧版单定时器格式
+    else if (component.data?.timerEnabled === true) {
+      const timerMode = component.data.timerMode || 'custom';
+      let callback: string;
+      
+      if (timerMode === 'preset' && component.data.timerActions && component.data.timerActions.length > 0) {
+        // 预设动作模式：生成自动回调函数名
+        callback = `${component.id}_preset_timer_cb`;
+      } else if (timerMode === 'custom' && component.data.timerCallback) {
+        // 自定义函数模式
+        callback = component.data.timerCallback;
+      } else {
+        return code; // 无效配置
+      }
+      
+      code += `${indentStr}// 绑定定时器\n`;
+      code += `${indentStr}gui_obj_create_timer((gui_obj_t *)${component.id}, ${component.data.timerInterval || 1000}, ${component.data.timerReload !== false ? 'true' : 'false'}, ${callback});\n`;
+      code += `${indentStr}gui_obj_start_timer((gui_obj_t *)${component.id});\n`;
+    }
+
+    return code;
   }
 
   /**

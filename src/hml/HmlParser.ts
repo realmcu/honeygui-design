@@ -587,7 +587,12 @@ export class HmlParser {
       // hg_glass 特有属性
       'movable', 'click',
       // hg_canvas SVG 文件属性
-      'svgFile'
+      'svgFile',
+      // 定时器属性（新版）
+      'timers',
+      // 定时器属性（旧版，保留兼容）
+      'timerEnabled', 'timerInterval', 'timerReload', 'timerMode', 'timerCallback', 
+      'timerActions', 'timerDuration', 'timerStopOnComplete'
     ]);
 
     const metaProps = new Set([
@@ -629,12 +634,12 @@ export class HmlParser {
         style[key] = value;
       } else if (dataProps.has(key)) {
         let value = attributes[key];
-        // 布尔值转换（loop, createBar, autoAlign, inertia, toggleMode, movable, click, enableScroll, scrollReverse 等）
-        if (['loop', 'createBar', 'autoAlign', 'inertia', 'toggleMode', 'movable', 'click', 'enableScroll', 'scrollReverse'].includes(key)) {
+        // 布尔值转换（loop, createBar, autoAlign, inertia, toggleMode, movable, click, timerEnabled, timerReload, timerStopOnComplete, enableScroll, scrollReverse 等）
+        if (['loop', 'createBar', 'autoAlign', 'inertia', 'toggleMode', 'movable', 'click', 'timerEnabled', 'timerReload', 'timerStopOnComplete', 'enableScroll', 'scrollReverse'].includes(key)) {
           value = value === 'true' || value === true;
         }
-        // 数字类型属性转换（包括 opacity 和滚动相关属性）
-        if (['noteNum', 'offset', 'outScope', 'opacity', 'animateStep', 'scrollStartOffset', 'scrollEndOffset', 'scrollInterval', 'scrollDuration'].includes(key) && typeof value === 'string') {
+        // 数字类型属性转换（包括 opacity, timerInterval, timerDuration）
+        if (['noteNum', 'offset', 'outScope', 'opacity', 'animateStep', 'timerInterval', 'timerDuration', 'scrollStartOffset', 'scrollEndOffset', 'scrollInterval', 'scrollDuration'].includes(key) && typeof value === 'string') {
           const num = parseFloat(value);
           value = isNaN(num) ? value : num;
         }
@@ -644,6 +649,24 @@ export class HmlParser {
             value = JSON.parse(value);
           } catch (e) {
             console.warn(`Failed to parse characterSets JSON: ${value}`);
+            value = [];
+          }
+        }
+        // timerActions 需要从 JSON 字符串解析为数组
+        if (key === 'timerActions' && typeof value === 'string') {
+          try {
+            value = JSON.parse(value);
+          } catch (e) {
+            console.warn(`Failed to parse timerActions JSON: ${value}`);
+            value = [];
+          }
+        }
+        // timers 需要从 JSON 字符串解析为数组
+        if (key === 'timers' && typeof value === 'string') {
+          try {
+            value = JSON.parse(value);
+          } catch (e) {
+            console.warn(`Failed to parse timers JSON: ${value}`);
             value = [];
           }
         }
@@ -686,9 +709,48 @@ export class HmlParser {
             value = [];
           }
         }
+        // timerActions 需要从 JSON 字符串解析为数组
+        if (key === 'timerActions' && typeof value === 'string') {
+          try {
+            value = JSON.parse(value);
+          } catch (e) {
+            console.warn(`Failed to parse timerActions JSON: ${value}`);
+            value = [];
+          }
+        }
         data[key] = value;
       }
     });
+
+    // 兼容旧版定时器格式：如果存在旧版字段但没有 timers 数组，自动转换
+    if (!data.timers && data.timerEnabled === true) {
+      const timerMode = data.timerMode || 'custom';
+      const timerId = `timer_${Date.now()}`;
+      
+      data.timers = [{
+        id: timerId,
+        name: timerMode === 'preset' ? '预设动作定时器' : '自定义定时器',
+        enabled: true,
+        interval: data.timerInterval || 1000,
+        reload: data.timerReload !== false,
+        mode: timerMode,
+        actions: data.timerActions || [],
+        callback: data.timerCallback,
+        duration: data.timerDuration || 1000,
+        stopOnComplete: data.timerStopOnComplete !== false,
+        delayStart: 0
+      }];
+      
+      // 清除旧版字段
+      delete data.timerEnabled;
+      delete data.timerInterval;
+      delete data.timerReload;
+      delete data.timerMode;
+      delete data.timerActions;
+      delete data.timerCallback;
+      delete data.timerDuration;
+      delete data.timerStopOnComplete;
+    }
 
     return { style, data, events };
   }

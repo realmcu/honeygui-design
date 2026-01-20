@@ -68,6 +68,43 @@ export interface ComponentStyle {
 }
 
 /**
+ * 定时器动作类型
+ */
+export interface TimerAction {
+  type: 'size' | 'position' | 'opacity';
+  // 大小动作
+  fromW?: number;
+  fromH?: number;
+  toW?: number;
+  toH?: number;
+  // 位置动作
+  fromX?: number;
+  fromY?: number;
+  toX?: number;
+  toY?: number;
+  // 透明度动作
+  from?: number;
+  to?: number;
+}
+
+/**
+ * 定时器配置类型
+ */
+export interface TimerConfig {
+  id: string;  // 定时器唯一标识
+  name?: string;  // 定时器名称（用于注释）
+  enabled: boolean;  // 是否绑定到组件（只有一个可以为 true）
+  interval: number;  // 定时器间隔（毫秒）
+  reload: boolean;  // 是否重复执行
+  mode: 'preset' | 'custom';  // 定时器模式：预设动作或自定义函数
+  actions?: TimerAction[];  // 预设动作列表
+  callback?: string;  // 自定义回调函数名
+  duration?: number;  // 总时间（毫秒）
+  stopOnComplete?: boolean;  // 到达总时间后是否停止定时器
+  delayStart?: number;  // 延时启动时间（毫秒），默认 0
+}
+
+/**
  * 组件数据类型
  */
 export interface ComponentData {
@@ -80,6 +117,20 @@ export interface ComponentData {
   residentMemory?: boolean;  // 常驻内存属性（用于 hg_view 组件）
   animateStep?: number;  // 动画步长（用于 hg_view 组件）
   opacity?: number;  // 透明度 0-255（用于 hg_view 组件）
+  
+  // 定时器配置（新版：支持多个定时器）
+  timers?: TimerConfig[];  // 定时器列表
+  
+  // 定时器配置（旧版：保留兼容，将在加载时转换为新版）
+  timerEnabled?: boolean;  // 是否启用定时器
+  timerInterval?: number;  // 定时器间隔（毫秒）
+  timerReload?: boolean;  // 是否重复执行
+  timerMode?: 'preset' | 'custom';  // 定时器模式：预设动作或自定义函数
+  timerActions?: TimerAction[];  // 预设动作列表
+  timerCallback?: string;  // 自定义回调函数名
+  timerDuration?: number;  // 总时间（毫秒）
+  timerStopOnComplete?: boolean;  // 到达总时间后是否停止定时器
+  
   [key: string]: any;  // 允许其他数据属性
 }
 

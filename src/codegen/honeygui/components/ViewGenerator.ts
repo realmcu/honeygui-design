@@ -109,6 +109,9 @@ export class ViewGenerator implements ComponentCodeGenerator {
       });
     }
     
+    // 注意：用户配置的定时器现在在 HoneyGuiCCodeGenerator 中为每个组件创建后立即绑定
+    // 不再在 switch_in 中统一绑定
+    
     code += `${indentStr}}\n`;
     
     // GUI_VIEW_INSTANCE 宏调用（第二个参数为常驻内存标志）
