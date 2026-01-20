@@ -2,6 +2,16 @@
 
 视频转换工具 - TypeScript 实现版本，支持多种输出格式。
 
+[![npm version](https://img.shields.io/npm/v/@belief997/video-converter.svg)](https://www.npmjs.com/package/@belief997/video-converter)
+[![npm downloads](https://img.shields.io/npm/dm/@belief997/video-converter.svg)](https://www.npmjs.com/package/@belief997/video-converter)
+
+## 文档导航
+
+- 📖 **[README.md](./README.md)** - 完整使用文档（当前文档）
+- 🚀 **[QUICK_START.md](./QUICK_START.md)** - 5 分钟快速开始
+- 🔧 **[INTEGRATION.md](./INTEGRATION.md)** - VSCode 插件集成指南
+- 📦 **[PUBLISH.md](./PUBLISH.md)** - npm 发布说明
+
 ## 功能特性
 
 - 支持三种输出格式：MJPEG、AVI-MJPEG、H264
@@ -9,6 +19,8 @@
 - 进度显示
 - AVI 文件 8 字节对齐处理
 - H264 自定义头部封装
+- 已发布到 npm，可作为依赖包使用
+- 完整的 TypeScript 类型定义
 
 ## 系统要求
 
@@ -16,6 +28,14 @@
 - FFmpeg（需要在系统 PATH 中可用）
 
 ## 安装
+
+### 作为 npm 包安装（推荐）
+
+```bash
+npm install @belief997/video-converter
+```
+
+### 从源码安装
 
 ```bash
 cd video-converter-ts
@@ -25,7 +45,55 @@ npm run build
 
 ## 使用方法
 
-### 查看视频信息
+### 作为 npm 包使用（推荐）
+
+安装后直接在代码中导入：
+
+```typescript
+import { VideoConverter, OutputFormat } from '@belief997/video-converter';
+
+// 创建转换器实例（可选进度回调）
+const converter = new VideoConverter((current, total) => {
+  console.log(`进度: ${current}/${total}`);
+});
+
+// 获取视频信息
+const info = await converter.getVideoInfo('input.mp4');
+console.log(info);
+
+// 转换视频
+const result = await converter.convert(
+  'input.mp4',
+  'output.avi',
+  OutputFormat.AVI_MJPEG,
+  { 
+    frameRate: 25,  // 可选：目标帧率
+    quality: 2,     // 可选：质量参数
+    debug: false    // 可选：调试模式
+  }
+);
+
+console.log('转换完成:', result);
+```
+
+### 命令行工具使用
+
+#### 从 npm 包运行 #### 从 npm 包运行
+
+如果全局安装：
+```bash
+npm install -g @belief997/video-converter
+video-converter --info -i input.mp4
+```
+
+如果本地安装：
+```bash
+npx @belief997/video-converter --info -i input.mp4
+```
+
+#### 从源码运行
+
+查看视频信息
 
 ```bash
 node dist/cli.js --info -i <输入视频路径>
@@ -97,25 +165,85 @@ node dist/cli.js -i ../test_video/birds.mp4 -o output.avi -f avi_mjpeg -v -d
 
 ### 编程接口
 
-```typescript
-import { VideoConverter, OutputFormat } from './dist/index.js';
+完整的 TypeScript API：
 
+```typescript
+import { 
+  VideoConverter, 
+  OutputFormat, 
+  VideoInfo,
+  ConversionResult,
+  ConversionOptions
+} from '@belief997/video-converter';
+
+// 创建转换器
 const converter = new VideoConverter((current, total) => {
   console.log(`进度: ${current}/${total}`);
 });
 
 // 获取视频信息
-const info = await converter.getVideoInfo('input.mp4');
-console.log(info);
+const info: VideoInfo = await converter.getVideoInfo('input.mp4');
+// info 包含: width, height, frameRate, frameCount, duration, codec
+
+// 转换选项
+const options: ConversionOptions = {
+  frameRate: 25,    // 可选：目标帧率
+  quality: 2,       // 可选：MJPEG 质量 (1-31) 或 H264 CRF (0-51)
+  debug: false      // 可选：保留中间文件
+};
 
 // 转换视频
-const result = await converter.convert(
+const result: ConversionResult = await converter.convert(
   'input.mp4',
-  'output.mjpeg',
-  OutputFormat.MJPEG,
-  { frameRate: 25, quality: 2 }
+  'output.avi',
+  OutputFormat.AVI_MJPEG,
+  options
 );
+
+// result 包含: success, inputPath, outputPath, outputFormat, frameCount, frameRate, quality
 ```
+
+### 在 VSCode 插件中使用
+
+1. **添加依赖**到插件的 `package.json`：
+```json
+{
+  "dependencies": {
+    "@belief997/video-converter": "^1.0.0"
+  }
+}
+```
+
+2. **安装依赖**：
+```bash
+npm install
+```
+
+3. **在插件代码中使用**：
+```typescript
+import { VideoConverter, OutputFormat } from '@belief997/video-converter';
+
+export async function convertVideo(inputPath: string, outputPath: string) {
+  const converter = new VideoConverter();
+  
+  try {
+    const result = await converter.convert(
+      inputPath,
+      outputPath,
+      OutputFormat.AVI_MJPEG
+    );
+    
+    return result;
+  } catch (error) {
+    console.error('转换失败:', error);
+    throw error;
+  }
+}
+```
+
+4. **打包插件**：当你构建 `.vsix` 文件时，npm 包会自动被打包进去。
+
+5. **用户安装**：最终用户安装插件时不需要单独安装此工具包。
 
 ## 测试
 
@@ -202,6 +330,24 @@ ffmpeg -version
 cmd /c "npm run build"
 cmd /c "npm test -- --run"
 ```
+
+### 如何更新到最新版本
+```bash
+npm update @belief997/video-converter
+```
+
+### 查看已安装版本
+```bash
+npm list @belief997/video-converter
+```
+
+## 发布信息
+
+- **npm 包名**: `@belief997/video-converter`
+- **当前版本**: 1.0.0
+- **发布日期**: 2026-01-20
+- **npm 主页**: https://www.npmjs.com/package/@belief997/video-converter
+- **GitHub 仓库**: https://github.com/Belief997/w01-video_converter
 
 ## 许可证
 
