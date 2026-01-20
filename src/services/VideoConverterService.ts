@@ -2,12 +2,15 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { spawn } from 'child_process';
 
-// 导入新的视频转换工具（npm 包）
-import {
-    VideoConverter as TsVideoConverter,
-    OutputFormat,
-    ProgressCallback
-} from '@belief997/video-converter';
+// 动态导入 ES Module
+let VideoConverterModule: any = null;
+
+async function loadVideoConverter() {
+    if (!VideoConverterModule) {
+        VideoConverterModule = await import('@belief997/video-converter');
+    }
+    return VideoConverterModule;
+}
 
 export interface VideoConvertOptions {
     format: 'mjpeg' | 'avi' | 'h264';
