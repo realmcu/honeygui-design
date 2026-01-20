@@ -122,3 +122,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.pyc
+
+# HoneyGUI 目录
+HoneyGUI/
