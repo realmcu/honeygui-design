@@ -13,18 +13,19 @@ export class LabelGenerator implements ComponentCodeGenerator {
     const indentStr = '    '.repeat(indent);
     const parentRef = context.getParentRef(component);
     const { x, y, width, height } = component.position;
-    const mapping = this.apiMapper.getMapping(component.type);
-
-    if (!mapping) {
-      return `${indentStr}// 警告: 未找到 ${component.type} 的API映射\n`;
-    }
+    
+    // 检查是否启用滚动（注意：可能是字符串 'true' 或布尔值 true）
+    const enableScroll = component.data?.enableScroll === true || component.data?.enableScroll === 'true';
+    
+    // 根据是否滚动选择不同的 API
+    const createFunction = enableScroll ? 'gui_scroll_text_create' : 'gui_text_create';
 
     // 检查是否是拆分时间格式
     if (component.data?.timeFormat === 'HH:mm-split') {
       return this.generateSplitTimeCreation(component, indent, context);
     }
 
-    return `${indentStr}${component.id} = ${mapping.createFunction}(${parentRef}, "${component.name}", ${x}, ${y}, ${width}, ${height});\n`;
+    return `${indentStr}${component.id} = ${createFunction}(${parentRef}, "${component.name}", ${x}, ${y}, ${width}, ${height});\n`;
   }
 
   generatePropertySetters(component: Component, indent: number, _context: GeneratorContext): string {
@@ -35,6 +36,16 @@ export class LabelGenerator implements ComponentCodeGenerator {
     
     let code = '';
     const indentStr = '    '.repeat(indent);
+
+    // 检查是否启用滚动（注意：可能是字符串 'true' 或布尔值 true）
+    const enableScroll = component.data?.enableScroll === true || component.data?.enableScroll === 'true';
+    const scrollDirection = component.data?.scrollDirection || 'horizontal';
+    const scrollReverse = component.data?.scrollReverse === true || component.data?.scrollReverse === 'true';
+    
+    // 根据滚动方向自动处理多行
+    // Y 方向滚动强制多行，X 方向滚动不支持多行
+    const forceMultiLine = enableScroll && scrollDirection === 'vertical';
+    const wordWrap = forceMultiLine ? true : (component.style?.wordWrap || false);
 
     // 获取属性值
     const fontSize = component.data?.fontSize || 16;
@@ -62,36 +73,72 @@ export class LabelGenerator implements ComponentCodeGenerator {
     const fontType = this.getFontType(component);
     const fontFile = component.data?.fontFile;
 
-    // gui_text_set 是必须调用的核心 API
-    // 参数: widget, text, text_type, color, length, font_size
-    // length 是字符串的字节数（UTF-8编码），不是 Unicode 字符数量
-    code += `${indentStr}gui_text_set((gui_text_t *)${component.id}, ${text}, ${fontType}, gui_rgb(${rgb.r}, ${rgb.g}, ${rgb.b}), ${textLengthExpr}, ${fontSize});\n`;
+    // 根据是否滚动选择不同的 API
+    const widgetCast = enableScroll ? 'gui_scroll_text_t' : 'gui_text_t';
+    const setFunction = enableScroll ? 'gui_scroll_text_set' : 'gui_text_set';
+    
+    // 设置文本内容和基本属性
+    code += `${indentStr}${setFunction}((${widgetCast} *)${component.id}, ${text}, ${fontType}, gui_rgb(${rgb.r}, ${rgb.g}, ${rgb.b}), ${textLengthExpr}, ${fontSize});\n`;
 
     // 设置字体文件路径（如果指定了字体文件）
     if (fontFile) {
-      // 生成转换后的字体文件名
       const convertedFontFile = this.getConvertedFontFileName(component);
       const fontMode = this.getFontMode();
-      code += `${indentStr}gui_text_type_set((gui_text_t *)${component.id}, "${convertedFontFile}", ${fontMode});\n`;
+      const typeSetFunction = enableScroll ? 'gui_scroll_text_type_set' : 'gui_text_type_set';
+      code += `${indentStr}${typeSetFunction}((${widgetCast} *)${component.id}, "${convertedFontFile}", ${fontMode});\n`;
     }
 
-    // 对齐方式 - 根据 hAlign 和 vAlign 组合生成 TEXT_MODE
-    const textMode = this.getTextMode(component);
-    code += `${indentStr}gui_text_mode_set((gui_text_t *)${component.id}, ${textMode});\n`;
+    // 对齐方式 - 滚动文本不需要 gui_text_mode_set，因为 gui_scroll_text_scroll_set 有 mode 参数
+    if (!enableScroll) {
+      const textMode = this.getTextMode(component);
+      code += `${indentStr}gui_text_mode_set((gui_text_t *)${component.id}, ${textMode});\n`;
+    }
 
-    // 字间距
+    // 滚动文本特有：设置滚动参数
+    if (enableScroll) {
+      // 转换滚动方向和对齐模式
+      // SDK TEXT_MODE 枚举：
+      // SCROLL_X = 0x30, SCROLL_X_REVERSE = 0x31
+      // SCROLL_X_MID = 0x32, SCROLL_X_MID_REVERSE = 0x33
+      // SCROLL_Y = 0x38, SCROLL_Y_REVERSE = 0x39
+      let scrollModeStr: string;
+      const vAlign = component.style?.vAlign || 'TOP';
+      
+      if (scrollDirection === 'horizontal') {
+        // 横向滚动
+        if (vAlign === 'MID') {
+          scrollModeStr = scrollReverse ? 'SCROLL_X_MID_REVERSE' : 'SCROLL_X_MID';
+        } else {
+          scrollModeStr = scrollReverse ? 'SCROLL_X_REVERSE' : 'SCROLL_X';
+        }
+      } else {
+        // 纵向滚动（SDK 只有 SCROLL_Y 和 SCROLL_Y_REVERSE，没有 MID 变体）
+        scrollModeStr = scrollReverse ? 'SCROLL_Y_REVERSE' : 'SCROLL_Y';
+      }
+      
+      // 获取滚动参数
+      const startOffset = component.data?.scrollStartOffset ?? 0;
+      const endOffset = component.data?.scrollEndOffset ?? 0;
+      const interval = component.data?.scrollInterval ?? 3000;
+      const duration = component.data?.scrollDuration ?? 0;
+      
+      // 调用 gui_scroll_text_scroll_set
+      code += `${indentStr}gui_scroll_text_scroll_set((gui_scroll_text_t *)${component.id}, ${scrollModeStr}, ${startOffset}, ${endOffset}, ${interval}, ${duration});\n`;
+    }
+
+    // 字间距 - 滚动文本需要强转为 gui_text_t
     const letterSpacing = component.style?.letterSpacing;
     if (letterSpacing !== undefined && letterSpacing !== 0) {
       code += `${indentStr}gui_text_extra_letter_spacing_set((gui_text_t *)${component.id}, ${letterSpacing});\n`;
     }
 
-    // 行间距
+    // 行间距 - 滚动文本需要强转为 gui_text_t
     const lineSpacing = component.style?.lineSpacing;
     if (lineSpacing !== undefined && lineSpacing !== 0) {
       code += `${indentStr}gui_text_extra_line_spacing_set((gui_text_t *)${component.id}, ${lineSpacing});\n`;
     }
 
-    // 断词保护（英文跨行断词）
+    // 断词保护（英文跨行断词）- 滚动文本需要强转为 gui_text_t
     const wordBreak = component.style?.wordBreak;
     if (wordBreak === true) {
       code += `${indentStr}gui_text_wordwrap_set((gui_text_t *)${component.id}, true);\n`;

@@ -576,6 +576,8 @@ export class HmlParser {
       'autoAlign', 'inertia', 'loop', 'createBar', 'offset', 'outScope',
       // 文本数据属性
       'fontFile', 'timeFormat',
+      // 滚动文本属性
+      'enableScroll', 'scrollDirection', 'scrollReverse', 'scrollStartOffset', 'scrollEndOffset', 'scrollInterval', 'scrollDuration',
       // 字体配置属性
       'fontType', 'renderMode', 'fontSize', 'characterSets',
       // hg_view 特有属性
@@ -627,12 +629,12 @@ export class HmlParser {
         style[key] = value;
       } else if (dataProps.has(key)) {
         let value = attributes[key];
-        // 布尔值转换（loop, createBar, autoAlign, inertia, toggleMode, movable, click 等）
-        if (['loop', 'createBar', 'autoAlign', 'inertia', 'toggleMode', 'movable', 'click'].includes(key)) {
+        // 布尔值转换（loop, createBar, autoAlign, inertia, toggleMode, movable, click, enableScroll, scrollReverse 等）
+        if (['loop', 'createBar', 'autoAlign', 'inertia', 'toggleMode', 'movable', 'click', 'enableScroll', 'scrollReverse'].includes(key)) {
           value = value === 'true' || value === true;
         }
-        // 数字类型属性转换（包括 opacity）
-        if (['noteNum', 'offset', 'outScope', 'opacity', 'animateStep'].includes(key) && typeof value === 'string') {
+        // 数字类型属性转换（包括 opacity 和滚动相关属性）
+        if (['noteNum', 'offset', 'outScope', 'opacity', 'animateStep', 'scrollStartOffset', 'scrollEndOffset', 'scrollInterval', 'scrollDuration'].includes(key) && typeof value === 'string') {
           const num = parseFloat(value);
           value = isNaN(num) ? value : num;
         }
@@ -669,6 +671,10 @@ export class HmlParser {
         }
         // enableBlur 需要转换为布尔值
         if (key === 'enableBlur') {
+          value = value === 'true' || value === true;
+        }
+        // enableScroll 和 scrollReverse 需要转换为布尔值
+        if (key === 'enableScroll' || key === 'scrollReverse') {
           value = value === 'true' || value === true;
         }
         // characterSets 需要从 JSON 字符串解析为数组

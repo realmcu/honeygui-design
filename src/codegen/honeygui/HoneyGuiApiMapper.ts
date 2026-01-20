@@ -68,6 +68,21 @@ export class HoneyGuiApiMapper {
       includeHeader: 'gui_text.h'
     });
 
+    // 滚动文本（基于 gui_text）
+    this.mappings.set('hg_scroll_text', {
+      componentType: 'hg_scroll_text',
+      createFunction: 'gui_scroll_text_create',
+      propertySetters: [
+        { property: 'fontFile', apiFunction: 'gui_text_type_set' },
+        { property: 'text', apiFunction: 'gui_text_content_set' },
+        { property: 'fontSize', apiFunction: 'gui_text_size_set' },
+        { property: 'color', apiFunction: 'gui_text_color_set', valueTransform: this.colorToHex },
+        { property: 'scrollDirection', apiFunction: 'gui_scroll_text_scroll_set' }
+      ],
+      eventHandlers: [],
+      includeHeader: 'gui_scroll_text.h'
+    });
+
     // 图片
     this.mappings.set('hg_image', {
       componentType: 'hg_image',

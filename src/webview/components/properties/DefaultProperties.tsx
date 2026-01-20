@@ -589,23 +589,35 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                     <div className="property-item">
                       <label>{t('Alignment')}</label>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
-                        <div>
+                        <div style={{ opacity: (component.data as any)?.enableScroll ? 0.5 : 1 }}>
                           <label style={{ fontSize: '12px' }}>{t('Horizontal')}</label>
                           <PropertyEditor
                             type="select"
                             value={(component.style as any)?.hAlign || 'LEFT'}
                             onChange={(value) => handleStyleChange('hAlign', value)}
                             options={['LEFT', 'CENTER', 'RIGHT']}
+                            disabled={(component.data as any)?.enableScroll}
                           />
+                          {(component.data as any)?.enableScroll && (
+                            <span style={{ fontSize: '10px', color: 'var(--vscode-descriptionForeground)' }}>
+                              ({t('Disabled when scrolling')})
+                            </span>
+                          )}
                         </div>
-                        <div>
+                        <div style={{ opacity: (component.data as any)?.enableScroll && (component.data as any)?.scrollDirection === 'vertical' ? 0.5 : 1 }}>
                           <label style={{ fontSize: '12px' }}>{t('Vertical')}</label>
                           <PropertyEditor
                             type="select"
                             value={(component.style as any)?.vAlign || 'TOP'}
                             onChange={(value) => handleStyleChange('vAlign', value)}
                             options={['TOP', 'MID']}
+                            disabled={(component.data as any)?.enableScroll && (component.data as any)?.scrollDirection === 'vertical'}
                           />
+                          {(component.data as any)?.enableScroll && (component.data as any)?.scrollDirection === 'vertical' && (
+                            <span style={{ fontSize: '10px', color: 'var(--vscode-descriptionForeground)' }}>
+                              ({t('Disabled for vertical scroll')})
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -623,17 +635,30 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                           />
                         </div>
                       ))}
-                    {/* Word wrap and word break */}
+                    {/* Word wrap and word break - 滚动时根据方向自动处理 */}
                     <div className="property-item">
                       <label>{t('Line Break')}</label>
                       <div style={{ display: 'flex', gap: '16px', marginTop: '4px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', opacity: (component.data as any)?.enableScroll ? 0.5 : 1 }}>
                           <PropertyEditor
                             type="boolean"
-                            value={(component.style as any)?.wordWrap ?? false}
+                            value={(component.data as any)?.enableScroll 
+                              ? (component.data as any)?.scrollDirection === 'vertical'
+                              : ((component.style as any)?.wordWrap ?? false)}
                             onChange={(value) => handleStyleChange('wordWrap', value)}
+                            disabled={(component.data as any)?.enableScroll}
                           />
                           <span style={{ fontSize: '12px' }}>{t('Word Wrap')}</span>
+                          {(component.data as any)?.enableScroll && (component.data as any)?.scrollDirection === 'vertical' && (
+                            <span style={{ fontSize: '10px', color: 'var(--vscode-descriptionForeground)' }}>
+                              ({t('Auto enabled for vertical scroll')})
+                            </span>
+                          )}
+                          {(component.data as any)?.enableScroll && (component.data as any)?.scrollDirection === 'horizontal' && (
+                            <span style={{ fontSize: '10px', color: 'var(--vscode-descriptionForeground)' }}>
+                              ({t('Auto disabled for horizontal scroll')})
+                            </span>
+                          )}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }} title={t('Break at word boundaries')}>
                           <PropertyEditor
@@ -667,6 +692,17 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                         </div>
                       </div>
                     </div>
+                    {/* 启用滚动 - 放在样式组最后 */}
+                    <div className="property-item">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                        <PropertyEditor
+                          type="boolean"
+                          value={(component.data as any)?.enableScroll ?? false}
+                          onChange={(value) => handleDataChange('enableScroll', value)}
+                        />
+                        <span style={{ fontSize: '12px' }}>{t('Enable Scroll')}</span>
+                      </div>
+                    </div>
                   </>
                 ) : (
                   definition.properties
@@ -683,6 +719,89 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                       </div>
                     ))
                 )}
+              </div>
+            )}
+
+            {/* Scroll Properties - 仅对 hg_label 且启用滚动时显示 */}
+            {component.type === 'hg_label' && (component.data as any)?.enableScroll && (
+              <div className="property-group">
+                <div className="property-group-title">{t('Scroll Settings')}</div>
+                {/* 滚动方向 */}
+                <div className="property-item">
+                  <label>{t('Scroll Direction')}</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px', marginTop: '4px' }}>
+                    <select
+                      value={(component.data as any)?.scrollDirection || 'horizontal'}
+                      onChange={(e) => handleDataChange('scrollDirection', e.target.value)}
+                      style={{
+                        padding: '4px 6px',
+                        backgroundColor: 'var(--vscode-input-background)',
+                        color: 'var(--vscode-input-foreground)',
+                        border: '1px solid var(--vscode-input-border)',
+                        borderRadius: '2px',
+                      }}
+                    >
+                      <option value="horizontal">{t('horizontal' as any)}</option>
+                      <option value="vertical">{t('vertical' as any)}</option>
+                    </select>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <PropertyEditor
+                        type="boolean"
+                        value={(component.data as any)?.scrollReverse ?? false}
+                        onChange={(value) => handleDataChange('scrollReverse', value)}
+                      />
+                      <span style={{ fontSize: '12px' }}>{t('Reverse')}</span>
+                    </div>
+                  </div>
+                </div>
+                {/* 起始偏移 */}
+                <div className="property-item">
+                  <label>{t('Start Offset (px)')}</label>
+                  <PropertyEditor
+                    type="number"
+                    value={(component.data as any)?.scrollStartOffset ?? 0}
+                    onChange={(value) => handleDataChange('scrollStartOffset', value)}
+                  />
+                  <span style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '2px' }}>
+                    {t('Initial blank space before text')}
+                  </span>
+                </div>
+                {/* 结束偏移 */}
+                <div className="property-item">
+                  <label>{t('End Offset (px)')}</label>
+                  <PropertyEditor
+                    type="number"
+                    value={(component.data as any)?.scrollEndOffset ?? 0}
+                    onChange={(value) => handleDataChange('scrollEndOffset', value)}
+                  />
+                  <span style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '2px' }}>
+                    {t('Final blank space after text')}
+                  </span>
+                </div>
+                {/* 循环间隔 */}
+                <div className="property-item">
+                  <label>{t('Loop Interval (ms)')}</label>
+                  <PropertyEditor
+                    type="number"
+                    value={(component.data as any)?.scrollInterval ?? 3000}
+                    onChange={(value) => handleDataChange('scrollInterval', value)}
+                  />
+                  <span style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '2px' }}>
+                    {t('Time for one complete scroll cycle')}
+                  </span>
+                </div>
+                {/* 总持续时间 */}
+                <div className="property-item">
+                  <label>{t('Total Duration (ms)')}</label>
+                  <PropertyEditor
+                    type="number"
+                    value={(component.data as any)?.scrollDuration ?? 0}
+                    onChange={(value) => handleDataChange('scrollDuration', value)}
+                  />
+                  <span style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '2px' }}>
+                    {t('Total scrolling duration, 0 = infinite')}
+                  </span>
+                </div>
               </div>
             )}
 

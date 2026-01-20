@@ -153,6 +153,12 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       code += `#include "gui_win.h"\n`;
     }
 
+    // 检查是否有滚动文本
+    const hasScrollText = this.components.some(c => c.type === 'hg_label' && (c.data?.enableScroll === true || c.data?.enableScroll === 'true'));
+    if (hasScrollText) {
+      code += `#include "gui_scroll_text.h"\n`;
+    }
+
     if (has3D) {
       code += `#include "gui_lite3d.h"\n`;
       code += `#include "gui_vfs.h"\n`;

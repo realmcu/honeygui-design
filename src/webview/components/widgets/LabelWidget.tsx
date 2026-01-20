@@ -50,7 +50,21 @@ export const LabelWidget: React.FC<WidgetProps> = ({ component, style, handlers 
   // 合并字体样式
   const hAlign = component.style?.hAlign || 'LEFT';
   const vAlign = component.style?.vAlign || 'TOP';
-  const wordWrap = component.style?.wordWrap || false;
+  
+  // 滚动相关属性
+  const enableScroll = component.data?.enableScroll === true || component.data?.enableScroll === 'true';
+  const scrollDirection = component.data?.scrollDirection || 'horizontal';
+  
+  // 换行设置：滚动时根据方向自动设置
+  // - 横向滚动：强制不换行
+  // - 纵向滚动：强制换行
+  // - 非滚动：使用用户设置
+  let wordWrap: boolean;
+  if (enableScroll) {
+    wordWrap = scrollDirection === 'vertical';
+  } else {
+    wordWrap = component.style?.wordWrap || false;
+  }
   const wordBreak = component.style?.wordBreak || false;
   
   // 获取配置的字号（确保是数字类型）
