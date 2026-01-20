@@ -9,6 +9,7 @@ import { HmlTemplateManager } from '../hml/HmlTemplateManager';
 import { WebviewUtils } from '../common/WebviewUtils';
 import { logger } from '../utils/Logger';
 import { getAllTemplateInfo, getTemplateById } from '../template/templates';
+import { AVAILABLE_TEMPLATES } from '../template/TemplateConfig';
 import { ProjectUtils } from '../utils/ProjectUtils';
 
 /**
@@ -483,12 +484,12 @@ export class CreateProjectPanel {
                 return;
             }
 
-            // 验证项目名称格式（必须是合法的 C 变量名）
-            if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(projectName)) {
+            // 验证项目名称格式（用于目录名）
+            if (!/^[a-zA-Z0-9_-]+$/.test(projectName)) {
                 logger.error(`[CreateProjectPanel] Invalid project name: ${projectName}`);
                 this._panel.webview.postMessage({
                     command: 'error',
-                    text: vscode.l10n.t('Project name can only contain letters, numbers, underscores, and must start with a letter or underscore')
+                    text: vscode.l10n.t('Project name can only contain letters, numbers, underscores, and hyphens')
                 });
                 return;
             }
@@ -505,55 +506,76 @@ export class CreateProjectPanel {
                 return;
             }
 
-            // 确保模板已下载（询问用户）
-            const templatePath = await this._templateManager.ensureTemplate(templateId);
-            if (!templatePath) {
-                // 用户取消下载
-                this._panel.webview.postMessage({
-                    command: 'error',
-                    text: vscode.l10n.t('Project creation cancelled')
-                });
-                return;
-            }
-            
-            // 从缓存加载模板
-            const template = await ProjectTemplate.loadFromDir(templatePath);
-            if (!template) {
-                throw new Error(`Template not found: ${templateId}`);
+            // 获取模板配置
+            const templateConfig = AVAILABLE_TEMPLATES.find(t => t.id === templateId);
+            if (!templateConfig) {
+                throw new Error(`Template configuration not found: ${templateId}`);
             }
 
-            // 使用 withProgress 显示创建进度（完成后自动消失）
+            // 直接从 Git 仓库克隆到项目目录
             await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
-                title: `Creating project from template: ${projectName}...`,
+                title: `Cloning template: ${templateConfig.name}...`,
                 cancellable: false
-            }, async () => {
-                // 使用模板创建项目（拷贝完整项目）
-                await template.generate(projectPath, projectName);
+            }, async (progress) => {
+                progress.report({ message: 'Cloning repository...' });
                 
-                // 创建完成后，更新 project.json 添加 romfs 地址
+                const { spawn } = await import('child_process');
+                
+                await new Promise<void>((resolve, reject) => {
+                    const gitProcess = spawn('git', ['clone', '--progress', templateConfig.repo, projectPath]);
+                    
+                    gitProcess.stderr.on('data', (data: Buffer) => {
+                        const output = data.toString();
+                        const match = output.match(/Receiving objects:\s+(\d+)%/);
+                        if (match) {
+                            const percent = parseInt(match[1], 10);
+                            progress.report({ 
+                                message: `Cloning... ${percent}%`,
+                                increment: 1
+                            });
+                        }
+                    });
+                    
+                    gitProcess.on('close', (code: number) => {
+                        if (code === 0) {
+                            resolve();
+                        } else {
+                            reject(new Error(`Git clone failed with exit code: ${code}`));
+                        }
+                    });
+                    
+                    gitProcess.on('error', (err: Error) => {
+                        reject(new Error(`Git clone failed: ${err.message}`));
+                    });
+                });
+                
+                // 删除 .git 目录
+                progress.report({ message: 'Cleaning up...' });
+                const gitDir = path.join(projectPath, '.git');
+                if (fs.existsSync(gitDir)) {
+                    fs.rmSync(gitDir, { recursive: true, force: true });
+                }
+                
+                // 更新 project.json（只更新 appId 和 romfsBaseAddr，保持模板原有的 name）
+                progress.report({ message: 'Updating configuration...' });
                 const projectJsonPath = path.join(projectPath, 'project.json');
                 if (fs.existsSync(projectJsonPath)) {
                     const projectConfig = JSON.parse(fs.readFileSync(projectJsonPath, 'utf8'));
+                    projectConfig.appId = appId;
                     projectConfig.romfsBaseAddr = romfsBaseAddr || DEFAULT_ROMFS_BASE_ADDR;
                     fs.writeFileSync(projectJsonPath, JSON.stringify(projectConfig, null, 2), 'utf8');
-                    logger.info(`[CreateProjectPanel] Romfs address added to project.json: ${projectConfig.romfsBaseAddr}`);
+                    logger.info(`[CreateProjectPanel] Updated project.json: appId=${appId}, romfsBaseAddr=${projectConfig.romfsBaseAddr}`);
                 }
-
-                // 创建 VSCode 工作区文件
+                
+                // 创建 VSCode 工作区文件（使用用户填写的项目名称）
                 const workspaceConfig = {
-                    folders: [
-                        { path: '.' }
-                    ],
+                    folders: [{ path: '.' }],
                     settings: {
-                        'files.associations': {
-                            '*.hml': 'xml'
-                        }
+                        'files.associations': { '*.hml': 'xml' }
                     },
                     extensions: {
-                        recommendations: [
-                            'realmcu.honeygui-visual-designer'
-                        ]
+                        recommendations: ['realmcu.honeygui-visual-designer']
                     }
                 };
                 fs.writeFileSync(
