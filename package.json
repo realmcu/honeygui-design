@@ -265,7 +265,7 @@
     "prepackage": "npm run check:deps",
     "test:video-formats": "npx ts-node scripts/test-three-formats.ts",
     "test:video-formats:quick": "node test-formats-quick.js",
-    "vscode:prepublish": "npm run update:deps && npm run compile && npm run build:webview",
+    "vscode:prepublish": "npm run compile && npm run build:webview",
     "compile": "node scripts/prepare-video-converter.js && npm run clean:src && tsc -p ./",
     "watch": "tsc -watch -p ./",
     "lint": "eslint . --ext .ts,.tsx",

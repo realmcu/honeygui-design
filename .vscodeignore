@@ -57,48 +57,23 @@ template-projects/**/*.o
 template-projects/**/*.a
 
 # ========================================
-# Node Modules - 只保留运行时依赖
+# Node Modules - 只保留 Extension 端运行时依赖
 # ========================================
 node_modules/**
 
-# 核心依赖 (自动生成，请勿手动修改此部分)
-# AUTO-GENERATED-DEPS-START
-!node_modules/@csstools/css-parser-algorithms/**
-!node_modules/@csstools/css-tokenizer/**
-!node_modules/bmp-js/**
-!node_modules/chokidar/**
-!node_modules/fabric/**
+# Extension 端核心依赖（Webview 依赖已由 webpack 打包）
 !node_modules/fast-xml-parser/**
-!node_modules/html2canvas/**
-!node_modules/ini/**
-!node_modules/jpeg-js/**
+!node_modules/strnum/**
 !node_modules/mp4box/**
 !node_modules/opentype.js/**
-!node_modules/pngjs/**
+!node_modules/string.prototype.codepointat/**
+!node_modules/tiny-inflate/**
 !node_modules/ws/**
-!node_modules/xml-js/**
-# AUTO-GENERATED-DEPS-END
 
-# chokidar 依赖链
-!node_modules/anymatch/**
-!node_modules/braces/**
-!node_modules/fill-range/**
-!node_modules/to-regex-range/**
-!node_modules/is-number/**
-!node_modules/glob-parent/**
-!node_modules/is-glob/**
-!node_modules/is-extglob/**
-!node_modules/is-binary-path/**
-!node_modules/binary-extensions/**
-!node_modules/normalize-path/**
-!node_modules/readdirp/**
-!node_modules/picomatch/**
-
-# fast-xml-parser 依赖
-!node_modules/strnum/**
-
-# xml-js 依赖
-!node_modules/sax/**
+# 图片转换工具依赖
+!node_modules/pngjs/**
+!node_modules/jpeg-js/**
+!node_modules/bmp-js/**
 *.kiro
 rm-sdk.kiro
 AGENTS.md

@@ -145,7 +145,13 @@ HmlEditorProvider.resolveCustomTextEditor()
    - 默认情况下，只修改代码，不执行 git 操作
    - 只有当用户明确说"提交"、"commit"、"push"、"提交到 gitee"等关键词时，才执行 git 操作
    - 如果不确定是否需要提交，先询问用户
-8. **发布版本**：
+8. **打包安装包**：
+   - 当用户说"打包"、"生成安装包"或"package"时，执行以下流程：
+     1. 执行 `npm install` 安装依赖（干净仓库必需）
+     2. 执行 `npm run compile` 编译代码
+     3. 执行 `npm run build:webview` 构建前端
+     4. 执行 `vsce package` 生成 `.vsix` 文件
+9. **发布版本**：
    - 当用户说"发布版本"或"publish"时，执行以下流程：
      1. 更新版本号（递增 patch 版本，如 1.4.13 → 1.4.14，或使用用户指定的版本）
      2. 执行 `npm install` 确保依赖最新（适用于干净仓库）
