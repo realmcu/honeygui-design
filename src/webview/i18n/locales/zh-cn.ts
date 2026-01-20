@@ -58,6 +58,8 @@ const zhCN = {
   'Final blank space after text': '文本后的最终空白',
   'Time for one complete scroll cycle': '一次完整滚动循环的时间',
   'Total scrolling duration, 0 = infinite': '滚动总持续时间，0 = 无限循环',
+  'Scroll Preview': '滚动预览',
+  'Enable scroll animation preview': '启用滚动动画预览',
   'Auto enabled for vertical scroll': '纵向滚动自动启用',
   'Auto disabled for horizontal scroll': '横向滚动自动禁用',
   'Disabled when scrolling': '滚动时无效',

@@ -58,6 +58,8 @@ const en = {
   'Final blank space after text': 'Final blank space after text',
   'Time for one complete scroll cycle': 'Time for one complete scroll cycle',
   'Total scrolling duration, 0 = infinite': 'Total scrolling duration, 0 = infinite',
+  'Scroll Preview': 'Scroll Preview',
+  'Enable scroll animation preview': 'Enable scroll animation preview',
   'Auto enabled for vertical scroll': 'Auto enabled for vertical scroll',
   'Auto disabled for horizontal scroll': 'Auto disabled for horizontal scroll',
   'Disabled when scrolling': 'Disabled when scrolling',

@@ -694,13 +694,25 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                     </div>
                     {/* 启用滚动 - 放在样式组最后 */}
                     <div className="property-item">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-                        <PropertyEditor
-                          type="boolean"
-                          value={(component.data as any)?.enableScroll ?? false}
-                          onChange={(value) => handleDataChange('enableScroll', value)}
-                        />
-                        <span style={{ fontSize: '12px' }}>{t('Enable Scroll')}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '4px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <PropertyEditor
+                            type="boolean"
+                            value={(component.data as any)?.enableScroll ?? false}
+                            onChange={(value) => handleDataChange('enableScroll', value)}
+                          />
+                          <span style={{ fontSize: '12px' }}>{t('Enable Scroll')}</span>
+                        </div>
+                        {(component.data as any)?.enableScroll && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }} title={t('Enable scroll animation preview')}>
+                            <PropertyEditor
+                              type="boolean"
+                              value={(component.data as any)?.scrollPreview ?? false}
+                              onChange={(value) => handleDataChange('scrollPreview', value)}
+                            />
+                            <span style={{ fontSize: '12px' }}>{t('Scroll Preview')}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </>
