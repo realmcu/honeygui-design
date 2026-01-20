@@ -178,31 +178,64 @@ export class LabelGenerator implements ComponentCodeGenerator {
     // 计算三个部分的位置和尺寸
     if (wordWrap) {
       // 换行模式：小时在第一行，冒号和分钟在第二行
-      // 参考 SDK 示例：
-      // - 小时和分钟使用相同的 x 和宽度（以分钟的 x 为准）
-      // - 冒号宽度 = 字体大小 / 2
-      // - 都使用 MID_CENTER 对齐，数字自然上下对齐
-      const colonWidth = Math.floor(Number(fontSize) / 2);  // 冒号宽度 = 字体大小 / 2
-      const numWidth2 = numWidth - colonWidth;              // 数字部分宽度
+      // 通用布局方案：
+      // - 根据字体大小估算数字宽度（数字字符宽度约为 fontSize * 0.5）
+      // - 小时和分钟使用估算的宽度 + CENTER 对齐，避免过大间隔
+      // - 冒号使用小宽度 + CENTER 对齐
       
-      const hourX = numX + colonWidth;  // 小时 x = 原始 x + 冒号宽度
-      const colonX = numX;              // 冒号在左侧
-      const minX = numX + colonWidth;   // 分钟 x = 原始 x + 冒号宽度（与小时相同）
+      const fontSize = Number(component.data?.fontSize) || 16;
       
+      // 估算字符宽度（参考 SDK 源码：数字字符宽度约为 font_height / 2）
+      const digitCharWidth = Math.floor(fontSize * 0.5);  // 单个数字字符宽度
+      const twoDigitsWidth = digitCharWidth * 2;  // 两位数字宽度（如 "12"）
+      
+      const colonWidth = Math.max(Math.floor(fontSize / 4), 20);  // 冒号宽度
+      const colonSpacing = Math.floor(fontSize / 8);  // 冒号与分钟的间隔
+      
+      // 计算居中位置
+      const centerX = numX + Math.floor(numWidth / 2);
+      
+      // 小时：CENTER 对齐，使用估算的两位数字宽度
+      const hourWidth = twoDigitsWidth;
+      const hourX = centerX - Math.floor(hourWidth / 2);
       const hourY = numY;
-      const colonY = Number(numY) + Number(height);     // 冒号在第二行
-      const minY = Number(numY) + Number(height);       // 分钟也在第二行
+      
+      // 第二行的布局：冒号 + 间隔 + 分钟
+      const secondLineWidth = colonWidth + colonSpacing + twoDigitsWidth;
+      const secondLineX = centerX - Math.floor(secondLineWidth / 2);
+      
+      // 冒号：CENTER 对齐
+      const colonX = secondLineX;
+      const colonY = Number(numY) + Number(fontSize);
+      
+      // 分钟：CENTER 对齐，使用估算的两位数字宽度
+      const minWidth = twoDigitsWidth;
+      const minX = secondLineX + colonWidth + colonSpacing;
+      const minY = Number(numY) + Number(fontSize);
       
       return this.generateSplitTimeWithWrap(component, indent, context, 
-        hourX, hourY, numWidth2, colonX, colonY, colonWidth, minX, minY, numWidth2, height);
+        hourX, hourY, hourWidth, colonX, colonY, colonWidth, minX, minY, minWidth, fontSize);
     } else {
       // 不换行模式：小时、冒号、分钟在同一行
-      const hourWidth = Math.floor(numWidth * 0.4);
-      const colonWidth = Math.floor(numWidth * 0.2);
-      const minWidth = Math.floor(numWidth * 0.4);
+      // 参考 SDK 示例布局逻辑：
+      // - 小时使用 RIGHT 对齐，右对齐到冒号左侧
+      // - 冒号紧贴在小时右侧
+      // - 分钟使用 LEFT 对齐，左对齐到冒号右侧
       
+      const colonWidth = Math.max(Math.floor(Number(fontSize) / 4), 20);  // 冒号宽度 = 字体大小 / 4，最小 20
+      
+      // 将总宽度分配给小时和分钟（各占一半）
+      const halfWidth = Math.floor((numWidth - colonWidth) / 2);
+      const hourWidth = halfWidth;
+      const minWidth = numWidth - colonWidth - hourWidth;
+      
+      // 小时：从左侧开始，RIGHT 对齐
       const hourX = numX;
+      
+      // 冒号：紧贴在小时右侧
       const colonX = numX + hourWidth;
+      
+      // 分钟：从冒号右侧开始，LEFT 对齐
       const minX = numX + hourWidth + colonWidth;
       
       return this.generateSplitTimeInline(component, indent, context,
@@ -212,6 +245,10 @@ export class LabelGenerator implements ComponentCodeGenerator {
 
   /**
    * 生成换行模式的拆分时间代码
+   * 通用布局方案：
+   * - 小时和分钟使用 CENTER 对齐，在各自区域内居中，自然垂直对齐
+   * - 冒号使用 CENTER 对齐，在独立小区域内居中
+   * - 高度直接使用字体大小（fontSize）
    */
   private generateSplitTimeWithWrap(
     component: Component, indent: number, context: GeneratorContext,
@@ -232,10 +269,9 @@ export class LabelGenerator implements ComponentCodeGenerator {
     const convertedFontFile = fontFile ? this.getConvertedFontFileName(component) : '';
     const fontMode = this.getFontMode();
     
-    // 拆分时间使用固定的对齐方式
-    // 参考 SDK 示例：小时和分钟都使用 MID_CENTER，数字自然上下对齐
-    const hourTextMode = 'MID_CENTER';
-    const minTextMode = 'MID_CENTER';
+    // 都使用 CENTER 对齐，在各自区域内居中
+    const hourTextMode = 'CENTER';
+    const minTextMode = 'CENTER';
     
     let code = '';
     
@@ -258,14 +294,14 @@ export class LabelGenerator implements ComponentCodeGenerator {
       code += `${indentStr}gui_text_extra_line_spacing_set(${component.id}_hour, ${lineSpacing});\n`;
     }
     
-    // 生成冒号 label
+    // 生成冒号 label（CENTER 对齐，在小区域内居中）
     code += `${indentStr}// 拆分时间 - 冒号（带呼吸灯）\n`;
     code += `${indentStr}${component.id}_colon = gui_text_create(${parentRef}, "${component.name}_colon", ${colonX}, ${colonY}, ${colonWidth}, ${height});\n`;
     code += `${indentStr}gui_text_set(${component.id}_colon, ":", ${fontType}, gui_rgb(${rgb.r}, ${rgb.g}, ${rgb.b}), 1, ${fontSize});\n`;
     if (fontFile) {
       code += `${indentStr}gui_text_type_set(${component.id}_colon, "${convertedFontFile}", ${fontMode});\n`;
     }
-    code += `${indentStr}gui_text_mode_set(${component.id}_colon, MID_CENTER);\n`;
+    code += `${indentStr}gui_text_mode_set(${component.id}_colon, CENTER);\n`;
     
     // 生成分钟 label
     code += `${indentStr}// 拆分时间 - 分钟\n`;
@@ -300,6 +336,11 @@ export class LabelGenerator implements ComponentCodeGenerator {
 
   /**
    * 生成不换行模式的拆分时间代码
+   * 参考 SDK 源码分析：
+   * - 小时使用 RIGHT 对齐（右对齐到冒号左侧）
+   * - 分钟使用 LEFT 对齐（左对齐到冒号右侧）
+   * - 冒号使用 LEFT 对齐（紧贴左侧，避免 CENTER 导致间隔过大）
+   * - 高度直接使用字体大小（fontSize）
    */
   private generateSplitTimeInline(
     component: Component, indent: number, context: GeneratorContext,
@@ -320,9 +361,9 @@ export class LabelGenerator implements ComponentCodeGenerator {
     const convertedFontFile = fontFile ? this.getConvertedFontFileName(component) : '';
     const fontMode = this.getFontMode();
     
-    // 拆分时间使用固定的对齐方式
-    const hourTextMode = 'MID_LEFT';
-    const minTextMode = 'MID_RIGHT';
+    // 参考 SDK 源码：小时右对齐，分钟左对齐，冒号左对齐（紧贴左侧）
+    const hourTextMode = 'RIGHT';
+    const minTextMode = 'LEFT';
     
     let code = '';
     
@@ -345,14 +386,14 @@ export class LabelGenerator implements ComponentCodeGenerator {
       code += `${indentStr}gui_text_extra_line_spacing_set(${component.id}_hour, ${lineSpacing});\n`;
     }
     
-    // 生成冒号 label
+    // 生成冒号 label（使用 LEFT 对齐，让冒号紧贴左侧，更接近数字）
     code += `${indentStr}// 拆分时间 - 冒号（带呼吸灯）\n`;
     code += `${indentStr}${component.id}_colon = gui_text_create(${parentRef}, "${component.name}_colon", ${colonX}, ${colonY}, ${colonWidth}, ${height});\n`;
     code += `${indentStr}gui_text_set(${component.id}_colon, ":", ${fontType}, gui_rgb(${rgb.r}, ${rgb.g}, ${rgb.b}), 1, ${fontSize});\n`;
     if (fontFile) {
       code += `${indentStr}gui_text_type_set(${component.id}_colon, "${convertedFontFile}", ${fontMode});\n`;
     }
-    code += `${indentStr}gui_text_mode_set(${component.id}_colon, MID_CENTER);\n`;
+    code += `${indentStr}gui_text_mode_set(${component.id}_colon, LEFT);\n`;
     
     // 生成分钟 label
     code += `${indentStr}// 拆分时间 - 分钟\n`;
