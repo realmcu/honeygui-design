@@ -58,6 +58,9 @@ node_modules/**
 
 # 核心依赖 (自动生成，请勿手动修改此部分)
 # AUTO-GENERATED-DEPS-START
+!node_modules/@belief997/video-converter/**
+!node_modules/@csstools/css-parser-algorithms/**
+!node_modules/@csstools/css-tokenizer/**
 !node_modules/bmp-js/**
 !node_modules/chokidar/**
 !node_modules/fabric/**
@@ -68,7 +71,6 @@ node_modules/**
 !node_modules/mp4box/**
 !node_modules/opentype.js/**
 !node_modules/pngjs/**
-!node_modules/video-converter-ts/**
 !node_modules/ws/**
 !node_modules/xml-js/**
 # AUTO-GENERATED-DEPS-END
