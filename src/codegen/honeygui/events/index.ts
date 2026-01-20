@@ -33,6 +33,7 @@ export class EventGeneratorFactory {
     // 基础控件
     this.generators.set('hg_button', new ButtonEventGenerator());
     this.generators.set('hg_label', new LabelEventGenerator());
+    this.generators.set('hg_time_label', new LabelEventGenerator());  // 时间标签复用标签事件生成器
     this.generators.set('hg_image', new ImageEventGenerator());
     this.generators.set('hg_input', new InputEventGenerator());
     this.generators.set('hg_checkbox', new CheckboxEventGenerator());

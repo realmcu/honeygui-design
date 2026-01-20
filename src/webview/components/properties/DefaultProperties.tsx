@@ -97,7 +97,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
   // 当字体文件改变时，请求字体度量信息
   React.useEffect(() => {
     const fontFile = (component.data as any)?.fontFile;
-    if (fontFile && component.type === 'hg_label') {
+    if (fontFile && (component.type === 'hg_label' || component.type === 'hg_time_label')) {
       window.vscodeAPI?.postMessage({
         command: 'getFontMetrics',
         fontPath: fontFile
@@ -583,9 +583,9 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                         </div>
                       ))}
                   </>
-                ) : component.type === 'hg_label' ? (
+                ) : component.type === 'hg_label' || component.type === 'hg_time_label' ? (
                   <>
-                    {/* hg_label 特殊处理：对齐方式在一行 */}
+                    {/* hg_label / hg_time_label 特殊处理：对齐方式在一行 */}
                     <div className="property-item">
                       <label>{t('Alignment')}</label>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
@@ -734,8 +734,8 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
               </div>
             )}
 
-            {/* Scroll Properties - 仅对 hg_label 且启用滚动时显示 */}
-            {component.type === 'hg_label' && (component.data as any)?.enableScroll && (
+            {/* Scroll Properties - 仅对 hg_label / hg_time_label 且启用滚动时显示 */}
+            {(component.type === 'hg_label' || component.type === 'hg_time_label') && (component.data as any)?.enableScroll && (
               <div className="property-group">
                 <div className="property-group-title">{t('Scroll Settings')}</div>
                 {/* 滚动方向 */}
@@ -849,7 +849,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                           (component.data as any)?.[property.name],
                           (value) => handleDataChange(property.name, value)
                         )
-                      ) : property.name === 'text' && component.type === 'hg_label' && (component.style as any)?.wordWrap ? (
+                      ) : property.name === 'text' && (component.type === 'hg_label' || component.type === 'hg_time_label') && (component.style as any)?.wordWrap ? (
                         // 自动换行开启时，文本输入框变成多行
                         <textarea
                           value={(component.data as any)?.[property.name] || ''}
@@ -924,8 +924,8 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
               </div>
             )}
 
-            {/* Font Properties - 仅对 hg_label 显示 */}
-            {definition && component.type === 'hg_label' && definition.properties.filter(p => p.group === 'font').length > 0 && (
+            {/* Font Properties - 仅对 hg_label / hg_time_label 显示 */}
+            {definition && (component.type === 'hg_label' || component.type === 'hg_time_label') && definition.properties.filter(p => p.group === 'font').length > 0 && (
               <div className="property-group">
                 <div className="property-group-title">{t('Font')}</div>
                 {/* 字体文件 */}

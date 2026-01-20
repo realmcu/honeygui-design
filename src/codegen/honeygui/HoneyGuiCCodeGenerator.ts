@@ -202,8 +202,8 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
           code += `extern gui_obj_t *${comp.id};\n`;
         }
         
-        // 如果是拆分时间格式的 label，添加子组件声明
-        if (comp.type === 'hg_label' && comp.data?.timeFormat === 'HH:mm-split') {
+        // 如果是拆分时间格式的时间标签，添加子组件声明
+        if (comp.type === 'hg_time_label' && comp.data?.timeFormat === 'HH:mm-split') {
           code += `extern gui_text_t *${comp.id}_hour;\n`;
           code += `extern gui_text_t *${comp.id}_colon;\n`;
           code += `extern gui_text_t *${comp.id}_min;\n`;
@@ -233,7 +233,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
    */
   private generateUiImplementation(baseName: string): string {
     // 收集所有时间标签
-    const timeLabels = this.components.filter(c => c.type === 'hg_label' && c.data?.timeFormat);
+    const timeLabels = this.components.filter(c => c.type === 'hg_time_label');
     
     let code = `/**
  * ${baseName} UI实现（自动生成，请勿手动修改）
@@ -266,8 +266,8 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
           code += `gui_obj_t *${comp.id} = NULL;\n`;
         }
         
-        // 如果是拆分时间格式的 label，添加子组件定义
-        if (comp.type === 'hg_label' && comp.data?.timeFormat === 'HH:mm-split') {
+        // 如果是拆分时间格式的时间标签，添加子组件定义
+        if (comp.type === 'hg_time_label' && comp.data?.timeFormat === 'HH:mm-split') {
           code += `gui_text_t *${comp.id}_hour = NULL;\n`;
           code += `gui_text_t *${comp.id}_colon = NULL;\n`;
           code += `gui_text_t *${comp.id}_min = NULL;\n`;
@@ -335,7 +335,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
     }
 
     // 生成拆分时间标签的回调函数
-    const splitTimeLabels = this.components.filter(c => c.type === 'hg_label' && c.data?.timeFormat === 'HH:mm-split');
+    const splitTimeLabels = this.components.filter(c => c.type === 'hg_time_label' && c.data?.timeFormat === 'HH:mm-split');
     if (splitTimeLabels.length > 0) {
       code += `// 拆分时间标签的回调函数\n`;
       splitTimeLabels.forEach(label => {

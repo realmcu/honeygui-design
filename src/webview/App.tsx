@@ -587,6 +587,115 @@ const App: React.FC = () => {
     });
   };
 
+  /**
+   * 从组件库右键菜单创建组件
+   * 在当前选中的容器或第一个 hg_view 中创建组件
+   */
+  const handleCreateComponentFromLibrary = (componentType: ComponentType) => {
+    const componentDef = componentDefinitions.find(def => def.type === componentType);
+    if (!componentDef) {
+      console.error(`未找到组件类型 ${componentType} 的定义配置`);
+      return;
+    }
+
+    const components = useDesignerStore.getState().components;
+    const currentSelected = useDesignerStore.getState().selectedComponent;
+    
+    // 查找目标容器：优先使用当前选中的容器，否则使用第一个 hg_view
+    let targetContainer: Component | null = null;
+    
+    if (currentSelected) {
+      const selectedComp = components.find(c => c.id === currentSelected);
+      if (selectedComp && isDropTargetType(selectedComp.type)) {
+        targetContainer = selectedComp;
+      } else if (selectedComp?.parent) {
+        // 如果选中的不是容器，使用其父容器
+        const parentComp = components.find(c => c.id === selectedComp.parent);
+        if (parentComp && isDropTargetType(parentComp.type)) {
+          targetContainer = parentComp;
+        }
+      }
+    }
+    
+    // 如果没有找到目标容器，使用第一个 hg_view
+    if (!targetContainer) {
+      targetContainer = components.find(c => c.type === 'hg_view') || null;
+    }
+    
+    if (!targetContainer) {
+      const api = useDesignerStore.getState().vscodeAPI;
+      if (api) {
+        api.postMessage({
+          command: 'error',
+          text: t('Please drop component into container (View/Window)')
+        });
+      }
+      return;
+    }
+
+    // 生成唯一组件ID
+    const componentId = `${componentType}_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
+    
+    // 默认位置：容器中心偏移
+    const { width: defWidth, height: defHeight } = componentDef.defaultSize;
+    const positionX = Math.max(0, Math.floor((targetContainer.position.width - defWidth) / 2));
+    const positionY = Math.max(0, Math.floor((targetContainer.position.height - defHeight) / 2));
+
+    // 应用默认样式
+    const defaultStyle: Record<string, any> = {};
+    componentDef.properties
+      .filter(prop => prop.group === 'style' && prop.defaultValue !== undefined)
+      .forEach(prop => {
+        defaultStyle[prop.name] = prop.defaultValue;
+      });
+
+    // 应用默认数据
+    const defaultData: Record<string, any> = {};
+    componentDef.properties
+      .filter(prop => prop.group === 'data' && prop.defaultValue !== undefined)
+      .forEach(prop => {
+        defaultData[prop.name] = prop.defaultValue;
+      });
+
+    // 时间标签：自动添加时间字符集
+    if (componentType === 'hg_time_label') {
+      defaultData.characterSets = [
+        { type: 'string', value: '0123456789:- ' }
+      ];
+    }
+
+    // 应用默认通用属性
+    componentDef.properties
+      .filter(prop => prop.group === 'general' && prop.defaultValue !== undefined)
+      .forEach(prop => {
+        defaultData[prop.name] = prop.defaultValue;
+      });
+
+    // 创建新组件对象
+    const newComponent: Component = {
+      id: componentId,
+      type: componentType,
+      name: `${componentType}_${Date.now().toString().substr(-4)}`,
+      position: {
+        x: positionX,
+        y: positionY,
+        width: defWidth,
+        height: defHeight,
+      },
+      visible: true,
+      enabled: true,
+      locked: false,
+      showOverflow: false,
+      zIndex: 1,
+      children: [],
+      parent: targetContainer.id,
+      style: defaultStyle,
+      data: defaultData,
+    };
+
+    addComponent(newComponent);
+    selectComponent(newComponent.id);
+  };
 
   const handleCanvasDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -1026,7 +1135,7 @@ const App: React.FC = () => {
 
           {/* Tab Content */}
           <div className="tab-content">
-            {activeTab === 'components' && <ComponentLibrary onComponentDragStart={() => {}} />}
+            {activeTab === 'components' && <ComponentLibrary onComponentDragStart={() => {}} onCreateComponent={handleCreateComponentFromLibrary} />}
             {activeTab === 'assets' && <AssetsPanel />}
             {activeTab === 'tree' && <ComponentTree onContextMenu={handleComponentContextMenu} />}
           </div>

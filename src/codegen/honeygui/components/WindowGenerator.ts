@@ -82,14 +82,14 @@ export class WindowGenerator implements ComponentCodeGenerator {
   }
 
   /**
-   * 收集当前 window 下所有带时间格式的 label 组件
+   * 收集当前 window 下所有时间标签组件
    */
   private collectTimeLabels(component: Component, context: GeneratorContext): string[] {
     const timeLabels: string[] = [];
     
     const collectRecursive = (comp: Component) => {
-      // 检查当前组件是否是带时间格式的 label
-      if (comp.type === 'hg_label' && comp.data?.timeFormat) {
+      // 检查当前组件是否是时间标签
+      if (comp.type === 'hg_time_label') {
         timeLabels.push(comp.id);
       }
       

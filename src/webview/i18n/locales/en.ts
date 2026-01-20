@@ -21,6 +21,8 @@ const en = {
   // Component names
   'Button': 'Button',
   'Label/Text': 'Label/Text',
+  'Time Label': 'Time Label',
+  'Advanced Widgets': 'Advanced Widgets',
   'Input': 'Input',
   'Image': 'Image',
   'Checkbox': 'Checkbox',

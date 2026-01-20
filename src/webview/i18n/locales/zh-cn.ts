@@ -21,6 +21,8 @@ const zhCN = {
   // Component names
   'Button': '按钮',
   'Label/Text': '标签/文本',
+  'Time Label': '时间标签',
+  'Advanced Widgets': '高级应用控件',
   'Input': '输入框',
   'Image': '图片',
   'Checkbox': '复选框',

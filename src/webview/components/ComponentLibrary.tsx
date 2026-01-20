@@ -1,10 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ComponentType, ComponentDefinition } from '../types';
 import { t } from '../i18n';
 import './ComponentLibrary.css';
 
 interface ComponentLibraryProps {
   onComponentDragStart: (type: ComponentType) => void;
+  onCreateComponent?: (type: ComponentType) => void;
+}
+
+/**
+ * 高级应用控件配置
+ * 定义哪些基础控件有对应的高级应用变体
+ */
+interface AdvancedVariant {
+  type: ComponentType;
+  label: string;
+  icon: string;
+}
+
+const advancedVariants: Record<string, AdvancedVariant[]> = {
+  'hg_label': [
+    { type: 'hg_time_label', label: 'Time Label', icon: '🕐' },
+  ],
+};
+
+/**
+ * 右键菜单状态
+ */
+interface ContextMenuState {
+  visible: boolean;
+  x: number;
+  y: number;
+  componentType: string;
 }
 
 const componentDefinitions: ComponentDefinition[] = [
@@ -30,8 +57,6 @@ const componentDefinitions: ComponentDefinition[] = [
     defaultSize: { width: 100, height: 24 },
     properties: [
       { name: 'text', label: 'Text', type: 'string', defaultValue: 'Label', group: 'data' },
-      { name: 'timeFormat', label: 'Time Format', type: 'select', defaultValue: '', 
-        options: ['', 'HH:mm:ss', 'HH:mm', 'HH:mm-split', 'YYYY-MM-DD', 'YYYY-MM-DD HH:mm:ss', 'MM-DD HH:mm'], group: 'data' },
       { name: 'hAlign', label: 'Horizontal Align', type: 'select', defaultValue: 'LEFT', 
         options: ['LEFT', 'CENTER', 'RIGHT'], group: 'style' },
       { name: 'vAlign', label: 'Vertical Align', type: 'select', defaultValue: 'TOP', 
@@ -48,6 +73,31 @@ const componentDefinitions: ComponentDefinition[] = [
       { name: 'scrollEndOffset', label: 'End Offset (px)', type: 'number', defaultValue: 0, group: 'scroll' },
       { name: 'scrollInterval', label: 'Loop Interval (ms)', type: 'number', defaultValue: 3000, group: 'scroll' },
       { name: 'scrollDuration', label: 'Total Duration (ms)', type: 'number', defaultValue: 0, group: 'scroll' },
+      { name: 'fontFile', label: 'Font File', type: 'string', defaultValue: '', group: 'font' },
+      { name: 'fontSize', label: 'Font Size', type: 'number', defaultValue: 16, group: 'font' },
+      { name: 'fontType', label: 'Font Type', type: 'select', defaultValue: 'bitmap', 
+        options: ['bitmap', 'vector'], group: 'font' },
+      { name: 'renderMode', label: 'Render Mode', type: 'select', defaultValue: '4', 
+        options: ['1', '2', '4', '8'], group: 'font' },
+    ],
+  },
+  // hg_time_label 定义保留用于属性面板，但不在组件库中显示
+  {
+    type: 'hg_time_label',
+    name: 'Time Label',
+    icon: '🕐',
+    defaultSize: { width: 120, height: 24 },
+    properties: [
+      { name: 'timeFormat', label: 'Time Format', type: 'select', defaultValue: 'HH:mm:ss', 
+        options: ['HH:mm:ss', 'HH:mm', 'HH:mm-split', 'YYYY-MM-DD', 'YYYY-MM-DD HH:mm:ss', 'MM-DD HH:mm'], group: 'data' },
+      { name: 'hAlign', label: 'Horizontal Align', type: 'select', defaultValue: 'LEFT', 
+        options: ['LEFT', 'CENTER', 'RIGHT'], group: 'style' },
+      { name: 'vAlign', label: 'Vertical Align', type: 'select', defaultValue: 'TOP', 
+        options: ['TOP', 'MID'], group: 'style' },
+      { name: 'color', label: 'Color', type: 'color', defaultValue: '#ffffff', group: 'style' },
+      { name: 'letterSpacing', label: 'Letter Spacing', type: 'number', defaultValue: 0, group: 'style' },
+      { name: 'lineSpacing', label: 'Line Spacing', type: 'number', defaultValue: 0, group: 'style' },
+      { name: 'wordWrap', label: 'Word Wrap', type: 'boolean', defaultValue: false, group: 'style' },
       { name: 'fontFile', label: 'Font File', type: 'string', defaultValue: '', group: 'font' },
       { name: 'fontSize', label: 'Font Size', type: 'number', defaultValue: 16, group: 'font' },
       { name: 'fontType', label: 'Font Type', type: 'select', defaultValue: 'bitmap', 
@@ -264,7 +314,7 @@ const componentDefinitions: ComponentDefinition[] = [
   },
 ];
 
-// Component categories
+// Component categories - hg_time_label 不在组件库中直接显示，只能通过右键标签控件创建
 const componentCategories = [
   { name: 'Containers', types: ['hg_view', 'hg_window', 'hg_canvas', 'hg_list'] },
   { name: 'Basic Controls', types: ['hg_button', 'hg_label', 'hg_image'] },
@@ -273,14 +323,57 @@ const componentCategories = [
   { name: 'Multimedia', types: ['hg_video', 'hg_3d', 'hg_lottie'] }
 ];
 
-const ComponentLibrary: React.FC<ComponentLibraryProps> = ({ onComponentDragStart }) => {
+const ComponentLibrary: React.FC<ComponentLibraryProps> = ({ onComponentDragStart, onCreateComponent }) => {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(componentCategories.map(c => c.name))
   );
+  const [contextMenu, setContextMenu] = useState<ContextMenuState>({
+    visible: false,
+    x: 0,
+    y: 0,
+    componentType: '',
+  });
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // 点击外部关闭菜单
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setContextMenu(prev => ({ ...prev, visible: false }));
+      }
+    };
+    if (contextMenu.visible) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [contextMenu.visible]);
 
   const handleDragStart = (e: React.DragEvent, type: ComponentType) => {
     e.dataTransfer.setData('component-type', type);
     onComponentDragStart(type);
+  };
+
+  const handleContextMenu = (e: React.MouseEvent, componentType: string) => {
+    // 只有有高级变体的组件才显示右键菜单
+    if (!advancedVariants[componentType]) {
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({
+      visible: true,
+      x: e.clientX,
+      y: e.clientY,
+      componentType,
+    });
+  };
+
+  const handleVariantClick = (variantType: ComponentType) => {
+    // 直接在当前 view 中创建组件
+    if (onCreateComponent) {
+      onCreateComponent(variantType);
+    }
+    setContextMenu(prev => ({ ...prev, visible: false }));
   };
 
   const toggleCategory = (categoryName: string) => {
@@ -294,6 +387,8 @@ const ComponentLibrary: React.FC<ComponentLibraryProps> = ({ onComponentDragStar
       return next;
     });
   };
+
+  const variants = advancedVariants[contextMenu.componentType] || [];
 
   return (
     <div className="component-library">
@@ -319,6 +414,7 @@ const ComponentLibrary: React.FC<ComponentLibraryProps> = ({ onComponentDragStar
                       className="component-item"
                       draggable
                       onDragStart={(e) => handleDragStart(e, component.type)}
+                      onContextMenu={(e) => handleContextMenu(e, component.type)}
                       title={t(component.name as any)}
                     >
                       <div className="component-icon">{component.icon}</div>
@@ -331,6 +427,27 @@ const ComponentLibrary: React.FC<ComponentLibraryProps> = ({ onComponentDragStar
           );
         })}
       </div>
+
+      {/* 右键菜单 */}
+      {contextMenu.visible && variants.length > 0 && (
+        <div
+          ref={menuRef}
+          className="component-library-context-menu"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+        >
+          <div className="context-menu-header">{t('Advanced Widgets' as any)}</div>
+          {variants.map((variant) => (
+            <div
+              key={variant.type}
+              className="context-menu-item"
+              onClick={() => handleVariantClick(variant.type)}
+            >
+              <span className="context-menu-icon">{variant.icon}</span>
+              <span className="context-menu-label">{t(variant.label as any)}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

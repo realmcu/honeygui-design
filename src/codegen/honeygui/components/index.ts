@@ -20,6 +20,7 @@ import { RectGenerator } from './RectGenerator';
 import { SvgGenerator } from './SvgGenerator';
 import { LottieGenerator } from './LottieGenerator';
 import { GlassGenerator } from './GlassGenerator';
+import { TimeLabelGenerator } from './TimeLabelGenerator';
 import { DefaultGenerator } from './DefaultGenerator';
 
 export class ComponentGeneratorFactory {
@@ -34,6 +35,7 @@ export class ComponentGeneratorFactory {
     // 基础控件
     this.generators.set('hg_button', new ButtonGenerator());
     this.generators.set('hg_label', new LabelGenerator());
+    this.generators.set('hg_time_label', new TimeLabelGenerator());
     this.generators.set('hg_image', new ImageGenerator());
     this.generators.set('hg_input', new InputGenerator());
     this.generators.set('hg_checkbox', new CheckboxGenerator());

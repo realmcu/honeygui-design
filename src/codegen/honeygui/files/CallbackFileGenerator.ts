@@ -60,7 +60,7 @@ export class CallbackFileGenerator {
 
     // 为拆分时间组件添加 extern 声明
     const splitTimeLabels = this.allComponents.filter(c => 
-      c.type === 'hg_label' && c.data?.timeFormat === 'HH:mm-split'
+      c.type === 'hg_time_label' && c.data?.timeFormat === 'HH:mm-split'
     );
     
     if (splitTimeLabels.length > 0) {
@@ -124,7 +124,7 @@ export class CallbackFileGenerator {
    */
   generateImplementation(baseName: string): string {
     // 收集所有时间标签（使用 allComponents）
-    const timeLabels = this.allComponents.filter(c => c.type === 'hg_label' && c.data?.timeFormat);
+    const timeLabels = this.allComponents.filter(c => c.type === 'hg_time_label');
     
     let code = `#include "${baseName}_callbacks.h"
 #include "../ui/${baseName}_ui.h"
@@ -319,8 +319,8 @@ export class CallbackFileGenerator {
     const impls = new Map<string, string>(); // 使用 Map 去重，key 为函数名
 
     this.allComponents.forEach(component => {
-      if (component.type === 'hg_label' && component.data?.timeFormat) {
-        const timeFormat = component.data.timeFormat;
+      if (component.type === 'hg_time_label') {
+        const timeFormat = component.data?.timeFormat || 'HH:mm:ss';
         const funcName = `${component.id}_time_update_cb`;
         const impl = this.generateTimeUpdateCallback(component.id, timeFormat);
         impls.set(funcName, impl);
@@ -337,7 +337,7 @@ export class CallbackFileGenerator {
     const names: string[] = [];
 
     this.allComponents.forEach(component => {
-      if (component.type === 'hg_label' && component.data?.timeFormat) {
+      if (component.type === 'hg_time_label') {
         names.push(`${component.id}_time_update_cb`);
       }
     });

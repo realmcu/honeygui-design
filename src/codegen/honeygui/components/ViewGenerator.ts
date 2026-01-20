@@ -172,8 +172,8 @@ export class ViewGenerator implements ComponentCodeGenerator {
     const timeLabels: string[] = [];
     
     const collectRecursive = (comp: Component) => {
-      // 检查当前组件是否是带时间格式的 label
-      if (comp.type === 'hg_label' && comp.data?.timeFormat) {
+      // 检查当前组件是否是时间标签
+      if (comp.type === 'hg_time_label') {
         timeLabels.push(comp.id);
       }
       
@@ -200,8 +200,8 @@ export class ViewGenerator implements ComponentCodeGenerator {
     const timeLabels: string[] = [];
     
     const collectRecursive = (comp: Component) => {
-      // 检查当前组件是否是带时间格式的 label
-      if (comp.type === 'hg_label' && comp.data?.timeFormat) {
+      // 检查当前组件是否是时间标签
+      if (comp.type === 'hg_time_label') {
         timeLabels.push(comp.id);
       }
       

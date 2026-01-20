@@ -97,3 +97,50 @@
   color: var(--vscode-foreground);
   word-break: break-word;
 }
+
+/* 右键菜单样式 */
+.component-library-context-menu {
+  position: fixed;
+  z-index: 1000;
+  min-width: 160px;
+  background: var(--vscode-menu-background);
+  border: 1px solid var(--vscode-menu-border);
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  padding: 4px 0;
+}
+
+.context-menu-header {
+  padding: 6px 12px;
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  border-bottom: 1px solid var(--vscode-menu-separatorBackground);
+  margin-bottom: 4px;
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.context-menu-item:hover {
+  background: var(--vscode-menu-selectionBackground);
+  color: var(--vscode-menu-selectionForeground);
+}
+
+.context-menu-icon {
+  margin-right: 8px;
+  font-size: 14px;
+}
+
+.context-menu-label {
+  font-size: 12px;
+  color: var(--vscode-menu-foreground);
+}
+
+.context-menu-item:hover .context-menu-label {
+  color: var(--vscode-menu-selectionForeground);
+}

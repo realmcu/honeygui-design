@@ -16,10 +16,6 @@ export interface MenuItem {
  */
 const commonMenuItems: MenuItem[] = [
   { id: 'gotoSlot', label: '跳转到槽函数', dividerAfter: true },
-  { id: 'copy', label: '复制 (Ctrl+C)' },
-  { id: 'cut', label: '剪切 (Ctrl+X)' },
-  { id: 'paste', label: '粘贴 (Ctrl+V)' },
-  { id: 'duplicate', label: '快速复制 (Ctrl+D)', dividerAfter: true },
   { id: 'bringToFront', label: '置于顶层' },
   { id: 'sendToBack', label: '置于底层' },
   { id: 'bringForward', label: '上移一层' },
@@ -33,8 +29,7 @@ const commonMenuItems: MenuItem[] = [
  * 如果没有特定配置，使用通用菜单
  */
 const menuItemsByType: Record<string, MenuItem[]> = {
-  // 可以为特定组件类型定义不同的菜单
-  // hg_button: [...commonMenuItems, { id: 'editText', label: '编辑文本' }],
+  // 所有组件使用通用菜单
 };
 
 /**
@@ -42,19 +37,11 @@ const menuItemsByType: Record<string, MenuItem[]> = {
  */
 export function getMenuItems(
   componentType: string, 
-  hasClipboard: boolean = false,
-  multiSelectCount: number = 1
+  _hasClipboard: boolean = false,
+  _multiSelectCount: number = 1
 ): MenuItem[] {
   const items = menuItemsByType[componentType] || commonMenuItems;
-  
-  return items.filter(item => {
-    // 如果剪贴板为空，过滤掉"粘贴"菜单项
-    if (item.id === 'paste' && !hasClipboard) {
-      return false;
-    }
-    
-    return true;
-  });
+  return items;
 }
 
 /**
