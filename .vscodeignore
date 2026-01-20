@@ -35,6 +35,11 @@ docs/**
 tools/**
 !tools/mpcli_meta_tool_py_v4.0.0.4/**
 !tools/mkromfs_for_honeygui.py
+# 保留 video-converter-ts 的编译输出
+!tools/video-converter-ts/**
+tools/video-converter-ts/src/**/*.ts
+tools/video-converter-ts/tests/**
+tools/video-converter-ts/node_modules/**
 
 # 其他
 azure.png
@@ -58,7 +63,6 @@ node_modules/**
 
 # 核心依赖 (自动生成，请勿手动修改此部分)
 # AUTO-GENERATED-DEPS-START
-!node_modules/@belief997/video-converter/**
 !node_modules/@csstools/css-parser-algorithms/**
 !node_modules/@csstools/css-tokenizer/**
 !node_modules/bmp-js/**

@@ -266,7 +266,7 @@
     "test:video-formats": "npx ts-node scripts/test-three-formats.ts",
     "test:video-formats:quick": "node test-formats-quick.js",
     "vscode:prepublish": "npm run update:deps && npm run compile && npm run build:webview",
-    "compile": "npm run clean:src && tsc -p ./",
+    "compile": "node scripts/prepare-video-converter.js && npm run clean:src && tsc -p ./",
     "watch": "tsc -watch -p ./",
     "lint": "eslint . --ext .ts,.tsx",
     "build:webview": "webpack --mode production",
@@ -319,7 +319,6 @@
     "webpack-dev-server": "^5.2.2"
   },
   "dependencies": {
-    "@belief997/video-converter": "^1.0.0",
     "@csstools/css-parser-algorithms": "^3.0.5",
     "@csstools/css-tokenizer": "^3.0.4",
     "bmp-js": "^0.1.0",

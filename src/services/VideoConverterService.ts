@@ -2,15 +2,8 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { spawn } from 'child_process';
 
-// 动态导入 ES Module
-let VideoConverterModule: any = null;
-
-async function loadVideoConverter() {
-    if (!VideoConverterModule) {
-        VideoConverterModule = await import('@belief997/video-converter');
-    }
-    return VideoConverterModule;
-}
+// 直接导入本地 video-converter 源码
+import { VideoConverter, OutputFormat, ProgressCallback, ConversionOptions } from '../../tools/video-converter-ts/src/index';
 
 export interface VideoConvertOptions {
     format: 'mjpeg' | 'avi' | 'h264';
@@ -57,12 +50,12 @@ export type LogCallback = (message: string) => void;
 export class VideoConverterService {
     private logCallback?: LogCallback;
     private progressCallback?: ProgressCallback;
-    private converter: TsVideoConverter;
+    private converter: VideoConverter;
 
     constructor(logCallback?: LogCallback, progressCallback?: ProgressCallback) {
         this.logCallback = logCallback;
         this.progressCallback = progressCallback;
-        this.converter = new TsVideoConverter(progressCallback);
+        this.converter = new VideoConverter(progressCallback);
     }
 
 
@@ -192,14 +185,15 @@ export class VideoConverterService {
         // 第二步：使用 TypeScript 转换器进行格式转换
         try {
             const outputFormat = this.mapFormat(options.format);
+            const conversionOptions: ConversionOptions = {
+                frameRate: options.frameRate,
+                quality: options.quality
+            };
             const result = await this.converter.convert(
                 videoToConvert,
                 outputPath,
                 outputFormat,
-                {
-                    frameRate: options.frameRate,
-                    quality: options.quality
-                }
+                conversionOptions
             );
 
             // 计算总耗时

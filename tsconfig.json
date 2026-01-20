@@ -22,7 +22,8 @@
   },
   "include": [
     "src/**/*",
-    "test/**/*"
+    "test/**/*",
+    "tools/video-converter-ts/src/**/*"
   ],
   "exclude": [
     "node_modules",
