@@ -227,7 +227,8 @@ export class ListGenerator implements ComponentCodeGenerator {
             const child = context.componentMap.get(childId);
             if (child) {
               try {
-                code += this.generateChildComponentCode(child, context, getGenerator, 2);
+                // 传入 isFirstLevel=true，因为这是 list_item 的直接子组件
+                code += this.generateChildComponentCode(child, context, getGenerator, 2, true);
               } catch (childError) {
                 const childErrorMsg = childError instanceof Error ? childError.message : String(childError);
                 console.error(`[ListGenerator] Failed to generate child component ${childId}: ${childErrorMsg}`);
@@ -297,9 +298,19 @@ export class ListGenerator implements ComponentCodeGenerator {
 
   /**
    * 生成子组件的创建代码
-   * 使用 note 作为父组件
+   * @param component 要生成的组件
+   * @param context 生成器上下文（包含父组件引用信息）
+   * @param getGenerator 获取生成器的函数
+   * @param indent 缩进级别
+   * @param isFirstLevel 是否是 list_item 的第一层子组件（第一层使用 note，更深层使用实际父组件）
    */
-  private generateChildComponentCode(component: Component, context: GeneratorContext, getGenerator: (type: string) => ComponentCodeGenerator, indent: number): string {
+  private generateChildComponentCode(
+    component: Component, 
+    context: GeneratorContext, 
+    getGenerator: (type: string) => ComponentCodeGenerator, 
+    indent: number,
+    isFirstLevel: boolean = true
+  ): string {
     try {
       const indentStr = '    '.repeat(indent);
       let code = '';
@@ -315,11 +326,22 @@ export class ListGenerator implements ComponentCodeGenerator {
       // 添加注释
       code += `${indentStr}// 创建 ${component.name || component.id} (${component.type})\n`;
 
-      // 创建一个修改后的上下文，将父组件引用改为 note
-      const modifiedContext: GeneratorContext = {
-        componentMap: context.componentMap,
-        getParentRef: () => '(gui_obj_t *)note'
-      };
+      // 决定使用哪个上下文：
+      // - 第一层子组件：使用 note 作为父组件
+      // - 更深层子组件：使用传入的 context（已经包含正确的父组件引用）
+      let effectiveContext: GeneratorContext;
+      
+      if (isFirstLevel) {
+        // 第一层：强制使用 note
+        effectiveContext = {
+          componentMap: context.componentMap,
+          getParentRef: (_comp: Component) => '(gui_obj_t *)note',
+          projectRoot: context.projectRoot
+        };
+      } else {
+        // 更深层：使用传入的 context
+        effectiveContext = context;
+      }
 
       // 使用对应的生成器生成创建代码
       const generator = getGenerator(component.type);
@@ -327,18 +349,26 @@ export class ListGenerator implements ComponentCodeGenerator {
         throw new Error(`No generator found for component type: ${component.type}`);
       }
 
-      let creationCode = generator.generateCreation(component, indent, modifiedContext);
+      let creationCode = generator.generateCreation(component, indent, effectiveContext);
       
       // 对于 hg_view 和 hg_window，需要处理子组件占位符
       if (component.type === 'hg_view' || component.type === 'hg_window') {
         let childrenCode = '';
         if (component.children && component.children.length > 0) {
           childrenCode += '\n';
+          // 创建新的上下文，将父组件引用更新为当前组件
+          const parentId = component.id;
+          const nestedContext: GeneratorContext = {
+            componentMap: context.componentMap,
+            getParentRef: (_comp: Component) => `(gui_obj_t *)${parentId}`,
+            projectRoot: context.projectRoot
+          };
           component.children.forEach(childId => {
             const child = context.componentMap.get(childId);
             if (child) {
               try {
-                childrenCode += this.generateChildComponentCode(child, context, getGenerator, indent);
+                // 传入 isFirstLevel=false，因为这些是 window/view 的子组件，不是 list_item 的直接子组件
+                childrenCode += this.generateChildComponentCode(child, nestedContext, getGenerator, indent, false);
               } catch (nestedError) {
                 const nestedErrorMsg = nestedError instanceof Error ? nestedError.message : String(nestedError);
                 console.error(`[ListGenerator] Failed to generate nested child component ${childId}: ${nestedErrorMsg}`);
@@ -356,7 +386,7 @@ export class ListGenerator implements ComponentCodeGenerator {
         code += creationCode;
         
         // 生成属性设置代码
-        code += generator.generatePropertySetters(component, indent, modifiedContext);
+        code += generator.generatePropertySetters(component, indent, effectiveContext);
 
         // 生成事件绑定代码
         const eventGenerator = EventGeneratorFactory.getGenerator(component.type);
@@ -366,11 +396,19 @@ export class ListGenerator implements ComponentCodeGenerator {
 
         // 递归生成子组件（如果有）
         if (component.children && component.children.length > 0) {
+          // 创建新的上下文，将父组件引用更新为当前组件
+          const parentId = component.id;
+          const nestedContext: GeneratorContext = {
+            componentMap: context.componentMap,
+            getParentRef: (_comp: Component) => `(gui_obj_t *)${parentId}`,
+            projectRoot: context.projectRoot
+          };
           component.children.forEach(childId => {
             const child = context.componentMap.get(childId);
             if (child) {
               try {
-                code += this.generateChildComponentCode(child, context, getGenerator, indent);
+                // 传入 isFirstLevel=false，因为这些是普通组件的子组件
+                code += this.generateChildComponentCode(child, nestedContext, getGenerator, indent, false);
               } catch (nestedError) {
                 const nestedErrorMsg = nestedError instanceof Error ? nestedError.message : String(nestedError);
                 console.error(`[ListGenerator] Failed to generate nested child component ${childId}: ${nestedErrorMsg}`);
