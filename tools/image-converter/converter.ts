@@ -186,10 +186,10 @@ export class ImageConverter {
         const paletteBuffer = Buffer.alloc(colorCount * 4);
         for (let i = 0; i < colorCount; i++) {
             const { r, g, b, a } = palette[i];
-            // ABGR8888: A在高地址，即 [B, G, R, A] 的顺序（小端序）
-            paletteBuffer.writeUInt8(b, i * 4);
+            // ABGR8888: 按照 [A, B, G, R] 的顺序存储
+            paletteBuffer.writeUInt8(r, i * 4);
             paletteBuffer.writeUInt8(g, i * 4 + 1);
-            paletteBuffer.writeUInt8(r, i * 4 + 2);
+            paletteBuffer.writeUInt8(b, i * 4 + 2);
             paletteBuffer.writeUInt8(a, i * 4 + 3);
         }
 
