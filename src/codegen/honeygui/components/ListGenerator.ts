@@ -239,6 +239,26 @@ export class ListGenerator implements ComponentCodeGenerator {
           });
         }
         
+        // 为 list_item 本身生成事件绑定（如果有）
+        if (listItem.eventConfigs && listItem.eventConfigs.length > 0) {
+          const eventGenerator = EventGeneratorFactory.getGenerator('hg_list_item');
+          if (eventGenerator) {
+            // 生成事件绑定代码
+            let eventCode = eventGenerator.generateEventBindings(listItem, 2, context.componentMap);
+            // 只替换 gui_obj_add_event_cb 的第一个参数（组件引用），保持回调函数名不变
+            // 例如：gui_obj_add_event_cb(list_item_id, callback, ...) -> gui_obj_add_event_cb(obj, callback, ...)
+            eventCode = eventCode.replace(
+              new RegExp(`gui_obj_add_event_cb\\(${listItem.id},`, 'g'),
+              'gui_obj_add_event_cb(obj,'
+            );
+            eventCode = eventCode.replace(
+              new RegExp(`gui_msg_subscribe\\(${listItem.id},`, 'g'),
+              'gui_msg_subscribe(obj,'
+            );
+            code += eventCode;
+          }
+        }
+        
         code += `        break;\n`;
         code += `    }\n`;
       });

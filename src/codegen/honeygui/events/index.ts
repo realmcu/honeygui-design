@@ -12,6 +12,7 @@ import { CheckboxEventGenerator } from './CheckboxEventGenerator';
 import { RadioEventGenerator } from './RadioEventGenerator';
 import { CanvasEventGenerator } from './CanvasEventGenerator';
 import { ListEventGenerator } from './ListEventGenerator';
+import { ListItemEventGenerator } from './ListItemEventGenerator';
 import { VideoEventGenerator } from './VideoEventGenerator';
 import { Model3DEventGenerator } from './Model3DEventGenerator';
 import { LottieEventGenerator } from './LottieEventGenerator';
@@ -42,6 +43,7 @@ export class EventGeneratorFactory {
     // 高级控件
     this.generators.set('hg_canvas', new CanvasEventGenerator());
     this.generators.set('hg_list', new ListEventGenerator());
+    this.generators.set('hg_list_item', new ListItemEventGenerator());  // list_item 事件生成器
     
     // 多媒体
     this.generators.set('hg_video', new VideoEventGenerator());

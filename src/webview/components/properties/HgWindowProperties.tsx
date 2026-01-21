@@ -9,7 +9,8 @@ export const HgWindowProperties: React.FC<PropertyPanelProps> = ({ component, on
   const [activeTab, setActiveTab] = useState<'properties' | 'events'>('properties');
   const enableBlur = component.data?.enableBlur ?? false;
   const blurDegree = component.data?.blurDegree ?? 225;
-  const backgroundColor = component.style?.backgroundColor ?? '#000000';
+  const showBackground = component.style?.showBackground ?? false;
+  const backgroundColor = component.style?.backgroundColor ?? '#808080';
 
   const handleStyleChange = (property: string, value: any) => {
     onUpdate({
@@ -49,14 +50,28 @@ export const HgWindowProperties: React.FC<PropertyPanelProps> = ({ component, on
             {/* 样式属性 */}
             <div className="property-group">
               <div className="property-group-title">{t('Style')}</div>
+              
               <div className="property-item">
-                <label>{t('Background Color')}</label>
-                <PropertyEditor
-                  type="color"
-                  value={backgroundColor}
-                  onChange={(value) => handleStyleChange('backgroundColor', value)}
-                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label>{t('Show Background')}</label>
+                  <PropertyEditor
+                    type="boolean"
+                    value={showBackground}
+                    onChange={(value) => handleStyleChange('showBackground', value)}
+                  />
+                </div>
               </div>
+
+              {showBackground && (
+                <div className="property-item">
+                  <label>{t('Background Color')}</label>
+                  <PropertyEditor
+                    type="color"
+                    value={backgroundColor}
+                    onChange={(value) => handleStyleChange('backgroundColor', value)}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Blur 效果 */}

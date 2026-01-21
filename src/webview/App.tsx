@@ -166,20 +166,30 @@ const App: React.FC = () => {
             useDesignerStore.setState({ allHmlFiles: message.allHmlFiles });
           }
 
-          // 设置当前文件路径
+          // 设置当前文件路径并恢复视图状态
           if (message.currentFilePath) {
             useDesignerStore.setState({ currentFilePath: message.currentFilePath });
-          }
-          
-          if (message.components) {
-            store.setComponents(message.components);
+            // 恢复该文件的视图状态（缩放和偏移）
+            const hasRestoredState = store.restoreViewState(message.currentFilePath);
             
-            // 自动居中第一个 hg_view
-            const currentComponents = useDesignerStore.getState().components;
-            const firstView = currentComponents.find(c => c.type === 'hg_view');
-            if (firstView) {
-              store.centerViewOnCanvas(firstView.id);
+            if (message.components) {
+              store.setComponents(message.components);
+              
+              // 只有在没有恢复视图状态时才自动居中
+              if (!hasRestoredState) {
+                console.log('[ViewState] 无保存状态，自动居中第一个 view');
+                // 自动居中第一个 hg_view
+                const currentComponents = useDesignerStore.getState().components;
+                const firstView = currentComponents.find(c => c.type === 'hg_view');
+                if (firstView) {
+                  store.centerViewOnCanvas(firstView.id);
+                }
+              } else {
+                console.log('[ViewState] 已恢复保存的视图状态，跳过自动居中');
+              }
             }
+          } else if (message.components) {
+            store.setComponents(message.components);
           }
           break;
 

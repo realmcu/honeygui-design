@@ -20,6 +20,7 @@ export class CallbackFileGenerator {
 
   /**
    * 递归展开所有组件（包括嵌套在容器内的子组件）
+   * 特别处理 list_item：包含 list_item 本身及其所有子组件
    */
   private flattenComponents(components: Component[]): Component[] {
     const visited = new Set<string>();
@@ -31,6 +32,8 @@ export class CallbackFileGenerator {
       visited.add(comp.id);
       
       result.push(comp);
+      
+      // 递归处理子组件（包括 list_item 的子组件）
       if (comp.children && comp.children.length > 0) {
         comp.children.forEach(childId => {
           const child = this.componentMap.get(childId);
@@ -121,10 +124,15 @@ export class CallbackFileGenerator {
 
   /**
    * 生成回调实现文件
+   * @param baseName 设计名称
+   * @param existingContent 现有文件内容（可选），用于检查已存在的函数
    */
-  generateImplementation(baseName: string): string {
+  generateImplementation(baseName: string, existingContent?: string): string {
     // 收集所有时间标签（使用 allComponents）
     const timeLabels = this.allComponents.filter(c => c.type === 'hg_time_label');
+    
+    // 提取现有文件中 custom_functions 保护区的函数名
+    const existingFunctions = existingContent ? this.extractFunctionNamesFromProtectedArea(existingContent) : new Set<string>();
     
     let code = `#include "${baseName}_callbacks.h"
 #include "../ui/${baseName}_ui.h"
@@ -164,8 +172,8 @@ export class CallbackFileGenerator {
       code += impl + '\n\n';
     });
 
-    // 生成预设定时器回调实现
-    const timerCallbackImpls = this.collectTimerCallbackImpls();
+    // 生成预设定时器回调实现（跳过已存在的）
+    const timerCallbackImpls = this.collectTimerCallbackImpls(existingFunctions);
     if (timerCallbackImpls.length > 0) {
       code += `// 预设定时器回调函数\n\n`;
       timerCallbackImpls.forEach(impl => {
@@ -182,7 +190,7 @@ export class CallbackFileGenerator {
       });
     }
 
-    // 生成普通回调函数模板
+    // 生成普通回调函数模板（跳过已存在的）
     const callbackFunctions = this.collectCallbackFunctions();
     const switchViewFuncNames = new Set(this.collectSwitchViewCallbackNames());
     const timeUpdateFuncNames = new Set(this.collectTimeUpdateCallbackNames());
@@ -191,6 +199,9 @@ export class CallbackFileGenerator {
     
     callbackFunctions.forEach(funcName => {
       if (switchViewFuncNames.has(funcName) || timeUpdateFuncNames.has(funcName) || timerCallbackNames.has(funcName) || msgCallbackNames.has(funcName)) return;
+      
+      // 跳过已存在于 custom_functions 保护区的函数
+      if (existingFunctions.has(funcName)) return;
       
       code += `void ${funcName}(void *obj, gui_event_t event, void *param)\n`;
       code += `{\n`;
@@ -208,6 +219,31 @@ export class CallbackFileGenerator {
 `;
 
     return code;
+  }
+
+  /**
+   * 从 custom_functions 保护区提取已存在的函数名
+   */
+  private extractFunctionNamesFromProtectedArea(content: string): Set<string> {
+    const functionNames = new Set<string>();
+    
+    // 提取 custom_functions 保护区内容
+    const regex = /\/\* @protected start custom_functions \*\/([\s\S]*?)\/\* @protected end custom_functions \*\//;
+    const match = content.match(regex);
+    
+    if (match && match[1]) {
+      const protectedContent = match[1];
+      
+      // 匹配函数定义：void function_name(...) 或 static void function_name(...)
+      const funcRegex = /(?:static\s+)?void\s+(\w+)\s*\(/g;
+      let funcMatch;
+      
+      while ((funcMatch = funcRegex.exec(protectedContent)) !== null) {
+        functionNames.add(funcMatch[1]);
+      }
+    }
+    
+    return functionNames;
   }
 
   /**
@@ -383,8 +419,9 @@ export class CallbackFileGenerator {
 
   /**
    * 收集所有用户配置的定时器回调实现
+   * @param existingFunctions 已存在的函数名集合（从 custom_functions 保护区提取）
    */
-  private collectTimerCallbackImpls(): string[] {
+  private collectTimerCallbackImpls(existingFunctions: Set<string> = new Set()): string[] {
     const impls = new Map<string, string>();
 
     this.allComponents.forEach(component => {
@@ -401,7 +438,8 @@ export class CallbackFileGenerator {
           } else if (timer.mode === 'custom' && timer.callback) {
             // 自定义函数模式：生成空实现供用户填充
             const callback = timer.callback;
-            if (!impls.has(callback)) {
+            // 跳过已存在于 custom_functions 保护区的函数
+            if (!impls.has(callback) && !existingFunctions.has(callback)) {
               const timerName = timer.name || timer.id;
               const impl = `/**
  * ${timerName}
@@ -431,7 +469,8 @@ void ${callback}(void *obj)
         } else if (timerMode === 'custom' && component.data.timerCallback) {
           // 自定义函数模式：生成空实现供用户填充
           const callback = component.data.timerCallback;
-          if (!impls.has(callback)) {
+          // 跳过已存在于 custom_functions 保护区的函数
+          if (!impls.has(callback) && !existingFunctions.has(callback)) {
             const impl = `void ${callback}(void *obj)
 {
     GUI_UNUSED(obj);

@@ -87,6 +87,7 @@ const en = {
   'Visible': 'Visible',
   'Checked': 'Checked',
   'Entry View': 'Entry View',
+  'Show Background': 'Show Background',
   'Background Color': 'Background Color',
   'Border Radius': 'Border Radius',
   'Padding': 'Padding',

@@ -165,6 +165,8 @@ const componentDefinitions: ComponentDefinition[] = [
     icon: '🪟',
     defaultSize: { width: 450, height: 350 },
     properties: [
+      { name: 'showBackground', label: 'Show Background', type: 'boolean', defaultValue: false, group: 'style' },
+      { name: 'backgroundColor', label: 'Background Color', type: 'color', defaultValue: '#808080', group: 'style' },
       { name: 'enableBlur', label: 'Enable Blur', type: 'boolean', defaultValue: false, group: 'general' },
       { name: 'blurDegree', label: 'Blur Degree', type: 'number', defaultValue: 225, group: 'general' },
     ],

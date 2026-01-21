@@ -87,6 +87,7 @@ const zhCN = {
   'Visible': '可见',
   'Checked': '选中',
   'Entry View': '入口视图',
+  'Show Background': '显示背景',
   'Background Color': '背景色',
   'Border Radius': '圆角',
   'Padding': '内边距',

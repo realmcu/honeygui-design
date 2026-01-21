@@ -153,13 +153,17 @@ export const calculateComponentStyle = (
     width: component.position.width,
     height: component.position.height,
     display: component.visible ? 'flex' : 'none',
-    opacity: component.style?.transform?.opacity !== undefined ? component.style.transform.opacity / 255 : (component.enabled ? 1 : 0.6),
+    opacity: component.style?.transform?.opacity !== undefined 
+      ? component.style.transform.opacity / 255 
+      : (component.enabled ? 1 : 0.6),
     cursor: editingMode === 'move' ? 'move' : 'pointer',
     outline: border, // 使用 outline 不占用空间
     outlineOffset: '-1px',
     borderRadius: borderRadiusValue,
     overflow: overflowValue,
-    background: component.style?.backgroundColor || 'transparent',
+    background: component.type === 'hg_window' 
+      ? (component.style?.showBackground ? (component.style?.backgroundColor || '#808080') : 'transparent')
+      : (component.style?.backgroundColor || 'transparent'),
     color: component.style?.color || 'inherit',
     fontSize: component.style?.fontSize ? `${component.style.fontSize}px` : undefined,
     zIndex: draggingZIndex,

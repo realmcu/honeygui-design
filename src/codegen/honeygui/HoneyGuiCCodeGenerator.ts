@@ -82,7 +82,8 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
         files.push(callbackImplFile);
       } else if (this.options.enableProtectedAreas) {
         const existing = fs.readFileSync(callbackImplFile, 'utf-8');
-        const merged = ProtectedAreaMerger.merge(existing, callbackGenerator.generateImplementation(designName));
+        // 传入现有内容，用于检查已存在的函数
+        const merged = ProtectedAreaMerger.merge(existing, callbackGenerator.generateImplementation(designName, existing));
         fs.writeFileSync(callbackImplFile, merged);
         files.push(callbackImplFile);
       }

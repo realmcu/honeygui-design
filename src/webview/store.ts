@@ -141,6 +141,8 @@ export interface DesignerStore extends DesignerState {
   setEditingMode: (mode: 'select' | 'move' | 'resize') => void;
   setCanvasBackgroundColor: (color: string) => void;
   centerViewOnCanvas: (componentId: string) => void;
+  saveViewState: () => void;
+  restoreViewState: (filePath: string) => boolean;
   
   // View connections
   showViewConnections: boolean;
@@ -221,6 +223,39 @@ const parseResolutionStr = (res?: string): { width: number; height: number } => 
     width: parseInt(parts[0]) || 800,
     height: parseInt(parts[1]) || 480,
   };
+};
+
+// 视图状态存储（按文件路径保存）
+interface ViewState {
+  zoom: number;
+  canvasOffset: { x: number; y: number };
+}
+
+// 使用 localStorage 持久化视图状态
+const VIEW_STATE_STORAGE_KEY = 'honeygui-designer-view-states';
+
+const viewStateStorage = {
+  get: (filePath: string): ViewState | undefined => {
+    try {
+      const stored = localStorage.getItem(VIEW_STATE_STORAGE_KEY);
+      if (!stored) return undefined;
+      const allStates = JSON.parse(stored) as Record<string, ViewState>;
+      return allStates[filePath];
+    } catch (e) {
+      console.error('[ViewState] 读取失败:', e);
+      return undefined;
+    }
+  },
+  set: (filePath: string, state: ViewState): void => {
+    try {
+      const stored = localStorage.getItem(VIEW_STATE_STORAGE_KEY);
+      const allStates = stored ? JSON.parse(stored) : {};
+      allStates[filePath] = state;
+      localStorage.setItem(VIEW_STATE_STORAGE_KEY, JSON.stringify(allStates));
+    } catch (e) {
+      console.error('[ViewState] 保存失败:', e);
+    }
+  }
 };
 
 export const useDesignerStore = create<DesignerStore>((set, get) => ({
@@ -714,8 +749,16 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   setDraggedComponent: (id) => set({ draggedComponent: id }),
 
   // Canvas operations
-  setZoom: (zoom) => set({ zoom }),
-  setCanvasOffset: (offset) => set({ canvasOffset: offset }),
+  setZoom: (zoom) => {
+    set({ zoom });
+    // 立即保存视图状态（不使用防抖，确保切换文件前保存）
+    get().saveViewState();
+  },
+  setCanvasOffset: (offset) => {
+    set({ canvasOffset: offset });
+    // 立即保存视图状态（不使用防抖，确保切换文件前保存）
+    get().saveViewState();
+  },
   setEditingMode: (mode) => set({ editingMode: mode }),
   setCanvasBackgroundColor: (color) => set({ canvasBackgroundColor: color }),
   setShowViewConnections: (show) => set({ showViewConnections: show }),
@@ -723,6 +766,37 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   setShowAlignmentGuides: (show) => set({ showAlignmentGuides: show }),
   setAssetCategory: (category) => set({ assetCategory: category }),
   setSimulationRunning: (running) => set({ isSimulationRunning: running }),
+  
+  // 保存当前视图状态
+  saveViewState: () => {
+    const state = get();
+    if (state.currentFilePath) {
+      const viewState = {
+        zoom: state.zoom,
+        canvasOffset: state.canvasOffset
+      };
+      viewStateStorage.set(state.currentFilePath, viewState);
+      console.log('[ViewState] 保存视图状态:', state.currentFilePath, viewState);
+    }
+  },
+  
+  // 恢复视图状态
+  restoreViewState: (filePath: string) => {
+    const savedState = viewStateStorage.get(filePath);
+    console.log('[ViewState] 尝试恢复视图状态:', filePath, savedState);
+    if (savedState) {
+      set({
+        zoom: savedState.zoom,
+        canvasOffset: savedState.canvasOffset
+      });
+      console.log('[ViewState] 已恢复视图状态:', savedState);
+      return true;  // 返回 true 表示成功恢复
+    } else {
+      // 如果没有保存的状态，不重置（保持当前状态）
+      console.log('[ViewState] 无保存状态，保持当前视图');
+      return false;  // 返回 false 表示没有恢复
+    }
+  },
   
   // 将指定组件居中显示在画布上
   centerViewOnCanvas: (componentId) => {

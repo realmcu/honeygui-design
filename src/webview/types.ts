@@ -57,6 +57,8 @@ export interface PropertyDefinition {
   defaultValue?: any;
   options?: string[] | any[];
   group: 'general' | 'style' | 'data' | 'events' | 'font' | 'interaction' | 'scroll';
+  min?: number;  // 数字类型的最小值
+  max?: number;  // 数字类型的最大值
 }
 
 // 视图跳转边信息
