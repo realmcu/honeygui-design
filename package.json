@@ -328,7 +328,7 @@
     "html2canvas": "^1.4.1",
     "ini": "^4.1.3",
     "jpeg-js": "^0.4.4",
-    "lucide-react": "^0.553.0",
+    "lucide-react": "^0.562.0",
     "mp4box": "^0.5.2",
     "opentype.js": "^1.3.4",
     "pngjs": "^7.0.0",

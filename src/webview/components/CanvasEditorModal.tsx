@@ -84,7 +84,7 @@ export const CanvasEditorModal: React.FC<CanvasEditorModalProps> = ({
   const initFabricCanvas = () => {
     if (!fabricCanvasRef.current) return;
     
-    const canvas = new fabric.Canvas(fabricCanvasRef.current, {
+    const canvas: any = new fabric.Canvas(fabricCanvasRef.current, {
       width: size.width - 40,
       height: size.height - 180,
       backgroundColor: '#ffffff',
@@ -93,8 +93,8 @@ export const CanvasEditorModal: React.FC<CanvasEditorModalProps> = ({
 
     // 如果有初始 SVG，加载它
     if (svgContent) {
-      fabric.loadSVGFromString(svgContent).then((result) => {
-        const objects = result.objects.filter((o): o is fabric.FabricObject => o !== null);
+      fabric.loadSVGFromString(svgContent).then((result: any) => {
+        const objects = result.objects.filter((o: any): o is fabric.FabricObject => o !== null);
         if (objects.length > 0) {
           const group = fabric.util.groupSVGElements(objects, result.options);
           canvas.add(group);
@@ -544,8 +544,8 @@ export const CanvasEditorModal: React.FC<CanvasEditorModalProps> = ({
           // 如果在设计器模式，也加载到 canvas
           if (mode === 'designer' && fabricCanvas) {
             fabricCanvas.clear();
-            fabric.loadSVGFromString(content).then((result) => {
-              const objects = result.objects.filter((o): o is fabric.FabricObject => o !== null);
+            fabric.loadSVGFromString(content).then((result: any) => {
+              const objects = result.objects.filter((o: any): o is fabric.FabricObject => o !== null);
               if (objects.length > 0) {
                 const group = fabric.util.groupSVGElements(objects, result.options);
                 fabricCanvas.add(group);
@@ -569,8 +569,8 @@ export const CanvasEditorModal: React.FC<CanvasEditorModalProps> = ({
       // 从文本加载到 canvas
       fabricCanvas.clear();
       if (svgContent) {
-        fabric.loadSVGFromString(svgContent).then((result) => {
-          const objects = result.objects.filter((o): o is fabric.FabricObject => o !== null);
+        fabric.loadSVGFromString(svgContent).then((result: any) => {
+          const objects = result.objects.filter((o: any): o is fabric.FabricObject => o !== null);
           if (objects.length > 0) {
             const group = fabric.util.groupSVGElements(objects, result.options);
             fabricCanvas.add(group);

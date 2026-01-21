@@ -553,9 +553,32 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
     return <Widget key={component.id} component={component} style={style} handlers={handlers} />;
   };
 
+  // 处理设计区域的滚动
+  const handleContainerWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+    // Ctrl + 滚轮：缩放（已有功能）
+    if (e.ctrlKey) {
+      e.preventDefault();
+      handleWheel(e);
+      return;
+    }
+    
+    // Shift + 滚轮：左右滚动
+    if (e.shiftKey) {
+      e.preventDefault();
+      const container = e.currentTarget;
+      container.scrollLeft += e.deltaY;
+      return;
+    }
+    
+    // 普通滚轮：上下滚动（浏览器默认行为，不需要处理）
+  }, [handleWheel]);
+
   // 扩展画布区域，使其成为可滚动的大型画布
   return (
-    <div className="designer-canvas-container">
+    <div 
+      className="designer-canvas-container"
+      onWheel={handleContainerWheel}
+    >
       {/* 可扩展的画布区域 */}
       <div
         ref={canvasRef}
@@ -576,12 +599,6 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
         onMouseUp={handleComponentMouseUp}
         onDrop={onDrop}
         onDragOver={onDragOver}
-        onWheel={(e) => {
-          if (e.ctrlKey) {
-            e.preventDefault();
-            handleWheel(e);
-          }
-        }}
         onMouseLeave={handleCanvasMouseUp}
         onContextMenu={(e) => {
           e.preventDefault();
