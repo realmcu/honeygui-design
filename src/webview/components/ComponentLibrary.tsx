@@ -16,11 +16,78 @@ interface AdvancedVariant {
   type: ComponentType;
   label: string;
   icon: string;
+  preset?: any; // 预设属性
 }
 
 const advancedVariants: Record<string, AdvancedVariant[]> = {
   'hg_label': [
     { type: 'hg_time_label', label: 'Time Label', icon: '🕐' },
+  ],
+  'hg_rect': [
+    { 
+      type: 'hg_rect', 
+      label: 'Dual-State Button', 
+      icon: '🔲',
+      preset: {
+        buttonMode: 'dual-state',
+        buttonStateOnColor: '#00FF00',
+        buttonStateOffColor: '#FF0000'
+      }
+    },
+    { 
+      type: 'hg_rect', 
+      label: 'Blink Button', 
+      icon: '✨',
+      preset: {
+        buttonMode: 'blink',
+        buttonBlinkOpacityMin: 50,
+        buttonBlinkOpacityMax: 255
+      }
+    },
+  ],
+  'hg_circle': [
+    { 
+      type: 'hg_circle', 
+      label: 'Dual-State Button', 
+      icon: '🔵',
+      preset: {
+        buttonMode: 'dual-state',
+        buttonStateOnColor: '#00FF00',
+        buttonStateOffColor: '#FF0000'
+      }
+    },
+    { 
+      type: 'hg_circle', 
+      label: 'Blink Button', 
+      icon: '✨',
+      preset: {
+        buttonMode: 'blink',
+        buttonBlinkOpacityMin: 50,
+        buttonBlinkOpacityMax: 255
+      }
+    },
+  ],
+  'hg_image': [
+    { 
+      type: 'hg_image', 
+      label: 'Dual-State Button', 
+      icon: '🖼️',
+      preset: {
+        buttonMode: 'dual-state',
+        buttonStateOnImage: '',
+        buttonStateOffImage: ''
+      }
+    },
+    { 
+      type: 'hg_image', 
+      label: 'Blink Button', 
+      icon: '✨',
+      preset: {
+        buttonMode: 'blink',
+        buttonBlinkOpacityMin: 50,
+        buttonBlinkOpacityMax: 255
+      }
+    },
   ],
 };
 
@@ -124,6 +191,16 @@ const componentDefinitions: ComponentDefinition[] = [
     properties: [
       { name: 'src', label: 'Image Path', type: 'string', group: 'data' },
       { name: 'visible', label: 'Visible', type: 'boolean', defaultValue: true, group: 'general' },
+      // 按键效果属性
+      { name: 'buttonMode', label: 'Button Mode', type: 'select', defaultValue: 'none', 
+        options: ['none', 'dual-state', 'blink'], group: 'interaction' },
+      { name: 'buttonStateOnImage', label: 'On State Image', type: 'string', group: 'interaction' },
+      { name: 'buttonStateOffImage', label: 'Off State Image', type: 'string', group: 'interaction' },
+      { name: 'buttonInitialState', label: 'Initial State', type: 'select', defaultValue: 'off', 
+        options: ['on', 'off'], group: 'interaction' },
+      { name: 'buttonBlinkOpacityMin', label: 'Blink Min Opacity', type: 'number', defaultValue: 50, group: 'interaction' },
+      { name: 'buttonBlinkOpacityMax', label: 'Blink Max Opacity', type: 'number', defaultValue: 255, group: 'interaction' },
+      { name: 'buttonBlinkInterval', label: 'Blink Interval (ms)', type: 'number', defaultValue: 500, group: 'interaction' },
     ],
   },
   {
@@ -266,6 +343,16 @@ const componentDefinitions: ComponentDefinition[] = [
       { name: 'opacity', label: 'Opacity', type: 'number', defaultValue: 255, group: 'style' },
       { name: 'useGradient', label: 'Enable Gradient', type: 'boolean', defaultValue: false, group: 'style' },
       { name: 'gradientType', label: 'Gradient Type', type: 'select', defaultValue: 'radial', options: ['radial', 'angular'], group: 'style' },
+      // 按键效果属性
+      { name: 'buttonMode', label: 'Button Mode', type: 'select', defaultValue: 'none', 
+        options: ['none', 'dual-state', 'blink'], group: 'interaction' },
+      { name: 'buttonStateOnColor', label: 'On State Color', type: 'color', defaultValue: '#00FF00', group: 'interaction' },
+      { name: 'buttonStateOffColor', label: 'Off State Color', type: 'color', defaultValue: '#FF0000', group: 'interaction' },
+      { name: 'buttonInitialState', label: 'Initial State', type: 'select', defaultValue: 'off', 
+        options: ['on', 'off'], group: 'interaction' },
+      { name: 'buttonBlinkOpacityMin', label: 'Blink Min Opacity', type: 'number', defaultValue: 50, group: 'interaction' },
+      { name: 'buttonBlinkOpacityMax', label: 'Blink Max Opacity', type: 'number', defaultValue: 255, group: 'interaction' },
+      { name: 'buttonBlinkInterval', label: 'Blink Interval (ms)', type: 'number', defaultValue: 500, group: 'interaction' },
     ],
   },
   {
@@ -279,6 +366,16 @@ const componentDefinitions: ComponentDefinition[] = [
       { name: 'opacity', label: 'Opacity', type: 'number', defaultValue: 255, group: 'style' },
       { name: 'useGradient', label: 'Enable Gradient', type: 'boolean', defaultValue: false, group: 'style' },
       { name: 'gradientDirection', label: 'Gradient Direction', type: 'select', defaultValue: 'horizontal', options: ['horizontal', 'vertical', 'diagonal_tl_br', 'diagonal_tr_bl'], group: 'style' },
+      // 按键效果属性
+      { name: 'buttonMode', label: 'Button Mode', type: 'select', defaultValue: 'none', 
+        options: ['none', 'dual-state', 'blink'], group: 'interaction' },
+      { name: 'buttonStateOnColor', label: 'On State Color', type: 'color', defaultValue: '#00FF00', group: 'interaction' },
+      { name: 'buttonStateOffColor', label: 'Off State Color', type: 'color', defaultValue: '#FF0000', group: 'interaction' },
+      { name: 'buttonInitialState', label: 'Initial State', type: 'select', defaultValue: 'off', 
+        options: ['on', 'off'], group: 'interaction' },
+      { name: 'buttonBlinkOpacityMin', label: 'Blink Min Opacity', type: 'number', defaultValue: 50, group: 'interaction' },
+      { name: 'buttonBlinkOpacityMax', label: 'Blink Max Opacity', type: 'number', defaultValue: 255, group: 'interaction' },
+      { name: 'buttonBlinkInterval', label: 'Blink Interval (ms)', type: 'number', defaultValue: 500, group: 'interaction' },
     ],
   },
   {
@@ -370,10 +467,22 @@ const ComponentLibrary: React.FC<ComponentLibraryProps> = ({ onComponentDragStar
     });
   };
 
-  const handleVariantClick = (variantType: ComponentType) => {
-    // 直接在当前 view 中创建组件
+  const handleVariantClick = (variant: AdvancedVariant) => {
+    // 直接在当前 view 中创建组件，并应用预设属性
     if (onCreateComponent) {
-      onCreateComponent(variantType);
+      // 如果有预设属性，直接在前端创建组件并应用预设
+      if (variant.preset) {
+        // 触发创建组件，并通过自定义事件传递预设属性
+        const event = new CustomEvent('createComponentWithPreset', {
+          detail: {
+            componentType: variant.type,
+            preset: variant.preset
+          }
+        });
+        window.dispatchEvent(event);
+      } else {
+        onCreateComponent(variant.type);
+      }
     }
     setContextMenu(prev => ({ ...prev, visible: false }));
   };
@@ -438,11 +547,11 @@ const ComponentLibrary: React.FC<ComponentLibraryProps> = ({ onComponentDragStar
           style={{ left: contextMenu.x, top: contextMenu.y }}
         >
           <div className="context-menu-header">{t('Advanced Widgets' as any)}</div>
-          {variants.map((variant) => (
+          {variants.map((variant, index) => (
             <div
-              key={variant.type}
+              key={`${variant.type}-${index}`}
               className="context-menu-item"
-              onClick={() => handleVariantClick(variant.type)}
+              onClick={() => handleVariantClick(variant)}
             >
               <span className="context-menu-icon">{variant.icon}</span>
               <span className="context-menu-label">{t(variant.label as any)}</span>

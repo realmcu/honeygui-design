@@ -301,6 +301,27 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       });
     }
 
+    // 生成按键效果的回调函数（rect、circle、image）
+    const hasButtonEffects = this.components.some(c => 
+      ['hg_rect', 'hg_circle', 'hg_image'].includes(c.type) && 
+      c.data?.buttonMode && 
+      c.data.buttonMode !== 'none'
+    );
+    if (hasButtonEffects) {
+      code += `// 按键效果回调函数\n`;
+      this.components.forEach(comp => {
+        if (['hg_rect', 'hg_circle', 'hg_image'].includes(comp.type)) {
+          const buttonMode = comp.data?.buttonMode;
+          if (buttonMode && buttonMode !== 'none') {
+            const generator = ComponentGeneratorFactory.getGenerator(comp.type);
+            if ('generateButtonCallback' in generator) {
+              code += (generator as any).generateButtonCallback(comp);
+            }
+          }
+        }
+      });
+    }
+
     // 生成所有 3D 模型的回调函数（包括动画）
     const has3DComponents = this.components.some(c => c.type === 'hg_3d');
     if (has3DComponents) {
@@ -384,6 +405,17 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       const generator = ComponentGeneratorFactory.getGenerator('hg_button');
       if ('generateEventBinding' in generator) {
         code += (generator as any).generateEventBinding(component, indent);
+      }
+    }
+
+    // 按键效果：为 rect、circle、image 生成事件绑定
+    if (['hg_rect', 'hg_circle', 'hg_image'].includes(component.type)) {
+      const buttonMode = component.data?.buttonMode;
+      if (buttonMode && buttonMode !== 'none') {
+        const generator = ComponentGeneratorFactory.getGenerator(component.type);
+        if ('generateEventBinding' in generator) {
+          code += (generator as any).generateEventBinding(component, indent);
+        }
       }
     }
 

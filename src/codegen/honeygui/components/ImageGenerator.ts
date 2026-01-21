@@ -165,6 +165,129 @@ export class ImageGenerator implements ComponentCodeGenerator {
   }
 
   /**
+   * 生成按键效果的事件绑定
+   */
+  generateEventBinding(component: Component, indent: number): string {
+    const buttonMode = component.data?.buttonMode;
+    if (!buttonMode || buttonMode === 'none') {
+      return '';
+    }
+
+    const indentStr = '    '.repeat(indent);
+    
+    if (buttonMode === 'dual-state') {
+      return `${indentStr}gui_obj_add_event_cb(${component.id}, ${component.id}_button_cb, GUI_EVENT_TOUCH_CLICKED, NULL);\n`;
+    } else if (buttonMode === 'blink') {
+      let code = '';
+      code += `${indentStr}gui_obj_add_event_cb(${component.id}, ${component.id}_button_press_cb, GUI_EVENT_TOUCH_PRESSED, NULL);\n`;
+      code += `${indentStr}gui_obj_add_event_cb(${component.id}, ${component.id}_button_release_cb, GUI_EVENT_TOUCH_RELEASED, NULL);\n`;
+      return code;
+    }
+
+    return '';
+  }
+
+  /**
+   * 生成按键效果的回调函数
+   */
+  generateButtonCallback(component: Component): string {
+    const buttonMode = component.data?.buttonMode;
+    if (!buttonMode || buttonMode === 'none') {
+      return '';
+    }
+
+    if (buttonMode === 'dual-state') {
+      return this.generateDualStateCallback(component);
+    } else if (buttonMode === 'blink') {
+      return this.generateBlinkCallback(component);
+    }
+
+    return '';
+  }
+
+  private generateDualStateCallback(component: Component): string {
+    const onImage = component.data?.buttonStateOnImage || '';
+    const offImage = component.data?.buttonStateOffImage || '';
+    const initialState = component.data?.buttonInitialState === 'on';
+
+    const binOn = this.convertToBinPath(onImage);
+    const binOff = this.convertToBinPath(offImage);
+
+    return `
+// ${component.id} 双态按键回调
+static bool ${component.id}_state = ${initialState ? 'true' : 'false'};
+
+void ${component.id}_button_cb(void *obj, gui_event_t event, void *param)
+{
+    GUI_UNUSED(obj);
+    GUI_UNUSED(event);
+    GUI_UNUSED(param);
+    
+    ${component.id}_state = !${component.id}_state;
+    
+    if (${component.id}_state) {
+        gui_img_set_image_data((gui_img_t *)${component.id}, "${binOn}");
+    } else {
+        gui_img_set_image_data((gui_img_t *)${component.id}, "${binOff}");
+    }
+}
+
+bool ${component.id}_get_state(void) { return ${component.id}_state; }
+void ${component.id}_set_state(bool state) {
+    if (${component.id}_state != state) {
+        ${component.id}_state = state;
+        gui_img_set_image_data((gui_img_t *)${component.id}, state ? "${binOn}" : "${binOff}");
+    }
+}
+`;
+  }
+
+  private generateBlinkCallback(component: Component): string {
+    const minOpacity = component.data?.buttonBlinkOpacityMin || 50;
+    const maxOpacity = component.data?.buttonBlinkOpacityMax || 255;
+
+    return `
+// ${component.id} 闪烁按键回调
+
+void ${component.id}_button_press_cb(void *obj, gui_event_t event, void *param)
+{
+    GUI_UNUSED(obj);
+    GUI_UNUSED(event);
+    GUI_UNUSED(param);
+    
+    gui_img_set_opacity((gui_img_t *)${component.id}, ${minOpacity});
+}
+
+void ${component.id}_button_release_cb(void *obj, gui_event_t event, void *param)
+{
+    GUI_UNUSED(obj);
+    GUI_UNUSED(event);
+    GUI_UNUSED(param);
+    
+    gui_img_set_opacity((gui_img_t *)${component.id}, ${maxOpacity});
+}
+`;
+  }
+
+  /**
+   * 转换图片路径为 .bin 格式
+   */
+  private convertToBinPath(src: string): string {
+    if (!src) return '';
+    
+    // 将图片扩展名替换为 .bin
+    let binSrc = src.replace(/\.(png|jpe?g|bmp|gif|tiff?|webp)$/i, '.bin');
+    // 去掉 assets/ 前缀
+    binSrc = binSrc.replace(/^assets\//, '');
+    // 确保路径以 / 开头
+    if (!binSrc.startsWith('/')) {
+      binSrc = '/' + binSrc;
+    }
+    
+    return binSrc;
+  }
+
+  /**
    * 获取图片的原始尺寸
    */
   private getImageSize(component: Component, context: GeneratorContext): { width: number; height: number } | null {

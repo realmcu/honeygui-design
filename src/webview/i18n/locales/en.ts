@@ -474,6 +474,18 @@ const en = {
   'Example: CP936': 'Example: CP936',
   'Add Character Set': 'Add Character Set',
   'Additional character sets will be merged with text characters during font conversion': 'Additional character sets will be merged with text characters during font conversion',
+
+  // Button effect variants
+  'Dual-State Button': 'Dual-State Button',
+  'Blink Button': 'Blink Button',
+  'Button Mode': 'Button Mode',
+  'On State Color': 'On State Color',
+  'Off State Color': 'Off State Color',
+  'On State Image': 'On State Image',
+  'Off State Image': 'Off State Image',
+  'Blink Min Opacity': 'Blink Min Opacity',
+  'Blink Max Opacity': 'Blink Max Opacity',
+  'Blink Interval (ms)': 'Blink Interval (ms)',
 };
 
 export default en;

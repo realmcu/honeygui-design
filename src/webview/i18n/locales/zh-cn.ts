@@ -474,6 +474,18 @@ const zhCN = {
   'Example: CP936': '示例：CP936',
   'Add Character Set': '添加字符集',
   'Additional character sets will be merged with text characters during font conversion': '附加字符集将在字体转换时与文本字符合并',
+
+  // 按键效果变体
+  'Dual-State Button': '双态按键',
+  'Blink Button': '闪烁按键',
+  'Button Mode': '按键模式',
+  'On State Color': '开启状态颜色',
+  'Off State Color': '关闭状态颜色',
+  'On State Image': '开启状态图片',
+  'Off State Image': '关闭状态图片',
+  'Blink Min Opacity': '闪烁最小透明度',
+  'Blink Max Opacity': '闪烁最大透明度',
+  'Blink Interval (ms)': '闪烁间隔（毫秒）',
 };
 
 export default zhCN;

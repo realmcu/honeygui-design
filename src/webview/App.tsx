@@ -650,7 +650,7 @@ const App: React.FC = () => {
    * 从组件库右键菜单创建组件
    * 在当前选中的容器或第一个 hg_view 中创建组件
    */
-  const handleCreateComponentFromLibrary = (componentType: ComponentType) => {
+  const handleCreateComponentFromLibrary = (componentType: ComponentType, preset?: any) => {
     const componentDef = componentDefinitions.find(def => def.type === componentType);
     if (!componentDef) {
       console.error(`未找到组件类型 ${componentType} 的定义配置`);
@@ -730,6 +730,11 @@ const App: React.FC = () => {
         defaultData[prop.name] = prop.defaultValue;
       });
 
+    // 应用预设属性（如果有）
+    if (preset) {
+      Object.assign(defaultData, preset);
+    }
+
     // 创建新组件对象
     const newComponent: Component = {
       id: componentId,
@@ -755,6 +760,17 @@ const App: React.FC = () => {
     addComponent(newComponent);
     selectComponent(newComponent.id);
   };
+
+  // 监听从组件库创建带预设的组件
+  useEffect(() => {
+    const handleCreateWithPreset = (e: CustomEvent<{ componentType: ComponentType; preset: any }>) => {
+      handleCreateComponentFromLibrary(e.detail.componentType, e.detail.preset);
+    };
+    window.addEventListener('createComponentWithPreset', handleCreateWithPreset as EventListener);
+    return () => {
+      window.removeEventListener('createComponentWithPreset', handleCreateWithPreset as EventListener);
+    };
+  }, []);
 
   const handleCanvasDrop = (e: React.DragEvent) => {
     e.preventDefault();

@@ -74,6 +74,111 @@ export class CircleGenerator implements ComponentCodeGenerator {
   }
 
   /**
+   * 生成按键效果的事件绑定
+   */
+  generateEventBinding(component: Component, indent: number): string {
+    const buttonMode = component.data?.buttonMode;
+    if (!buttonMode || buttonMode === 'none') {
+      return '';
+    }
+
+    const indentStr = '    '.repeat(indent);
+    
+    if (buttonMode === 'dual-state') {
+      return `${indentStr}gui_obj_add_event_cb(${component.id}, ${component.id}_button_cb, GUI_EVENT_TOUCH_CLICKED, NULL);\n`;
+    } else if (buttonMode === 'blink') {
+      let code = '';
+      code += `${indentStr}gui_obj_add_event_cb(${component.id}, ${component.id}_button_press_cb, GUI_EVENT_TOUCH_PRESSED, NULL);\n`;
+      code += `${indentStr}gui_obj_add_event_cb(${component.id}, ${component.id}_button_release_cb, GUI_EVENT_TOUCH_RELEASED, NULL);\n`;
+      return code;
+    }
+
+    return '';
+  }
+
+  /**
+   * 生成按键效果的回调函数（与 RectGenerator 类似）
+   */
+  generateButtonCallback(component: Component): string {
+    const buttonMode = component.data?.buttonMode;
+    if (!buttonMode || buttonMode === 'none') {
+      return '';
+    }
+
+    if (buttonMode === 'dual-state') {
+      return this.generateDualStateCallback(component);
+    } else if (buttonMode === 'blink') {
+      return this.generateBlinkCallback(component);
+    }
+
+    return '';
+  }
+
+  private generateDualStateCallback(component: Component): string {
+    const onColor = component.data?.buttonStateOnColor || '#00FF00';
+    const offColor = component.data?.buttonStateOffColor || '#FF0000';
+    const initialState = component.data?.buttonInitialState === 'on';
+
+    const onColorRgba = this.convertColorToRgba(onColor);
+    const offColorRgba = this.convertColorToRgba(offColor);
+
+    return `
+// ${component.id} 双态按键回调
+static bool ${component.id}_state = ${initialState ? 'true' : 'false'};
+
+void ${component.id}_button_cb(void *obj, gui_event_t event, void *param)
+{
+    GUI_UNUSED(obj);
+    GUI_UNUSED(event);
+    GUI_UNUSED(param);
+    
+    ${component.id}_state = !${component.id}_state;
+    
+    if (${component.id}_state) {
+        gui_circle_set_color((gui_circle_t *)${component.id}, ${onColorRgba});
+    } else {
+        gui_circle_set_color((gui_circle_t *)${component.id}, ${offColorRgba});
+    }
+}
+
+bool ${component.id}_get_state(void) { return ${component.id}_state; }
+void ${component.id}_set_state(bool state) {
+    if (${component.id}_state != state) {
+        ${component.id}_state = state;
+        gui_circle_set_color((gui_circle_t *)${component.id}, state ? ${onColorRgba} : ${offColorRgba});
+    }
+}
+`;
+  }
+
+  private generateBlinkCallback(component: Component): string {
+    const minOpacity = component.data?.buttonBlinkOpacityMin || 50;
+    const maxOpacity = component.data?.buttonBlinkOpacityMax || 255;
+
+    return `
+// ${component.id} 闪烁按键回调
+
+void ${component.id}_button_press_cb(void *obj, gui_event_t event, void *param)
+{
+    GUI_UNUSED(obj);
+    GUI_UNUSED(event);
+    GUI_UNUSED(param);
+    
+    gui_circle_set_opacity((gui_circle_t *)${component.id}, ${minOpacity});
+}
+
+void ${component.id}_button_release_cb(void *obj, gui_event_t event, void *param)
+{
+    GUI_UNUSED(obj);
+    GUI_UNUSED(event);
+    GUI_UNUSED(param);
+    
+    gui_circle_set_opacity((gui_circle_t *)${component.id}, ${maxOpacity});
+}
+`;
+  }
+
+  /**
    * 转换颜色值为 gui_rgb() 格式
    */
   private convertColor(color?: string): string {
