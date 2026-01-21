@@ -1,0 +1,20 @@
+stages:
+  - build
+
+build-job:
+  stage: build
+  image: node:18
+  script:
+    - node --version
+    - npm --version
+    - npm ci || npm install
+    - npm run compile
+    - npm run build:webview
+    - npx vsce package --allow-missing-repository || echo "Package failed"
+  artifacts:
+    paths:
+      - "*.vsix"
+    expire_in: 7 days
+  only:
+    - master
+    - develop
