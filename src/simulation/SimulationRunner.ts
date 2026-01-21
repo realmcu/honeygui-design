@@ -94,7 +94,7 @@ export class SimulationRunner {
             
             try {
                 if (process.platform === 'win32') {
-                    exec(`taskkill /F /T /PID ${this.currentProcess.pid}`, (error) => {
+                    exec(`taskkill /F /T /PID ${this.currentProcess.pid}`, { windowsHide: true }, (error) => {
                         if (error) {
                             this.log(`taskkill 错误: ${error.message}`);
                         }
@@ -112,7 +112,7 @@ export class SimulationRunner {
                         if (this.currentProcess && this.currentProcess.pid) {
                             try {
                                 if (process.platform === 'win32') {
-                                    exec(`taskkill /F /T /PID ${this.currentProcess.pid}`);
+                                    exec(`taskkill /F /T /PID ${this.currentProcess.pid}`, { windowsHide: true });
                                 } else {
                                     try {
                                         process.kill(-this.currentProcess.pid, 'SIGKILL');

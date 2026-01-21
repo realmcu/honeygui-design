@@ -104,11 +104,11 @@ export class EnvironmentChecker {
 
     private async checkPython(): Promise<{ installed: boolean; version?: string }> {
         try {
-            const { stdout } = await execAsync('python --version');
+            const { stdout } = await execAsync('python --version', { windowsHide: true });
             return { installed: true, version: stdout.trim() };
         } catch {
             try {
-                const { stdout } = await execAsync('python3 --version');
+                const { stdout } = await execAsync('python3 --version', { windowsHide: true });
                 return { installed: true, version: stdout.trim() };
             } catch {
                 return { installed: false };
@@ -118,7 +118,7 @@ export class EnvironmentChecker {
 
     private async checkSCons(): Promise<{ installed: boolean; version?: string }> {
         try {
-            const { stdout } = await execAsync('scons --version');
+            const { stdout } = await execAsync('scons --version', { windowsHide: true });
             const match = stdout.match(/SCons.*?(\d+\.\d+\.\d+)/);
             return { installed: true, version: match ? match[1] : stdout.split('\n')[0] };
         } catch {
@@ -128,7 +128,7 @@ export class EnvironmentChecker {
 
     private async checkCompiler(): Promise<{ installed: boolean; version?: string }> {
         try {
-            const { stdout } = await execAsync('gcc --version');
+            const { stdout } = await execAsync('gcc --version', { windowsHide: true });
             const match = stdout.match(/gcc.*?(\d+\.\d+\.\d+)/i);
             return { installed: true, version: match ? match[1] : stdout.split('\n')[0] };
         } catch {
@@ -138,7 +138,7 @@ export class EnvironmentChecker {
 
     private async checkSDL(): Promise<{ installed: boolean; version?: string }> {
         try {
-            const { stdout } = await execAsync('pkg-config --modversion sdl2');
+            const { stdout } = await execAsync('pkg-config --modversion sdl2', { windowsHide: true });
             return { installed: true, version: stdout.trim() };
         } catch {
             return { installed: false };
@@ -147,7 +147,7 @@ export class EnvironmentChecker {
 
     private async checkFFmpeg(): Promise<{ installed: boolean; version?: string }> {
         try {
-            const { stdout } = await execAsync('ffmpeg -version');
+            const { stdout } = await execAsync('ffmpeg -version', { windowsHide: true });
             const match = stdout.match(/ffmpeg version (\S+)/);
             return { installed: true, version: match ? match[1] : stdout.split('\n')[0] };
         } catch {

@@ -241,7 +241,8 @@ export class BuildCore {
         // 生成 C 文件
         try {
             execSync(`${pythonCmd} "${mkromfsScript}" -i "${assetsDir}" -o "${romfsOutput}" -a ${baseAddr}`, {
-                stdio: 'inherit'
+                stdio: 'pipe',  // 改为 pipe 避免继承父进程的 stdio
+                windowsHide: true  // Windows 上隐藏命令行窗口
             });
             this.logger.log('romfs C 文件生成完成');
         } catch (error) {
@@ -251,7 +252,8 @@ export class BuildCore {
         // 生成二进制文件（用于 UART 下载）
         try {
             execSync(`${pythonCmd} "${mkromfsScript}" -i "${assetsDir}" -o "${romfsBinOutput}" -a ${baseAddr} -b`, {
-                stdio: 'inherit'
+                stdio: 'pipe',  // 改为 pipe 避免继承父进程的 stdio
+                windowsHide: true  // Windows 上隐藏命令行窗口
             });
             this.logger.log(`romfs 二进制文件生成完成 (基地址: ${baseAddr})`);
         } catch (error) {
@@ -265,7 +267,8 @@ export class BuildCore {
         return new Promise((resolve, reject) => {
             const compileProcess = spawn('scons', ['-j4'], {
                 cwd: this.buildDir,
-                shell: true
+                shell: true,
+                windowsHide: true  // Windows 上隐藏命令行窗口
             });
 
             let compiledCount = 0;
