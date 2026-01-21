@@ -198,8 +198,8 @@ export class HmlSerializer {
         if (view && view.components && view.components.length > 0) {
             // 找到顶层组件（没有parent的组件）
             const topLevelComponents = view.components.filter(comp => !comp.parent);
-            topLevelComponents.forEach(component => {
-                viewContent += this._serializeComponent(component, 2);
+            topLevelComponents.forEach((component, index) => {
+                viewContent += this._serializeComponent(component, 2, index);
             });
         }
 
@@ -211,9 +211,10 @@ export class HmlSerializer {
      * 递归序列化组件对象 - 从新格式序列化
      * @param component 组件对象
      * @param indentLevel 缩进级别
+     * @param siblingIndex 在同级兄弟中的索引（用于自动设置 zIndex）
      * @returns 序列化后的组件XML字符串
      */
-    private _serializeComponent(component: Component, indentLevel: number): string {
+    private _serializeComponent(component: Component, indentLevel: number, siblingIndex: number = 0): string {
         const indent = ' '.repeat(indentLevel * 4);
         let componentContent = '';
 
@@ -283,9 +284,8 @@ export class HmlSerializer {
         if (component.locked === true) {
             attributesStr += ' locked="true"';
         }
-        if (component.zIndex && component.zIndex !== 0) {
-            attributesStr += ' zIndex="' + component.zIndex + '"';
-        }
+        // 自动根据同级顺序设置 zIndex（索引即为 zIndex，始终输出以确保层级正确）
+        attributesStr += ' zIndex="' + siblingIndex + '"';
         if (component.showOverflow === true) {
             attributesStr += ' showOverflow="true"';
         }
@@ -372,10 +372,10 @@ export class HmlSerializer {
                     childrenToSerialize = [...listItemComponents.map(c => c.id), ...otherChildren];
                 }
                 
-                childrenToSerialize.forEach(childId => {
+                childrenToSerialize.forEach((childId, index) => {
                     const child = this.componentMap.get(childId);
                     if (child) {
-                        componentContent += this._serializeComponent(child, indentLevel + 1);
+                        componentContent += this._serializeComponent(child, indentLevel + 1, index);
                     }
                 });
             }
