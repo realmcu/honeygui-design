@@ -141,8 +141,8 @@ export interface DesignerStore extends DesignerState {
   setEditingMode: (mode: 'select' | 'move' | 'resize') => void;
   setCanvasBackgroundColor: (color: string) => void;
   centerViewOnCanvas: (componentId: string) => void;
-  saveViewState: () => void;
-  restoreViewState: (filePath: string) => boolean;
+  saveViewState: (uiState?: { leftPanelTab?: 'components' | 'assets' | 'tree'; leftPanelVisible?: boolean; rightPanelVisible?: boolean; leftPanelWidth?: number; rightPanelWidth?: number }) => void;
+  restoreViewState: (filePath: string) => { restored: boolean; state?: ViewState };
   
   // View connections
   showViewConnections: boolean;
@@ -229,6 +229,12 @@ const parseResolutionStr = (res?: string): { width: number; height: number } => 
 interface ViewState {
   zoom: number;
   canvasOffset: { x: number; y: number };
+  selectedComponent: string | null;  // 选中的组件
+  leftPanelTab: 'components' | 'assets' | 'tree';  // 左侧面板 Tab
+  leftPanelVisible: boolean;  // 左侧面板是否可见
+  rightPanelVisible: boolean;  // 右侧面板是否可见
+  leftPanelWidth?: number;  // 左侧面板宽度
+  rightPanelWidth?: number;  // 右侧面板宽度
 }
 
 // 使用 localStorage 持久化视图状态
@@ -734,7 +740,11 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     get().saveToFile();
   },
 
-  selectComponent: (id) => set({ selectedComponent: id, selectedComponents: id ? [id] : [] }),
+  selectComponent: (id) => {
+    set({ selectedComponent: id, selectedComponents: id ? [id] : [] });
+    // 保存选中状态
+    get().saveViewState();
+  },
   setSelectedComponents: (ids) => set({ selectedComponents: ids, selectedComponent: ids.length ? ids[0] : null }),
   addToSelection: (id) => {
     const current = get().selectedComponents;
@@ -768,12 +778,18 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   setSimulationRunning: (running) => set({ isSimulationRunning: running }),
   
   // 保存当前视图状态
-  saveViewState: () => {
+  saveViewState: (uiState) => {
     const state = get();
     if (state.currentFilePath) {
-      const viewState = {
+      const viewState: ViewState = {
         zoom: state.zoom,
-        canvasOffset: state.canvasOffset
+        canvasOffset: state.canvasOffset,
+        selectedComponent: state.selectedComponent,
+        leftPanelTab: uiState?.leftPanelTab || 'components',
+        leftPanelVisible: uiState?.leftPanelVisible ?? true,
+        rightPanelVisible: uiState?.rightPanelVisible ?? true,
+        leftPanelWidth: uiState?.leftPanelWidth,
+        rightPanelWidth: uiState?.rightPanelWidth,
       };
       viewStateStorage.set(state.currentFilePath, viewState);
       console.log('[ViewState] 保存视图状态:', state.currentFilePath, viewState);
@@ -787,14 +803,15 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     if (savedState) {
       set({
         zoom: savedState.zoom,
-        canvasOffset: savedState.canvasOffset
+        canvasOffset: savedState.canvasOffset,
+        selectedComponent: savedState.selectedComponent,
       });
       console.log('[ViewState] 已恢复视图状态:', savedState);
-      return true;  // 返回 true 表示成功恢复
+      return { restored: true, state: savedState };
     } else {
       // 如果没有保存的状态，不重置（保持当前状态）
       console.log('[ViewState] 无保存状态，保持当前视图');
-      return false;  // 返回 false 表示没有恢复
+      return { restored: false };
     }
   },
   

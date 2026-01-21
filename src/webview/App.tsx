@@ -43,6 +43,18 @@ const App: React.FC = () => {
   // Tab 切换状态
   const [activeTab, setActiveTab] = React.useState<'components' | 'assets' | 'tree'>('components');
 
+  // 保存 Tab 状态到 store（当 Tab 切换时）
+  React.useEffect(() => {
+    const store = useDesignerStore.getState();
+    store.saveViewState({
+      leftPanelTab: activeTab,
+      leftPanelVisible: !leftPanel.isCollapsed,
+      rightPanelVisible: !rightPanel.isCollapsed,
+      leftPanelWidth: leftPanel.width,
+      rightPanelWidth: rightPanel.width,
+    });
+  }, [activeTab]);
+
   // Canvas 编辑器弹窗状态
   const [canvasEditorOpen, setCanvasEditorOpen] = useState(false);
   const [editingCanvasId, setEditingCanvasId] = useState<string | null>(null);
@@ -50,6 +62,18 @@ const App: React.FC = () => {
   // 面板状态管理
   const leftPanel = usePanelResize({ defaultWidth: 280, minWidth: 200, maxWidth: 500 });
   const rightPanel = usePanelResize({ defaultWidth: 300, minWidth: 250, maxWidth: 500 });
+  
+  // 保存面板状态（当面板可见性或宽度改变时）
+  React.useEffect(() => {
+    const store = useDesignerStore.getState();
+    store.saveViewState({
+      leftPanelTab: activeTab,
+      leftPanelVisible: !leftPanel.isCollapsed,
+      rightPanelVisible: !rightPanel.isCollapsed,
+      leftPanelWidth: leftPanel.width,
+      rightPanelWidth: rightPanel.width,
+    });
+  }, [leftPanel.isCollapsed, rightPanel.isCollapsed, leftPanel.width, rightPanel.width, activeTab]);
   
   // 面板快捷键
   usePanelShortcuts(leftPanel.toggle, rightPanel.toggle);
@@ -169,14 +193,39 @@ const App: React.FC = () => {
           // 设置当前文件路径并恢复视图状态
           if (message.currentFilePath) {
             useDesignerStore.setState({ currentFilePath: message.currentFilePath });
-            // 恢复该文件的视图状态（缩放和偏移）
-            const hasRestoredState = store.restoreViewState(message.currentFilePath);
+            // 恢复该文件的视图状态（缩放、偏移、选中组件、面板状态等）
+            const { restored, state: savedState } = store.restoreViewState(message.currentFilePath);
+            
+            // 恢复 UI 状态
+            if (restored && savedState) {
+              // 恢复左侧面板 Tab
+              setActiveTab(savedState.leftPanelTab || 'components');
+              
+              // 恢复面板可见性（通过比较 isCollapsed 状态）
+              const shouldLeftPanelBeCollapsed = !savedState.leftPanelVisible;
+              const shouldRightPanelBeCollapsed = !savedState.rightPanelVisible;
+              
+              if (shouldLeftPanelBeCollapsed !== leftPanel.isCollapsed) {
+                leftPanel.toggle();
+              }
+              if (shouldRightPanelBeCollapsed !== rightPanel.isCollapsed) {
+                rightPanel.toggle();
+              }
+              
+              // 恢复面板宽度
+              if (savedState.leftPanelWidth) {
+                leftPanel.setWidth(savedState.leftPanelWidth);
+              }
+              if (savedState.rightPanelWidth) {
+                rightPanel.setWidth(savedState.rightPanelWidth);
+              }
+            }
             
             if (message.components) {
               store.setComponents(message.components);
               
               // 只有在没有恢复视图状态时才自动居中
-              if (!hasRestoredState) {
+              if (!restored) {
                 console.log('[ViewState] 无保存状态，自动居中第一个 view');
                 // 自动居中第一个 hg_view
                 const currentComponents = useDesignerStore.getState().components;
