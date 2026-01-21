@@ -592,21 +592,54 @@ export class AssetManager {
                 }
 
                 const assetsDir = path.join(projectRoot, 'assets');
-                const targetPath = path.join(assetsDir, fileName);
-
-                // 复制文件到 assets 目录
-                await fs.promises.copyFile(filePath, targetPath);
+                
+                // 检查文件是否已经在 assets 目录中
+                const normalizedFilePath = path.normalize(filePath);
+                const normalizedAssetsDir = path.normalize(assetsDir);
+                
+                let relativePath: string;
+                let targetPath: string;
+                
+                if (normalizedFilePath.startsWith(normalizedAssetsDir)) {
+                    // 文件已经在 assets 目录中，保持原有路径结构
+                    const relativeToAssets = path.relative(assetsDir, filePath).replace(/\\/g, '/');
+                    relativePath = `assets/${relativeToAssets}`;
+                    targetPath = filePath; // 不需要复制
+                    logger.info(`[AssetManager] 文件已在 assets 目录中: ${relativePath}`);
+                } else {
+                    // 文件在外部，复制到 assets 根目录
+                    targetPath = path.join(assetsDir, fileName);
+                    
+                    // 如果目标文件已存在，询问是否覆盖
+                    if (fs.existsSync(targetPath)) {
+                        const result = await vscode.window.showWarningMessage(
+                            vscode.l10n.t('File {0} already exists. Overwrite?', fileName),
+                            vscode.l10n.t('Overwrite'),
+                            vscode.l10n.t('Cancel')
+                        );
+                        
+                        if (result !== vscode.l10n.t('Overwrite')) {
+                            return;
+                        }
+                    }
+                    
+                    // 复制文件到 assets 目录
+                    await fs.promises.copyFile(filePath, targetPath);
+                    relativePath = `assets/${fileName}`;
+                    logger.info(`[AssetManager] 图片已复制到: ${relativePath}`);
+                }
+                
+                // 获取图片尺寸
+                const imageSize = this.getImageSize(targetPath);
                 
                 // 发送相对路径到webview
-                const relativePath = `assets/${fileName}`;
                 this._panel.webview.postMessage({
                     command: 'updateImagePath',
                     componentId: componentId,
                     propertyName: propertyName || 'src',
-                    path: relativePath
+                    path: relativePath,
+                    imageSize
                 });
-                
-                logger.info(`[AssetManager] 图片已复制到: ${relativePath}`);
             }
         } catch (error) {
             logger.error(`[AssetManager] 选择图片失败: ${error}`);

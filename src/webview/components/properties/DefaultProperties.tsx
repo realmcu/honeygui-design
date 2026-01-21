@@ -839,6 +839,13 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                           (value) => handleDataChange(property.name, value),
                           property.name
                         )
+                      ) : (property.name === 'buttonStateOnImage' || property.name === 'buttonStateOffImage') && component.type === 'hg_image' ? (
+                        // Image 组件双态按键的图片选择器
+                        renderImageProperty(
+                          (component.data as any)?.[property.name],
+                          (value) => handleDataChange(property.name, value),
+                          property.name
+                        )
                       ) : property.name === 'src' && component.type === 'hg_glass' ? (
                         renderGlassProperty(
                           (component.data as any)?.[property.name],
