@@ -4,6 +4,7 @@
  */
 import { Component } from '../../../hml/types';
 import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';
+import { ComponentGeneratorFactory } from './index';
 import { EventGeneratorFactory } from '../events';
 
 export class ListGenerator implements ComponentCodeGenerator {
@@ -407,6 +408,14 @@ export class ListGenerator implements ComponentCodeGenerator {
         
         // 生成属性设置代码
         code += generator.generatePropertySetters(component, indent, effectiveContext);
+
+        // 双态按钮：生成点击事件绑定
+        if (component.type === 'hg_button' && (component.data?.toggleMode === true || component.data?.toggleMode === 'true')) {
+          const buttonGenerator = ComponentGeneratorFactory.getGenerator('hg_button');
+          if ('generateEventBinding' in buttonGenerator) {
+            code += (buttonGenerator as any).generateEventBinding(component, indent);
+          }
+        }
 
         // 生成事件绑定代码
         const eventGenerator = EventGeneratorFactory.getGenerator(component.type);
