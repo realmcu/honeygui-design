@@ -366,6 +366,38 @@ function rectsOverlap(
 }
 
 /**
+ * 递归收集所有可见组件（包括嵌套的子组件）
+ */
+function collectAllVisibleComponents(
+  components: Component[],
+  glassId: string,
+  glassZIndex: number,
+  glassRect: { x: number; y: number; w: number; h: number },
+  allComponents: Component[]
+): Component[] {
+  const result: Component[] = [];
+  
+  for (const c of components) {
+    if (c.id === glassId) continue;
+    if ((c.zIndex || 1) > glassZIndex) continue;
+    
+    const absPos = getAbsolutePosition(c, allComponents);
+    const compRect = {
+      x: absPos.x,
+      y: absPos.y,
+      w: c.position.width,
+      h: c.position.height
+    };
+    
+    if (rectsOverlap(glassRect, compRect)) {
+      result.push(c);
+    }
+  }
+  
+  return result.sort((a, b) => (a.zIndex || 1) - (b.zIndex || 1));
+}
+
+/**
  * 内部组件：用于获取图片的 webview URI
  */
 const ImageLoader: React.FC<{
@@ -390,17 +422,14 @@ export const GlassWidget: React.FC<WidgetProps> = ({ component, style, handlers 
   const [error, setError] = useState(false);
   const [svgPoints, setSvgPoints] = useState<Array<{x: number, y: number}> | null>(null);
   const imageUrisRef = useRef<Map<string, string>>(new Map());
-  const imageCacheRef = useRef<Map<string, HTMLImageElement>>(new Map()); // 图片缓存
+  const imageCacheRef = useRef<Map<string, HTMLImageElement>>(new Map());
   const [renderTrigger, setRenderTrigger] = useState(0);
 
-  // 玻璃效果参数（从百分比转换为实际值）
-  // distortion: 100% 输入对应实际 0.2（除以 500）
-  // region: 100% 输入对应实际 1.0（除以 100）
+  // 玻璃效果参数
   const distortion = ((component.data?.distortion ?? 10) / 500);
   const region = ((component.data?.region ?? 50) / 100);
 
   const components = useDesignerStore(state => state.components);
-  const canvasBackgroundColor = useDesignerStore(state => state.canvasBackgroundColor);
 
   // 加载并解析 .glass 文件
   useEffect(() => {
@@ -413,13 +442,11 @@ export const GlassWidget: React.FC<WidgetProps> = ({ component, style, handlers 
         if (paths.length > 0) {
           const points = svgPathToPoints(paths[0]);
           if (points.length >= 3) {
-            // 计算边界框并将坐标归一化到从 (0,0) 开始（与 generator 一致）
             let minX = Infinity, minY = Infinity;
             for (const p of points) {
               if (p.x < minX) minX = p.x;
               if (p.y < minY) minY = p.y;
             }
-            // 偏移所有点，使边界从 (0,0) 开始
             const normalizedPoints = points.map(p => ({
               x: p.x - minX,
               y: p.y - minY
@@ -435,7 +462,7 @@ export const GlassWidget: React.FC<WidgetProps> = ({ component, style, handlers 
       .catch(() => setError(true));
   }, [webviewUri]);
 
-  // 找到需要渲染的下方组件（图片和有背景色的组件）
+  // 找到所有需要渲染的下方组件
   const belowComponents = React.useMemo(() => {
     const glassAbsPos = getAbsolutePosition(component, components);
     const glassRect = {
@@ -444,32 +471,9 @@ export const GlassWidget: React.FC<WidgetProps> = ({ component, style, handlers 
       w: component.position.width,
       h: component.position.height
     };
-
-    const result: Component[] = [];
     const currentZIndex = component.zIndex || 1;
     
-    for (const c of components) {
-      if (c.id === component.id) continue;
-      if ((c.zIndex || 1) > currentZIndex) continue;
-      
-      const absPos = getAbsolutePosition(c, components);
-      const compRect = {
-        x: absPos.x,
-        y: absPos.y,
-        w: c.position.width,
-        h: c.position.height
-      };
-      
-      if (rectsOverlap(glassRect, compRect)) {
-        // 包含图片组件和有背景色的组件
-        if ((c.type === 'hg_image' && c.data?.src) || c.style?.backgroundColor) {
-          result.push(c);
-        }
-      }
-    }
-    
-    // 按 zIndex 排序，确保正确的绘制顺序
-    return result.sort((a, b) => (a.zIndex || 1) - (b.zIndex || 1));
+    return collectAllVisibleComponents(components, component.id, currentZIndex, glassRect, components);
   }, [component, components]);
 
   // 只获取图片组件用于 URI 加载
@@ -482,13 +486,11 @@ export const GlassWidget: React.FC<WidgetProps> = ({ component, style, handlers 
     if (imageUrisRef.current.get(compId) !== uri) {
       imageUrisRef.current.set(compId, uri);
       
-      // 预加载图片到缓存
       if (!imageCacheRef.current.has(uri)) {
         const img = new Image();
         img.crossOrigin = 'anonymous';
         img.onload = () => {
           imageCacheRef.current.set(uri, img);
-          // 图片加载完成后触发渲染
           const allLoaded = belowImageComponents.every(c => {
             const u = imageUrisRef.current.get(c.id);
             return u && imageCacheRef.current.has(u);
@@ -499,7 +501,6 @@ export const GlassWidget: React.FC<WidgetProps> = ({ component, style, handlers 
         };
         img.src = uri;
       } else {
-        // 图片已在缓存中
         const allLoaded = belowImageComponents.every(c => {
           const u = imageUrisRef.current.get(c.id);
           return u && imageCacheRef.current.has(u);
@@ -515,7 +516,6 @@ export const GlassWidget: React.FC<WidgetProps> = ({ component, style, handlers 
   useEffect(() => {
     if (!svgPoints || !canvasRef.current) return;
     
-    // 检查是否所有图片都已加载
     const allLoaded = belowImageComponents.length === 0 || 
       belowImageComponents.every(c => imageUrisRef.current.has(c.id));
     if (!allLoaded) return;
@@ -531,7 +531,6 @@ export const GlassWidget: React.FC<WidgetProps> = ({ component, style, handlers 
 
     const glassAbsPos = getAbsolutePosition(component, components);
 
-    // 清除为透明背景
     ctx.clearRect(0, 0, width, height);
 
     // 创建临时 canvas 用于绘制背景
@@ -541,48 +540,373 @@ export const GlassWidget: React.FC<WidgetProps> = ({ component, style, handlers 
     const tempCtx = tempCanvas.getContext('2d');
     if (!tempCtx) return;
 
-    // 绘制背景色到临时 canvas
-    // 优先使用父容器的背景色，否则使用画布背景色
-    let bgColor = canvasBackgroundColor || '#3c3c3c';
+    // 先清空为完全透明
+    tempCtx.clearRect(0, 0, width, height);
     
-    // 查找父容器的背景色
-    if (component.parent) {
-      const parentComp = components.find(c => c.id === component.parent);
-      if (parentComp && parentComp.style?.backgroundColor) {
-        bgColor = parentComp.style.backgroundColor;
+    // 查找 glass 覆盖区域内最底层的背景色
+    // 优先从 belowComponents 中找（按 zIndex 排序，最小的在前）
+    let foundBackground = false;
+    for (const comp of belowComponents) {
+      if (comp.type === 'hg_view' || comp.type === 'hg_window') {
+        // 检查是否显示背景色
+        // hg_window 需要检查 showBackground 属性
+        // hg_view 直接使用 backgroundColor
+        const shouldShowBg = comp.type === 'hg_window' 
+          ? (comp.style?.showBackground === true)
+          : true;
+        
+        if (shouldShowBg && comp.style?.backgroundColor) {
+          const compAbsPos = getAbsolutePosition(comp, components);
+          const relX = compAbsPos.x - glassAbsPos.x;
+          const relY = compAbsPos.y - glassAbsPos.y;
+          tempCtx.fillStyle = comp.style.backgroundColor;
+          tempCtx.fillRect(relX, relY, comp.position.width, comp.position.height);
+          foundBackground = true;
+        }
       }
     }
     
-    tempCtx.fillStyle = bgColor;
-    tempCtx.fillRect(0, 0, width, height);
+    // 如果没有找到任何容器背景，尝试从父容器查找
+    if (!foundBackground) {
+      const findParentBackground = (comp: Component): string | null => {
+        if (!comp.parent) return null;
+        const parentComp = components.find(c => c.id === comp.parent);
+        if (!parentComp) return null;
+        
+        // 检查是否显示背景色
+        const shouldShowBg = parentComp.type === 'hg_window' 
+          ? (parentComp.style?.showBackground === true)
+          : true;
+        
+        if (shouldShowBg && parentComp.style?.backgroundColor) {
+          return parentComp.style.backgroundColor;
+        }
+        return findParentBackground(parentComp);
+      };
+      
+      const parentBg = findParentBackground(component);
+      if (parentBg) {
+        tempCtx.fillStyle = parentBg;
+        tempCtx.fillRect(0, 0, width, height);
+      }
+    }
 
-    // 绘制所有下方组件（同步，使用缓存的图片）
+    // 绘制所有下方组件
     for (const comp of belowComponents) {
       const compAbsPos = getAbsolutePosition(comp, components);
       const relX = compAbsPos.x - glassAbsPos.x;
       const relY = compAbsPos.y - glassAbsPos.y;
+      const compW = comp.position.width;
+      const compH = comp.position.height;
+      const s = comp.style || {};
+      const d = comp.data || {};
       
-      // 绘制背景色
-      if (comp.style?.backgroundColor) {
-        tempCtx.fillStyle = comp.style.backgroundColor;
-        tempCtx.fillRect(relX, relY, comp.position.width, comp.position.height);
+      // 容器类型 (hg_view, hg_window) - 绘制背景色
+      if (comp.type === 'hg_view' || comp.type === 'hg_window') {
+        // hg_window 需要检查 showBackground 属性
+        const shouldShowBg = comp.type === 'hg_window' 
+          ? (s.showBackground === true)
+          : true;
+        
+        if (shouldShowBg && s.backgroundColor) {
+          tempCtx.fillStyle = s.backgroundColor;
+          tempCtx.fillRect(relX, relY, compW, compH);
+        }
       }
       
-      // 绘制图片（从缓存获取）
-      if (comp.type === 'hg_image' && comp.data?.src) {
+      // 图片
+      else if (comp.type === 'hg_image' && d.src) {
         const uri = imageUrisRef.current.get(comp.id);
         if (uri) {
           const cachedImg = imageCacheRef.current.get(uri);
           if (cachedImg) {
-            tempCtx.drawImage(cachedImg, relX, relY, comp.position.width, comp.position.height);
+            tempCtx.drawImage(cachedImg, relX, relY, compW, compH);
           }
         }
+      }
+      
+      // 文本
+      else if ((comp.type === 'hg_text' || comp.type === 'hg_label') && d.text) {
+        const fontSize = d.fontSize || 14;
+        const fontColor = d.fontColor || s.color || '#ffffff';
+        tempCtx.font = `${fontSize}px sans-serif`;
+        tempCtx.fillStyle = fontColor;
+        tempCtx.textBaseline = 'top';
+        tempCtx.fillText(d.text, relX, relY);
+      }
+      
+      // 时间标签
+      else if (comp.type === 'hg_time_label') {
+        const fontSize = d.fontSize || 14;
+        const fontColor = d.fontColor || s.color || '#ffffff';
+        const format = d.format || 'HH:mm:ss';
+        tempCtx.font = `${fontSize}px sans-serif`;
+        tempCtx.fillStyle = fontColor;
+        tempCtx.textBaseline = 'top';
+        tempCtx.fillText(format, relX, relY);
+      }
+      
+      // 按钮
+      else if (comp.type === 'hg_button') {
+        if (s.backgroundColor) {
+          tempCtx.fillStyle = s.backgroundColor;
+          tempCtx.fillRect(relX, relY, compW, compH);
+        }
+        if (d.text) {
+          const fontSize = d.fontSize || 14;
+          const fontColor = d.fontColor || s.color || '#ffffff';
+          tempCtx.font = `${fontSize}px sans-serif`;
+          tempCtx.fillStyle = fontColor;
+          tempCtx.textAlign = 'center';
+          tempCtx.textBaseline = 'middle';
+          tempCtx.fillText(d.text, relX + compW / 2, relY + compH / 2);
+          tempCtx.textAlign = 'left';
+        }
+      }
+      
+      // 矩形
+      else if (comp.type === 'hg_rect') {
+        const fillColor = s.fillColor || '#007acc';
+        const opacity = (s.opacity ?? 255) / 255;
+        const borderRadius = s.borderRadius ?? 0;
+        
+        tempCtx.globalAlpha = opacity;
+        tempCtx.fillStyle = fillColor;
+        
+        if (borderRadius > 0) {
+          // 圆角矩形
+          tempCtx.beginPath();
+          tempCtx.roundRect(relX, relY, compW, compH, borderRadius);
+          tempCtx.fill();
+        } else {
+          tempCtx.fillRect(relX, relY, compW, compH);
+        }
+        tempCtx.globalAlpha = 1;
+      }
+      
+      // 圆形
+      else if (comp.type === 'hg_circle') {
+        const radius = s.radius ?? 40;
+        const fillColor = s.fillColor || '#007acc';
+        const opacity = s.opacity !== undefined ? s.opacity / 255 : 1;
+        const cx = relX + compW / 2;
+        const cy = relY + compH / 2;
+        
+        tempCtx.globalAlpha = opacity;
+        tempCtx.fillStyle = fillColor;
+        tempCtx.beginPath();
+        tempCtx.arc(cx, cy, radius, 0, Math.PI * 2);
+        tempCtx.fill();
+        tempCtx.globalAlpha = 1;
+      }
+      
+      // 弧形
+      else if (comp.type === 'hg_arc') {
+        const radius = s.radius ?? 40;
+        const startAngle = (s.startAngle ?? 0) * Math.PI / 180;
+        const endAngle = (s.endAngle ?? 270) * Math.PI / 180;
+        const strokeWidth = s.strokeWidth ?? 8;
+        const color = s.color || '#007acc';
+        const opacity = s.opacity !== undefined ? s.opacity / 255 : 1;
+        const cx = relX + compW / 2;
+        const cy = relY + compH / 2;
+        
+        tempCtx.globalAlpha = opacity;
+        tempCtx.strokeStyle = color;
+        tempCtx.lineWidth = strokeWidth;
+        tempCtx.lineCap = 'round';
+        tempCtx.beginPath();
+        tempCtx.arc(cx, cy, radius, startAngle, endAngle);
+        tempCtx.stroke();
+        tempCtx.globalAlpha = 1;
+      }
+      
+      // 输入框
+      else if (comp.type === 'hg_input' || comp.type === 'hg_textarea') {
+        tempCtx.fillStyle = s.backgroundColor || '#ffffff';
+        tempCtx.fillRect(relX, relY, compW, compH);
+        tempCtx.strokeStyle = '#cccccc';
+        tempCtx.lineWidth = 1;
+        tempCtx.strokeRect(relX, relY, compW, compH);
+        
+        if (d.placeholder || d.value) {
+          const fontSize = d.fontSize || 14;
+          tempCtx.font = `${fontSize}px sans-serif`;
+          tempCtx.fillStyle = d.value ? '#000000' : '#999999';
+          tempCtx.textBaseline = 'middle';
+          tempCtx.fillText(String(d.value || d.placeholder || ''), relX + 4, relY + compH / 2);
+        }
+      }
+      
+      // 复选框
+      else if (comp.type === 'hg_checkbox') {
+        const checked = d.checked ?? false;
+        const boxSize = Math.min(compW, compH, 20);
+        
+        tempCtx.strokeStyle = '#666666';
+        tempCtx.lineWidth = 2;
+        tempCtx.strokeRect(relX, relY + (compH - boxSize) / 2, boxSize, boxSize);
+        
+        if (checked) {
+          tempCtx.strokeStyle = '#007acc';
+          tempCtx.beginPath();
+          tempCtx.moveTo(relX + 4, relY + (compH - boxSize) / 2 + boxSize / 2);
+          tempCtx.lineTo(relX + boxSize / 3, relY + (compH - boxSize) / 2 + boxSize - 4);
+          tempCtx.lineTo(relX + boxSize - 4, relY + (compH - boxSize) / 2 + 4);
+          tempCtx.stroke();
+        }
+      }
+      
+      // 单选框
+      else if (comp.type === 'hg_radio') {
+        const checked = d.checked ?? false;
+        const radius = Math.min(compW, compH, 20) / 2;
+        const cx = relX + radius;
+        const cy = relY + compH / 2;
+        
+        tempCtx.strokeStyle = '#666666';
+        tempCtx.lineWidth = 2;
+        tempCtx.beginPath();
+        tempCtx.arc(cx, cy, radius - 1, 0, Math.PI * 2);
+        tempCtx.stroke();
+        
+        if (checked) {
+          tempCtx.fillStyle = '#007acc';
+          tempCtx.beginPath();
+          tempCtx.arc(cx, cy, radius - 5, 0, Math.PI * 2);
+          tempCtx.fill();
+        }
+      }
+      
+      // 开关
+      else if (comp.type === 'hg_switch') {
+        const checked = d.checked ?? false;
+        const trackHeight = Math.min(compH, 24);
+        const trackWidth = Math.min(compW, 44);
+        const trackY = relY + (compH - trackHeight) / 2;
+        const thumbRadius = trackHeight / 2 - 2;
+        
+        // 轨道
+        tempCtx.fillStyle = checked ? '#007acc' : '#cccccc';
+        tempCtx.beginPath();
+        tempCtx.roundRect(relX, trackY, trackWidth, trackHeight, trackHeight / 2);
+        tempCtx.fill();
+        
+        // 滑块
+        const thumbX = checked ? relX + trackWidth - thumbRadius - 2 : relX + thumbRadius + 2;
+        tempCtx.fillStyle = '#ffffff';
+        tempCtx.beginPath();
+        tempCtx.arc(thumbX, trackY + trackHeight / 2, thumbRadius, 0, Math.PI * 2);
+        tempCtx.fill();
+      }
+      
+      // 滑块
+      else if (comp.type === 'hg_slider') {
+        const value = Number(d.value ?? 50);
+        const min = Number(d.min ?? 0);
+        const max = Number(d.max ?? 100);
+        const progress = (value - min) / (max - min);
+        const trackHeight = 4;
+        const trackY = relY + (compH - trackHeight) / 2;
+        
+        // 轨道背景
+        tempCtx.fillStyle = '#cccccc';
+        tempCtx.fillRect(relX, trackY, compW, trackHeight);
+        
+        // 进度
+        tempCtx.fillStyle = '#007acc';
+        tempCtx.fillRect(relX, trackY, compW * progress, trackHeight);
+        
+        // 滑块
+        const thumbX = relX + compW * progress;
+        tempCtx.fillStyle = '#007acc';
+        tempCtx.beginPath();
+        tempCtx.arc(thumbX, relY + compH / 2, 8, 0, Math.PI * 2);
+        tempCtx.fill();
+      }
+      
+      // 列表
+      else if (comp.type === 'hg_list') {
+        if (s.backgroundColor) {
+          tempCtx.fillStyle = s.backgroundColor;
+          tempCtx.fillRect(relX, relY, compW, compH);
+        }
+      }
+      
+      // 列表项
+      else if (comp.type === 'hg_list_item') {
+        if (s.backgroundColor) {
+          tempCtx.fillStyle = s.backgroundColor;
+          tempCtx.fillRect(relX, relY, compW, compH);
+        }
+      }
+      
+      // Canvas 画布
+      else if (comp.type === 'hg_canvas') {
+        tempCtx.fillStyle = s.backgroundColor || '#ffffff';
+        tempCtx.fillRect(relX, relY, compW, compH);
+      }
+      
+      // 视频占位符
+      else if (comp.type === 'hg_video') {
+        tempCtx.fillStyle = '#000000';
+        tempCtx.fillRect(relX, relY, compW, compH);
+        tempCtx.fillStyle = '#ffffff';
+        tempCtx.font = '24px sans-serif';
+        tempCtx.textAlign = 'center';
+        tempCtx.textBaseline = 'middle';
+        tempCtx.fillText('▶', relX + compW / 2, relY + compH / 2);
+        tempCtx.textAlign = 'left';
+      }
+      
+      // 3D 模型占位符
+      else if (comp.type === 'hg_3d') {
+        tempCtx.fillStyle = s.backgroundColor || '#1a1a2e';
+        tempCtx.fillRect(relX, relY, compW, compH);
+        tempCtx.fillStyle = '#ffffff';
+        tempCtx.font = '24px sans-serif';
+        tempCtx.textAlign = 'center';
+        tempCtx.textBaseline = 'middle';
+        tempCtx.fillText('🎲', relX + compW / 2, relY + compH / 2);
+        tempCtx.textAlign = 'left';
+      }
+      
+      // SVG 占位符
+      else if (comp.type === 'hg_svg') {
+        tempCtx.fillStyle = '#f0f0f0';
+        tempCtx.fillRect(relX, relY, compW, compH);
+        tempCtx.fillStyle = '#666666';
+        tempCtx.font = '24px sans-serif';
+        tempCtx.textAlign = 'center';
+        tempCtx.textBaseline = 'middle';
+        tempCtx.fillText('🎨', relX + compW / 2, relY + compH / 2);
+        tempCtx.textAlign = 'left';
+      }
+      
+      // Lottie 占位符
+      else if (comp.type === 'hg_lottie') {
+        tempCtx.fillStyle = s.backgroundColor || '#f0f0f0';
+        tempCtx.fillRect(relX, relY, compW, compH);
+        tempCtx.fillStyle = '#666666';
+        tempCtx.font = '24px sans-serif';
+        tempCtx.textAlign = 'center';
+        tempCtx.textBaseline = 'middle';
+        tempCtx.fillText('🎬', relX + compW / 2, relY + compH / 2);
+        tempCtx.textAlign = 'left';
+      }
+      
+      // 其他有背景色的组件
+      else if (s.backgroundColor) {
+        tempCtx.fillStyle = s.backgroundColor;
+        tempCtx.fillRect(relX, relY, compW, compH);
       }
     }
 
     const bgImageData = tempCtx.getImageData(0, 0, width, height);
     renderGlassEffect(ctx, bgImageData, svgPoints, width, height, distortion, region);
-  }, [svgPoints, renderTrigger, component.position.x, component.position.y, component.position.width, component.position.height, distortion, region, belowComponents, belowImageComponents, components, canvasBackgroundColor]);
+  }, [svgPoints, renderTrigger, component.position.x, component.position.y, 
+      component.position.width, component.position.height, distortion, region, 
+      belowComponents, belowImageComponents, components, component.parent, component]);
 
   if (error) {
     return (
@@ -594,7 +918,6 @@ export const GlassWidget: React.FC<WidgetProps> = ({ component, style, handlers 
 
   return (
     <div style={{ ...style, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...handlers}>
-      {/* 隐藏的图片 URI 加载器 */}
       {belowImageComponents.map(c => (
         <ImageLoader
           key={c.id}
