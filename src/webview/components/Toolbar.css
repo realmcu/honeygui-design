@@ -9,19 +9,20 @@
   padding: 0 12px;
   background-color: var(--vscode-editor-toolbar-background);
   border-bottom: 1px solid var(--vscode-panel-border);
-  gap: 8px;
+  gap: 12px;
 }
 
 .toolbar-section {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
 .toolbar-divider {
   width: 1px;
-  height: 24px;
+  height: 20px;
   background-color: var(--vscode-panel-border);
+  opacity: 0.35;
   margin: 0 4px;
 }
 
@@ -31,10 +32,10 @@
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  background-color: var(--vscode-button-background);
-  color: var(--vscode-button-foreground);
-  border: 1px solid var(--vscode-button-border);
-  border-radius: 2px;
+  background-color: transparent; /* Ghost style */
+  color: var(--vscode-foreground);
+  border: 1px solid transparent;
+  border-radius: 6px;
   font-size: 13px;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -42,7 +43,8 @@
 }
 
 .toolbar-button:hover {
-  background-color: var(--vscode-button-hoverBackground);
+  background-color: var(--vscode-list-hoverBackground);
+  border-color: var(--vscode-panel-border);
 }
 
 .toolbar-button:active {
@@ -60,12 +62,21 @@
 }
 
 .toolbar-button.primary {
-  background-color: var(--vscode-button-background);
+  background-color: transparent;
+  color: var(--vscode-focusBorder);
+  border: 1px solid var(--vscode-focusBorder);
   font-weight: 500;
+  border-radius: 8px;
 }
 
 .toolbar-button.primary:hover {
+  background-color: color-mix(in oklab, var(--vscode-focusBorder) 12%, transparent);
+}
+
+.toolbar-button.primary.running {
+  color: var(--vscode-button-foreground);
   background-color: var(--vscode-button-hoverBackground);
+  border-color: var(--vscode-focusBorder);
 }
 
 /* Zoom controls */
@@ -115,12 +126,40 @@
 
 /* Icon only button */
 .toolbar-icon-button {
-  padding: 6px;
-  width: 32px;
-  height: 32px;
+  padding: 4px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
+  background-color: transparent; /* Ghost style */
+  color: var(--vscode-foreground);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.toolbar-icon-button:hover {
+  background-color: var(--vscode-list-hoverBackground);
+  border-color: var(--vscode-panel-border);
+}
+
+.toolbar-icon-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.toolbar-icon-button.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.toolbar-icon-button.active {
+  background-color: var(--vscode-button-hoverBackground);
+  border-color: var(--vscode-focusBorder);
 }
 
 /* Background color picker */
@@ -180,12 +219,14 @@
 }
 
 .selection-badge {
+  position: absolute;
+  top: -4px;
+  right: -6px;
   background: var(--vscode-badge-background, #4d4d4d);
   color: var(--vscode-badge-foreground, #fff);
   font-size: 10px;
   padding: 1px 5px;
   border-radius: 8px;
-  margin-left: 4px;
 }
 
 .align-dropdown-menu {
@@ -246,4 +287,38 @@
   height: 1px;
   background: var(--vscode-menu-separatorBackground, #454545);
   margin: 4px 0;
+}
+.toolbar-segmented {
+  display: inline-flex;
+  align-items: center;
+  border: none;
+  border-radius: 8px;
+  overflow: hidden;
+  background: transparent;
+}
+
+.toolbar-segmented .toolbar-icon-button,
+.toolbar-segmented .segmented-value {
+  border-radius: 0;
+}
+
+.toolbar-segmented .toolbar-icon-button {
+  border-color: transparent;
+}
+
+.toolbar-segmented .toolbar-icon-button:hover {
+  background-color: var(--vscode-list-hoverBackground);
+}
+
+.segmented-value {
+  padding: 0 8px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  border-left: none;
+  border-right: none;
+  color: var(--vscode-descriptionForeground);
+  font-size: 12px;
 }

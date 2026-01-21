@@ -135,7 +135,7 @@ const Toolbar: React.FC = () => {
           onClick={handleSave}
           title={`${t('Save')} (Ctrl+S)`}
         >
-          <Save size={16} />
+          <Save size={16} strokeWidth={1.4} />
           <span>{t('Save')}</span>
         </button>
       </div>
@@ -143,59 +143,54 @@ const Toolbar: React.FC = () => {
       <div className="toolbar-divider" />
 
       <div className="toolbar-section">
-        <button
-          className="toolbar-button"
-          onClick={handleUndo}
-          title={`${t('Undo')} (Ctrl+Z)`}
-          disabled={!canUndo()}
-        >
-          <RotateCcw size={16} />
-          <span>{t('Undo')}</span>
-        </button>
-        <button
-          className="toolbar-button"
-          onClick={handleRedo}
-          title={`${t('Redo')} (Ctrl+Y)`}
-          disabled={!canRedo()}
-        >
-          <RotateCw size={16} />
-          <span>{t('Redo')}</span>
-        </button>
+        <div className="toolbar-segmented">
+          <button
+            className="toolbar-icon-button"
+            onClick={handleUndo}
+            title={`${t('Undo')} (Ctrl+Z)`}
+            disabled={!canUndo()}
+          >
+            <RotateCcw size={16} strokeWidth={1.4} />
+          </button>
+          <button
+            className="toolbar-icon-button"
+            onClick={handleRedo}
+            title={`${t('Redo')} (Ctrl+Y)`}
+            disabled={!canRedo()}
+          >
+            <RotateCw size={16} strokeWidth={1.4} />
+          </button>
+        </div>
       </div>
-
-      <div className="toolbar-divider" />
 
       <div className="toolbar-divider" />
 
       <div className="toolbar-section">
         <button
-          className="toolbar-button"
+          className="toolbar-icon-button"
           onClick={handleToggleViewConnections}
           title={t('View Relations')}
         >
-          <GitBranch size={16} />
-          <span>{t('Relations')}</span>
+          <GitBranch size={16} strokeWidth={1.4} />
         </button>
         
         <button
-          className={`toolbar-button ${showAlignmentGuides ? 'active' : ''}`}
+          className={`toolbar-icon-button ${showAlignmentGuides ? 'active' : ''}`}
           onClick={() => setShowAlignmentGuides(!showAlignmentGuides)}
           title={showAlignmentGuides ? t('Hide guides') : t('Show guides')}
         >
-          <Grid size={16} />
-          <span>{t('Guides')}</span>
+          <Grid size={16} strokeWidth={1.4} />
         </button>
         
         {/* Align button */}
         <div className="align-menu-container" ref={alignMenuRef}>
           <button
-            className={`toolbar-button ${selectedComponents.length < 2 ? 'disabled' : ''}`}
+            className={`toolbar-icon-button ${selectedComponents.length < 2 ? 'disabled' : ''}`}
             onClick={() => selectedComponents.length >= 2 && setShowAlignMenu(!showAlignMenu)}
             title={selectedComponents.length < 2 ? t('Select at least 2 components') : t('Align and distribute')}
             disabled={selectedComponents.length < 2}
           >
-            <AlignLeft size={16} />
-            <span>{t('Align')}</span>
+            <AlignLeft size={16} strokeWidth={1.4} />
             {selectedComponents.length >= 2 && (
               <span className="selection-badge">{selectedComponents.length}</span>
             )}
@@ -261,12 +256,11 @@ const Toolbar: React.FC = () => {
         
         <div className="background-color-picker">
           <button
-            className="toolbar-button"
+            className="toolbar-icon-button"
             onClick={() => setShowColorPicker(!showColorPicker)}
             title={t('Background Color')}
           >
-            <Palette size={16} />
-            <span>{t('Background')}</span>
+            <Palette size={16} strokeWidth={1.4} />
           </button>
           {showColorPicker && (
             <div className="color-picker-dropdown">
@@ -302,28 +296,30 @@ const Toolbar: React.FC = () => {
       <div className="toolbar-divider" />
 
       <div className="toolbar-section">
-        <button
-          className="toolbar-button"
-          onClick={handleZoomOut}
-          title={t('Zoom Out')}
-        >
-          <ZoomOut size={16} />
-        </button>
-        <div className="zoom-level">{Math.round(zoom * 100)}%</div>
-        <button
-          className="toolbar-button"
-          onClick={handleZoomIn}
-          title={t('Zoom In')}
-        >
-          <ZoomIn size={16} />
-        </button>
-        <button
-          className="toolbar-button"
-          onClick={handleZoomFit}
-          title={t('Fit to Screen')}
-        >
-          <Maximize2 size={16} />
-        </button>
+        <div className="toolbar-segmented">
+          <button
+            className="toolbar-icon-button"
+            onClick={handleZoomOut}
+            title={t('Zoom Out')}
+          >
+            <ZoomOut size={16} strokeWidth={1.4} />
+          </button>
+          <div className="segmented-value zoom-level">{Math.round(zoom * 100)}%</div>
+          <button
+            className="toolbar-icon-button"
+            onClick={handleZoomIn}
+            title={t('Zoom In')}
+          >
+            <ZoomIn size={16} strokeWidth={1.4} />
+          </button>
+          <button
+            className="toolbar-icon-button"
+            onClick={handleZoomFit}
+            title={t('Fit to Screen')}
+          >
+            <Maximize2 size={16} strokeWidth={1.4} />
+          </button>
+        </div>
       </div>
 
       <div style={{ flex: 1 }} />
@@ -334,7 +330,7 @@ const Toolbar: React.FC = () => {
           onClick={handleGenerateAllCode}
           title={t('Generate Code')}
         >
-          <Code size={16} />
+          <Code size={16} strokeWidth={1.4} />
           <span>{t('Generate Code')}</span>
         </button>
         <button
@@ -342,25 +338,25 @@ const Toolbar: React.FC = () => {
           onClick={handleSimulation}
           title={isSimulationRunning ? t('Stop Simulation') : t('Compile & Simulate')}
         >
-          {isSimulationRunning ? <Square size={16} /> : <Rocket size={16} />}
+          {isSimulationRunning ? <Square size={16} strokeWidth={1.4} /> : <Rocket size={16} strokeWidth={1.4} />}
           <span>{isSimulationRunning ? t('Stop') : t('Simulate')}</span>
         </button>
-        <button
-          className="toolbar-button"
-          onClick={handleUartDownload}
-          title={t('UART Download')}
-        >
-          <Download size={16} />
-          <span>{t('Download')}</span>
-        </button>
-        <button
-          className="toolbar-button"
-          onClick={handleClean}
-          title={t('Clean Build')}
-        >
-          <Trash2 size={16} />
-          <span>{t('Clean')}</span>
-        </button>
+        <div className="toolbar-segmented">
+          <button
+            className="toolbar-icon-button"
+            onClick={handleUartDownload}
+            title={t('UART Download')}
+          >
+            <Download size={16} strokeWidth={1.4} />
+          </button>
+          <button
+            className="toolbar-icon-button"
+            onClick={handleClean}
+            title={t('Clean Build')}
+          >
+            <Trash2 size={16} strokeWidth={1.4} />
+          </button>
+        </div>
       </div>
     </div>
   );
