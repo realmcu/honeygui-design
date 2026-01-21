@@ -412,6 +412,7 @@ const en = {
 
   // AssetsPanel
   'Drag files here': 'Drag files here',
+  'Image compression settings': 'Image compression settings',
 
   // ComponentTree
   'Drag from component library to add': 'Drag from component library to add',

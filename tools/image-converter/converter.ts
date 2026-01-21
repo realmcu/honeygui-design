@@ -19,6 +19,20 @@ interface RGBA {
     a: number;
 }
 
+interface IndexedImageData {
+    indices: number[];
+    palette: RGBA[];
+    maxColors: number;  // PNG8/BMP8 = 256
+}
+
+interface ImageLoadResult {
+    pixels: RGBA[];
+    width: number;
+    height: number;
+    hasAlpha: boolean;
+    indexed?: IndexedImageData;  // 索引色图片的调色板信息
+}
+
 export class ImageConverter {
     private compressor?: CompressionAlgorithm;
 
@@ -43,39 +57,42 @@ export class ImageConverter {
         const isJPEG = buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF;
         const isBMP = buffer[0] === 0x42 && buffer[1] === 0x4D; // 'BM'
         
-        let pixels: RGBA[];
-        let width: number;
-        let height: number;
-        let hasAlpha: boolean;
+        let result: ImageLoadResult;
 
         if (isPNG) {
-            const result = await this.loadPNG(inputPath);
-            pixels = result.pixels;
-            width = result.width;
-            height = result.height;
-            hasAlpha = result.hasAlpha;
+            result = await this.loadPNG(inputPath);
         } else if (isJPEG) {
-            const result = await this.loadJPEG(inputPath);
-            pixels = result.pixels;
-            width = result.width;
-            height = result.height;
-            hasAlpha = false;
+            result = await this.loadJPEG(inputPath);
         } else if (isBMP) {
-            const result = await this.loadBMP(inputPath);
-            pixels = result.pixels;
-            width = result.width;
-            height = result.height;
-            hasAlpha = result.hasAlpha;
+            result = await this.loadBMP(inputPath);
         } else {
             throw new Error(`Unsupported image format (not PNG, JPEG or BMP)`);
         }
 
+        const { pixels, width, height, hasAlpha, indexed } = result;
+
         // Auto-detect format
         let pixelFormat: PixelFormat;
         if (format === 'auto') {
-            pixelFormat = hasAlpha ? PixelFormat.ARGB8888 : PixelFormat.RGB565;
+            // PNG8/BMP8（索引色且颜色数 <= 256）优先使用 I8 格式
+            if (indexed && indexed.palette.length <= 256) {
+                pixelFormat = PixelFormat.I8;
+            } else if (hasAlpha) {
+                pixelFormat = PixelFormat.ARGB8888;
+            } else {
+                pixelFormat = PixelFormat.RGB565;
+            }
         } else {
             pixelFormat = format;
+        }
+
+        // I8 格式需要索引色图片
+        if (pixelFormat === PixelFormat.I8) {
+            if (!indexed) {
+                throw new Error('I8 format requires indexed color image (PNG8 or BMP8)');
+            }
+            await this.convertI8(outputPath, width, height, indexed);
+            return;
         }
 
         // Convert pixels
@@ -142,50 +159,103 @@ export class ImageConverter {
         }
     }
 
-    private async loadPNG(filePath: string): Promise<{
-        pixels: RGBA[];
-        width: number;
-        height: number;
-        hasAlpha: boolean;
-    }> {
+    /**
+     * Convert indexed color image to I8 format
+     * 格式：8 byte header + 4 byte info + palette (ABGR8888) + indices
+     */
+    private async convertI8(
+        outputPath: string,
+        width: number,
+        height: number,
+        indexed: IndexedImageData
+    ): Promise<void> {
+        const { indices, palette, maxColors } = indexed;
+        const colorCount = palette.length;
+
+        // 8 byte GUI header
+        const header = new RGBDataHeader(width, height, PixelFormat.I8, false);
+        const headerBuffer = header.pack();
+
+        // 4 byte info: 高16位 = colorCount - 1, 低16位 = maxColors - 1
+        const infoBuffer = Buffer.alloc(4);
+        const highWord = (colorCount - 1) & 0xFFFF;
+        const lowWord = (maxColors - 1) & 0xFFFF;
+        infoBuffer.writeUInt32LE((highWord << 16) | lowWord, 0);
+
+        // 颜色表：ABGR8888 格式，每个颜色 4 字节
+        const paletteBuffer = Buffer.alloc(colorCount * 4);
+        for (let i = 0; i < colorCount; i++) {
+            const { r, g, b, a } = palette[i];
+            // ABGR8888: A在高地址，即 [B, G, R, A] 的顺序（小端序）
+            paletteBuffer.writeUInt8(b, i * 4);
+            paletteBuffer.writeUInt8(g, i * 4 + 1);
+            paletteBuffer.writeUInt8(r, i * 4 + 2);
+            paletteBuffer.writeUInt8(a, i * 4 + 3);
+        }
+
+        // 索引数据
+        const indexBuffer = Buffer.from(indices);
+
+        // Write output
+        const dir = path.dirname(outputPath);
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+
+        const outputBuffer = Buffer.concat([headerBuffer, infoBuffer, paletteBuffer, indexBuffer]);
+        fs.writeFileSync(outputPath, outputBuffer);
+    }
+
+    private async loadPNG(filePath: string): Promise<ImageLoadResult> {
         return new Promise((resolve, reject) => {
-            fs.createReadStream(filePath)
-                .pipe(new PNG())
-                .on('parsed', function(this: PNG) {
-                    const pixels: RGBA[] = [];
-                    let hasAlpha = false;
-                    
-                    // Check if any pixel has alpha < 255
-                    for (let i = 0; i < this.data.length; i += 4) {
-                        const a = this.data[i + 3];
-                        if (a < 255) {
-                            hasAlpha = true;
-                        }
-                        pixels.push({
-                            r: this.data[i],
-                            g: this.data[i + 1],
-                            b: this.data[i + 2],
-                            a: a,
-                        });
-                    }
-                    
-                    resolve({
-                        pixels,
-                        width: this.width,
-                        height: this.height,
-                        hasAlpha,
-                    });
-                })
-                .on('error', reject);
+            const fileBuffer = fs.readFileSync(filePath);
+            
+            // 先用 pngjs 同步解析获取元数据
+            const png = PNG.sync.read(fileBuffer);
+            
+            const pixels: RGBA[] = [];
+            let hasAlpha = false;
+            
+            // Check if any pixel has alpha < 255
+            for (let i = 0; i < png.data.length; i += 4) {
+                const a = png.data[i + 3];
+                if (a < 255) {
+                    hasAlpha = true;
+                }
+                pixels.push({
+                    r: png.data[i],
+                    g: png.data[i + 1],
+                    b: png.data[i + 2],
+                    a: a,
+                });
+            }
+            
+            // 检查是否是索引色 PNG (colorType 3)
+            // pngjs 会自动将索引色转换为 RGBA，但我们需要重建索引
+            let indexed: IndexedImageData | undefined;
+            
+            // 对于 PNG8，我们需要从像素数据中提取唯一颜色并建立索引
+            // 因为 pngjs 不直接暴露原始调色板，我们需要重建
+            const pngPalette = (png as any).palette;
+            if (pngPalette && Array.isArray(pngPalette) && pngPalette.length > 0) {
+                // pngjs 7.x 支持 palette 属性
+                indexed = this.buildIndexedDataFromPalette(pixels, pngPalette, 256);
+            } else {
+                // 尝试从像素数据中提取索引（适用于 256 色以内的图片）
+                indexed = this.tryBuildIndexedData(pixels, 256);
+            }
+            
+            resolve({
+                pixels,
+                width: png.width,
+                height: png.height,
+                hasAlpha,
+                indexed,
+            });
         });
     }
 
-    private async loadJPEG(filePath: string): Promise<{
-        pixels: RGBA[];
-        width: number;
-        height: number;
-        hasAlpha: boolean;
-    }> {
+    private async loadJPEG(filePath: string): Promise<ImageLoadResult> {
         const buffer = fs.readFileSync(filePath);
         const rawImageData = jpeg.decode(buffer);
         
@@ -207,12 +277,7 @@ export class ImageConverter {
         };
     }
 
-    private async loadBMP(filePath: string): Promise<{
-        pixels: RGBA[];
-        width: number;
-        height: number;
-        hasAlpha: boolean;
-    }> {
+    private async loadBMP(filePath: string): Promise<ImageLoadResult> {
         const buffer = fs.readFileSync(filePath);
         const bmpData = bmp.decode(buffer) as any;
         
@@ -236,11 +301,122 @@ export class ImageConverter {
             pixels.push({ r, g, b, a });
         }
         
+        // 检查是否是 8 位 BMP（索引色）
+        let indexed: IndexedImageData | undefined;
+        
+        // bmp-js 的 palette 属性包含调色板信息
+        if (bmpData.palette && bmpData.palette.length > 0) {
+            indexed = this.buildIndexedDataFromBmpPalette(pixels, bmpData.palette, 256);
+        } else {
+            // 尝试从像素数据中提取索引（适用于 256 色以内的图片）
+            indexed = this.tryBuildIndexedData(pixels, 256);
+        }
+        
         return {
             pixels,
             width: bmpData.width,
             height: bmpData.height,
             hasAlpha,
+            indexed,
+        };
+    }
+
+    /**
+     * 从 PNG 调色板构建索引数据
+     */
+    private buildIndexedDataFromPalette(
+        pixels: RGBA[],
+        palette: Array<[number, number, number, number]>,
+        maxColors: number
+    ): IndexedImageData {
+        const paletteRGBA: RGBA[] = palette.map(([r, g, b, a]) => ({ r, g, b, a: a ?? 255 }));
+        
+        // 建立颜色到索引的映射
+        const colorToIndex = new Map<string, number>();
+        paletteRGBA.forEach((color, index) => {
+            const key = `${color.r},${color.g},${color.b},${color.a}`;
+            colorToIndex.set(key, index);
+        });
+        
+        // 为每个像素找到对应的索引
+        const indices: number[] = pixels.map(pixel => {
+            const key = `${pixel.r},${pixel.g},${pixel.b},${pixel.a}`;
+            return colorToIndex.get(key) ?? 0;
+        });
+        
+        return {
+            indices,
+            palette: paletteRGBA,
+            maxColors,
+        };
+    }
+
+    /**
+     * 从 BMP 调色板构建索引数据
+     */
+    private buildIndexedDataFromBmpPalette(
+        pixels: RGBA[],
+        palette: Array<{ red: number; green: number; blue: number; quad: number }>,
+        maxColors: number
+    ): IndexedImageData {
+        const paletteRGBA: RGBA[] = palette.map(p => ({
+            r: p.red,
+            g: p.green,
+            b: p.blue,
+            a: 255,  // BMP 调色板通常没有 alpha
+        }));
+        
+        // 建立颜色到索引的映射
+        const colorToIndex = new Map<string, number>();
+        paletteRGBA.forEach((color, index) => {
+            const key = `${color.r},${color.g},${color.b},${color.a}`;
+            colorToIndex.set(key, index);
+        });
+        
+        // 为每个像素找到对应的索引
+        const indices: number[] = pixels.map(pixel => {
+            const key = `${pixel.r},${pixel.g},${pixel.b},${pixel.a}`;
+            return colorToIndex.get(key) ?? 0;
+        });
+        
+        return {
+            indices,
+            palette: paletteRGBA,
+            maxColors,
+        };
+    }
+
+    /**
+     * 尝试从像素数据中构建索引数据（当没有调色板信息时）
+     */
+    private tryBuildIndexedData(pixels: RGBA[], maxColors: number): IndexedImageData | undefined {
+        // 收集所有唯一颜色
+        const colorMap = new Map<string, { color: RGBA; index: number }>();
+        const indices: number[] = [];
+        
+        for (const pixel of pixels) {
+            const key = `${pixel.r},${pixel.g},${pixel.b},${pixel.a}`;
+            
+            if (!colorMap.has(key)) {
+                if (colorMap.size >= maxColors) {
+                    // 颜色数超过最大值，不是索引色图片
+                    return undefined;
+                }
+                colorMap.set(key, { color: pixel, index: colorMap.size });
+            }
+            
+            indices.push(colorMap.get(key)!.index);
+        }
+        
+        // 构建调色板
+        const palette: RGBA[] = Array.from(colorMap.values())
+            .sort((a, b) => a.index - b.index)
+            .map(v => v.color);
+        
+        return {
+            indices,
+            palette,
+            maxColors,
         };
     }
 }

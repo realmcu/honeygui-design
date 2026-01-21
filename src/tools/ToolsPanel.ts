@@ -210,7 +210,13 @@ export class ToolsPanel {
             switch (file.type) {
                 case 'image':
                     outputPath = path.join(outputSubDir, file.name.replace(/\.[^.]+$/, '.bin'));
-                    result = await this.imageConverter.convert(tempInput, outputPath, settings.format || 'auto');
+                    result = await this.imageConverter.convert(tempInput, outputPath, {
+                        format: settings.format || 'auto',
+                        compression: settings.compression || 'none',
+                        yuvSampleMode: settings.yuvSampleMode,
+                        yuvBlurBits: settings.yuvBlurBits,
+                        yuvFastlz: settings.yuvFastlz
+                    });
                     break;
                 case 'video':
                     const extMap: Record<string, string> = { avi: '.avi', h264: '.h264', mjpeg: '.mjpeg' };

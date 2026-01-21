@@ -412,6 +412,7 @@ const zhCN = {
 
   // AssetsPanel
   'Drag files here': '拖拽文件到此处',
+  'Image compression settings': '图片压缩设置',
 
   // ComponentTree
   'Drag from component library to add': '从组件库拖拽添加组件',

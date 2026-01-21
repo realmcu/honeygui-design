@@ -102,10 +102,24 @@ export class BuildCore {
             fs.mkdirSync(outputDir, { recursive: true });
         }
 
-        // 转换图片资源（不再需要 sdkPath）
+        // 转换图片资源
         this.logger.log('转换图片资源...');
         const imageConverter = new ImageConverterService();
-        const imageResults = await imageConverter.convertAssetsDir(assetsDir, outputDir);
+        
+        // 从项目配置读取压缩设置
+        const compressionConfig = this.projectConfig.imageCompression;
+        const imageOptions = compressionConfig?.enabled ? {
+            compression: compressionConfig.algorithm || 'none',
+            yuvSampleMode: compressionConfig.yuvSampleMode,
+            yuvBlurBits: compressionConfig.yuvBlurBits,
+            yuvFastlz: compressionConfig.yuvFastlz
+        } : undefined;
+        
+        if (imageOptions?.compression && imageOptions.compression !== 'none') {
+            this.logger.log(`使用压缩算法: ${imageOptions.compression}`);
+        }
+        
+        const imageResults = await imageConverter.convertAssetsDir(assetsDir, outputDir, imageOptions);
 
         const imageFailed = imageResults.filter(r => !r.success);
         if (imageFailed.length > 0) {

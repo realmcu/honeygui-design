@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trash2, Edit2, Upload, FolderUp } from 'lucide-react';
+import { Trash2, Edit2, Upload, FolderUp, Settings } from 'lucide-react';
 import { AssetFile } from '../types';
 import { useDesignerStore } from '../store';
 import { t } from '../i18n';
@@ -716,6 +716,13 @@ const AssetsPanel: React.FC = () => {
           title={t('Upload folder')}
         >
           <FolderUp size={16} />
+        </button>
+        <button 
+          className="upload-btn" 
+          onClick={() => window.vscodeAPI?.postMessage({ command: 'openImageCompressionSettings' })}
+          title={t('Image compression settings')}
+        >
+          <Settings size={16} />
         </button>
         <input
           ref={fileInputRef}

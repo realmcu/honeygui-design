@@ -156,6 +156,10 @@ export class MessageHandler {
                 this._assetManager.handleLoadAssets(this._fileManager.currentFilePath);
                 break;
 
+            case 'openImageCompressionSettings':
+                this._handleOpenImageCompressionSettings();
+                break;
+
             case 'getFontFiles':
                 this._assetManager.handleGetFontFiles(this._fileManager.currentFilePath);
                 break;
@@ -500,6 +504,105 @@ export class MessageHandler {
         } catch (error) {
             logger.error(`[MessageHandler] 切换文件失败: ${error}`);
             vscode.window.showErrorMessage(vscode.l10n.t('Failed to switch file: {0}', error instanceof Error ? error.message : vscode.l10n.t('Unknown error')));
+        }
+    }
+
+    /**
+     * 处理打开图片压缩设置
+     */
+    private async _handleOpenImageCompressionSettings(): Promise<void> {
+        try {
+            const currentFile = this._fileManager.currentFilePath;
+            if (!currentFile) {
+                vscode.window.showErrorMessage(vscode.l10n.t('Current HML file not found'));
+                return;
+            }
+
+            const projectRoot = ProjectUtils.findProjectRoot(currentFile);
+            if (!projectRoot) {
+                vscode.window.showErrorMessage(vscode.l10n.t('Cannot find project root (project.json)'));
+                return;
+            }
+
+            const projectJsonPath = path.join(projectRoot, 'project.json');
+            const config = ProjectUtils.loadProjectConfig(projectRoot);
+            const currentCompression = config.imageCompression || {};
+
+            // 显示快速选择菜单
+            const algorithms = [
+                { label: '$(circle-slash) ' + vscode.l10n.t('No compression'), value: 'none', description: vscode.l10n.t('Original size, fastest') },
+                { label: '$(archive) RLE', value: 'rle', description: vscode.l10n.t('Run-length encoding, good for simple images') },
+                { label: '$(zap) FastLZ', value: 'fastlz', description: vscode.l10n.t('Fast compression, balanced') },
+                { label: '$(color-mode) YUV', value: 'yuv', description: vscode.l10n.t('Color space compression, best ratio') }
+            ];
+
+            const currentAlgorithm = currentCompression.enabled ? (currentCompression.algorithm || 'none') : 'none';
+            
+            const selected = await vscode.window.showQuickPick(algorithms, {
+                placeHolder: vscode.l10n.t('Select image compression algorithm (current: {0})', currentAlgorithm),
+                title: vscode.l10n.t('Image Compression Settings')
+            });
+
+            if (!selected) return;
+
+            let newConfig: any = { enabled: selected.value !== 'none', algorithm: selected.value };
+
+            // 如果选择 YUV，显示额外选项
+            if (selected.value === 'yuv') {
+                const sampleModes = [
+                    { label: 'YUV444', value: 'yuv444', description: vscode.l10n.t('Lossless, largest size') },
+                    { label: 'YUV422', value: 'yuv422', description: vscode.l10n.t('Recommended, good balance') },
+                    { label: 'YUV411', value: 'yuv411', description: vscode.l10n.t('High compression, some quality loss') }
+                ];
+                
+                const sampleMode = await vscode.window.showQuickPick(sampleModes, {
+                    placeHolder: vscode.l10n.t('Select YUV sample mode'),
+                    title: vscode.l10n.t('YUV Sample Mode')
+                });
+                
+                if (sampleMode) {
+                    newConfig.yuvSampleMode = sampleMode.value;
+                }
+
+                const blurBits = [
+                    { label: '0', value: 0, description: vscode.l10n.t('No blur') },
+                    { label: '1', value: 1, description: vscode.l10n.t('Slight blur') },
+                    { label: '2', value: 2, description: vscode.l10n.t('Medium blur') },
+                    { label: '4', value: 4, description: vscode.l10n.t('Strong blur') }
+                ];
+
+                const blur = await vscode.window.showQuickPick(blurBits, {
+                    placeHolder: vscode.l10n.t('Select blur bits (reduces size but loses detail)'),
+                    title: vscode.l10n.t('YUV Blur Bits')
+                });
+
+                if (blur) {
+                    newConfig.yuvBlurBits = blur.value;
+                }
+
+                const useFastlz = await vscode.window.showQuickPick([
+                    { label: vscode.l10n.t('No'), value: false },
+                    { label: vscode.l10n.t('Yes'), value: true, description: vscode.l10n.t('Additional FastLZ compression') }
+                ], {
+                    placeHolder: vscode.l10n.t('Apply FastLZ on top of YUV?'),
+                    title: vscode.l10n.t('YUV + FastLZ')
+                });
+
+                if (useFastlz) {
+                    newConfig.yuvFastlz = useFastlz.value;
+                }
+            }
+
+            // 更新配置文件
+            config.imageCompression = newConfig;
+            fs.writeFileSync(projectJsonPath, JSON.stringify(config, null, 2), 'utf-8');
+            
+            const algorithmName = selected.value === 'none' ? vscode.l10n.t('No compression') : selected.value.toUpperCase();
+            vscode.window.showInformationMessage(vscode.l10n.t('Image compression set to: {0}', algorithmName));
+
+        } catch (error) {
+            logger.error(`[MessageHandler] 打开图片压缩设置失败: ${error}`);
+            vscode.window.showErrorMessage(vscode.l10n.t('Failed to open settings: {0}', String(error)));
         }
     }
 

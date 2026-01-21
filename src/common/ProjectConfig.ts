@@ -1,6 +1,16 @@
 /**
  * HoneyGUI项目配置 - 统一定义
  */
+
+// 图片压缩配置
+export interface ImageCompressionConfig {
+    enabled?: boolean;           // 是否启用压缩
+    algorithm?: 'none' | 'rle' | 'fastlz' | 'yuv';  // 压缩算法
+    yuvSampleMode?: 'yuv444' | 'yuv422' | 'yuv411'; // YUV 采样模式
+    yuvBlurBits?: 0 | 1 | 2 | 4;  // YUV 模糊位数
+    yuvFastlz?: boolean;          // YUV 是否叠加 FastLZ
+}
+
 export interface ProjectConfig {
     name?: string;
     version?: string;
@@ -19,6 +29,9 @@ export interface ProjectConfig {
     // 屏幕形状配置（与 SDK DRV_LCD_CORNER_RADIUS 对应）
     // 0 = 矩形（默认）, -1 = 圆形, >0 = 圆角半径（像素）
     cornerRadius?: number;
+    
+    // 图片压缩配置
+    imageCompression?: ImageCompressionConfig;
     
     // 视频转换配置
     videoFormat?: 'mjpeg' | 'avi' | 'h264';  // 默认视频输出格式

@@ -498,6 +498,7 @@ function renderProperties() {
         html += '<div class="file-path">🖼️ '+imgCount+'  🎬 '+vidCount+'  📦 '+modCount+'  🔤 '+fntCount+'  🔮 '+glsCount+'</div>';
         
         if (imgCount > 0) {
+            const isYuv = settings.image?.compression === 'yuv';
             html += '<div class="prop-group"><div class="prop-group-title">🖼️ 图片设置 ('+imgCount+'个)</div>' +
                 '<div class="prop-row"><label>像素格式:</label><select onchange="updateFolderSetting(\\'image\\',\\'format\\',this.value)">' +
                 '<option value="auto"'+(settings.image?.format==='auto'||!settings.image?.format?' selected':'')+'>自动检测</option>' +
@@ -505,7 +506,27 @@ function renderProperties() {
                 '<option value="rgb888"'+(settings.image?.format==='rgb888'?' selected':'')+'>RGB888</option>' +
                 '<option value="argb8888"'+(settings.image?.format==='argb8888'?' selected':'')+'>ARGB8888</option>' +
                 '<option value="argb8565"'+(settings.image?.format==='argb8565'?' selected':'')+'>ARGB8565</option>' +
-                '</select></div></div>';
+                '<option value="i8"'+(settings.image?.format==='i8'?' selected':'')+'>I8 (索引色)</option>' +
+                '</select></div>' +
+                '<div class="prop-row"><label>压缩:</label><select onchange="updateFolderSetting(\\'image\\',\\'compression\\',this.value);renderProperties()">' +
+                '<option value="none"'+(settings.image?.compression==='none'||!settings.image?.compression?' selected':'')+'>不压缩</option>' +
+                '<option value="rle"'+(settings.image?.compression==='rle'?' selected':'')+'>RLE</option>' +
+                '<option value="fastlz"'+(settings.image?.compression==='fastlz'?' selected':'')+'>FastLZ</option>' +
+                '<option value="yuv"'+(settings.image?.compression==='yuv'?' selected':'')+'>YUV</option>' +
+                '</select></div>' +
+                (isYuv ? '<div class="prop-row"><label>采样模式:</label><select onchange="updateFolderSetting(\\'image\\',\\'yuvSampleMode\\',this.value)">' +
+                '<option value="yuv444"'+(settings.image?.yuvSampleMode==='yuv444'?' selected':'')+'>YUV444 (无损)</option>' +
+                '<option value="yuv422"'+(settings.image?.yuvSampleMode==='yuv422'||!settings.image?.yuvSampleMode?' selected':'')+'>YUV422 (推荐)</option>' +
+                '<option value="yuv411"'+(settings.image?.yuvSampleMode==='yuv411'?' selected':'')+'>YUV411 (高压缩)</option>' +
+                '</select></div>' +
+                '<div class="prop-row"><label>模糊位数:</label><select onchange="updateFolderSetting(\\'image\\',\\'yuvBlurBits\\',+this.value)">' +
+                '<option value="0"'+(settings.image?.yuvBlurBits===0||!settings.image?.yuvBlurBits?' selected':'')+'>0 (无模糊)</option>' +
+                '<option value="1"'+(settings.image?.yuvBlurBits===1?' selected':'')+'>1</option>' +
+                '<option value="2"'+(settings.image?.yuvBlurBits===2?' selected':'')+'>2</option>' +
+                '<option value="4"'+(settings.image?.yuvBlurBits===4?' selected':'')+'>4</option>' +
+                '</select></div>' +
+                '<div class="prop-row"><label>叠加FastLZ:</label><input type="checkbox" '+(settings.image?.yuvFastlz?'checked':'')+' onchange="updateFolderSetting(\\'image\\',\\'yuvFastlz\\',this.checked)"></div>' : '') +
+                '</div>';
         }
         
         if (vidCount > 0) {
@@ -599,7 +620,10 @@ function renderProperties() {
     
     if (file.type === 'image') {
         const effectiveFormat = settings.format || inherited.image?.format || 'auto';
+        const effectiveCompression = settings.compression || inherited.image?.compression || 'none';
         const isInherited = !settings.format && inherited.image?.format;
+        const isCompressionInherited = !settings.compression && inherited.image?.compression;
+        const isYuv = settings.compression === 'yuv' || (!settings.compression && inherited.image?.compression === 'yuv');
         html += '<div class="prop-group"><div class="prop-group-title">转换设置'+(isInherited?' <span style="color:var(--vscode-descriptionForeground)">(继承自文件夹)</span>':'')+'</div>' +
             '<div class="prop-row"><label>像素格式:</label><select onchange="updateSetting(\\'format\\',this.value)">' +
             '<option value=""'+(settings.format===''||!settings.format?' selected':'')+'>继承 ('+(inherited.image?.format||'自动')+')</option>' +
@@ -608,7 +632,30 @@ function renderProperties() {
             '<option value="rgb888"'+(settings.format==='rgb888'?' selected':'')+'>RGB888</option>' +
             '<option value="argb8888"'+(settings.format==='argb8888'?' selected':'')+'>ARGB8888</option>' +
             '<option value="argb8565"'+(settings.format==='argb8565'?' selected':'')+'>ARGB8565</option>' +
-            '</select></div></div>';
+            '<option value="i8"'+(settings.format==='i8'?' selected':'')+'>I8 (索引色)</option>' +
+            '</select></div>' +
+            '<div class="prop-row"><label>压缩:</label><select onchange="updateSetting(\\'compression\\',this.value);renderProperties()">' +
+            '<option value=""'+(settings.compression===''||!settings.compression?' selected':'')+'>继承 ('+(inherited.image?.compression||'不压缩')+')</option>' +
+            '<option value="none"'+(settings.compression==='none'?' selected':'')+'>不压缩</option>' +
+            '<option value="rle"'+(settings.compression==='rle'?' selected':'')+'>RLE</option>' +
+            '<option value="fastlz"'+(settings.compression==='fastlz'?' selected':'')+'>FastLZ</option>' +
+            '<option value="yuv"'+(settings.compression==='yuv'?' selected':'')+'>YUV</option>' +
+            '</select></div>' +
+            (isYuv ? '<div class="prop-row"><label>采样模式:</label><select onchange="updateSetting(\\'yuvSampleMode\\',this.value)">' +
+            '<option value=""'+(!settings.yuvSampleMode?' selected':'')+'>继承 ('+(inherited.image?.yuvSampleMode||'YUV422')+')</option>' +
+            '<option value="yuv444"'+(settings.yuvSampleMode==='yuv444'?' selected':'')+'>YUV444 (无损)</option>' +
+            '<option value="yuv422"'+(settings.yuvSampleMode==='yuv422'?' selected':'')+'>YUV422 (推荐)</option>' +
+            '<option value="yuv411"'+(settings.yuvSampleMode==='yuv411'?' selected':'')+'>YUV411 (高压缩)</option>' +
+            '</select></div>' +
+            '<div class="prop-row"><label>模糊位数:</label><select onchange="updateSetting(\\'yuvBlurBits\\',this.value?+this.value:null)">' +
+            '<option value=""'+(settings.yuvBlurBits===undefined||settings.yuvBlurBits===null?' selected':'')+'>继承 ('+(inherited.image?.yuvBlurBits||0)+')</option>' +
+            '<option value="0"'+(settings.yuvBlurBits===0?' selected':'')+'>0 (无模糊)</option>' +
+            '<option value="1"'+(settings.yuvBlurBits===1?' selected':'')+'>1</option>' +
+            '<option value="2"'+(settings.yuvBlurBits===2?' selected':'')+'>2</option>' +
+            '<option value="4"'+(settings.yuvBlurBits===4?' selected':'')+'>4</option>' +
+            '</select></div>' +
+            '<div class="prop-row"><label>叠加FastLZ:</label><input type="checkbox" '+(settings.yuvFastlz?'checked':'')+' onchange="updateSetting(\\'yuvFastlz\\',this.checked)"></div>' : '') +
+            '</div>';
     } else if (file.type === 'video') {
         const iv = inherited.video || {};
         html += '<div class="prop-group"><div class="prop-group-title">转换设置</div>' +
