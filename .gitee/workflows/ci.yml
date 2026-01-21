@@ -1,0 +1,53 @@
+name: CI Build and Test
+
+on:
+  push:
+    branches:
+      - master
+      - develop
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    name: Build Extension
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm install
+        
+      - name: Compile TypeScript
+        run: npm run compile
+        
+      - name: Build Webview
+        run: npm run build:webview
+        
+      - name: Check for compilation errors
+        run: |
+          if [ -d "out" ]; then
+            echo "✅ Compilation successful"
+          else
+            echo "❌ Compilation failed"
+            exit 1
+          fi
+          
+      - name: Package extension
+        run: npx vsce package --allow-missing-repository
+        
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: vsix-package
+          path: '*.vsix'
+          retention-days: 7
