@@ -721,32 +721,48 @@ export class BuildCore {
                 ]
             };
 
-            this.logger.log(`转换字体: ${group.fontFile} (${group.fontType}, size=${group.fontSize}, bits=${group.renderMode})`);
-            this.logger.log(`  文本字符: "${group.characters.substring(0, 50)}${group.characters.length > 50 ? '...' : ''}" (${group.characters.length} 字符)`);
-            if (group.additionalCharSets.length > 0) {
-                this.logger.log(`  附加字符集: ${group.additionalCharSets.length} 个`);
-                group.additionalCharSets.forEach((cs, idx) => {
-                    // 显示原始路径
-                    this.logger.log(`    [${idx + 1}] ${cs.type}: ${cs.value}`);
-                });
-                // 显示转换后的绝对路径（用于调试）
-                options.characterSets.slice(1).forEach((cs, idx) => {
-                    if (cs.type === 'file' || cs.type === 'codepage') {
-                        this.logger.log(`    [${idx + 1}] file: ${cs.value}`);
-                    }
-                });
-            }
-
             try {
                 const result = await fontConverter.convert(fontPath, fontOutputDir, options);
                 results.push(result);
                 
                 if (result.success) {
-                    this.logger.log(`  ✓ 成功: ${result.processedCount} 字符`);
+                    // 成功时不显示日志，只在最后统计
                 } else {
+                    // 失败时显示详细信息，方便调试
+                    this.logger.log(`转换字体: ${group.fontFile} (${group.fontType}, size=${group.fontSize}, bits=${group.renderMode})`);
+                    this.logger.log(`  文本字符: "${group.characters.substring(0, 50)}${group.characters.length > 50 ? '...' : ''}" (${group.characters.length} 字符)`);
+                    if (group.additionalCharSets.length > 0) {
+                        this.logger.log(`  附加字符集: ${group.additionalCharSets.length} 个`);
+                        group.additionalCharSets.forEach((cs, idx) => {
+                            // 显示原始路径
+                            this.logger.log(`    [${idx + 1}] ${cs.type}: ${cs.value}`);
+                        });
+                        // 显示转换后的绝对路径（用于调试）
+                        options.characterSets.slice(1).forEach((cs, idx) => {
+                            if (cs.type === 'file' || cs.type === 'codepage') {
+                                this.logger.log(`    [${idx + 1}] file: ${cs.value}`);
+                            }
+                        });
+                    }
                     this.logger.log(`  ✗ 失败: ${result.error}`, true);
                 }
             } catch (error: any) {
+                // 异常时显示详细信息，方便调试
+                this.logger.log(`转换字体: ${group.fontFile} (${group.fontType}, size=${group.fontSize}, bits=${group.renderMode})`);
+                this.logger.log(`  文本字符: "${group.characters.substring(0, 50)}${group.characters.length > 50 ? '...' : ''}" (${group.characters.length} 字符)`);
+                if (group.additionalCharSets.length > 0) {
+                    this.logger.log(`  附加字符集: ${group.additionalCharSets.length} 个`);
+                    group.additionalCharSets.forEach((cs, idx) => {
+                        // 显示原始路径
+                        this.logger.log(`    [${idx + 1}] ${cs.type}: ${cs.value}`);
+                    });
+                    // 显示转换后的绝对路径（用于调试）
+                    options.characterSets.slice(1).forEach((cs, idx) => {
+                        if (cs.type === 'file' || cs.type === 'codepage') {
+                            this.logger.log(`    [${idx + 1}] file: ${cs.value}`);
+                        }
+                    });
+                }
                 results.push({
                     success: false,
                     inputPath: fontPath,
