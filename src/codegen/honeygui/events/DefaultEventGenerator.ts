@@ -2,7 +2,7 @@
  * 默认事件代码生成器（通用组件）
  */
 import { Component } from '../../../hml/types';
-import { EventCodeGenerator, EVENT_TYPE_TO_GUI_EVENT, generateMessageCallbackImpl, getMessageCallbackName } from './EventCodeGenerator';
+import { EventCodeGenerator, EVENT_TYPE_TO_GUI_EVENT, generateMessageCallbackImpl, generateControlTimerCallbackImpl, getMessageCallbackName } from './EventCodeGenerator';
 
 export class DefaultEventGenerator implements EventCodeGenerator {
 
@@ -14,6 +14,7 @@ export class DefaultEventGenerator implements EventCodeGenerator {
     let code = '';
     const indentStr = '    '.repeat(indent);
     let msgIndex = 0;
+    let controlTimerIndex = 0;
 
     component.eventConfigs.forEach((eventConfig) => {
       // 处理 onMessage 事件（消息订阅）
@@ -36,6 +37,10 @@ export class DefaultEventGenerator implements EventCodeGenerator {
           const targetName = targetComponent?.name || action.target;
           code += `${indentStr}gui_obj_event_set(${component.id}, ${guiEvent});\n`;
           code += `${indentStr}gui_obj_click(${component.id}, (gui_event_cb_t)gui_switch_app, (void *)"${targetName}");\n`;
+        } else if (action.type === 'controlTimer' && action.timerTargets && action.timerTargets.length > 0) {
+          const callbackName = `${component.id}_animation_set_${controlTimerIndex}_cb`;
+          controlTimerIndex++;
+          code += `${indentStr}gui_obj_add_event_cb(${component.id}, (gui_event_cb_t)${callbackName}, ${guiEvent}, NULL);\n`;
         }
       });
     });
@@ -48,6 +53,7 @@ export class DefaultEventGenerator implements EventCodeGenerator {
     if (!component.eventConfigs) return functions;
 
     let msgIndex = 0;
+    let controlTimerIndex = 0;
     component.eventConfigs.forEach(eventConfig => {
       if (eventConfig.type === 'onMessage' && eventConfig.message) {
         // onMessage 生成统一回调名
@@ -57,6 +63,9 @@ export class DefaultEventGenerator implements EventCodeGenerator {
         eventConfig.actions.forEach(action => {
           if (action.type === 'callFunction' && action.functionName) {
             functions.push(action.functionName);
+          } else if (action.type === 'controlTimer' && action.timerTargets && action.timerTargets.length > 0) {
+            functions.push(`${component.id}_animation_set_${controlTimerIndex}_cb`);
+            controlTimerIndex++;
           }
         });
       }
@@ -70,5 +79,12 @@ export class DefaultEventGenerator implements EventCodeGenerator {
    */
   getMessageCallbackImpl(component: Component, componentMap: Map<string, Component>): string[] {
     return generateMessageCallbackImpl(component, componentMap);
+  }
+
+  /**
+   * 生成 controlTimer 回调实现
+   */
+  getControlTimerCallbackImpl(component: Component, componentMap: Map<string, Component>): string[] {
+    return generateControlTimerCallbackImpl(component, componentMap);
   }
 }

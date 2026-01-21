@@ -375,6 +375,11 @@ export class HmlParser {
         eventConfig.handler = attrs.handler;
       }
 
+      // 解析 checkReleaseArea 属性（抬起区域检测）
+      if (eventType === 'onTouchUp' && attrs.checkReleaseArea === 'true') {
+        eventConfig.checkReleaseArea = true;
+      }
+
       // 解析动作
       const actionElements = eventEl.event;
       if (Array.isArray(actionElements)) {
@@ -392,6 +397,15 @@ export class HmlParser {
           if (actionAttrs.functionName) action.functionName = actionAttrs.functionName;
           if (actionAttrs.switchOutStyle) action.switchOutStyle = actionAttrs.switchOutStyle;
           if (actionAttrs.switchInStyle) action.switchInStyle = actionAttrs.switchInStyle;
+          
+          // 解析 controlTimer 的 timerTargets
+          if (actionAttrs.timerTargets && typeof actionAttrs.timerTargets === 'string') {
+            try {
+              action.timerTargets = JSON.parse(actionAttrs.timerTargets);
+            } catch (e) {
+              console.warn(`Failed to parse timerTargets JSON: ${actionAttrs.timerTargets}`);
+            }
+          }
 
           eventConfig.actions.push(action);
         });
@@ -890,6 +904,11 @@ export class HmlParser {
         eventConfig.handler = attrs.handler;
       }
 
+      // 解析 checkReleaseArea 属性（抬起区域检测）
+      if (eventType === 'onTouchUp' && attrs.checkReleaseArea === 'true') {
+        eventConfig.checkReleaseArea = true;
+      }
+
       // 解析动作
       if (eventEl.action) {
         const actionElements = Array.isArray(eventEl.action)
@@ -908,6 +927,15 @@ export class HmlParser {
           if (actionAttrs.functionName) action.functionName = actionAttrs.functionName;
           if (actionAttrs.switchOutStyle) action.switchOutStyle = actionAttrs.switchOutStyle;
           if (actionAttrs.switchInStyle) action.switchInStyle = actionAttrs.switchInStyle;
+          
+          // 解析 controlTimer 的 timerTargets
+          if (actionAttrs.timerTargets && typeof actionAttrs.timerTargets === 'string') {
+            try {
+              action.timerTargets = JSON.parse(actionAttrs.timerTargets);
+            } catch (e) {
+              console.warn(`Failed to parse timerTargets JSON: ${actionAttrs.timerTargets}`);
+            }
+          }
 
           eventConfig.actions.push(action);
         });

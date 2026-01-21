@@ -34,7 +34,9 @@ export type ActionType =
   // 消息
   | 'sendMessage'
   // 自定义
-  | 'callFunction';
+  | 'callFunction'
+  // 控制动画定时器
+  | 'controlTimer';
 
 // ============ 动作定义 ============
 
@@ -46,6 +48,12 @@ export interface Action {
   // switchView专用
   switchOutStyle?: string;   // 退出动画
   switchInStyle?: string;    // 进入动画
+  // controlTimer专用
+  timerTargets?: Array<{     // 目标组件列表
+    componentId: string;     // 组件ID
+    timerIndex?: number;     // 定时器索引（如果有多个定时器）
+    action: 'start' | 'stop'; // 每个定时器的动作
+  }>;
 }
 
 // ============ 事件配置 ============
@@ -55,6 +63,7 @@ export interface EventConfig {
   message?: string;          // 仅 onMessage 事件需要
   handler?: string;          // 回调函数名（onMessage 用）
   actions: Action[];
+  checkReleaseArea?: boolean; // 抬起区域检测（仅 onTouchUp 事件）
 }
 
 // ============ 组件支持的事件映射 ============
@@ -110,6 +119,7 @@ export const ACTION_LABELS: Record<ActionType, string> = {
   switchView: '跳转界面',
   sendMessage: '发送消息',
   callFunction: '调用函数',
+  controlTimer: '自定义动画集',
 };
 
 // ============ 视图切换动画选项 ============

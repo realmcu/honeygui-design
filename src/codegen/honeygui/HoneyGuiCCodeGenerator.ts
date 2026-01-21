@@ -573,7 +573,8 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       if (enabledTimers.length > 0) {
         enabledTimers.forEach((timer: any) => {
           let callback: string;
-          if (timer.mode === 'preset' && timer.actions && timer.actions.length > 0) {
+          // 预设动作模式：支持 segments（多段动画）或 actions（单段动画）
+          if (timer.mode === 'preset' && ((timer.segments && timer.segments.length > 0) || (timer.actions && timer.actions.length > 0))) {
             // 预设动作模式：使用定时器 ID 生成回调函数名
             callback = `${component.id}_${timer.id}_cb`;
           } else if (timer.mode === 'custom' && timer.callback) {

@@ -68,10 +68,10 @@ export interface ComponentStyle {
 }
 
 /**
- * 定时器动作类型
+ * 定时动画动作类型
  */
 export interface TimerAction {
-  type: 'size' | 'position' | 'opacity';
+  type: 'size' | 'position' | 'opacity' | 'rotation' | 'scale' | 'switchView' | 'changeImage';
   // 大小动作
   fromW?: number;
   fromH?: number;
@@ -85,23 +85,46 @@ export interface TimerAction {
   // 透明度动作
   from?: number;
   to?: number;
+  // 旋转动作（仅 hg_image）
+  angleOrigin?: number;
+  angleTarget?: number;
+  // 缩放动作（仅 hg_image）
+  zoomXOrigin?: number;
+  zoomXTarget?: number;
+  zoomYOrigin?: number;
+  zoomYTarget?: number;
+  // 跳转界面动作
+  target?: string;           // 目标视图ID
+  switchOutStyle?: string;   // 退出动画
+  switchInStyle?: string;    // 进入动画
+  // 更换图片动作（仅 hg_image）
+  imagePath?: string;        // 图片路径
 }
 
 /**
- * 定时器配置类型
+ * 动画段配置（支持多段动画）
+ */
+export interface AnimationSegment {
+  duration: number;  // 这段动画的持续时间（毫秒）
+  actions: TimerAction[];  // 这段动画的动作列表（可以为空，表示等待）
+}
+
+/**
+ * 定时动画配置类型
  */
 export interface TimerConfig {
-  id: string;  // 定时器唯一标识
-  name?: string;  // 定时器名称（用于注释）
+  id: string;  // 动画唯一标识
+  name?: string;  // 动画名称（用于注释）
   enabled: boolean;  // 是否绑定到组件（只有一个可以为 true）
-  interval: number;  // 定时器间隔（毫秒）
+  interval: number;  // 动画间隔（毫秒）
   reload: boolean;  // 是否重复执行
-  mode: 'preset' | 'custom';  // 定时器模式：预设动作或自定义函数
-  actions?: TimerAction[];  // 预设动作列表
+  mode: 'preset' | 'custom';  // 动画模式：预设动作或自定义函数
+  actions?: TimerAction[];  // 预设动作列表（旧版兼容，单段动画）
+  segments?: AnimationSegment[];  // 多段动画列表（新版）
   callback?: string;  // 自定义回调函数名
-  duration?: number;  // 总时间（毫秒）
-  stopOnComplete?: boolean;  // 到达总时间后是否停止定时器
-  delayStart?: number;  // 延时启动时间（毫秒），默认 0
+  duration?: number;  // 总时间（毫秒）（旧版兼容）
+  stopOnComplete?: boolean;  // 到达总时间后是否停止动画
+  delayStart?: number;  // 延时启动时间（毫秒），默认 0（已废弃，用 segments 的第一段空动作替代）
 }
 
 /**

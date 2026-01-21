@@ -8,6 +8,7 @@ import App from './App';
 import './global.css';
 // 从types.ts导入已有的Window接口扩展
 import './types';
+import { setLocale } from './i18n';
 
 // 安全初始化VSCode API，确保只获取一次
 if (!window.vscodeAPI) {
@@ -28,6 +29,25 @@ if (!window.vscodeAPI) {
   }
 } else {
   console.log('[HoneyGUI] VSCode API already initialized, reusing existing instance');
+}
+
+// 【关键修复】在渲染前就初始化语言设置，避免闪烁
+// 尝试从 VSCode 的状态中获取语言设置
+try {
+  const state = window.vscodeAPI?.getState();
+  if (state && state.locale) {
+    setLocale(state.locale);
+    console.log('[HoneyGUI] Locale initialized from state:', state.locale);
+  } else {
+    // 如果没有保存的状态，尝试从浏览器语言推断
+    const browserLang = navigator.language.toLowerCase();
+    if (browserLang.startsWith('zh')) {
+      setLocale('zh-cn');
+      console.log('[HoneyGUI] Locale initialized from browser:', 'zh-cn');
+    }
+  }
+} catch (error) {
+  console.warn('[HoneyGUI] Failed to initialize locale:', error);
 }
 
 const rootElement = document.getElementById('root');

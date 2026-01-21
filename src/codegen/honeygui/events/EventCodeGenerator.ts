@@ -24,6 +24,11 @@ export interface EventCodeGenerator {
    * 获取 onMessage 回调的实现代码（可选）
    */
   getMessageCallbackImpl?(component: Component, componentMap: Map<string, Component>): string[];
+
+  /**
+   * 获取 controlTimer 回调的实现代码（可选）
+   */
+  getControlTimerCallbackImpl?(component: Component, componentMap: Map<string, Component>): string[];
 }
 
 /**
@@ -55,6 +60,63 @@ export function getMessageCallbackName(component: Component, eventConfig: EventC
 }
 
 /**
+ * 生成 controlTimer 回调实现的公共函数
+ */
+export function generateControlTimerCallbackImpl(component: Component, componentMap: Map<string, Component>): string[] {
+  const impls: string[] = [];
+  if (!component.eventConfigs) return impls;
+
+  let controlTimerIndex = 0;
+  component.eventConfigs.forEach(eventConfig => {
+    if (eventConfig.type === 'onMessage') return;
+
+    // 检查是否有 controlTimer 动作
+    const controlTimerActions = eventConfig.actions.filter(a => 
+      a.type === 'controlTimer' && a.timerTargets && a.timerTargets.length > 0
+    );
+
+    if (controlTimerActions.length === 0) return;
+
+    // 为每个 controlTimer 动作生成独立的回调函数
+    controlTimerActions.forEach(action => {
+      const callbackName = `${component.id}_animation_set_${controlTimerIndex}_cb`;
+      controlTimerIndex++;
+
+      let callbackBody = `    GUI_UNUSED(obj);\n    GUI_UNUSED(event);\n    GUI_UNUSED(param);\n`;
+
+      action.timerTargets!.forEach(target => {
+        const targetComp = componentMap.get(target.componentId);
+        if (!targetComp) return;
+
+        const timers = targetComp.data?.timers;
+        if (!timers || !Array.isArray(timers)) return;
+
+        const timer = timers[target.timerIndex || 0];
+        if (!timer) return;
+
+        if (target.action === 'start') {
+          // 开启定时器
+          const callback = timer.mode === 'preset' 
+            ? `${target.componentId}_${timer.id}_cb`
+            : (timer.callback || `${target.componentId}_timer_cb`);
+          callbackBody += `    gui_obj_create_timer(GUI_BASE(${target.componentId}), ${timer.interval}, ${timer.reload ? 'true' : 'false'}, ${callback});\n`;
+          callbackBody += `    gui_obj_start_timer(GUI_BASE(${target.componentId}));\n`;
+        } else if (target.action === 'stop') {
+          // 关闭定时器
+          callbackBody += `    if (GUI_BASE(${target.componentId})->timer) {\n`;
+          callbackBody += `        gui_obj_stop_timer(GUI_BASE(${target.componentId}));\n`;
+          callbackBody += `    }\n`;
+        }
+      });
+
+      impls.push(`void ${callbackName}(void *obj, gui_event_t event, void *param)\n{\n${callbackBody}}`);
+    });
+  });
+
+  return impls;
+}
+
+/**
  * 生成 onMessage 回调实现的公共函数
  */
 export function generateMessageCallbackImpl(component: Component, componentMap: Map<string, Component>): string[] {
@@ -82,6 +144,32 @@ export function generateMessageCallbackImpl(component: Component, componentMap: 
         body += `    gui_view_switch_direct(gui_view_get_current(), "${targetName}", ${switchOutStyle}, ${switchInStyle});\n`;
       } else if (action.type === 'sendMessage' && action.message) {
         body += `    gui_msg_publish("${action.message}", data, len);\n`;
+      } else if (action.type === 'controlTimer' && action.timerTargets && action.timerTargets.length > 0) {
+        // 控制动画定时器
+        action.timerTargets.forEach(target => {
+          const targetComp = componentMap.get(target.componentId);
+          if (!targetComp) return;
+          
+          const timers = targetComp.data?.timers;
+          if (!timers || !Array.isArray(timers)) return;
+          
+          const timer = timers[target.timerIndex || 0];
+          if (!timer) return;
+          
+          if (target.action === 'start') {
+            // 开启定时器
+            const callback = timer.mode === 'preset' 
+              ? `${target.componentId}_${timer.id}_cb`
+              : (timer.callback || `${target.componentId}_timer_cb`);
+            body += `    gui_obj_create_timer(GUI_BASE(${target.componentId}), ${timer.interval}, ${timer.reload ? 'true' : 'false'}, ${callback});\n`;
+            body += `    gui_obj_start_timer(GUI_BASE(${target.componentId}));\n`;
+          } else if (target.action === 'stop') {
+            // 关闭定时器
+            body += `    if (GUI_BASE(${target.componentId})->timer) {\n`;
+            body += `        gui_obj_stop_timer(GUI_BASE(${target.componentId}));\n`;
+            body += `    }\n`;
+          }
+        });
       }
     });
 

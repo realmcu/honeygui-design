@@ -90,11 +90,14 @@ export const calculateComponentStyle = (
     const t = component.style.transform;
     const transforms: string[] = [];
     
-    // 平移
+    // 平移（需要减去变换中心点的偏移）
     if (t.translateX !== undefined || t.translateY !== undefined) {
       const tx = t.translateX ?? 0;
       const ty = t.translateY ?? 0;
-      transforms.push(`translate(${tx}px, ${ty}px)`);
+      const focusX = t.focusX ?? 0;
+      const focusY = t.focusY ?? 0;
+      // 实际平移量 = 用户设置的平移量 - 变换中心点偏移
+      transforms.push(`translate(${tx - focusX}px, ${ty - focusY}px)`);
     }
     
     // 缩放

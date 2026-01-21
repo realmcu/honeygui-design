@@ -2,7 +2,7 @@
  * hg_rect 事件代码生成器
  */
 import { Component } from '../../../hml/types';
-import { EventCodeGenerator, EVENT_TYPE_TO_GUI_EVENT, generateMessageCallbackImpl, getMessageCallbackName } from './EventCodeGenerator';
+import { EventCodeGenerator, EVENT_TYPE_TO_GUI_EVENT, generateMessageCallbackImpl, generateControlTimerCallbackImpl, getMessageCallbackName } from './EventCodeGenerator';
 
 export class RectEventGenerator implements EventCodeGenerator {
 
@@ -14,6 +14,7 @@ export class RectEventGenerator implements EventCodeGenerator {
     let code = '';
     const indentStr = '    '.repeat(indent);
     let msgIndex = 0;
+    let controlTimerIndex = 0;
 
     component.eventConfigs.forEach((eventConfig) => {
       if (eventConfig.type === 'onMessage' && eventConfig.message) {
@@ -32,6 +33,10 @@ export class RectEventGenerator implements EventCodeGenerator {
         } else if (action.type === 'switchView' && action.target) {
           const callbackName = `${component.id}_switch_view_cb`;
           code += `${indentStr}gui_obj_add_event_cb(${component.id}, (gui_event_cb_t)${callbackName}, ${guiEvent}, NULL);\n`;
+        } else if (action.type === 'controlTimer' && action.timerTargets && action.timerTargets.length > 0) {
+          const callbackName = `${component.id}_animation_set_${controlTimerIndex}_cb`;
+          controlTimerIndex++;
+          code += `${indentStr}gui_obj_add_event_cb(${component.id}, (gui_event_cb_t)${callbackName}, ${guiEvent}, NULL);\n`;
         }
       });
     });
@@ -44,6 +49,7 @@ export class RectEventGenerator implements EventCodeGenerator {
     if (!component.eventConfigs) return functions;
 
     let msgIndex = 0;
+    let controlTimerIndex = 0;
     component.eventConfigs.forEach(eventConfig => {
       if (eventConfig.type === 'onMessage' && eventConfig.message) {
         functions.push(getMessageCallbackName(component, eventConfig, msgIndex));
@@ -56,6 +62,9 @@ export class RectEventGenerator implements EventCodeGenerator {
           functions.push(action.functionName);
         } else if (action.type === 'switchView' && action.target) {
           functions.push(`${component.id}_switch_view_cb`);
+        } else if (action.type === 'controlTimer' && action.timerTargets && action.timerTargets.length > 0) {
+          functions.push(`${component.id}_animation_set_${controlTimerIndex}_cb`);
+          controlTimerIndex++;
         }
       });
     });
@@ -95,5 +104,9 @@ export class RectEventGenerator implements EventCodeGenerator {
 
   getMessageCallbackImpl(component: Component, componentMap: Map<string, Component>): string[] {
     return generateMessageCallbackImpl(component, componentMap);
+  }
+
+  getControlTimerCallbackImpl(component: Component, componentMap: Map<string, Component>): string[] {
+    return generateControlTimerCallbackImpl(component, componentMap);
   }
 }

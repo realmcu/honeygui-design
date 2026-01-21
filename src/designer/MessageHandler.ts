@@ -200,7 +200,8 @@ export class MessageHandler {
                     message.dropPosition,
                     message.targetContainerId,
                     message.relativePath,
-                    message.componentId
+                    message.componentId,
+                    message.callbackId
                 );
                 break;
 

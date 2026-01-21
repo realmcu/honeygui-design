@@ -312,6 +312,10 @@ export class HmlSerializer {
                     if (eventConfig.handler) {
                         eventAttrs += ' handler="' + this._escapeXmlValue(eventConfig.handler) + '"';
                     }
+                    // 保存抬起区域检测标志
+                    if (eventConfig.type === 'onTouchUp' && eventConfig.checkReleaseArea === true) {
+                        eventAttrs += ' checkReleaseArea="true"';
+                    }
 
                     if (eventConfig.actions && eventConfig.actions.length > 0) {
                         componentContent += eventIndent + '<event ' + eventAttrs + '>\n';
@@ -324,6 +328,10 @@ export class HmlSerializer {
                             if (action.type === 'switchView') {
                                 actionAttrs += ' switchOutStyle="' + (action.switchOutStyle || 'SWITCH_OUT_TO_LEFT_USE_TRANSLATION') + '"';
                                 actionAttrs += ' switchInStyle="' + (action.switchInStyle || 'SWITCH_IN_FROM_RIGHT_USE_TRANSLATION') + '"';
+                            }
+                            // 序列化 controlTimer 的 timerTargets
+                            if (action.type === 'controlTimer' && action.timerTargets && action.timerTargets.length > 0) {
+                                actionAttrs += ' timerTargets="' + this._escapeXmlValue(JSON.stringify(action.timerTargets)) + '"';
                             }
                             componentContent += actionIndent + '<action ' + actionAttrs + ' />\n';
                         });

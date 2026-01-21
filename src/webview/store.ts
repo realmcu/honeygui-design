@@ -801,12 +801,13 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     const savedState = viewStateStorage.get(filePath);
     console.log('[ViewState] 尝试恢复视图状态:', filePath, savedState);
     if (savedState) {
-      set({
-        zoom: savedState.zoom,
-        canvasOffset: savedState.canvasOffset,
-        selectedComponent: savedState.selectedComponent,
-      });
-      console.log('[ViewState] 已恢复视图状态:', savedState);
+      // 【修复闪烁】不在这里直接 set，而是返回状态让调用者批量更新
+      // set({
+      //   zoom: savedState.zoom,
+      //   canvasOffset: savedState.canvasOffset,
+      //   selectedComponent: savedState.selectedComponent,
+      // });
+      console.log('[ViewState] 已找到保存的视图状态:', savedState);
       return { restored: true, state: savedState };
     } else {
       // 如果没有保存的状态，不重置（保持当前状态）

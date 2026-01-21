@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { PropertyEditor } from './PropertyEditor';
 import { t } from '../../i18n';
-import { TimerConfig, TimerAction } from '../../../hml/types';
+import { TimerConfig, TimerAction, AnimationSegment } from '../../../hml/types';
+import { SWITCH_OUT_STYLES, SWITCH_IN_STYLES } from '../../../hml/eventTypes';
+import { useDesignerStore } from '../../store';
 
 interface TimerPropertiesProps {
   componentId: string;
@@ -19,27 +21,48 @@ export const TimerProperties: React.FC<TimerPropertiesProps> = ({
   const [expandedTimerId, setExpandedTimerId] = useState<string | null>(
     timers.length > 0 ? timers[0].id : null
   );
+  
+  const components = useDesignerStore((state) => state.components);
+  const allViews = useDesignerStore((state) => state.allViews || []);
 
-  // 添加新定时器
+  // 获取可用的视图列表
+  const getAvailableViews = () => {
+    const currentViews = components
+      .filter(c => c.type === 'hg_view' && c.id !== componentId)
+      .map(c => ({
+        id: c.id,
+        name: c.name || c.id,
+        file: '当前文件'
+      }));
+    
+    const currentViewIds = new Set(currentViews.map(v => v.id));
+    const otherViews = allViews.filter(v => !currentViewIds.has(v.id));
+    
+    return [...currentViews, ...otherViews];
+  };
+
+  // 添加新定时动画
   const handleAddTimer = () => {
+    const timerIndex = timers.length;
     const newTimer: TimerConfig = {
-      id: `timer_${Date.now()}`,
-      name: `定时器 ${timers.length + 1}`,
-      enabled: timers.length === 0, // 第一个默认启用
+      id: `timer_${timerIndex}`,
+      name: `定时动画 ${timerIndex + 1}`,
+      enabled: timers.length === 0,
       interval: 1000,
       reload: true,
       mode: 'custom',
-      callback: `${componentId}_timer_${timers.length + 1}_cb`,
+      callback: `${componentId}_timer_${timerIndex}_cb`,
       duration: 1000,
       stopOnComplete: true,
       delayStart: 0,
       actions: [],
+      segments: [],
     };
     onUpdate([...timers, newTimer]);
     setExpandedTimerId(newTimer.id);
   };
 
-  // 删除定时器
+  // 删除定时动画
   const handleDeleteTimer = (timerId: string) => {
     const newTimers = timers.filter(t => t.id !== timerId);
     onUpdate(newTimers);
@@ -48,17 +71,15 @@ export const TimerProperties: React.FC<TimerPropertiesProps> = ({
     }
   };
 
-  // 更新定时器
+  // 更新定时动画
   const handleUpdateTimer = (timerId: string, updates: Partial<TimerConfig>) => {
     const newTimers = timers.map(t => {
       if (t.id === timerId) {
-        // 如果启用当前定时器，禁用其他定时器
         if (updates.enabled === true) {
           return { ...t, ...updates };
         }
         return { ...t, ...updates };
       } else if (updates.enabled === true) {
-        // 禁用其他定时器
         return { ...t, enabled: false };
       }
       return t;
@@ -66,7 +87,7 @@ export const TimerProperties: React.FC<TimerPropertiesProps> = ({
     onUpdate(newTimers);
   };
 
-  // 切换定时器展开/折叠
+  // 切换定时动画展开/折叠
   const toggleExpand = (timerId: string) => {
     setExpandedTimerId(expandedTimerId === timerId ? null : timerId);
   };
@@ -74,9 +95,9 @@ export const TimerProperties: React.FC<TimerPropertiesProps> = ({
   return (
     <div className="property-group">
       <div className="property-item">
-        <label>{t('Timers')}</label>
+        <label>{t('Animations')}</label>
         
-        {/* 定时器列表 */}
+        {/* 定时动画列表 */}
         {timers.map((timer, index) => (
           <div
             key={timer.id}
@@ -90,7 +111,7 @@ export const TimerProperties: React.FC<TimerPropertiesProps> = ({
                 : '1px solid var(--vscode-panel-border)',
             }}
           >
-            {/* 定时器头部 */}
+            {/* 定时动画头部 */}
             <div
               style={{
                 display: 'flex',
@@ -119,7 +140,7 @@ export const TimerProperties: React.FC<TimerPropertiesProps> = ({
                     handleUpdateTimer(timer.id, { name: e.target.value });
                   }}
                   onClick={(e) => e.stopPropagation()}
-                  placeholder={t('Timer Name')}
+                  placeholder={t('Animation Name')}
                   style={{
                     flex: 1,
                     padding: '2px 6px',
@@ -154,13 +175,13 @@ export const TimerProperties: React.FC<TimerPropertiesProps> = ({
               </button>
             </div>
 
-            {/* 定时器详细配置 */}
+            {/* 定时动画详细配置 */}
             {expandedTimerId === timer.id && (
               <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--vscode-panel-border)' }}>
                 {/* 基本配置 */}
                 <div style={{ marginBottom: '8px' }}>
                   <label style={{ fontSize: '11px', display: 'block', marginBottom: '4px' }}>
-                    {t('Timer Interval (ms)')}
+                    {t('Animation Interval (ms)')}
                   </label>
                   <PropertyEditor
                     type="number"
@@ -176,7 +197,7 @@ export const TimerProperties: React.FC<TimerPropertiesProps> = ({
                       value={timer.reload}
                       onChange={(value) => handleUpdateTimer(timer.id, { reload: value })}
                     />
-                    <span style={{ fontSize: '12px' }}>{t('Repeat timer')}</span>
+                    <span style={{ fontSize: '12px' }}>{t('Repeat animation')}</span>
                   </div>
                 </div>
 
@@ -205,7 +226,7 @@ export const TimerProperties: React.FC<TimerPropertiesProps> = ({
                         fontSize: '11px',
                         opacity: timer.mode === 'preset' ? 1 : 0.7,
                       }}
-                      onClick={() => handleUpdateTimer(timer.id, { mode: 'preset', actions: [] })}
+                      onClick={() => handleUpdateTimer(timer.id, { mode: 'preset', segments: [] })}
                     >
                       {t('Preset Actions')}
                     </button>
@@ -241,6 +262,7 @@ export const TimerProperties: React.FC<TimerPropertiesProps> = ({
                       timer={timer}
                       componentType={componentType}
                       onUpdate={(updates) => handleUpdateTimer(timer.id, updates)}
+                      getAvailableViews={getAvailableViews}
                     />
                   )}
 
@@ -248,7 +270,7 @@ export const TimerProperties: React.FC<TimerPropertiesProps> = ({
                   {timer.mode === 'custom' && (
                     <div style={{ marginTop: '8px' }}>
                       <label style={{ fontSize: '11px', display: 'block', marginBottom: '4px' }}>
-                        {t('Timer Callback')}
+                        {t('Animation Callback')}
                       </label>
                       <input
                         type="text"
@@ -274,7 +296,7 @@ export const TimerProperties: React.FC<TimerPropertiesProps> = ({
           </div>
         ))}
 
-        {/* 添加定时器按钮 */}
+        {/* 添加定时动画按钮 */}
         <button
           onClick={handleAddTimer}
           style={{
@@ -289,22 +311,52 @@ export const TimerProperties: React.FC<TimerPropertiesProps> = ({
             fontSize: '12px',
           }}
         >
-          + {t('Add Timer')}
+          + {t('Add Animation')}
         </button>
       </div>
     </div>
   );
 };
 
-// 预设动作模式组件
+// 预设动作模式组件（支持多段动画）
 const TimerPresetMode: React.FC<{
   timer: TimerConfig;
   componentType: string;
   onUpdate: (updates: Partial<TimerConfig>) => void;
-}> = ({ timer, componentType, onUpdate }) => {
-  const actions = timer.actions || [];
+  getAvailableViews: () => Array<{ id: string; name: string; file: string }>;
+}> = ({ timer, componentType, onUpdate, getAvailableViews }) => {
+  const segments = timer.segments || [];
+  const [expandedSegmentIndex, setExpandedSegmentIndex] = useState<number | null>(
+    segments.length > 0 ? 0 : null
+  );
 
-  const handleAddAction = () => {
+  const handleAddSegment = () => {
+    const newSegment: AnimationSegment = {
+      duration: 1000,
+      actions: [],
+    };
+    onUpdate({ segments: [...segments, newSegment] });
+    setExpandedSegmentIndex(segments.length);
+  };
+
+  const handleUpdateSegment = (index: number, updates: Partial<AnimationSegment>) => {
+    const newSegments = [...segments];
+    newSegments[index] = { ...newSegments[index], ...updates };
+    onUpdate({ segments: newSegments });
+  };
+
+  const handleDeleteSegment = (index: number) => {
+    const newSegments = segments.filter((_, i) => i !== index);
+    onUpdate({ segments: newSegments });
+    if (expandedSegmentIndex === index && newSegments.length > 0) {
+      setExpandedSegmentIndex(0);
+    } else if (expandedSegmentIndex !== null && expandedSegmentIndex > index) {
+      setExpandedSegmentIndex(expandedSegmentIndex - 1);
+    }
+  };
+
+  const handleAddAction = (segmentIndex: number) => {
+    const segment = segments[segmentIndex];
     let newAction: TimerAction;
     if (componentType === 'hg_window') {
       newAction = { type: 'size', fromW: 0, fromH: 0, toW: 0, toH: 0 };
@@ -313,45 +365,26 @@ const TimerPresetMode: React.FC<{
     } else {
       newAction = { type: 'position', fromX: 0, fromY: 0, toX: 0, toY: 0 };
     }
-    onUpdate({ actions: [...actions, newAction] });
+    handleUpdateSegment(segmentIndex, { actions: [...segment.actions, newAction] });
   };
 
-  const handleUpdateAction = (index: number, updates: Partial<TimerAction>) => {
-    const newActions = [...actions];
-    newActions[index] = { ...newActions[index], ...updates };
-    onUpdate({ actions: newActions });
+  const handleUpdateAction = (segmentIndex: number, actionIndex: number, updates: Partial<TimerAction>) => {
+    const segment = segments[segmentIndex];
+    const newActions = [...segment.actions];
+    newActions[actionIndex] = { ...newActions[actionIndex], ...updates };
+    handleUpdateSegment(segmentIndex, { actions: newActions });
   };
 
-  const handleDeleteAction = (index: number) => {
-    onUpdate({ actions: actions.filter((_, i) => i !== index) });
+  const handleDeleteAction = (segmentIndex: number, actionIndex: number) => {
+    const segment = segments[segmentIndex];
+    handleUpdateSegment(segmentIndex, { actions: segment.actions.filter((_, i) => i !== actionIndex) });
   };
+
+  // 计算总时间
+  const totalDuration = segments.reduce((sum, seg) => sum + seg.duration, 0);
 
   return (
     <div style={{ marginTop: '8px' }}>
-      {/* 总时间 */}
-      <div style={{ marginBottom: '8px' }}>
-        <label style={{ fontSize: '11px', display: 'block', marginBottom: '4px' }}>
-          {t('Total Duration (ms)')}
-        </label>
-        <PropertyEditor
-          type="number"
-          value={timer.duration || 1000}
-          onChange={(value) => onUpdate({ duration: value })}
-        />
-      </div>
-
-      {/* 延时启动 */}
-      <div style={{ marginBottom: '8px' }}>
-        <label style={{ fontSize: '11px', display: 'block', marginBottom: '4px' }}>
-          {t('Delay Start (ms)')}
-        </label>
-        <PropertyEditor
-          type="number"
-          value={timer.delayStart || 0}
-          onChange={(value) => onUpdate({ delayStart: value })}
-        />
-      </div>
-
       {/* 停止选项 */}
       <div style={{ marginBottom: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -364,10 +397,19 @@ const TimerPresetMode: React.FC<{
         </div>
       </div>
 
-      {/* 动作列表 */}
-      {actions.map((action, index) => (
+      {/* 总时间显示 */}
+      {segments.length > 0 && (
+        <div style={{ marginBottom: '12px', padding: '6px', background: 'var(--vscode-editor-background)', borderRadius: '4px' }}>
+          <span style={{ fontSize: '11px', opacity: 0.8 }}>
+            {t('Total Duration')}: {totalDuration} ms
+          </span>
+        </div>
+      )}
+
+      {/* 动画段列表 */}
+      {segments.map((segment, segmentIndex) => (
         <div
-          key={index}
+          key={segmentIndex}
           style={{
             marginBottom: '8px',
             padding: '8px',
@@ -376,43 +418,27 @@ const TimerPresetMode: React.FC<{
             border: '1px solid var(--vscode-input-border)',
           }}
         >
+          {/* 段头部 */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <select
-              value={action.type}
-              onChange={(e) => {
-                const newType = e.target.value as 'size' | 'position' | 'opacity';
-                const newAction: TimerAction = { type: newType };
-                if (newType === 'size') {
-                  newAction.fromW = 0;
-                  newAction.fromH = 0;
-                  newAction.toW = 0;
-                  newAction.toH = 0;
-                } else if (newType === 'position') {
-                  newAction.fromX = 0;
-                  newAction.fromY = 0;
-                  newAction.toX = 0;
-                  newAction.toY = 0;
-                } else {
-                  newAction.from = 255;
-                  newAction.to = 128;
-                }
-                handleUpdateAction(index, newAction);
-              }}
-              style={{
-                padding: '4px 8px',
-                backgroundColor: 'var(--vscode-input-background)',
-                color: 'var(--vscode-input-foreground)',
-                border: '1px solid var(--vscode-input-border)',
-                borderRadius: '2px',
-                fontSize: '11px',
-              }}
+            <div
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, cursor: 'pointer' }}
+              onClick={() => setExpandedSegmentIndex(expandedSegmentIndex === segmentIndex ? null : segmentIndex)}
             >
-              {componentType === 'hg_window' && <option value="size">{t('Adjust Size')}</option>}
-              <option value="position">{t('Adjust Position')}</option>
-              {componentType === 'hg_image' && <option value="opacity">{t('Adjust Opacity')}</option>}
-            </select>
+              <span style={{ fontSize: '11px', fontWeight: 'bold' }}>
+                {t('Segment')} {segmentIndex + 1}
+              </span>
+              <span style={{ fontSize: '10px', opacity: 0.7 }}>
+                ({segment.duration}ms, {segment.actions.length} {t('actions')})
+              </span>
+              <span style={{ fontSize: '12px', opacity: 0.7 }}>
+                {expandedSegmentIndex === segmentIndex ? '▼' : '▶'}
+              </span>
+            </div>
             <button
-              onClick={() => handleDeleteAction(index)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteSegment(segmentIndex);
+              }}
               style={{
                 padding: '2px 8px',
                 background: 'var(--vscode-button-secondaryBackground)',
@@ -427,18 +453,21 @@ const TimerPresetMode: React.FC<{
             </button>
           </div>
 
-          {/* 动作参数 */}
-          {action.type === 'size' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-              <div>
-                <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('From')} W</label>
+          {/* 段详细配置 */}
+          {expandedSegmentIndex === segmentIndex && (
+            <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--vscode-panel-border)' }}>
+              {/* 持续时间 */}
+              <div style={{ marginBottom: '8px' }}>
+                <label style={{ fontSize: '10px', display: 'block', marginBottom: '4px' }}>
+                  {t('Duration (ms)')}
+                </label>
                 <input
                   type="number"
-                  value={action.fromW || 0}
-                  onChange={(e) => handleUpdateAction(index, { fromW: Number(e.target.value) })}
+                  value={segment.duration}
+                  onChange={(e) => handleUpdateSegment(segmentIndex, { duration: Number(e.target.value) })}
                   style={{
                     width: '100%',
-                    padding: '3px',
+                    padding: '4px 8px',
                     backgroundColor: 'var(--vscode-input-background)',
                     color: 'var(--vscode-input-foreground)',
                     border: '1px solid var(--vscode-input-border)',
@@ -447,194 +476,602 @@ const TimerPresetMode: React.FC<{
                   }}
                 />
               </div>
-              <div>
-                <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('To')} W</label>
-                <input
-                  type="number"
-                  value={action.toW || 0}
-                  onChange={(e) => handleUpdateAction(index, { toW: Number(e.target.value) })}
-                  style={{
-                    width: '100%',
-                    padding: '3px',
-                    backgroundColor: 'var(--vscode-input-background)',
-                    color: 'var(--vscode-input-foreground)',
-                    border: '1px solid var(--vscode-input-border)',
-                    borderRadius: '2px',
-                    fontSize: '11px',
-                  }}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('From')} H</label>
-                <input
-                  type="number"
-                  value={action.fromH || 0}
-                  onChange={(e) => handleUpdateAction(index, { fromH: Number(e.target.value) })}
-                  style={{
-                    width: '100%',
-                    padding: '3px',
-                    backgroundColor: 'var(--vscode-input-background)',
-                    color: 'var(--vscode-input-foreground)',
-                    border: '1px solid var(--vscode-input-border)',
-                    borderRadius: '2px',
-                    fontSize: '11px',
-                  }}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('To')} H</label>
-                <input
-                  type="number"
-                  value={action.toH || 0}
-                  onChange={(e) => handleUpdateAction(index, { toH: Number(e.target.value) })}
-                  style={{
-                    width: '100%',
-                    padding: '3px',
-                    backgroundColor: 'var(--vscode-input-background)',
-                    color: 'var(--vscode-input-foreground)',
-                    border: '1px solid var(--vscode-input-border)',
-                    borderRadius: '2px',
-                    fontSize: '11px',
-                  }}
-                />
-              </div>
-            </div>
-          )}
 
-          {action.type === 'position' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-              <div>
-                <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('From')} X</label>
-                <input
-                  type="number"
-                  value={action.fromX || 0}
-                  onChange={(e) => handleUpdateAction(index, { fromX: Number(e.target.value) })}
+              {/* 动作列表 */}
+              {segment.actions.map((action, actionIndex) => (
+                <div
+                  key={actionIndex}
                   style={{
-                    width: '100%',
-                    padding: '3px',
-                    backgroundColor: 'var(--vscode-input-background)',
-                    color: 'var(--vscode-input-foreground)',
-                    border: '1px solid var(--vscode-input-border)',
-                    borderRadius: '2px',
-                    fontSize: '11px',
+                    marginBottom: '8px',
+                    padding: '6px',
+                    background: 'var(--vscode-editor-background)',
+                    borderRadius: '4px',
+                    border: '1px solid var(--vscode-panel-border)',
                   }}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('To')} X</label>
-                <input
-                  type="number"
-                  value={action.toX || 0}
-                  onChange={(e) => handleUpdateAction(index, { toX: Number(e.target.value) })}
-                  style={{
-                    width: '100%',
-                    padding: '3px',
-                    backgroundColor: 'var(--vscode-input-background)',
-                    color: 'var(--vscode-input-foreground)',
-                    border: '1px solid var(--vscode-input-border)',
-                    borderRadius: '2px',
-                    fontSize: '11px',
-                  }}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('From')} Y</label>
-                <input
-                  type="number"
-                  value={action.fromY || 0}
-                  onChange={(e) => handleUpdateAction(index, { fromY: Number(e.target.value) })}
-                  style={{
-                    width: '100%',
-                    padding: '3px',
-                    backgroundColor: 'var(--vscode-input-background)',
-                    color: 'var(--vscode-input-foreground)',
-                    border: '1px solid var(--vscode-input-border)',
-                    borderRadius: '2px',
-                    fontSize: '11px',
-                  }}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('To')} Y</label>
-                <input
-                  type="number"
-                  value={action.toY || 0}
-                  onChange={(e) => handleUpdateAction(index, { toY: Number(e.target.value) })}
-                  style={{
-                    width: '100%',
-                    padding: '3px',
-                    backgroundColor: 'var(--vscode-input-background)',
-                    color: 'var(--vscode-input-foreground)',
-                    border: '1px solid var(--vscode-input-border)',
-                    borderRadius: '2px',
-                    fontSize: '11px',
-                  }}
-                />
-              </div>
-            </div>
-          )}
+                >
+                  <TimerActionEditor
+                    action={action}
+                    componentType={componentType}
+                    onUpdate={(updates) => handleUpdateAction(segmentIndex, actionIndex, updates)}
+                    onDelete={() => handleDeleteAction(segmentIndex, actionIndex)}
+                    availableViews={getAvailableViews()}
+                  />
+                </div>
+              ))}
 
-          {action.type === 'opacity' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-              <div>
-                <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('From')} (0-255)</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="255"
-                  value={action.from || 255}
-                  onChange={(e) => handleUpdateAction(index, { from: Number(e.target.value) })}
-                  style={{
-                    width: '100%',
-                    padding: '3px',
-                    backgroundColor: 'var(--vscode-input-background)',
-                    color: 'var(--vscode-input-foreground)',
-                    border: '1px solid var(--vscode-input-border)',
-                    borderRadius: '2px',
-                    fontSize: '11px',
-                  }}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('To')} (0-255)</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="255"
-                  value={action.to || 128}
-                  onChange={(e) => handleUpdateAction(index, { to: Number(e.target.value) })}
-                  style={{
-                    width: '100%',
-                    padding: '3px',
-                    backgroundColor: 'var(--vscode-input-background)',
-                    color: 'var(--vscode-input-foreground)',
-                    border: '1px solid var(--vscode-input-border)',
-                    borderRadius: '2px',
-                    fontSize: '11px',
-                  }}
-                />
-              </div>
+              {/* 添加动作按钮 */}
+              <button
+                onClick={() => handleAddAction(segmentIndex)}
+                style={{
+                  width: '100%',
+                  padding: '4px 8px',
+                  background: 'var(--vscode-button-secondaryBackground)',
+                  color: 'var(--vscode-button-secondaryForeground)',
+                  border: 'none',
+                  borderRadius: '2px',
+                  cursor: 'pointer',
+                  fontSize: '10px',
+                }}
+              >
+                + {t('Add Action')}
+              </button>
             </div>
           )}
         </div>
       ))}
 
-      {/* 添加动作按钮 */}
+      {/* 添加动画段按钮 */}
       <button
-        onClick={handleAddAction}
+        onClick={handleAddSegment}
         style={{
           width: '100%',
           padding: '4px 8px',
-          background: 'var(--vscode-button-secondaryBackground)',
-          color: 'var(--vscode-button-secondaryForeground)',
+          background: 'var(--vscode-button-background)',
+          color: 'var(--vscode-button-foreground)',
           border: 'none',
           borderRadius: '2px',
           cursor: 'pointer',
           fontSize: '11px',
         }}
       >
-        + {t('Add Action')}
+        + {t('Add Segment')}
       </button>
     </div>
+  );
+};
+
+// 动作编辑器组件
+const TimerActionEditor: React.FC<{
+  action: TimerAction;
+  componentType: string;
+  onUpdate: (updates: Partial<TimerAction>) => void;
+  onDelete: () => void;
+  availableViews: Array<{ id: string; name: string; file: string }>;
+}> = ({ action, componentType, onUpdate, onDelete, availableViews }) => {
+  return (
+    <>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+        <select
+          value={action.type}
+          onChange={(e) => {
+            const newType = e.target.value as 'size' | 'position' | 'opacity' | 'rotation' | 'scale' | 'switchView' | 'changeImage';
+            const newAction: TimerAction = { type: newType };
+            if (newType === 'size') {
+              newAction.fromW = 0;
+              newAction.fromH = 0;
+              newAction.toW = 0;
+              newAction.toH = 0;
+            } else if (newType === 'position') {
+              newAction.fromX = 0;
+              newAction.fromY = 0;
+              newAction.toX = 0;
+              newAction.toY = 0;
+            } else if (newType === 'opacity') {
+              newAction.from = 255;
+              newAction.to = 128;
+            } else if (newType === 'rotation') {
+              newAction.angleOrigin = 0;
+              newAction.angleTarget = 360;
+            } else if (newType === 'scale') {
+              newAction.zoomXOrigin = 1.0;
+              newAction.zoomXTarget = 2.0;
+              newAction.zoomYOrigin = 1.0;
+              newAction.zoomYTarget = 2.0;
+            } else if (newType === 'switchView') {
+              newAction.target = '';
+              newAction.switchOutStyle = 'SWITCH_OUT_TO_LEFT_USE_TRANSLATION';
+              newAction.switchInStyle = 'SWITCH_IN_FROM_RIGHT_USE_TRANSLATION';
+            } else if (newType === 'changeImage') {
+              newAction.imagePath = '';
+            }
+            onUpdate(newAction);
+          }}
+          style={{
+            padding: '4px 8px',
+            backgroundColor: 'var(--vscode-input-background)',
+            color: 'var(--vscode-input-foreground)',
+            border: '1px solid var(--vscode-input-border)',
+            borderRadius: '2px',
+            fontSize: '10px',
+          }}
+        >
+          {componentType === 'hg_window' && <option value="size">{t('Adjust Size')}</option>}
+          <option value="position">{t('Adjust Position')}</option>
+          {componentType === 'hg_image' && <option value="opacity">{t('Adjust Opacity')}</option>}
+          {componentType === 'hg_image' && <option value="rotation">{t('Adjust Rotation')}</option>}
+          {componentType === 'hg_image' && <option value="scale">{t('Adjust Scale')}</option>}
+          {componentType === 'hg_image' && <option value="changeImage">{t('Change Image')}</option>}
+          <option value="switchView">{t('Switch View')}</option>
+        </select>
+        <button
+          onClick={onDelete}
+          style={{
+            padding: '2px 8px',
+            background: 'var(--vscode-button-secondaryBackground)',
+            color: 'var(--vscode-button-secondaryForeground)',
+            border: 'none',
+            borderRadius: '2px',
+            cursor: 'pointer',
+            fontSize: '9px',
+          }}
+        >
+          {t('Remove')}
+        </button>
+      </div>
+
+      {/* 动作参数 */}
+      {action.type === 'changeImage' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div>
+            <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('Image Path')}</label>
+            <div style={{ display: 'flex', gap: '4px' }}>
+              <input
+                type="text"
+                value={action.imagePath || ''}
+                onChange={(e) => onUpdate({ imagePath: e.target.value })}
+                placeholder="assets/image.bin"
+                style={{
+                  flex: 1,
+                  padding: '3px',
+                  backgroundColor: 'var(--vscode-input-background)',
+                  color: 'var(--vscode-input-foreground)',
+                  border: '1px solid var(--vscode-input-border)',
+                  borderRadius: '2px',
+                  fontSize: '11px',
+                }}
+              />
+              <button
+                onClick={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = '.png,.jpg,.jpeg,.gif,.bmp,.svg,.webp,.bin';
+                  input.onchange = (e: Event) => {
+                    const file = (e.target as HTMLInputElement).files?.[0];
+                    if (!file) return;
+
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      const arrayBuffer = event.target?.result as ArrayBuffer;
+                      const uint8Array = new Uint8Array(arrayBuffer);
+                      
+                      // 生成临时回调 ID
+                      const callbackId = `timer_image_${Date.now()}`;
+                      
+                      // 注册一次性消息监听器来接收保存后的路径
+                      const messageHandler = (event: MessageEvent) => {
+                        const message = event.data;
+                        if (message.command === 'imageSaved' && message.callbackId === callbackId) {
+                          // 更新动作的图片路径
+                          onUpdate({ imagePath: message.path });
+                          // 移除监听器
+                          window.removeEventListener('message', messageHandler);
+                        }
+                      };
+                      window.addEventListener('message', messageHandler);
+                      
+                      // 发送保存图片请求
+                      window.vscodeAPI?.postMessage({
+                        command: 'saveImageToAssets',
+                        fileName: file.name,
+                        fileData: Array.from(uint8Array),
+                        relativePath: '',
+                        callbackId: callbackId
+                      });
+                    };
+                    reader.readAsArrayBuffer(file);
+                  };
+                  input.click();
+                }}
+                style={{
+                  padding: '3px 8px',
+                  backgroundColor: 'var(--vscode-button-background)',
+                  color: 'var(--vscode-button-foreground)',
+                  border: 'none',
+                  borderRadius: '2px',
+                  cursor: 'pointer',
+                  fontSize: '11px'
+                }}
+                title={t('Select Image File')}
+              >
+                📁
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {action.type === 'switchView' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div>
+            <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('Target View')}</label>
+            <select
+              value={action.target || ''}
+              onChange={(e) => onUpdate({ target: e.target.value })}
+              style={{
+                width: '100%',
+                padding: '3px',
+                backgroundColor: 'var(--vscode-input-background)',
+                color: 'var(--vscode-input-foreground)',
+                border: '1px solid var(--vscode-input-border)',
+                borderRadius: '2px',
+                fontSize: '11px',
+              }}
+            >
+              <option value="">-- {t('Select')} --</option>
+              {availableViews.map(v => (
+                <option key={v.id} value={v.id}>
+                  {v.name} {v.file !== '当前文件' ? `(${v.file})` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('Exit Animation')}</label>
+            <select
+              value={action.switchOutStyle || 'SWITCH_OUT_TO_LEFT_USE_TRANSLATION'}
+              onChange={(e) => onUpdate({ switchOutStyle: e.target.value })}
+              style={{
+                width: '100%',
+                padding: '3px',
+                backgroundColor: 'var(--vscode-input-background)',
+                color: 'var(--vscode-input-foreground)',
+                border: '1px solid var(--vscode-input-border)',
+                borderRadius: '2px',
+                fontSize: '11px',
+              }}
+            >
+              {SWITCH_OUT_STYLES.map(s => (
+                <option key={s.value} value={s.value}>{s.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('Enter Animation')}</label>
+            <select
+              value={action.switchInStyle || 'SWITCH_IN_FROM_RIGHT_USE_TRANSLATION'}
+              onChange={(e) => onUpdate({ switchInStyle: e.target.value })}
+              style={{
+                width: '100%',
+                padding: '3px',
+                backgroundColor: 'var(--vscode-input-background)',
+                color: 'var(--vscode-input-foreground)',
+                border: '1px solid var(--vscode-input-border)',
+                borderRadius: '2px',
+                fontSize: '11px',
+              }}
+            >
+              {SWITCH_IN_STYLES.map(s => (
+                <option key={s.value} value={s.value}>{s.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
+
+      {action.type === 'size' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+          <div>
+            <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('From')} W</label>
+            <input
+              type="number"
+              value={action.fromW || 0}
+              onChange={(e) => onUpdate({ fromW: Number(e.target.value) })}
+              style={{
+                width: '100%',
+                padding: '3px',
+                backgroundColor: 'var(--vscode-input-background)',
+                color: 'var(--vscode-input-foreground)',
+                border: '1px solid var(--vscode-input-border)',
+                borderRadius: '2px',
+                fontSize: '11px',
+              }}
+            />
+          </div>
+          <div>
+            <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('To')} W</label>
+            <input
+              type="number"
+              value={action.toW || 0}
+              onChange={(e) => onUpdate({ toW: Number(e.target.value) })}
+              style={{
+                width: '100%',
+                padding: '3px',
+                backgroundColor: 'var(--vscode-input-background)',
+                color: 'var(--vscode-input-foreground)',
+                border: '1px solid var(--vscode-input-border)',
+                borderRadius: '2px',
+                fontSize: '11px',
+              }}
+            />
+          </div>
+          <div>
+            <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('From')} H</label>
+            <input
+              type="number"
+              value={action.fromH || 0}
+              onChange={(e) => onUpdate({ fromH: Number(e.target.value) })}
+              style={{
+                width: '100%',
+                padding: '3px',
+                backgroundColor: 'var(--vscode-input-background)',
+                color: 'var(--vscode-input-foreground)',
+                border: '1px solid var(--vscode-input-border)',
+                borderRadius: '2px',
+                fontSize: '11px',
+              }}
+            />
+          </div>
+          <div>
+            <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('To')} H</label>
+            <input
+              type="number"
+              value={action.toH || 0}
+              onChange={(e) => onUpdate({ toH: Number(e.target.value) })}
+              style={{
+                width: '100%',
+                padding: '3px',
+                backgroundColor: 'var(--vscode-input-background)',
+                color: 'var(--vscode-input-foreground)',
+                border: '1px solid var(--vscode-input-border)',
+                borderRadius: '2px',
+                fontSize: '11px',
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {action.type === 'position' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+          <div>
+            <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('From')} X</label>
+            <input
+              type="number"
+              value={action.fromX || 0}
+              onChange={(e) => onUpdate({ fromX: Number(e.target.value) })}
+              style={{
+                width: '100%',
+                padding: '3px',
+                backgroundColor: 'var(--vscode-input-background)',
+                color: 'var(--vscode-input-foreground)',
+                border: '1px solid var(--vscode-input-border)',
+                borderRadius: '2px',
+                fontSize: '11px',
+              }}
+            />
+          </div>
+          <div>
+            <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('To')} X</label>
+            <input
+              type="number"
+              value={action.toX || 0}
+              onChange={(e) => onUpdate({ toX: Number(e.target.value) })}
+              style={{
+                width: '100%',
+                padding: '3px',
+                backgroundColor: 'var(--vscode-input-background)',
+                color: 'var(--vscode-input-foreground)',
+                border: '1px solid var(--vscode-input-border)',
+                borderRadius: '2px',
+                fontSize: '11px',
+              }}
+            />
+          </div>
+          <div>
+            <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('From')} Y</label>
+            <input
+              type="number"
+              value={action.fromY || 0}
+              onChange={(e) => onUpdate({ fromY: Number(e.target.value) })}
+              style={{
+                width: '100%',
+                padding: '3px',
+                backgroundColor: 'var(--vscode-input-background)',
+                color: 'var(--vscode-input-foreground)',
+                border: '1px solid var(--vscode-input-border)',
+                borderRadius: '2px',
+                fontSize: '11px',
+              }}
+            />
+          </div>
+          <div>
+            <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('To')} Y</label>
+            <input
+              type="number"
+              value={action.toY || 0}
+              onChange={(e) => onUpdate({ toY: Number(e.target.value) })}
+              style={{
+                width: '100%',
+                padding: '3px',
+                backgroundColor: 'var(--vscode-input-background)',
+                color: 'var(--vscode-input-foreground)',
+                border: '1px solid var(--vscode-input-border)',
+                borderRadius: '2px',
+                fontSize: '11px',
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {action.type === 'opacity' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+          <div>
+            <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('From')} (0-255)</label>
+            <input
+              type="number"
+              min="0"
+              max="255"
+              value={action.from || 255}
+              onChange={(e) => onUpdate({ from: Number(e.target.value) })}
+              style={{
+                width: '100%',
+                padding: '3px',
+                backgroundColor: 'var(--vscode-input-background)',
+                color: 'var(--vscode-input-foreground)',
+                border: '1px solid var(--vscode-input-border)',
+                borderRadius: '2px',
+                fontSize: '11px',
+              }}
+            />
+          </div>
+          <div>
+            <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('To')} (0-255)</label>
+            <input
+              type="number"
+              min="0"
+              max="255"
+              value={action.to || 128}
+              onChange={(e) => onUpdate({ to: Number(e.target.value) })}
+              style={{
+                width: '100%',
+                padding: '3px',
+                backgroundColor: 'var(--vscode-input-background)',
+                color: 'var(--vscode-input-foreground)',
+                border: '1px solid var(--vscode-input-border)',
+                borderRadius: '2px',
+                fontSize: '11px',
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {action.type === 'rotation' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+          <div>
+            <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('From Angle')} (°)</label>
+            <input
+              type="number"
+              value={action.angleOrigin || 0}
+              onChange={(e) => onUpdate({ angleOrigin: Number(e.target.value) })}
+              style={{
+                width: '100%',
+                padding: '3px',
+                backgroundColor: 'var(--vscode-input-background)',
+                color: 'var(--vscode-input-foreground)',
+                border: '1px solid var(--vscode-input-border)',
+                borderRadius: '2px',
+                fontSize: '11px',
+              }}
+            />
+          </div>
+          <div>
+            <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('To Angle')} (°)</label>
+            <input
+              type="number"
+              value={action.angleTarget || 360}
+              onChange={(e) => onUpdate({ angleTarget: Number(e.target.value) })}
+              style={{
+                width: '100%',
+                padding: '3px',
+                backgroundColor: 'var(--vscode-input-background)',
+                color: 'var(--vscode-input-foreground)',
+                border: '1px solid var(--vscode-input-border)',
+                borderRadius: '2px',
+                fontSize: '11px',
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {action.type === 'scale' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+          <div>
+            <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('From Scale')} X</label>
+            <input
+              type="number"
+              step="0.1"
+              value={action.zoomXOrigin || 1.0}
+              onChange={(e) => onUpdate({ zoomXOrigin: Number(e.target.value) })}
+              style={{
+                width: '100%',
+                padding: '3px',
+                backgroundColor: 'var(--vscode-input-background)',
+                color: 'var(--vscode-input-foreground)',
+                border: '1px solid var(--vscode-input-border)',
+                borderRadius: '2px',
+                fontSize: '11px',
+              }}
+            />
+          </div>
+          <div>
+            <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('To Scale')} X</label>
+            <input
+              type="number"
+              step="0.1"
+              value={action.zoomXTarget || 2.0}
+              onChange={(e) => onUpdate({ zoomXTarget: Number(e.target.value) })}
+              style={{
+                width: '100%',
+                padding: '3px',
+                backgroundColor: 'var(--vscode-input-background)',
+                color: 'var(--vscode-input-foreground)',
+                border: '1px solid var(--vscode-input-border)',
+                borderRadius: '2px',
+                fontSize: '11px',
+              }}
+            />
+          </div>
+          <div>
+            <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('From Scale')} Y</label>
+            <input
+              type="number"
+              step="0.1"
+              value={action.zoomYOrigin || 1.0}
+              onChange={(e) => onUpdate({ zoomYOrigin: Number(e.target.value) })}
+              style={{
+                width: '100%',
+                padding: '3px',
+                backgroundColor: 'var(--vscode-input-background)',
+                color: 'var(--vscode-input-foreground)',
+                border: '1px solid var(--vscode-input-border)',
+                borderRadius: '2px',
+                fontSize: '11px',
+              }}
+            />
+          </div>
+          <div>
+            <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('To Scale')} Y</label>
+            <input
+              type="number"
+              step="0.1"
+              value={action.zoomYTarget || 2.0}
+              onChange={(e) => onUpdate({ zoomYTarget: Number(e.target.value) })}
+              style={{
+                width: '100%',
+                padding: '3px',
+                backgroundColor: 'var(--vscode-input-background)',
+                color: 'var(--vscode-input-foreground)',
+                border: '1px solid var(--vscode-input-border)',
+                borderRadius: '2px',
+                fontSize: '11px',
+              }}
+            />
+          </div>
+        </div>
+      )}
+    </>
   );
 };

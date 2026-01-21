@@ -42,6 +42,9 @@ const App: React.FC = () => {
 
   // Tab 切换状态
   const [activeTab, setActiveTab] = React.useState<'components' | 'assets' | 'tree'>('components');
+  
+  // 文件加载状态（用于避免切换时的闪烁）
+  const [isLoadingFile, setIsLoadingFile] = React.useState(false);
 
   // 保存 Tab 状态到 store（当 Tab 切换时）
   React.useEffect(() => {
@@ -162,84 +165,157 @@ const App: React.FC = () => {
           // Set locale from extension
           if (message.locale) {
             setLocale(message.locale);
+            // 【关键】保存语言设置到 VSCode 状态，下次加载时可以直接使用
+            try {
+              const currentState = window.vscodeAPI?.getState() || {};
+              window.vscodeAPI?.setState({ ...currentState, locale: message.locale });
+            } catch (error) {
+              console.warn('[HoneyGUI] Failed to save locale to state:', error);
+            }
           }
           break;
 
         case 'loadHml':
+          // 【关键】立即显示加载状态并清空组件，避免显示旧内容
+          setIsLoadingFile(true);
+          
           // 直接使用store方法，避免闭包问题
           const store = useDesignerStore.getState();
           
-          // Set locale if provided
+          // 【关键】立即清空组件，避免显示旧组件
+          useDesignerStore.setState({ components: [] });
+          
+          // Set locale if provided（同时保存到状态）
           if (message.locale) {
             setLocale(message.locale);
-          }
-          
-          store.setProjectConfig(message.projectConfig || null);
-          
-          if (message.designerConfig?.canvasBackgroundColor) {
-            store.setCanvasBackgroundColor(message.designerConfig.canvasBackgroundColor);
-          }
-
-          // 设置所有 view 列表
-          if (message.allViews) {
-            useDesignerStore.setState({ allViews: message.allViews });
-          }
-
-          // 设置所有 HML 文件列表
-          if (message.allHmlFiles) {
-            useDesignerStore.setState({ allHmlFiles: message.allHmlFiles });
-          }
-
-          // 设置当前文件路径并恢复视图状态
-          if (message.currentFilePath) {
-            useDesignerStore.setState({ currentFilePath: message.currentFilePath });
-            // 恢复该文件的视图状态（缩放、偏移、选中组件、面板状态等）
-            const { restored, state: savedState } = store.restoreViewState(message.currentFilePath);
-            
-            // 恢复 UI 状态
-            if (restored && savedState) {
-              // 恢复左侧面板 Tab
-              setActiveTab(savedState.leftPanelTab || 'components');
-              
-              // 恢复面板可见性（通过比较 isCollapsed 状态）
-              const shouldLeftPanelBeCollapsed = !savedState.leftPanelVisible;
-              const shouldRightPanelBeCollapsed = !savedState.rightPanelVisible;
-              
-              if (shouldLeftPanelBeCollapsed !== leftPanel.isCollapsed) {
-                leftPanel.toggle();
-              }
-              if (shouldRightPanelBeCollapsed !== rightPanel.isCollapsed) {
-                rightPanel.toggle();
-              }
-              
-              // 恢复面板宽度
-              if (savedState.leftPanelWidth) {
-                leftPanel.setWidth(savedState.leftPanelWidth);
-              }
-              if (savedState.rightPanelWidth) {
-                rightPanel.setWidth(savedState.rightPanelWidth);
-              }
+            try {
+              const currentState = window.vscodeAPI?.getState() || {};
+              window.vscodeAPI?.setState({ ...currentState, locale: message.locale });
+            } catch (error) {
+              console.warn('[HoneyGUI] Failed to save locale to state:', error);
             }
-            
-            if (message.components) {
-              store.setComponents(message.components);
+          }
+          
+          // 【优化】使用 setTimeout 延迟处理，确保清空操作先完成
+          setTimeout(() => {
+            // 先恢复 UI 状态（面板），再批量更新 store，减少渲染次数
+            if (message.currentFilePath) {
+              // 恢复该文件的视图状态（不触发渲染）
+              const { restored, state: savedState } = store.restoreViewState(message.currentFilePath);
+              
+              // 先恢复 UI 状态（面板），这些操作会触发 React 状态更新
+              if (restored && savedState) {
+                // 恢复左侧面板 Tab（同步更新，避免闪烁）
+                if (savedState.leftPanelTab && savedState.leftPanelTab !== activeTab) {
+                  setActiveTab(savedState.leftPanelTab);
+                }
+                
+                // 恢复面板可见性
+                const shouldLeftPanelBeCollapsed = !savedState.leftPanelVisible;
+                const shouldRightPanelBeCollapsed = !savedState.rightPanelVisible;
+                
+                if (shouldLeftPanelBeCollapsed !== leftPanel.isCollapsed) {
+                  leftPanel.toggle();
+                }
+                if (shouldRightPanelBeCollapsed !== rightPanel.isCollapsed) {
+                  rightPanel.toggle();
+                }
+                
+                // 恢复面板宽度
+                if (savedState.leftPanelWidth && savedState.leftPanelWidth !== leftPanel.width) {
+                  leftPanel.setWidth(savedState.leftPanelWidth);
+                }
+                if (savedState.rightPanelWidth && savedState.rightPanelWidth !== rightPanel.width) {
+                  rightPanel.setWidth(savedState.rightPanelWidth);
+                }
+              }
+              
+              // 【关键】批量更新所有 store 状态，只触发一次渲染
+              const batchUpdate: any = {
+                currentFilePath: message.currentFilePath,
+              };
+              
+              // 添加项目配置
+              if (message.projectConfig) {
+                batchUpdate.projectConfig = message.projectConfig;
+              }
+              
+              // 添加画布背景色
+              if (message.designerConfig?.canvasBackgroundColor) {
+                batchUpdate.canvasBackgroundColor = message.designerConfig.canvasBackgroundColor;
+              }
+              
+              // 添加 view 列表
+              if (message.allViews) {
+                batchUpdate.allViews = message.allViews;
+              }
+              
+              // 添加 HML 文件列表
+              if (message.allHmlFiles) {
+                batchUpdate.allHmlFiles = message.allHmlFiles;
+              }
+              
+              // 如果有组件数据，添加到批量更新中
+              if (message.components) {
+                batchUpdate.components = message.components;
+              }
+              
+              // 如果恢复了视图状态，添加到批量更新中
+              if (restored && savedState) {
+                batchUpdate.zoom = savedState.zoom;
+                batchUpdate.canvasOffset = savedState.canvasOffset;
+                batchUpdate.selectedComponent = savedState.selectedComponent;
+                console.log('[ViewState] 批量恢复视图状态:', savedState);
+              }
+              
+              // 【关键】一次性更新所有状态，只触发一次渲染
+              useDesignerStore.setState(batchUpdate);
+              
+              // 【关键】延迟隐藏加载状态，确保渲染完成
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                  setIsLoadingFile(false);
+                });
+              });
               
               // 只有在没有恢复视图状态时才自动居中
-              if (!restored) {
+              if (!restored && message.components) {
                 console.log('[ViewState] 无保存状态，自动居中第一个 view');
-                // 自动居中第一个 hg_view
-                const currentComponents = useDesignerStore.getState().components;
-                const firstView = currentComponents.find(c => c.type === 'hg_view');
-                if (firstView) {
-                  store.centerViewOnCanvas(firstView.id);
-                }
-              } else {
+                // 延迟执行居中，确保组件已渲染
+                setTimeout(() => {
+                  const currentComponents = useDesignerStore.getState().components;
+                  const firstView = currentComponents.find(c => c.type === 'hg_view');
+                  if (firstView) {
+                    store.centerViewOnCanvas(firstView.id);
+                  }
+                }, 0);
+              } else if (restored) {
                 console.log('[ViewState] 已恢复保存的视图状态，跳过自动居中');
               }
+            } else {
+              // 没有 currentFilePath 的情况（旧逻辑兼容）
+              store.setProjectConfig(message.projectConfig || null);
+              
+              if (message.designerConfig?.canvasBackgroundColor) {
+                store.setCanvasBackgroundColor(message.designerConfig.canvasBackgroundColor);
+              }
+
+              if (message.allViews) {
+                useDesignerStore.setState({ allViews: message.allViews });
+              }
+
+              if (message.allHmlFiles) {
+                useDesignerStore.setState({ allHmlFiles: message.allHmlFiles });
+              }
+              
+              if (message.components) {
+                store.setComponents(message.components);
+              }
+              
+              // 隐藏加载状态
+              setIsLoadingFile(false);
             }
-          } else if (message.components) {
-            store.setComponents(message.components);
-          }
+          }, 0);
           break;
 
         case 'showMessage':
@@ -1179,6 +1255,20 @@ const App: React.FC = () => {
 
   return (
     <div className="app">
+      {/* 文件加载遮罩 - 避免切换时的闪烁 */}
+      {isLoadingFile && (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'var(--vscode-editor-background)',
+          zIndex: 9999,
+          opacity: 1
+        }} />
+      )}
+      
       {/* Toolbar */}
       <Toolbar />
 

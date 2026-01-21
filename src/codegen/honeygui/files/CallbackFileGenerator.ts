@@ -116,6 +116,10 @@ export class CallbackFileGenerator {
     }
 
     code += `
+/* @protected start custom_declarations */
+// 自定义函数声明
+/* @protected end custom_declarations */
+
 #endif // ${guardName}
 `;
 
@@ -134,13 +138,22 @@ export class CallbackFileGenerator {
     // 提取现有文件中 custom_functions 保护区的函数名
     const existingFunctions = existingContent ? this.extractFunctionNamesFromProtectedArea(existingContent) : new Set<string>();
     
+    // 检查是否需要 tp_algo.h（用于抬起区域检测）
+    const needsTpAlgo = this.checkNeedsTpAlgo();
+    
     let code = `#include "${baseName}_callbacks.h"
 #include "../ui/${baseName}_ui.h"
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
-
 `;
+
+    // 如果需要抬起区域检测，添加 tp_algo.h
+    if (needsTpAlgo) {
+      code += `#include "tp_algo.h"\n`;
+    }
+
+    code += `\n`;
 
     // 为每个时间标签声明外部全局变量（在 UI 文件中定义）
     if (timeLabels.length > 0) {
@@ -163,6 +176,12 @@ export class CallbackFileGenerator {
     // 收集 onMessage 回调实现
     const messageImpls = this.collectMessageCallbackImpls();
     messageImpls.forEach(impl => {
+      code += impl + '\n\n';
+    });
+
+    // 收集 controlTimer 回调实现
+    const controlTimerImpls = this.collectControlTimerCallbackImpls();
+    controlTimerImpls.forEach(impl => {
       code += impl + '\n\n';
     });
 
@@ -196,9 +215,10 @@ export class CallbackFileGenerator {
     const timeUpdateFuncNames = new Set(this.collectTimeUpdateCallbackNames());
     const timerCallbackNames = new Set(this.collectTimerCallbackNames());
     const msgCallbackNames = new Set(this.collectMessageCallbackNames());
+    const controlTimerCallbackNames = new Set(this.collectControlTimerCallbackNames());
     
     callbackFunctions.forEach(funcName => {
-      if (switchViewFuncNames.has(funcName) || timeUpdateFuncNames.has(funcName) || timerCallbackNames.has(funcName) || msgCallbackNames.has(funcName)) return;
+      if (switchViewFuncNames.has(funcName) || timeUpdateFuncNames.has(funcName) || timerCallbackNames.has(funcName) || msgCallbackNames.has(funcName) || controlTimerCallbackNames.has(funcName)) return;
       
       // 跳过已存在于 custom_functions 保护区的函数
       if (existingFunctions.has(funcName)) return;
@@ -329,6 +349,29 @@ export class CallbackFileGenerator {
   }
 
   /**
+   * 收集所有 controlTimer 回调实现
+   */
+  private collectControlTimerCallbackImpls(): string[] {
+    const impls = new Map<string, string>(); // 使用 Map 去重，key 为函数名
+
+    this.allComponents.forEach(component => {
+      const generator = EventGeneratorFactory.getGenerator(component.type);
+      if (generator.getControlTimerCallbackImpl) {
+        generator.getControlTimerCallbackImpl(component, this.componentMap).forEach(impl => {
+          // 提取函数名作为 key
+          const match = impl.match(/void\s+(\w+)\s*\(/);
+          if (match) {
+            const funcName = match[1];
+            impls.set(funcName, impl);
+          }
+        });
+      }
+    });
+
+    return Array.from(impls.values());
+  }
+
+  /**
    * 收集所有 onMessage 回调函数名
    */
   private collectMessageCallbackNames(): string[] {
@@ -342,6 +385,29 @@ export class CallbackFileGenerator {
           names.push(getMessageCallbackName(component, eventConfig, msgIndex));
           msgIndex++;
         }
+      });
+    });
+
+    return names;
+  }
+
+  /**
+   * 收集所有 controlTimer 回调函数名
+   */
+  private collectControlTimerCallbackNames(): string[] {
+    const names: string[] = [];
+
+    this.allComponents.forEach(component => {
+      if (!component.eventConfigs) return;
+      let controlTimerIndex = 0;
+      component.eventConfigs.forEach(eventConfig => {
+        if (eventConfig.type === 'onMessage') return;
+        eventConfig.actions.forEach(action => {
+          if (action.type === 'controlTimer' && action.timerTargets && action.timerTargets.length > 0) {
+            names.push(`${component.id}_animation_set_${controlTimerIndex}_cb`);
+            controlTimerIndex++;
+          }
+        });
       });
     });
 
@@ -391,7 +457,8 @@ export class CallbackFileGenerator {
       // 支持新版 timers 数组
       if (component.data?.timers && Array.isArray(component.data.timers)) {
         component.data.timers.forEach((timer: any) => {
-          if (timer.mode === 'preset' && timer.actions && timer.actions.length > 0) {
+          // 预设动作模式：支持 segments（多段动画）或 actions（单段动画）
+          if (timer.mode === 'preset' && ((timer.segments && timer.segments.length > 0) || (timer.actions && timer.actions.length > 0))) {
             // 预设动作模式：使用定时器 ID 生成回调函数名
             names.add(`${component.id}_${timer.id}_cb`);
           } else if (timer.mode === 'custom' && timer.callback) {
@@ -428,7 +495,8 @@ export class CallbackFileGenerator {
       // 支持新版 timers 数组
       if (component.data?.timers && Array.isArray(component.data.timers)) {
         component.data.timers.forEach((timer: any) => {
-          if (timer.mode === 'preset' && timer.actions && timer.actions.length > 0) {
+          // 预设动作模式：支持 segments（多段动画）或 actions（单段动画）
+          if (timer.mode === 'preset' && ((timer.segments && timer.segments.length > 0) || (timer.actions && timer.actions.length > 0))) {
             // 预设动作模式：生成自动实现的回调函数
             const callback = `${component.id}_${timer.id}_cb`;
             if (!impls.has(callback)) {
@@ -533,9 +601,28 @@ void ${callback}(void *obj)
         // 调整透明度动作（仅支持 hg_image）
         code += `    // 调整透明度: ${action.from} -> ${action.to}\n`;
         code += `    const uint8_t opacity_origin = ${action.from};\n`;
-        code += `    const int16_t opacity_target = ${action.to};\n`;
+        code += `    const uint8_t opacity_target = ${action.to};\n`;
         code += `    int16_t opacity_cur = opacity_origin + (opacity_target - opacity_origin) * cnt / cnt_max;\n`;
         code += `    gui_img_set_opacity((gui_img_t *)target, opacity_cur);\n`;
+        code += `    \n`;
+      } else if (action.type === 'rotation') {
+        // 调整旋转动作（仅支持 hg_image）
+        code += `    // 调整旋转: ${action.angleOrigin}° -> ${action.angleTarget}°\n`;
+        code += `    const float angle_origin = ${action.angleOrigin};\n`;
+        code += `    const float angle_target = ${action.angleTarget};\n`;
+        code += `    float angle_cur = angle_origin + (angle_target - angle_origin) * cnt / cnt_max;\n`;
+        code += `    gui_img_rotation((gui_img_t *)target, angle_cur);\n`;
+        code += `    \n`;
+      } else if (action.type === 'scale') {
+        // 调整缩放动作（仅支持 hg_image）
+        code += `    // 调整缩放: (${action.zoomXOrigin}, ${action.zoomYOrigin}) -> (${action.zoomXTarget}, ${action.zoomYTarget})\n`;
+        code += `    const float zoom_x_origin = ${action.zoomXOrigin};\n`;
+        code += `    const float zoom_x_target = ${action.zoomXTarget};\n`;
+        code += `    const float zoom_y_origin = ${action.zoomYOrigin};\n`;
+        code += `    const float zoom_y_target = ${action.zoomYTarget};\n`;
+        code += `    float zoom_x_cur = zoom_x_origin + (zoom_x_target - zoom_x_origin) * cnt / cnt_max;\n`;
+        code += `    float zoom_y_cur = zoom_y_origin + (zoom_y_target - zoom_y_origin) * cnt / cnt_max;\n`;
+        code += `    gui_img_scale((gui_img_t *)target, zoom_x_cur, zoom_y_cur);\n`;
         code += `    \n`;
       }
     });
@@ -561,16 +648,24 @@ void ${callback}(void *obj)
   }
 
   /**
-   * 从 TimerConfig 生成预设动作的定时器回调函数（支持延时启动）
+   * 从 TimerConfig 生成预设动作的定时器回调函数（支持多段动画）
    */
   private generatePresetTimerCallbackFromConfig(component: Component, timer: any): string {
     const callback = `${component.id}_${timer.id}_cb`;
-    const actions = timer.actions || [];
-    const duration = timer.duration || 1000;
+    const segments = timer.segments || [];
     const interval = timer.interval || 1000;
     const stopOnComplete = timer.stopOnComplete !== false;
-    const delayStart = timer.delayStart || 0;
     const timerName = timer.name || timer.id;
+    
+    // 如果有多段动画，使用新的多段动画生成逻辑
+    if (segments.length > 0) {
+      return this.generateMultiSegmentTimerCallback(component, timer, callback, timerName, interval, stopOnComplete, segments);
+    }
+    
+    // 否则使用旧的单段动画逻辑（兼容旧版）
+    const actions = timer.actions || [];
+    const duration = timer.duration || 1000;
+    const delayStart = timer.delayStart || 0;
     
     // 计算 cnt_max 和 cnt_wait
     const cntMax = Math.ceil(duration / interval);
@@ -579,7 +674,7 @@ void ${callback}(void *obj)
     let code = `/**
  * ${timerName}
  * 组件: ${component.id}
- * 模式: 预设动作
+ * 模式: 预设动作（单段）
  */
 void ${callback}(void *obj)\n{\n`;
     code += `    gui_obj_t *target = (gui_obj_t *)obj;\n`;
@@ -602,52 +697,7 @@ void ${callback}(void *obj)\n{\n`;
     
     // 为每个动作生成代码
     actions.forEach((action: any) => {
-      if (action.type === 'position') {
-        // 调整位置动作
-        code += `    // 调整位置: (${action.fromX}, ${action.fromY}) -> (${action.toX}, ${action.toY})\n`;
-        code += `    const int16_t x_origin = ${action.fromX};\n`;
-        code += `    const int16_t y_origin = ${action.fromY};\n`;
-        code += `    const int16_t x_target = ${action.toX};\n`;
-        code += `    const int16_t y_target = ${action.toY};\n`;
-        if (delayStart > 0) {
-          code += `    int16_t x_cur = x_origin + (x_target - x_origin) * (cnt - cnt_wait) / cnt_max;\n`;
-          code += `    int16_t y_cur = y_origin + (y_target - y_origin) * (cnt - cnt_wait) / cnt_max;\n`;
-        } else {
-          code += `    int16_t x_cur = x_origin + (x_target - x_origin) * cnt / cnt_max;\n`;
-          code += `    int16_t y_cur = y_origin + (y_target - y_origin) * cnt / cnt_max;\n`;
-        }
-        code += `    gui_obj_move(target, x_cur, y_cur);\n`;
-        code += `    \n`;
-      } else if (action.type === 'size') {
-        // 调整大小动作（仅支持 hg_window）
-        code += `    // 调整大小: (${action.fromW}, ${action.fromH}) -> (${action.toW}, ${action.toH})\n`;
-        code += `    const int16_t w_origin = ${action.fromW};\n`;
-        code += `    const int16_t h_origin = ${action.fromH};\n`;
-        code += `    const int16_t w_target = ${action.toW};\n`;
-        code += `    const int16_t h_target = ${action.toH};\n`;
-        if (delayStart > 0) {
-          code += `    int16_t w_cur = w_origin + (w_target - w_origin) * (cnt - cnt_wait) / cnt_max;\n`;
-          code += `    int16_t h_cur = h_origin + (h_target - h_origin) * (cnt - cnt_wait) / cnt_max;\n`;
-        } else {
-          code += `    int16_t w_cur = w_origin + (w_target - w_origin) * cnt / cnt_max;\n`;
-          code += `    int16_t h_cur = h_origin + (h_target - h_origin) * cnt / cnt_max;\n`;
-        }
-        code += `    target->w = w_cur;\n`;
-        code += `    target->h = h_cur;\n`;
-        code += `    \n`;
-      } else if (action.type === 'opacity') {
-        // 调整透明度动作（仅支持 hg_image）
-        code += `    // 调整透明度: ${action.from} -> ${action.to}\n`;
-        code += `    const uint8_t opacity_origin = ${action.from};\n`;
-        code += `    const int16_t opacity_target = ${action.to};\n`;
-        if (delayStart > 0) {
-          code += `    int16_t opacity_cur = opacity_origin + (opacity_target - opacity_origin) * (cnt - cnt_wait) / cnt_max;\n`;
-        } else {
-          code += `    int16_t opacity_cur = opacity_origin + (opacity_target - opacity_origin) * cnt / cnt_max;\n`;
-        }
-        code += `    gui_img_set_opacity((gui_img_t *)target, opacity_cur);\n`;
-        code += `    \n`;
-      }
+      code += this.generateActionCode(action, delayStart > 0, 'cnt', 'cnt_wait', 'cnt_max');
     });
     
     // 增加计数器
@@ -669,6 +719,204 @@ void ${callback}(void *obj)\n{\n`;
     code += `}\n`;
     
     return code;
+  }
+
+  /**
+   * 生成多段动画的定时器回调函数
+   */
+  private generateMultiSegmentTimerCallback(
+    component: Component,
+    timer: any,
+    callback: string,
+    timerName: string,
+    interval: number,
+    stopOnComplete: boolean,
+    segments: any[]
+  ): string {
+    // 计算每段的 cnt_max
+    const segmentCntMaxes = segments.map(seg => Math.ceil(seg.duration / interval));
+    const totalCntMax = segmentCntMaxes.reduce((sum, cnt) => sum + cnt, 0);
+    
+    let code = `/**
+ * ${timerName}
+ * 组件: ${component.id}
+ * 模式: 预设动作（多段动画）
+ * 段数: ${segments.length}
+ */
+void ${callback}(void *obj)\n{\n`;
+    code += `    gui_obj_t *target = (gui_obj_t *)obj;\n`;
+    code += `    static uint16_t cnt = 0;\n`;
+    code += `    const uint16_t total_cnt_max = ${totalCntMax};\n`;
+    code += `    \n`;
+    
+    // 为每段生成边界常量
+    let cumulativeCnt = 0;
+    segments.forEach((seg, idx) => {
+      const segCntMax = segmentCntMaxes[idx];
+      code += `    const uint16_t seg${idx}_start = ${cumulativeCnt};\n`;
+      code += `    const uint16_t seg${idx}_end = ${cumulativeCnt + segCntMax};\n`;
+      cumulativeCnt += segCntMax;
+    });
+    code += `    \n`;
+    
+    // cnt++ 在判断前执行
+    code += `    cnt++;\n`;
+    code += `    \n`;
+    
+    // 为每段生成条件分支（使用 if-else 提高效率）
+    segments.forEach((seg, idx) => {
+      const actions = seg.actions || [];
+      const ifKeyword = idx === 0 ? 'if' : 'else if';
+      
+      if (actions.length === 0) {
+        // 空段（等待）
+        code += `    // 段 ${idx + 1}: 等待 ${seg.duration}ms\n`;
+        code += `    ${ifKeyword} (cnt > seg${idx}_start && cnt <= seg${idx}_end) {\n`;
+        code += `        // 无动作，仅等待\n`;
+        code += `    }\n`;
+      } else {
+        // 检查是否所有动作都不需要段内计数器（跳转界面、更换图片等）
+        const allNoSegCounter = actions.every((action: any) => 
+          action.type === 'switchView' || action.type === 'changeImage'
+        );
+        
+        // 有动作的段
+        code += `    // 段 ${idx + 1}: ${seg.duration}ms, ${actions.length} 个动作\n`;
+        code += `    ${ifKeyword} (cnt > seg${idx}_start && cnt <= seg${idx}_end) {\n`;
+        
+        // 只有在需要渐变计算时才生成段内计数器
+        if (!allNoSegCounter) {
+          code += `        uint16_t seg_cnt = cnt - seg${idx}_start;\n`;
+          code += `        const uint16_t seg_cnt_max = seg${idx}_end - seg${idx}_start;\n`;
+          code += `        \n`;
+        }
+        
+        // 为每个动作生成代码
+        actions.forEach((action: any) => {
+          const actionCode = this.generateActionCode(action, false, 'seg_cnt', '', 'seg_cnt_max');
+          // 缩进处理
+          const indentedCode = actionCode.split('\n').map(line => line ? `        ${line}` : line).join('\n');
+          code += indentedCode;
+        });
+        
+        code += `    }\n`;
+      }
+    });
+    
+    code += `    \n`;
+    
+    // 到达总时间后的处理
+    if (stopOnComplete) {
+      code += `    if (cnt >= total_cnt_max) {\n`;
+      code += `        gui_obj_stop_timer(target);\n`;
+      code += `        cnt = 0; // 重置计数器\n`;
+      code += `    }\n`;
+    } else {
+      code += `    if (cnt >= total_cnt_max) {\n`;
+      code += `        cnt = 0; // 重置计数器，继续循环\n`;
+      code += `    }\n`;
+    }
+    
+    code += `}\n`;
+    
+    return code;
+  }
+
+  /**
+   * 生成单个动作的代码
+   */
+  private generateActionCode(action: any, hasDelay: boolean, cntVar: string, waitVar: string, maxVar: string): string {
+    let code = '';
+    const progressExpr = hasDelay ? `(${cntVar} - ${waitVar}) / ${maxVar}` : `${cntVar} / ${maxVar}`;
+    
+    if (action.type === 'changeImage') {
+      // 更换图片动作（仅支持 hg_image）
+      let imagePath = action.imagePath || '';
+      // 去掉 assets/ 前缀，只保留后面的路径
+      if (imagePath.startsWith('assets/')) {
+        imagePath = imagePath.substring(6); // 去掉 'assets/'
+      }
+      // 将路径后缀改为 .bin
+      if (imagePath && !imagePath.endsWith('.bin')) {
+        imagePath = imagePath.replace(/\.[^.]+$/, '.bin');
+      }
+      code += `    // 更换图片: ${imagePath}\n`;
+      code += `    gui_img_set_image_data((gui_img_t *)target, "${imagePath}");\n`;
+      code += `    gui_img_refresh_size((gui_img_t *)target);\n`;
+      code += `    \n`;
+    } else if (action.type === 'switchView') {
+      // 跳转界面动作
+      const targetName = action.target || 'unknown_view';
+      const switchOutStyle = action.switchOutStyle || 'SWITCH_OUT_TO_LEFT_USE_TRANSLATION';
+      const switchInStyle = action.switchInStyle || 'SWITCH_IN_FROM_RIGHT_USE_TRANSLATION';
+      code += `    // 跳转界面: ${targetName}\n`;
+      code += `    gui_view_switch_direct(gui_view_get_current(), "${targetName}", ${switchOutStyle}, ${switchInStyle});\n`;
+      code += `    \n`;
+    } else if (action.type === 'position') {
+      // 调整位置动作
+      code += `    // 调整位置: (${action.fromX}, ${action.fromY}) -> (${action.toX}, ${action.toY})\n`;
+      code += `    const int16_t x_origin = ${action.fromX};\n`;
+      code += `    const int16_t y_origin = ${action.fromY};\n`;
+      code += `    const int16_t x_target = ${action.toX};\n`;
+      code += `    const int16_t y_target = ${action.toY};\n`;
+      code += `    int16_t x_cur = x_origin + (x_target - x_origin) * ${progressExpr};\n`;
+      code += `    int16_t y_cur = y_origin + (y_target - y_origin) * ${progressExpr};\n`;
+      code += `    gui_obj_move(target, x_cur, y_cur);\n`;
+      code += `    \n`;
+    } else if (action.type === 'size') {
+      // 调整大小动作（仅支持 hg_window）
+      code += `    // 调整大小: (${action.fromW}, ${action.fromH}) -> (${action.toW}, ${action.toH})\n`;
+      code += `    const int16_t w_origin = ${action.fromW};\n`;
+      code += `    const int16_t h_origin = ${action.fromH};\n`;
+      code += `    const int16_t w_target = ${action.toW};\n`;
+      code += `    const int16_t h_target = ${action.toH};\n`;
+      code += `    int16_t w_cur = w_origin + (w_target - w_origin) * ${progressExpr};\n`;
+      code += `    int16_t h_cur = h_origin + (h_target - h_origin) * ${progressExpr};\n`;
+      code += `    target->w = w_cur;\n`;
+      code += `    target->h = h_cur;\n`;
+      code += `    \n`;
+    } else if (action.type === 'opacity') {
+      // 调整透明度动作（仅支持 hg_image）
+      code += `    // 调整透明度: ${action.from} -> ${action.to}\n`;
+      code += `    const uint8_t opacity_origin = ${action.from};\n`;
+      code += `    const uint8_t opacity_target = ${action.to};\n`;
+      code += `    int16_t opacity_cur = opacity_origin + (opacity_target - opacity_origin) * ${progressExpr};\n`;
+      code += `    gui_img_set_opacity((gui_img_t *)target, opacity_cur);\n`;
+      code += `    \n`;
+    } else if (action.type === 'rotation') {
+      // 调整旋转动作（仅支持 hg_image）
+      code += `    // 调整旋转: ${action.angleOrigin}° -> ${action.angleTarget}°\n`;
+      code += `    const float angle_origin = ${action.angleOrigin};\n`;
+      code += `    const float angle_target = ${action.angleTarget};\n`;
+      code += `    float angle_cur = angle_origin + (angle_target - angle_origin) * ${progressExpr};\n`;
+      code += `    gui_img_rotation((gui_img_t *)target, angle_cur);\n`;
+      code += `    \n`;
+    } else if (action.type === 'scale') {
+      // 调整缩放动作（仅支持 hg_image）
+      code += `    // 调整缩放: (${action.zoomXOrigin}, ${action.zoomYOrigin}) -> (${action.zoomXTarget}, ${action.zoomYTarget})\n`;
+      code += `    const float zoom_x_origin = ${action.zoomXOrigin};\n`;
+      code += `    const float zoom_x_target = ${action.zoomXTarget};\n`;
+      code += `    const float zoom_y_origin = ${action.zoomYOrigin};\n`;
+      code += `    const float zoom_y_target = ${action.zoomYTarget};\n`;
+      code += `    float zoom_x_cur = zoom_x_origin + (zoom_x_target - zoom_x_origin) * ${progressExpr};\n`;
+      code += `    float zoom_y_cur = zoom_y_origin + (zoom_y_target - zoom_y_origin) * ${progressExpr};\n`;
+      code += `    gui_img_scale((gui_img_t *)target, zoom_x_cur, zoom_y_cur);\n`;
+      code += `    \n`;
+    }
+    
+    return code;
+  }
+
+  /**
+   * 检查是否需要 tp_algo.h（用于抬起区域检测）
+   */
+  private checkNeedsTpAlgo(): boolean {
+    return this.allComponents.some(component => {
+      if (!component.eventConfigs) return false;
+      return component.eventConfigs.some(eventConfig => 
+        eventConfig.type === 'onTouchUp' && eventConfig.checkReleaseArea === true
+      );
+    });
   }
 
   /**

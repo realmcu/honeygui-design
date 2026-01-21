@@ -184,10 +184,69 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
     setExpandedEvents(newExpanded);
   };
 
+  // 获取同一 view 下所有有定时器的组件
+  const getTimerComponents = () => {
+    // 找到当前组件所在的 view
+    let currentView: Component | undefined;
+    if (component.type === 'hg_view') {
+      currentView = component;
+    } else {
+      // 向上查找父 view
+      let parentId = component.parent;
+      while (parentId) {
+        const parent = components.find(c => c.id === parentId);
+        if (parent?.type === 'hg_view') {
+          currentView = parent;
+          break;
+        }
+        parentId = parent?.parent;
+      }
+    }
+
+    if (!currentView) return [];
+
+    // 收集该 view 下所有有定时器的组件（包括 view 自己）
+    const timerComponents: Array<{
+      id: string;
+      name: string;
+      timers: Array<{ id: string; name: string; index: number }>;
+    }> = [];
+
+    const collectTimerComponents = (comp: Component) => {
+      // 检查组件是否有定时器
+      const timers = comp.data?.timers;
+      if (timers && Array.isArray(timers) && timers.length > 0) {
+        timerComponents.push({
+          id: comp.id,
+          name: comp.name || comp.id,
+          timers: timers.map((timer: any, index: number) => ({
+            id: timer.id,
+            name: timer.name || `定时动画 ${index + 1}`,
+            index,
+          })),
+        });
+      }
+
+      // 递归处理子组件
+      if (comp.children) {
+        comp.children.forEach(childId => {
+          const child = components.find(c => c.id === childId);
+          if (child) {
+            collectTimerComponents(child);
+          }
+        });
+      }
+    };
+
+    collectTimerComponents(currentView);
+    return timerComponents;
+  };
+
   // 渲染动作编辑器
   const renderActionEditor = (action: Action, eventIndex: number, actionIndex: number) => {
     const views = getAvailableViews();
     const eventConfig = eventConfigs[eventIndex];
+    const timerComponents = getTimerComponents();
 
     return (
       <div className="action-item" key={actionIndex}>
@@ -197,14 +256,14 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
             onChange={(e) => handleActionUpdate(eventIndex, actionIndex, { type: e.target.value as ActionType })}
             className="action-type-select"
           >
-            <option 
-              value="switchView" 
+            <option value="switchView" 
               disabled={eventConfig.actions.filter(a => a.type === 'switchView').length > 0 && action.type !== 'switchView'}
             >
               跳转界面
             </option>
             <option value="sendMessage">发送消息</option>
             <option value="callFunction">调用函数</option>
+            <option value="controlTimer">自定义动画集</option>
           </select>
           <button
             className="action-remove-btn"
@@ -283,6 +342,87 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
               />
             </div>
           )}
+
+          {/* controlTimer - 自定义动画集 */}
+          {action.type === 'controlTimer' && (
+            <>
+              {timerComponents.length === 0 ? (
+                <div className="param-row">
+                  <span style={{ fontSize: '12px', color: 'var(--vscode-descriptionForeground)' }}>
+                    当前 view 下没有配置定时器的组件
+                  </span>
+                </div>
+              ) : (
+                <div className="param-row">
+                  <label>选择目标组件及动作</label>
+                  <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid var(--vscode-input-border)', borderRadius: '2px', padding: '8px' }}>
+                    {timerComponents.map(comp => (
+                      <div key={comp.id} style={{ marginBottom: '12px', padding: '8px', background: 'var(--vscode-editor-background)', borderRadius: '4px', border: '1px solid var(--vscode-panel-border)' }}>
+                        <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '12px', color: 'var(--vscode-foreground)' }}>{comp.name}</div>
+                        {comp.timers.map(timer => {
+                          const target = action.timerTargets?.find(t => t.componentId === comp.id && t.timerIndex === timer.index);
+                          const isSelected = !!target;
+                          const timerAction = target?.action || 'start';
+                          
+                          return (
+                            <div key={timer.id} style={{ marginLeft: '12px', marginBottom: '8px', padding: '6px', background: 'var(--vscode-input-background)', borderRadius: '2px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={(e) => {
+                                    const currentTargets = action.timerTargets || [];
+                                    let newTargets;
+                                    if (e.target.checked) {
+                                      // 添加
+                                      newTargets = [...currentTargets, { componentId: comp.id, timerIndex: timer.index, action: 'start' as const }];
+                                    } else {
+                                      // 移除
+                                      newTargets = currentTargets.filter(t => !(t.componentId === comp.id && t.timerIndex === timer.index));
+                                    }
+                                    handleActionUpdate(eventIndex, actionIndex, { timerTargets: newTargets });
+                                  }}
+                                  style={{ cursor: 'pointer' }}
+                                />
+                                <span style={{ fontSize: '11px', flex: 1 }}>{timer.name}</span>
+                                {isSelected && (
+                                  <select
+                                    value={timerAction}
+                                    onChange={(e) => {
+                                      const currentTargets = action.timerTargets || [];
+                                      const newTargets = currentTargets.map(t => 
+                                        (t.componentId === comp.id && t.timerIndex === timer.index)
+                                          ? { ...t, action: e.target.value as 'start' | 'stop' }
+                                          : t
+                                      );
+                                      handleActionUpdate(eventIndex, actionIndex, { timerTargets: newTargets });
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                    style={{
+                                      padding: '2px 6px',
+                                      fontSize: '10px',
+                                      backgroundColor: 'var(--vscode-dropdown-background)',
+                                      color: 'var(--vscode-dropdown-foreground)',
+                                      border: '1px solid var(--vscode-dropdown-border)',
+                                      borderRadius: '2px',
+                                      cursor: 'pointer',
+                                    }}
+                                  >
+                                    <option value="start">开启</option>
+                                    <option value="stop">关闭</option>
+                                  </select>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
     );
@@ -350,6 +490,24 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
                       {handlerError && <span className="error-hint">{handlerError}</span>}
                     </div>
                   </>
+                )}
+
+                {/* onTouchUp 抬起区域检测 */}
+                {event.type === 'onTouchUp' && (
+                  <div className="check-release-area">
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={event.checkReleaseArea || false}
+                        onChange={(e) => {
+                          const newConfigs = [...eventConfigs];
+                          newConfigs[eventIndex] = { ...newConfigs[eventIndex], checkReleaseArea: e.target.checked };
+                          onUpdate({ eventConfigs: newConfigs });
+                        }}
+                      />
+                      <span style={{ marginLeft: '6px' }}>{t('Check Release Area')}</span>
+                    </label>
+                  </div>
                 )}
 
                 {/* 动作列表 */}

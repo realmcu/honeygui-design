@@ -486,7 +486,8 @@ export class AssetManager {
         dropPosition?: { x: number; y: number },
         targetContainerId?: string,
         relativePath?: string,
-        componentId?: string
+        componentId?: string,
+        callbackId?: string
     ): Promise<void> {
         try {
             if (!currentFilePath) {
@@ -547,6 +548,13 @@ export class AssetManager {
                     componentId: componentId,
                     path: hmlRelativePath,
                     imageSize
+                });
+            } else if (callbackId) {
+                // 如果提供了 callbackId，则返回保存的路径（用于定时器动作等场景）
+                this._panel.webview.postMessage({
+                    command: 'imageSaved',
+                    callbackId: callbackId,
+                    path: hmlRelativePath
                 });
             }
 

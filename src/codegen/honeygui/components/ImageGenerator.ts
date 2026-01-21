@@ -97,7 +97,7 @@ export class ImageGenerator implements ComponentCodeGenerator {
       // 2. 设置变换中心点（focus）
       if (hasFocusSet) {
         // 用户显式设置了变换中心
-        code += `${indentStr}gui_img_set_focus((gui_img_t *)${component.id}, ${transform.focusX}f, ${transform.focusY}f);\n`;
+        code += `${indentStr}gui_img_set_focus((gui_img_t *)${component.id}, ${transform.focusX!.toFixed(1)}f, ${transform.focusY!.toFixed(1)}f);\n`;
       } else if (hasRotation) {
         // 有旋转但没有设置 focus，自动设置为图片中心
         code += `${indentStr}gui_img_set_focus((gui_img_t *)${component.id}, gui_img_get_width((gui_img_t *)${component.id}) / 2.0f, gui_img_get_height((gui_img_t *)${component.id}) / 2.0f);\n`;

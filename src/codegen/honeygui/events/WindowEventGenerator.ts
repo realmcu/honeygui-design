@@ -7,7 +7,7 @@
  * - 支持消息订阅（onMessage）
  */
 import { Component } from '../../../hml/types';
-import { EventCodeGenerator, EVENT_TYPE_TO_GUI_EVENT, generateMessageCallbackImpl, getMessageCallbackName } from './EventCodeGenerator';
+import { EventCodeGenerator, EVENT_TYPE_TO_GUI_EVENT, generateMessageCallbackImpl, generateControlTimerCallbackImpl, getMessageCallbackName } from './EventCodeGenerator';
 
 export class WindowEventGenerator implements EventCodeGenerator {
 
@@ -16,6 +16,7 @@ export class WindowEventGenerator implements EventCodeGenerator {
 
     let code = '';
     const indentStr = '    '.repeat(indent);
+    let controlTimerIndex = 0;
 
     component.eventConfigs.forEach(eventConfig => {
       const guiEvent = EVENT_TYPE_TO_GUI_EVENT[eventConfig.type];
@@ -37,6 +38,10 @@ export class WindowEventGenerator implements EventCodeGenerator {
             // 生成内联回调发送消息
             const callbackName = `${component.id}_${eventConfig.type}_send_msg`;
             code += `${indentStr}gui_obj_add_event_cb(GUI_BASE(${component.id}), ${callbackName}, ${guiEvent}, NULL);\n`;
+          } else if (action.type === 'controlTimer' && action.timerTargets && action.timerTargets.length > 0) {
+            const callbackName = `${component.id}_animation_set_${controlTimerIndex}_cb`;
+            controlTimerIndex++;
+            code += `${indentStr}gui_obj_add_event_cb(GUI_BASE(${component.id}), (gui_event_cb_t)${callbackName}, ${guiEvent}, NULL);\n`;
           }
         });
       }
@@ -50,10 +55,11 @@ export class WindowEventGenerator implements EventCodeGenerator {
     
     if (!component.eventConfigs) return functions;
 
+    let msgIndex = 0;
+    let controlTimerIndex = 0;
     component.eventConfigs.forEach(eventConfig => {
       // 收集 onMessage 的回调函数名
       if (eventConfig.type === 'onMessage' && eventConfig.message) {
-        let msgIndex = 0;
         functions.push(getMessageCallbackName(component, eventConfig, msgIndex));
         msgIndex++;
       }
@@ -64,6 +70,9 @@ export class WindowEventGenerator implements EventCodeGenerator {
             functions.push(action.functionName);
           } else if (action.type === 'sendMessage' && action.message) {
             functions.push(`${component.id}_${eventConfig.type}_send_msg`);
+          } else if (action.type === 'controlTimer' && action.timerTargets && action.timerTargets.length > 0) {
+            functions.push(`${component.id}_animation_set_${controlTimerIndex}_cb`);
+            controlTimerIndex++;
           }
         });
       }
@@ -79,5 +88,9 @@ export class WindowEventGenerator implements EventCodeGenerator {
   getSwitchViewCallbackImpl(_component: Component, _componentMap: Map<string, Component>): string[] {
     // window 不支持视图切换
     return [];
+  }
+
+  getControlTimerCallbackImpl(component: Component, componentMap: Map<string, Component>): string[] {
+    return generateControlTimerCallbackImpl(component, componentMap);
   }
 }

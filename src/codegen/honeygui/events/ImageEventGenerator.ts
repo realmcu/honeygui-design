@@ -2,7 +2,7 @@
  * hg_image 事件代码生成器
  */
 import { Component } from '../../../hml/types';
-import { EventCodeGenerator, EVENT_TYPE_TO_GUI_EVENT, generateMessageCallbackImpl, getMessageCallbackName } from './EventCodeGenerator';
+import { EventCodeGenerator, EVENT_TYPE_TO_GUI_EVENT, generateMessageCallbackImpl, generateControlTimerCallbackImpl, getMessageCallbackName } from './EventCodeGenerator';
 
 export class ImageEventGenerator implements EventCodeGenerator {
 
@@ -14,6 +14,7 @@ export class ImageEventGenerator implements EventCodeGenerator {
     let code = '';
     const indentStr = '    '.repeat(indent);
     let msgIndex = 0;
+    let controlTimerIndex = 0;
 
     component.eventConfigs.forEach((eventConfig) => {
       // 处理 onMessage 事件
@@ -33,6 +34,10 @@ export class ImageEventGenerator implements EventCodeGenerator {
         } else if (action.type === 'switchView' && action.target) {
           const callbackName = `${component.id}_switch_view_cb`;
           code += `${indentStr}gui_obj_add_event_cb(${component.id}, (gui_event_cb_t)${callbackName}, ${guiEvent}, NULL);\n`;
+        } else if (action.type === 'controlTimer' && action.timerTargets && action.timerTargets.length > 0) {
+          const callbackName = `${component.id}_animation_set_${controlTimerIndex}_cb`;
+          controlTimerIndex++;
+          code += `${indentStr}gui_obj_add_event_cb(${component.id}, (gui_event_cb_t)${callbackName}, ${guiEvent}, NULL);\n`;
         }
       });
     });
@@ -45,6 +50,7 @@ export class ImageEventGenerator implements EventCodeGenerator {
     if (!component.eventConfigs) return functions;
 
     let msgIndex = 0;
+    let controlTimerIndex = 0;
     component.eventConfigs.forEach(eventConfig => {
       // onMessage 生成统一回调名
       if (eventConfig.type === 'onMessage' && eventConfig.message) {
@@ -58,6 +64,9 @@ export class ImageEventGenerator implements EventCodeGenerator {
           functions.push(action.functionName);
         } else if (action.type === 'switchView' && action.target) {
           functions.push(`${component.id}_switch_view_cb`);
+        } else if (action.type === 'controlTimer' && action.timerTargets && action.timerTargets.length > 0) {
+          functions.push(`${component.id}_animation_set_${controlTimerIndex}_cb`);
+          controlTimerIndex++;
         }
       });
     });
@@ -84,12 +93,29 @@ export class ImageEventGenerator implements EventCodeGenerator {
           const switchOutStyle = action.switchOutStyle || 'SWITCH_OUT_TO_LEFT_USE_TRANSLATION';
           const switchInStyle = action.switchInStyle || 'SWITCH_IN_FROM_RIGHT_USE_TRANSLATION';
 
-          const impl = `void ${callbackName}(void *obj, gui_event_t event, void *param)
-{
-    GUI_UNUSED(obj);
+          // 生成回调函数体
+          let callbackBody = `    GUI_UNUSED(obj);
     GUI_UNUSED(event);
     GUI_UNUSED(param);
-    gui_view_switch_direct(gui_view_get_current(), "${targetName}", ${switchOutStyle}, ${switchInStyle});
+`;
+
+          // 如果是 onTouchUp 事件且开启了抬起区域检测
+          if (eventConfig.type === 'onTouchUp' && eventConfig.checkReleaseArea) {
+            callbackBody += `    
+    // 抬起区域检测
+    touch_info_t *tp = tp_get_info();
+    gui_obj_t *parent = ((gui_obj_t *)obj)->parent;
+    if (!(gui_obj_point_in_obj_rect((gui_obj_t *)obj, tp->x + tp->deltaX - parent->x, tp->y + tp->deltaY - parent->y) == true)) {
+        return;
+    }
+`;
+          }
+
+          callbackBody += `    gui_view_switch_direct(gui_view_get_current(), "${targetName}", ${switchOutStyle}, ${switchInStyle});`;
+
+          const impl = `void ${callbackName}(void *obj, gui_event_t event, void *param)
+{
+${callbackBody}
 }`;
           callbacks.push(impl);
         }
@@ -101,5 +127,9 @@ export class ImageEventGenerator implements EventCodeGenerator {
 
   getMessageCallbackImpl(component: Component, componentMap: Map<string, Component>): string[] {
     return generateMessageCallbackImpl(component, componentMap);
+  }
+
+  getControlTimerCallbackImpl(component: Component, componentMap: Map<string, Component>): string[] {
+    return generateControlTimerCallbackImpl(component, componentMap);
   }
 }
