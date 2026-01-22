@@ -500,15 +500,25 @@ const en = {
 
   // Button effect variants
   'Dual-State Button': 'Dual-State Button',
-  'Blink Button': 'Blink Button',
+  'Opacity Button': 'Opacity Button',
+  'Button Effect': 'Button Effect',
   'Button Mode': 'Button Mode',
+  'none': 'None',
+  'dual-state': 'Dual-State',
+  'opacity': 'Opacity',
+  'Switch between two states on click': 'Switch between two states on click',
+  'Change opacity on press/release': 'Change opacity on press/release',
+  'No button effect': 'No button effect',
+  'on': 'On',
+  'off': 'Off',
+  'State Colors': 'State Colors',
+  'On State': 'On State',
+  'Off State': 'Off State',
   'On State Color': 'On State Color',
   'Off State Color': 'Off State Color',
-  'On State Image': 'On State Image',
-  'Off State Image': 'Off State Image',
-  'Blink Min Opacity': 'Blink Min Opacity',
-  'Blink Max Opacity': 'Blink Max Opacity',
-  'Blink Interval (ms)': 'Blink Interval (ms)',
+  'Opacity States': 'Opacity States',
+  'Pressed': 'Pressed',
+  'Released': 'Released',
 };
 
 export default en;

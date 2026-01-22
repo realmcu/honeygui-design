@@ -17,10 +17,24 @@ export class CircleGenerator implements ComponentCodeGenerator {
     // opacity 优先从 style 读取，兼容从 data 读取
     const opacity = component.style?.opacity ?? component.data?.opacity ?? 255;
     
-    // 根据透明度选择颜色格式
-    const color = opacity < 255 
-      ? this.convertColorWithOpacity(component.style?.fillColor, opacity)
-      : this.convertColor(component.style?.fillColor);
+    // 检查是否是双态按键，如果是则使用初始状态对应的颜色
+    let color: string;
+    const buttonMode = component.data?.buttonMode;
+    if (buttonMode === 'dual-state') {
+      const initialState = component.data?.buttonInitialState === 'on';
+      const onColor = component.data?.buttonStateOnColor || '#00FF00';
+      const offColor = component.data?.buttonStateOffColor || '#FF0000';
+      const stateColor = initialState ? onColor : offColor;
+      
+      color = opacity < 255 
+        ? this.convertColorWithOpacity(stateColor, opacity)
+        : this.convertColor(stateColor);
+    } else {
+      // 普通圆形使用 fillColor
+      color = opacity < 255 
+        ? this.convertColorWithOpacity(component.style?.fillColor, opacity)
+        : this.convertColor(component.style?.fillColor);
+    }
 
     // 重要：gui_circle_create 的 x, y 参数是圆心坐标，不是矩形框左上角
     // 设计器中存储的是矩形框左上角，需要转换为圆心坐标
@@ -86,7 +100,7 @@ export class CircleGenerator implements ComponentCodeGenerator {
     
     if (buttonMode === 'dual-state') {
       return `${indentStr}gui_obj_add_event_cb(${component.id}, ${component.id}_button_cb, GUI_EVENT_TOUCH_CLICKED, NULL);\n`;
-    } else if (buttonMode === 'blink') {
+    } else if (buttonMode === 'opacity') {
       let code = '';
       code += `${indentStr}gui_obj_add_event_cb(${component.id}, ${component.id}_button_press_cb, GUI_EVENT_TOUCH_PRESSED, NULL);\n`;
       code += `${indentStr}gui_obj_add_event_cb(${component.id}, ${component.id}_button_release_cb, GUI_EVENT_TOUCH_RELEASED, NULL);\n`;
@@ -107,8 +121,8 @@ export class CircleGenerator implements ComponentCodeGenerator {
 
     if (buttonMode === 'dual-state') {
       return this.generateDualStateCallback(component);
-    } else if (buttonMode === 'blink') {
-      return this.generateBlinkCallback(component);
+    } else if (buttonMode === 'opacity') {
+      return this.generateOpacityCallback(component);
     }
 
     return '';
@@ -151,12 +165,12 @@ void ${component.id}_set_state(bool state) {
 `;
   }
 
-  private generateBlinkCallback(component: Component): string {
-    const minOpacity = component.data?.buttonBlinkOpacityMin || 50;
-    const maxOpacity = component.data?.buttonBlinkOpacityMax || 255;
+  private generateOpacityCallback(component: Component): string {
+    const pressedOpacity = component.data?.buttonPressedOpacity || 128;
+    const releasedOpacity = component.data?.buttonReleasedOpacity || 255;
 
     return `
-// ${component.id} 闪烁按键回调
+// ${component.id} 透明度按键回调
 
 void ${component.id}_button_press_cb(void *obj, gui_event_t event, void *param)
 {
@@ -164,7 +178,7 @@ void ${component.id}_button_press_cb(void *obj, gui_event_t event, void *param)
     GUI_UNUSED(event);
     GUI_UNUSED(param);
     
-    gui_circle_set_opacity((gui_circle_t *)${component.id}, ${minOpacity});
+    gui_circle_set_opacity((gui_circle_t *)${component.id}, ${pressedOpacity});
 }
 
 void ${component.id}_button_release_cb(void *obj, gui_event_t event, void *param)
@@ -173,7 +187,7 @@ void ${component.id}_button_release_cb(void *obj, gui_event_t event, void *param
     GUI_UNUSED(event);
     GUI_UNUSED(param);
     
-    gui_circle_set_opacity((gui_circle_t *)${component.id}, ${maxOpacity});
+    gui_circle_set_opacity((gui_circle_t *)${component.id}, ${releasedOpacity});
 }
 `;
   }

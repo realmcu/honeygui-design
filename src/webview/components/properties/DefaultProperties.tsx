@@ -907,27 +907,111 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
               </div>
             )}
 
-            {/* Interaction Properties - 水平排列 */}
+            {/* Interaction Properties - 按键效果 */}
             {definition && definition.properties.filter(p => p.group === 'interaction').length > 0 && (
               <div className="property-group">
-                <div className="property-group-title">交互</div>
+                <div className="property-group-title">{t('Button Effect')}</div>
+                
+                {/* 按键模式选择 */}
                 <div className="property-item">
-                  <div style={{ display: 'flex', gap: '16px', marginTop: '4px' }}>
-                    {definition.properties
-                      .filter(p => p.group === 'interaction')
-                      .map((property) => (
-                        <div key={property.name} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <PropertyEditor
-                            type={property.type as any}
-                            value={(component.data as any)?.[property.name]}
-                            onChange={(value) => handleDataChange(property.name, value)}
-                            options={property.options as string[]}
-                          />
-                          <span style={{ fontSize: '12px' }}>{property.label}</span>
-                        </div>
-                      ))}
-                  </div>
+                  <label>{t('Button Mode')}</label>
+                  <PropertyEditor
+                    type="select"
+                    value={(component.data as any)?.buttonMode || 'none'}
+                    onChange={(value) => {
+                      handleDataChange('buttonMode', value);
+                      
+                      // 如果启用按键效果，自动在 name 中添加 _button_ 标识（如果还没有）
+                      if (value !== 'none' && !component.name.includes('_button_')) {
+                        const newName = component.name.replace(component.type, `${component.type}_button`);
+                        onUpdate({ name: newName });
+                      }
+                      // 如果禁用按键效果，移除 _button_ 标识
+                      else if (value === 'none' && component.name.includes('_button_')) {
+                        const newName = component.name.replace('_button_', '_').replace('_button', '');
+                        onUpdate({ name: newName });
+                      }
+                    }}
+                    options={['none', 'dual-state', 'opacity']}
+                  />
+                  <span style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '2px' }}>
+                    {(component.data as any)?.buttonMode === 'dual-state' && t('Switch between two states on click')}
+                    {(component.data as any)?.buttonMode === 'opacity' && t('Change opacity on press/release')}
+                    {((component.data as any)?.buttonMode === 'none' || !(component.data as any)?.buttonMode) && t('No button effect')}
+                  </span>
                 </div>
+
+                {/* 双态模式属性 */}
+                {(component.data as any)?.buttonMode === 'dual-state' && (
+                  <>
+                    {/* 初始状态 */}
+                    <div className="property-item">
+                      <label>{t('Initial State')}</label>
+                      <PropertyEditor
+                        type="select"
+                        value={(component.data as any)?.buttonInitialState || 'off'}
+                        onChange={(value) => handleDataChange('buttonInitialState', value)}
+                        options={['on', 'off']}
+                      />
+                    </div>
+
+                    {/* 几何组件：双态颜色 */}
+                    {(component.type === 'hg_rect' || component.type === 'hg_circle') && (
+                      <div className="property-item">
+                        <label>{t('State Colors')}</label>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
+                          <div>
+                            <label style={{ fontSize: '12px' }}>{t('On State')}</label>
+                            <PropertyEditor
+                              type="color"
+                              value={(component.data as any)?.buttonStateOnColor || '#00FF00'}
+                              onChange={(value) => handleDataChange('buttonStateOnColor', value)}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ fontSize: '12px' }}>{t('Off State')}</label>
+                            <PropertyEditor
+                              type="color"
+                              value={(component.data as any)?.buttonStateOffColor || '#FF0000'}
+                              onChange={(value) => handleDataChange('buttonStateOffColor', value)}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* 透明度模式属性 */}
+                {(component.data as any)?.buttonMode === 'opacity' && (
+                  <div className="property-item">
+                    <label>{t('Opacity States')}</label>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
+                      <div>
+                        <label style={{ fontSize: '12px' }}>{t('Pressed')}</label>
+                        <PropertyEditor
+                          type="number"
+                          value={(component.data as any)?.buttonPressedOpacity ?? 128}
+                          onChange={(value) => handleDataChange('buttonPressedOpacity', value)}
+                        />
+                        <span style={{ fontSize: '10px', color: 'var(--vscode-descriptionForeground)' }}>
+                          (0-255)
+                        </span>
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '12px' }}>{t('Released')}</label>
+                        <PropertyEditor
+                          type="number"
+                          value={(component.data as any)?.buttonReleasedOpacity ?? 255}
+                          onChange={(value) => handleDataChange('buttonReleasedOpacity', value)}
+                        />
+                        <span style={{ fontSize: '10px', color: 'var(--vscode-descriptionForeground)' }}>
+                          (0-255)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

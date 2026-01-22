@@ -23,10 +23,24 @@ export class RectGenerator implements ComponentCodeGenerator {
     // opacity 优先从 style 读取，兼容从 data 读取
     const opacity = component.style?.opacity ?? component.data?.opacity ?? 255;
     
-    // 根据透明度选择颜色格式
-    const fillColor = opacity < 255 
-      ? this.convertColorWithOpacity(component.style?.fillColor, opacity)
-      : this.convertColor(component.style?.fillColor);
+    // 检查是否是双态按键，如果是则使用初始状态对应的颜色
+    let fillColor: string;
+    const buttonMode = component.data?.buttonMode;
+    if (buttonMode === 'dual-state') {
+      const initialState = component.data?.buttonInitialState === 'on';
+      const onColor = component.data?.buttonStateOnColor || '#00FF00';
+      const offColor = component.data?.buttonStateOffColor || '#FF0000';
+      const stateColor = initialState ? onColor : offColor;
+      
+      fillColor = opacity < 255 
+        ? this.convertColorWithOpacity(stateColor, opacity)
+        : this.convertColor(stateColor);
+    } else {
+      // 普通矩形使用 fillColor
+      fillColor = opacity < 255 
+        ? this.convertColorWithOpacity(component.style?.fillColor, opacity)
+        : this.convertColor(component.style?.fillColor);
+    }
 
     return `${indentStr}${component.id} = gui_rect_create(${parentRef}, "${component.name}", ${x}, ${y}, ${width}, ${height}, ${borderRadius}, ${fillColor});\n`;
   }
@@ -89,8 +103,8 @@ export class RectGenerator implements ComponentCodeGenerator {
     if (buttonMode === 'dual-state') {
       // 双态按键：使用点击事件
       return `${indentStr}gui_obj_add_event_cb(${component.id}, ${component.id}_button_cb, GUI_EVENT_TOUCH_CLICKED, NULL);\n`;
-    } else if (buttonMode === 'blink') {
-      // 闪烁按键：使用按下和松开事件
+    } else if (buttonMode === 'opacity') {
+      // 透明度按键：使用按下和松开事件
       let code = '';
       code += `${indentStr}gui_obj_add_event_cb(${component.id}, ${component.id}_button_press_cb, GUI_EVENT_TOUCH_PRESSED, NULL);\n`;
       code += `${indentStr}gui_obj_add_event_cb(${component.id}, ${component.id}_button_release_cb, GUI_EVENT_TOUCH_RELEASED, NULL);\n`;
@@ -111,8 +125,8 @@ export class RectGenerator implements ComponentCodeGenerator {
 
     if (buttonMode === 'dual-state') {
       return this.generateDualStateCallback(component);
-    } else if (buttonMode === 'blink') {
-      return this.generateBlinkCallback(component);
+    } else if (buttonMode === 'opacity') {
+      return this.generateOpacityCallback(component);
     }
 
     return '';
@@ -173,33 +187,33 @@ void ${component.id}_set_state(bool state)
   }
 
   /**
-   * 生成闪烁按键回调（按下变暗，松开恢复）
+   * 生成透明度按键回调（按下变暗，松开恢复）
    */
-  private generateBlinkCallback(component: Component): string {
-    const minOpacity = component.data?.buttonBlinkOpacityMin || 50;
-    const maxOpacity = component.data?.buttonBlinkOpacityMax || 255;
+  private generateOpacityCallback(component: Component): string {
+    const pressedOpacity = component.data?.buttonPressedOpacity || 128;
+    const releasedOpacity = component.data?.buttonReleasedOpacity || 255;
 
     return `
-// ${component.id} 闪烁按键回调
+// ${component.id} 透明度按键回调
 
-// 按下时变暗
+// 按下时改变透明度
 void ${component.id}_button_press_cb(void *obj, gui_event_t event, void *param)
 {
     GUI_UNUSED(obj);
     GUI_UNUSED(event);
     GUI_UNUSED(param);
     
-    gui_rect_set_opacity((gui_rounded_rect_t *)${component.id}, ${minOpacity});
+    gui_rect_set_opacity((gui_rounded_rect_t *)${component.id}, ${pressedOpacity});
 }
 
-// 松开时恢复
+// 松开时恢复透明度
 void ${component.id}_button_release_cb(void *obj, gui_event_t event, void *param)
 {
     GUI_UNUSED(obj);
     GUI_UNUSED(event);
     GUI_UNUSED(param);
     
-    gui_rect_set_opacity((gui_rounded_rect_t *)${component.id}, ${maxOpacity});
+    gui_rect_set_opacity((gui_rounded_rect_t *)${component.id}, ${releasedOpacity});
 }
 `;
   }

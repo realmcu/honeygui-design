@@ -500,15 +500,25 @@ const zhCN = {
 
   // 按键效果变体
   'Dual-State Button': '双态按键',
-  'Blink Button': '闪烁按键',
+  'Opacity Button': '透明度按键',
+  'Button Effect': '按键效果',
   'Button Mode': '按键模式',
+  'none': '无',
+  'dual-state': '双态',
+  'opacity': '透明度',
+  'Switch between two states on click': '点击时在两种状态间切换',
+  'Change opacity on press/release': '按下和松开时改变透明度',
+  'No button effect': '无按键效果',
+  'on': '开启',
+  'off': '关闭',
+  'State Colors': '状态颜色',
+  'On State': '开启状态',
+  'Off State': '关闭状态',
   'On State Color': '开启状态颜色',
   'Off State Color': '关闭状态颜色',
-  'On State Image': '开启状态图片',
-  'Off State Image': '关闭状态图片',
-  'Blink Min Opacity': '闪烁最小透明度',
-  'Blink Max Opacity': '闪烁最大透明度',
-  'Blink Interval (ms)': '闪烁间隔（毫秒）',
+  'Opacity States': '透明度状态',
+  'Pressed': '按下',
+  'Released': '松开',
 };
 
 export default zhCN;

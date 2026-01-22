@@ -36,12 +36,12 @@ const advancedVariants: Record<string, AdvancedVariant[]> = {
     },
     { 
       type: 'hg_rect', 
-      label: 'Blink Button', 
+      label: 'Opacity Button', 
       icon: '✨',
       preset: {
-        buttonMode: 'blink',
-        buttonBlinkOpacityMin: 50,
-        buttonBlinkOpacityMax: 255
+        buttonMode: 'opacity',
+        buttonPressedOpacity: 128,
+        buttonReleasedOpacity: 255
       }
     },
   ],
@@ -58,34 +58,12 @@ const advancedVariants: Record<string, AdvancedVariant[]> = {
     },
     { 
       type: 'hg_circle', 
-      label: 'Blink Button', 
+      label: 'Opacity Button', 
       icon: '✨',
       preset: {
-        buttonMode: 'blink',
-        buttonBlinkOpacityMin: 50,
-        buttonBlinkOpacityMax: 255
-      }
-    },
-  ],
-  'hg_image': [
-    { 
-      type: 'hg_image', 
-      label: 'Dual-State Button', 
-      icon: '🖼️',
-      preset: {
-        buttonMode: 'dual-state',
-        buttonStateOnImage: '',
-        buttonStateOffImage: ''
-      }
-    },
-    { 
-      type: 'hg_image', 
-      label: 'Blink Button', 
-      icon: '✨',
-      preset: {
-        buttonMode: 'blink',
-        buttonBlinkOpacityMin: 50,
-        buttonBlinkOpacityMax: 255
+        buttonMode: 'opacity',
+        buttonPressedOpacity: 128,
+        buttonReleasedOpacity: 255
       }
     },
   ],
@@ -191,16 +169,6 @@ const componentDefinitions: ComponentDefinition[] = [
     properties: [
       { name: 'src', label: 'Image Path', type: 'string', group: 'data' },
       { name: 'visible', label: 'Visible', type: 'boolean', defaultValue: true, group: 'general' },
-      // 按键效果属性
-      { name: 'buttonMode', label: 'Button Mode', type: 'select', defaultValue: 'none', 
-        options: ['none', 'dual-state', 'blink'], group: 'interaction' },
-      { name: 'buttonStateOnImage', label: 'On State Image', type: 'string', group: 'interaction' },
-      { name: 'buttonStateOffImage', label: 'Off State Image', type: 'string', group: 'interaction' },
-      { name: 'buttonInitialState', label: 'Initial State', type: 'select', defaultValue: 'off', 
-        options: ['on', 'off'], group: 'interaction' },
-      { name: 'buttonBlinkOpacityMin', label: 'Blink Min Opacity', type: 'number', defaultValue: 50, group: 'interaction' },
-      { name: 'buttonBlinkOpacityMax', label: 'Blink Max Opacity', type: 'number', defaultValue: 255, group: 'interaction' },
-      { name: 'buttonBlinkInterval', label: 'Blink Interval (ms)', type: 'number', defaultValue: 500, group: 'interaction' },
     ],
   },
   {
@@ -345,14 +313,13 @@ const componentDefinitions: ComponentDefinition[] = [
       { name: 'gradientType', label: 'Gradient Type', type: 'select', defaultValue: 'radial', options: ['radial', 'angular'], group: 'style' },
       // 按键效果属性
       { name: 'buttonMode', label: 'Button Mode', type: 'select', defaultValue: 'none', 
-        options: ['none', 'dual-state', 'blink'], group: 'interaction' },
+        options: ['none', 'dual-state', 'opacity'], group: 'interaction' },
       { name: 'buttonStateOnColor', label: 'On State Color', type: 'color', defaultValue: '#00FF00', group: 'interaction' },
       { name: 'buttonStateOffColor', label: 'Off State Color', type: 'color', defaultValue: '#FF0000', group: 'interaction' },
       { name: 'buttonInitialState', label: 'Initial State', type: 'select', defaultValue: 'off', 
         options: ['on', 'off'], group: 'interaction' },
-      { name: 'buttonBlinkOpacityMin', label: 'Blink Min Opacity', type: 'number', defaultValue: 50, group: 'interaction' },
-      { name: 'buttonBlinkOpacityMax', label: 'Blink Max Opacity', type: 'number', defaultValue: 255, group: 'interaction' },
-      { name: 'buttonBlinkInterval', label: 'Blink Interval (ms)', type: 'number', defaultValue: 500, group: 'interaction' },
+      { name: 'buttonPressedOpacity', label: 'Pressed Opacity', type: 'number', defaultValue: 128, group: 'interaction' },
+      { name: 'buttonReleasedOpacity', label: 'Released Opacity', type: 'number', defaultValue: 255, group: 'interaction' },
     ],
   },
   {
@@ -368,14 +335,13 @@ const componentDefinitions: ComponentDefinition[] = [
       { name: 'gradientDirection', label: 'Gradient Direction', type: 'select', defaultValue: 'horizontal', options: ['horizontal', 'vertical', 'diagonal_tl_br', 'diagonal_tr_bl'], group: 'style' },
       // 按键效果属性
       { name: 'buttonMode', label: 'Button Mode', type: 'select', defaultValue: 'none', 
-        options: ['none', 'dual-state', 'blink'], group: 'interaction' },
+        options: ['none', 'dual-state', 'opacity'], group: 'interaction' },
       { name: 'buttonStateOnColor', label: 'On State Color', type: 'color', defaultValue: '#00FF00', group: 'interaction' },
       { name: 'buttonStateOffColor', label: 'Off State Color', type: 'color', defaultValue: '#FF0000', group: 'interaction' },
       { name: 'buttonInitialState', label: 'Initial State', type: 'select', defaultValue: 'off', 
         options: ['on', 'off'], group: 'interaction' },
-      { name: 'buttonBlinkOpacityMin', label: 'Blink Min Opacity', type: 'number', defaultValue: 50, group: 'interaction' },
-      { name: 'buttonBlinkOpacityMax', label: 'Blink Max Opacity', type: 'number', defaultValue: 255, group: 'interaction' },
-      { name: 'buttonBlinkInterval', label: 'Blink Interval (ms)', type: 'number', defaultValue: 500, group: 'interaction' },
+      { name: 'buttonPressedOpacity', label: 'Pressed Opacity', type: 'number', defaultValue: 128, group: 'interaction' },
+      { name: 'buttonReleasedOpacity', label: 'Released Opacity', type: 'number', defaultValue: 255, group: 'interaction' },
     ],
   },
   {
