@@ -74,10 +74,10 @@ export class ImageConverter {
         // Auto-detect format
         let pixelFormat: PixelFormat;
         if (format === 'auto') {
-            // PNG8/BMP8（索引色且颜色数 <= 256）优先使用 I8 格式
-            if (indexed && indexed.palette.length <= 256) {
-                pixelFormat = PixelFormat.I8;
-            } else if (hasAlpha) {
+            // Revised logic: Remove automatic I8 detection
+            // If has alpha -> ARGB8888
+            // Otherwise -> RGB565
+            if (hasAlpha) {
                 pixelFormat = PixelFormat.ARGB8888;
             } else {
                 pixelFormat = PixelFormat.RGB565;
