@@ -50,8 +50,10 @@ export class CallbackFileGenerator {
 
   /**
    * 生成回调头文件
+   * @param baseName 设计名称
+   * @param existingCallbacksC 现有的 callbacks.c 文件内容（可选），用于提取自定义函数声明
    */
-  generateHeader(baseName: string): string {
+  generateHeader(baseName: string, existingCallbacksC?: string): string {
     const guardName = `${baseName.toUpperCase()}_CALLBACKS_H`;
     let code = `#ifndef ${guardName}
 #define ${guardName}
@@ -115,11 +117,18 @@ export class CallbackFileGenerator {
       });
     }
 
-    code += `
-/* @protected start custom_declarations */
-// 自定义函数声明
-/* @protected end custom_declarations */
+    // 从 callbacks.c 的保护区提取自定义函数并生成声明
+    if (existingCallbacksC) {
+      const customFunctions = this.extractCustomFunctionDeclarations(existingCallbacksC);
+      if (customFunctions.length > 0) {
+        code += `\n// 自定义函数声明（从 callbacks.c 保护区自动提取）\n`;
+        customFunctions.forEach(declaration => {
+          code += `${declaration};\n`;
+        });
+      }
+    }
 
+    code += `
 #endif // ${guardName}
 `;
 
@@ -264,6 +273,38 @@ export class CallbackFileGenerator {
     }
     
     return functionNames;
+  }
+
+  /**
+   * 从 callbacks.c 的 custom_functions 保护区提取自定义函数声明
+   * 返回函数声明数组（不包含函数体）
+   */
+  private extractCustomFunctionDeclarations(content: string): string[] {
+    const declarations: string[] = [];
+    
+    // 提取 custom_functions 保护区内容
+    const regex = /\/\* @protected start custom_functions \*\/([\s\S]*?)\/\* @protected end custom_functions \*\//;
+    const match = content.match(regex);
+    
+    if (!match || !match[1]) {
+      return declarations;
+    }
+    
+    const protectedContent = match[1];
+    
+    // 匹配函数定义（包括 static）
+    // 支持多种返回类型：void, int, char*, gui_obj_t*, 等
+    const funcRegex = /((?:static\s+)?(?:void|int|char\s*\*|gui_obj_t\s*\*|uint8_t|uint16_t|uint32_t|int8_t|int16_t|int32_t|bool)\s+\w+\s*\([^)]*\))/g;
+    let funcMatch;
+    
+    while ((funcMatch = funcRegex.exec(protectedContent)) !== null) {
+      const declaration = funcMatch[1].trim();
+      // 移除 static 关键字（头文件中不需要）
+      const cleanDeclaration = declaration.replace(/^static\s+/, '');
+      declarations.push(cleanDeclaration);
+    }
+    
+    return declarations;
   }
 
   /**

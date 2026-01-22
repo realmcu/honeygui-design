@@ -72,8 +72,14 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       const callbackHeaderFile = path.join(callbacksDir, `${designName}_callbacks.h`);
       const callbackImplFile = path.join(callbacksDir, `${designName}_callbacks.c`);
       
-      // 回调头文件：每次覆盖（只包含函数声明，不影响用户代码）
-      fs.writeFileSync(callbackHeaderFile, callbackGenerator.generateHeader(designName));
+      // 读取现有的 callbacks.c 内容（如果存在）
+      let existingCallbacksC: string | undefined;
+      if (fs.existsSync(callbackImplFile)) {
+        existingCallbacksC = fs.readFileSync(callbackImplFile, 'utf-8');
+      }
+      
+      // 回调头文件：每次覆盖，自动从 callbacks.c 提取自定义函数声明
+      fs.writeFileSync(callbackHeaderFile, callbackGenerator.generateHeader(designName, existingCallbacksC));
       files.push(callbackHeaderFile);
       
       // 回调实现文件：保护区合并

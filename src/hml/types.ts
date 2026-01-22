@@ -121,6 +121,7 @@ export interface TimerConfig {
   mode: 'preset' | 'custom';  // 动画模式：预设动作或自定义函数
   actions?: TimerAction[];  // 预设动作列表（旧版兼容，单段动画）
   segments?: AnimationSegment[];  // 多段动画列表（新版）
+  segmentsBackup?: AnimationSegment[];  // 预设动作备份（切换到自定义模式时保存，方便切回来）
   callback?: string;  // 自定义回调函数名
   duration?: number;  // 总时间（毫秒）（旧版兼容）
   stopOnComplete?: boolean;  // 到达总时间后是否停止动画

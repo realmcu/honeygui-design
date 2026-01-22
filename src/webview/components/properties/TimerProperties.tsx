@@ -226,7 +226,16 @@ export const TimerProperties: React.FC<TimerPropertiesProps> = ({
                         fontSize: '11px',
                         opacity: timer.mode === 'preset' ? 1 : 0.7,
                       }}
-                      onClick={() => handleUpdateTimer(timer.id, { mode: 'preset', segments: [] })}
+                      onClick={() => {
+                        // 切换到预设模式时，恢复之前保存的预设数据
+                        const updates: Partial<TimerConfig> = { mode: 'preset' };
+                        if (timer.segmentsBackup && timer.segmentsBackup.length > 0) {
+                          updates.segments = timer.segmentsBackup;
+                        } else if (!timer.segments || timer.segments.length === 0) {
+                          updates.segments = [];
+                        }
+                        handleUpdateTimer(timer.id, updates);
+                      }}
                     >
                       {t('Preset Actions')}
                     </button>
@@ -245,12 +254,18 @@ export const TimerProperties: React.FC<TimerPropertiesProps> = ({
                         fontSize: '11px',
                         opacity: timer.mode === 'custom' ? 1 : 0.7,
                       }}
-                      onClick={() =>
-                        handleUpdateTimer(timer.id, {
+                      onClick={() => {
+                        // 切换到自定义模式时，备份当前的预设数据
+                        const updates: Partial<TimerConfig> = {
                           mode: 'custom',
                           callback: timer.callback || `${componentId}_timer_cb`,
-                        })
-                      }
+                        };
+                        // 如果当前有预设数据，备份它
+                        if (timer.segments && timer.segments.length > 0) {
+                          updates.segmentsBackup = timer.segments;
+                        }
+                        handleUpdateTimer(timer.id, updates);
+                      }}
                     >
                       {t('Custom Function')}
                     </button>
