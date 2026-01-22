@@ -11,14 +11,15 @@ export class InputGenerator implements ComponentCodeGenerator {
     const parentRef = context.getParentRef(component);
     const { x, y, width, height } = component.position;
     
-    // 获取占位符文本
+    // 获取占位符文本（需要进行 C 字符串转义）
     const placeholder = component.data?.placeholder || 'Input...';
+    const escapedPlaceholder = this.escapeCString(placeholder);
     
     // 使用 gui_text_create 创建文本组件
     let code = `${indentStr}${component.id} = gui_text_create(${parentRef}, "${component.name}", ${x}, ${y}, ${width}, ${height});\n`;
     
     // 设置占位符文本
-    code += `${indentStr}gui_text_set(${component.id}, (void *)"${placeholder}", "Arial", APP_COLOR_GRAY, strlen("${placeholder}"), ${component.style?.fontSize || 16});\n`;
+    code += `${indentStr}gui_text_set(${component.id}, (void *)"${escapedPlaceholder}", "Arial", APP_COLOR_GRAY, strlen("${escapedPlaceholder}"), ${component.style?.fontSize || 16});\n`;
     
     // 启用输入功能
     code += `${indentStr}gui_text_input_set(${component.id}, true);\n`;
@@ -30,9 +31,10 @@ export class InputGenerator implements ComponentCodeGenerator {
     const indentStr = '    '.repeat(indent);
     let code = '';
 
-    // 如果有初始文本值
+    // 如果有初始文本值（需要进行 C 字符串转义）
     if (component.data?.text) {
-      code += `${indentStr}gui_text_set(${component.id}, (void *)"${component.data.text}", "Arial", APP_COLOR_BLACK, strlen("${component.data.text}"), ${component.style?.fontSize || 16});\n`;
+      const escapedText = this.escapeCString(component.data.text);
+      code += `${indentStr}gui_text_set(${component.id}, (void *)"${escapedText}", "Arial", APP_COLOR_BLACK, strlen("${escapedText}"), ${component.style?.fontSize || 16});\n`;
     }
     
     // 文本颜色
@@ -44,6 +46,19 @@ export class InputGenerator implements ComponentCodeGenerator {
     return code;
   }
   
+  /**
+   * 转义 C 字符串中的特殊字符
+   */
+  private escapeCString(str: string): string {
+    return str
+      .replace(/\\/g, '\\\\')   // 反斜杠必须最先处理
+      .replace(/"/g, '\\"')     // 双引号
+      .replace(/\n/g, '\\n')    // 换行符
+      .replace(/\r/g, '\\r')    // 回车符
+      .replace(/\t/g, '\\t')    // 制表符
+      .replace(/\0/g, '\\0');   // 空字符
+  }
+
   /**
    * 转换颜色值为 gui_rgb() 格式
    */

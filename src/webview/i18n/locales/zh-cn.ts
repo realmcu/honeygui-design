@@ -42,6 +42,7 @@ const zhCN = {
 
   // Property labels
   'Text': '文本',
+  'Display Text': '显示文本',
   'Toggle Mode': '双态模式',
   'On Image': '开启图片',
   'Off Image': '关闭图片',

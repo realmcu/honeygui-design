@@ -36,9 +36,10 @@ export class LabelGenerator implements ComponentCodeGenerator {
     const color = component.style?.color || '#ffffff';
     const rgb = this.colorToRgb(color);
     
-    // 普通标签：使用静态文本
+    // 普通标签：使用静态文本（需要进行 C 字符串转义）
     const staticText = String(component.data?.text ?? '');
-    const text = `"${staticText}"`;
+    const escapedText = this.escapeCString(staticText);
+    const text = `"${escapedText}"`;
     const textLengthExpr = String(this.getUtf8ByteLength(staticText));
 
     // 确定字体类型
@@ -175,6 +176,19 @@ export class LabelGenerator implements ComponentCodeGenerator {
    */
   protected getFontMode(): string {
     return 'FONT_SRC_FILESYS';
+  }
+
+  /**
+   * 转义 C 字符串中的特殊字符
+   */
+  protected escapeCString(str: string): string {
+    return str
+      .replace(/\\/g, '\\\\')   // 反斜杠必须最先处理
+      .replace(/"/g, '\\"')     // 双引号
+      .replace(/\n/g, '\\n')    // 换行符
+      .replace(/\r/g, '\\r')    // 回车符
+      .replace(/\t/g, '\\t')    // 制表符
+      .replace(/\0/g, '\\0');   // 空字符
   }
 
   /**

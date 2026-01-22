@@ -888,7 +888,8 @@ export class BuildCore {
             // 提取 text 属性
             const textMatch = tagContent.match(/text\s*=\s*["']([^"']*)["']/);
             if (textMatch) {
-                config.text = textMatch[1];
+                // 反转义 XML 实体（&lt; &gt; &amp; &quot; &#39;）
+                config.text = this.unescapeXml(textMatch[1]);
             }
             
             // 时间标签：自动添加时间显示所需的字符（已在创建时添加到 characterSets）
@@ -909,6 +910,20 @@ export class BuildCore {
             
             configs.push(config);
         }
+    }
+
+    /**
+     * 反转义 XML 实体
+     * @param text 包含 XML 实体的文本
+     * @returns 反转义后的文本
+     */
+    private unescapeXml(text: string): string {
+        return text
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .replace(/&amp;/g, '&'); // &amp; 必须最后处理
     }
 
     /**

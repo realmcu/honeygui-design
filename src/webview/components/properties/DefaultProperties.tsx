@@ -573,7 +573,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                       .filter(p => p.group === 'style' && p.name !== 'itemWidth' && p.name !== 'itemHeight')
                       .map((property) => (
                         <div key={property.name} className="property-item">
-                          <label>{property.label}</label>
+                          <label>{t(property.label as any)}</label>
                           <PropertyEditor
                             type={property.type as any}
                             value={(component.style as any)?.[property.name]}
@@ -626,7 +626,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                       .filter(p => p.group === 'style' && !['hAlign', 'vAlign', 'letterSpacing', 'lineSpacing', 'wordWrap', 'wordBreak'].includes(p.name))
                       .map((property) => (
                         <div key={property.name} className="property-item">
-                          <label>{property.label}</label>
+                          <label>{t(property.label as any)}</label>
                           <PropertyEditor
                             type={property.type as any}
                             value={(component.style as any)?.[property.name]}
@@ -721,7 +721,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                     .filter(p => p.group === 'style')
                     .map((property) => (
                       <div key={property.name} className="property-item">
-                        <label>{property.label}</label>
+                        <label>{t(property.label as any)}</label>
                         <PropertyEditor
                           type={property.type as any}
                           value={(component.style as any)?.[property.name]}
@@ -825,7 +825,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                   .filter(p => p.group === 'data')
                   .map((property) => (
                     <div key={property.name} className="property-item">
-                      <label>{property.label}</label>
+                      <label>{t(property.label as any)}</label>
                       {property.name === 'src' && component.type === 'hg_image' ? (
                         renderImageProperty(
                           (component.data as any)?.[property.name],
@@ -895,7 +895,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                   .filter(p => p.group === 'general')
                   .map((property) => (
                     <div key={property.name} className="property-item">
-                      <label>{property.label}</label>
+                      <label>{t(property.label as any)}</label>
                       <PropertyEditor
                         type={property.type as any}
                         value={(component.data as any)?.[property.name]}

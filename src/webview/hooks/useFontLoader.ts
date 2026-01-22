@@ -32,9 +32,9 @@ export interface FontLoaderResult {
 }
 
 /**
- * 获取 webview URI
+ * 获取 webview URI（带重试机制）
  */
-function getWebviewUri(fontPath: string): Promise<string> {
+function getWebviewUri(fontPath: string, retryCount: number = 0): Promise<string> {
   const assetsPath = `assets${fontPath}`;
   
   if (uriCache.has(assetsPath)) {
@@ -51,12 +51,24 @@ function getWebviewUri(fontPath: string): Promise<string> {
     
     pendingUriRequests.set(requestId, [resolve]);
     
+    // 超时时间：首次 5 秒，重试时 3 秒
+    const timeout = retryCount === 0 ? 5000 : 3000;
+    
     setTimeout(() => {
       if (pendingUriRequests.has(requestId)) {
         pendingUriRequests.delete(requestId);
-        reject(new Error('URI 转换超时'));
+        
+        // 如果是首次请求且超时，尝试重试一次
+        if (retryCount === 0) {
+          console.warn(`[useFontLoader] URI 转换超时，尝试重试: ${fontPath}`);
+          getWebviewUri(fontPath, 1)
+            .then(resolve)
+            .catch(reject);
+        } else {
+          reject(new Error(`URI 转换超时（已重试 ${retryCount} 次）`));
+        }
       }
-    }, 5000);
+    }, timeout);
     
     if ((window as any).vscodeAPI) {
       (window as any).vscodeAPI.postMessage({
@@ -96,15 +108,18 @@ export function useFontLoader(fontPath: string | undefined): FontLoaderResult {
 
   const loadIdRef = useRef(0);
   const prevFontFamilyRef = useRef<string | undefined>(undefined);
+  const retryCountRef = useRef(0); // 重试计数器
 
   useEffect(() => {
     if (!fontPath) {
       prevFontFamilyRef.current = undefined;
+      retryCountRef.current = 0;
       setResult({ fontFamily: undefined, fontFace: undefined, isLoading: false });
       return;
     }
 
     const currentLoadId = ++loadIdRef.current;
+    retryCountRef.current = 0; // 重置重试计数
 
     // 检查缓存
     const cached = loadedFonts.get(fontPath);
@@ -127,30 +142,49 @@ export function useFontLoader(fontPath: string | undefined): FontLoaderResult {
       isLoading: true 
     }));
 
-    // 获取 URI 并加载字体
-    getWebviewUri(fontPath)
-      .then((webviewUri) => {
-        if (loadIdRef.current !== currentLoadId) return;
-
-        const fontName = `custom-font-${fontPath.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now()}`;
-        const fontFace = new FontFace(fontName, `url(${webviewUri})`);
-
-        return fontFace.load().then((loadedFace) => {
+    // 加载字体的内部函数（支持重试）
+    const loadFont = (retryCount: number = 0) => {
+      // 获取 URI 并加载字体
+      getWebviewUri(fontPath, retryCount)
+        .then((webviewUri) => {
           if (loadIdRef.current !== currentLoadId) return;
 
-          document.fonts.add(loadedFace);
-          loadedFonts.set(fontPath, { fontFamily: fontName, fontFace: loadedFace });
-          prevFontFamilyRef.current = fontName;
-          setResult({ fontFamily: fontName, fontFace: loadedFace, isLoading: false });
+          const fontName = `custom-font-${fontPath.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now()}`;
+          const fontFace = new FontFace(fontName, `url(${webviewUri})`);
+
+          return fontFace.load().then((loadedFace) => {
+            if (loadIdRef.current !== currentLoadId) return;
+
+            document.fonts.add(loadedFace);
+            loadedFonts.set(fontPath, { fontFamily: fontName, fontFace: loadedFace });
+            prevFontFamilyRef.current = fontName;
+            retryCountRef.current = 0;
+            setResult({ fontFamily: fontName, fontFace: loadedFace, isLoading: false });
+          });
+        })
+        .catch((error) => {
+          console.error('[useFontLoader] 加载失败:', fontPath, error, `(尝试 ${retryCount + 1} 次)`);
+          
+          if (loadIdRef.current !== currentLoadId) return;
+          
+          // 如果是首次失败，尝试重试一次（延迟 500ms）
+          if (retryCount === 0 && retryCountRef.current === 0) {
+            retryCountRef.current = 1;
+            console.warn('[useFontLoader] 500ms 后重试加载字体:', fontPath);
+            setTimeout(() => {
+              if (loadIdRef.current === currentLoadId) {
+                loadFont(1);
+              }
+            }, 500);
+          } else {
+            // 加载失败时也保持旧字体
+            setResult(prev => ({ ...prev, isLoading: false }));
+          }
         });
-      })
-      .catch((error) => {
-        console.error('[useFontLoader] 加载失败:', fontPath, error);
-        if (loadIdRef.current === currentLoadId) {
-          // 加载失败时也保持旧字体
-          setResult(prev => ({ ...prev, isLoading: false }));
-        }
-      });
+    };
+
+    // 开始加载
+    loadFont(0);
   }, [fontPath]);
 
   return result;

@@ -86,7 +86,7 @@ const componentDefinitions: ComponentDefinition[] = [
     icon: '🔘',
     defaultSize: { width: 100, height: 32 },
     properties: [
-      { name: 'text', label: 'Text', type: 'string', defaultValue: 'Button', group: 'data' },
+      { name: 'text', label: 'Display Text', type: 'string', defaultValue: 'Button', group: 'data' },
       { name: 'toggleMode', label: 'Toggle Mode', type: 'boolean', defaultValue: false, group: 'data' },
       { name: 'imageOn', label: 'On Image', type: 'string', group: 'data' },
       { name: 'imageOff', label: 'Off Image', type: 'string', group: 'data' },
@@ -101,7 +101,7 @@ const componentDefinitions: ComponentDefinition[] = [
     icon: '🏷️',
     defaultSize: { width: 100, height: 24 },
     properties: [
-      { name: 'text', label: 'Text', type: 'string', defaultValue: 'Label', group: 'data' },
+      { name: 'text', label: 'Display Text', type: 'string', defaultValue: 'Label', group: 'data' },
       { name: 'hAlign', label: 'Horizontal Align', type: 'select', defaultValue: 'LEFT', 
         options: ['LEFT', 'CENTER', 'RIGHT'], group: 'style' },
       { name: 'vAlign', label: 'Vertical Align', type: 'select', defaultValue: 'TOP', 

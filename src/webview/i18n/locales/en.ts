@@ -42,6 +42,7 @@ const en = {
 
   // Property labels
   'Text': 'Text',
+  'Display Text': 'Display Text',
   'Toggle Mode': 'Toggle Mode',
   'On Image': 'On Image',
   'Off Image': 'Off Image',
