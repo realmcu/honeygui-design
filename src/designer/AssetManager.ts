@@ -6,6 +6,7 @@ import * as MP4Box from 'mp4box';
 import { logger } from '../utils/Logger';
 import { ProjectUtils } from '../utils/ProjectUtils';
 import { FontMetricsAnalyzer } from './FontMetricsAnalyzer';
+import { ConversionConfigService } from '../services/ConversionConfigService';
 
 /**
  * 资源管理器 - 处理资源文件的扫描、添加、删除等操作
@@ -42,10 +43,20 @@ export class AssetManager {
             // 递归扫描assets目录
             const assets = this.scanAssetsDirectory(assetsDir, assetsDir);
 
+            // 加载转换配置
+            const configService = ConversionConfigService.getInstance();
+            const conversionConfig = configService.loadConfig(projectRoot);
+
             // 发送资源列表到webview
             this._panel.webview.postMessage({
                 command: 'assetsLoaded',
                 assets
+            });
+
+            // 发送转换配置到webview
+            this._panel.webview.postMessage({
+                command: 'conversionConfigLoaded',
+                config: conversionConfig
             });
         } catch (error) {
             logger.error(`加载资源列表失败: ${error}`);

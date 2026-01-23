@@ -13,7 +13,7 @@ export function getToolsPanelHtml(): string {
         <div class="main-layout">
             <div class="left-panel">
                 <div class="panel-header">
-                    <select class="filter-select" id="filterSelect" onchange="setFilter(this.value)">
+                    <select class="filter-select" id="filterSelect" onchange="setFilter(this.value)" disabled>
                         <option value="all">全部</option>
                         <option value="image">🖼️ 图片</option>
                         <option value="video">🎬 视频</option>
@@ -22,16 +22,16 @@ export function getToolsPanelHtml(): string {
                         <option value="glass">🔮 玻璃</option>
                     </select>
                     <div class="header-buttons">
-                        <button class="icon-btn" onclick="selectFiles()" title="选择文件">📁</button>
-                        <button class="icon-btn" onclick="selectFolder()" title="选择文件夹">📂</button>
+                        <button class="icon-btn" id="selectFilesBtn" onclick="selectFiles()" title="请先设定输出目录" disabled>📁</button>
+                        <button class="icon-btn" id="selectFolderBtn" onclick="selectFolder()" title="请先设定输出目录" disabled>📂</button>
                     </div>
                 </div>
                 <div class="breadcrumb" id="breadcrumb">
                     <span class="breadcrumb-item" onclick="navigateTo(-1)">🏠 根目录</span>
                 </div>
-                <div class="file-grid" id="fileGrid" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+                <div class="file-grid disabled" id="fileGrid" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
                     <div class="file-grid-inner" id="fileGridInner">
-                        <div class="empty-hint">拖拽文件或文件夹到此处</div>
+                        <div class="empty-hint">请先选择输出目录</div>
                     </div>
                 </div>
                 <input type="file" id="fileInput" multiple accept=".png,.jpg,.jpeg,.bmp,.mp4,.avi,.mov,.mkv,.webm,.obj,.gltf,.ttf,.otf,.svg" style="display:none" onchange="handleFileSelect(event)">
@@ -53,8 +53,8 @@ export function getToolsPanelHtml(): string {
         <div class="footer">
             <div class="stats" id="stats">🖼️ 0  🎬 0  📦 0</div>
             <div class="actions">
-                <button onclick="clearAll()">🗑️ 清空</button>
-                <button id="convertBtn" onclick="startConvert()" disabled>▶️ 开始转换</button>
+                <button id="clearBtn" onclick="clearAll()" title="请先设定输出目录" disabled>🗑️ 清空</button>
+                <button id="convertBtn" onclick="startConvert()" title="请先设定输出目录" disabled>▶️ 开始转换</button>
             </div>
         </div>
         <div class="progress-section" id="progressSection" style="display:none">
@@ -90,6 +90,7 @@ h1{font-size:16px;margin-bottom:12px}
 .file-grid{flex:1;overflow-y:auto;padding:8px}
 .file-grid-inner{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px}
 .file-grid.drag-over{background:var(--vscode-list-hoverBackground);outline:2px dashed var(--vscode-focusBorder);outline-offset:-4px}
+.file-grid.disabled{pointer-events:none;opacity:0.6}
 .empty-hint{grid-column:1/-1;color:var(--vscode-descriptionForeground);text-align:center;padding:60px 20px;font-size:13px}
 .grid-item{position:relative;border-radius:4px;overflow:hidden;cursor:pointer;background:var(--vscode-editor-background);border:2px solid transparent;flex-shrink:0}
 .grid-item:hover{border-color:var(--vscode-focusBorder)}
@@ -157,6 +158,7 @@ let outputDir = '';
 let currentPath = [];
 let filterType = 'all';
 const folderSettings = {};
+let conversionConfig = null;  // conversion.json 配置
 
 const IMAGE_EXTS = ['.png','.jpg','.jpeg','.bmp'];
 const VIDEO_EXTS = ['.mp4','.avi','.mov','.mkv','.webm'];
@@ -174,11 +176,72 @@ function getFileType(name) {
     return 'unknown';
 }
 
+// 获取图片的转换配置（从 conversion.json）
+function getImageConversionConfig(relativePath) {
+    if (!conversionConfig) return null;
+    const normalizedPath = (relativePath || '').replace(/\\\\/g, '/').replace(/^\\/+|\\/+$/g, '');
+    return conversionConfig.items[normalizedPath] || null;
+}
+
+// 获取文件夹的转换配置
+function getFolderConversionConfig(folderPath) {
+    if (!conversionConfig) return null;
+    const normalizedPath = (folderPath || '').replace(/\\\\/g, '/').replace(/^\\/+|\\/+$/g, '');
+    return conversionConfig.items[normalizedPath] || null;
+}
+
+// 解析有效配置（处理继承）
+function resolveEffectiveConfig(assetPath) {
+    if (!conversionConfig) {
+        return { format: 'adaptive16', compression: 'none', isInherited: true, inheritedFrom: '默认' };
+    }
+    
+    const normalizedPath = (assetPath || '').replace(/\\\\/g, '/').replace(/^\\/+|\\/+$/g, '');
+    const itemSettings = conversionConfig.items[normalizedPath];
+    
+    // 如果有明确配置且不是 inherit，直接使用
+    if (itemSettings && itemSettings.format && itemSettings.format !== 'inherit') {
+        return { ...itemSettings, isInherited: false };
+    }
+    
+    // 需要继承：查找父级配置
+    const pathParts = normalizedPath.split('/');
+    for (let i = pathParts.length - 1; i >= 0; i--) {
+        const parentPath = pathParts.slice(0, i).join('/');
+        const parentSettings = parentPath ? conversionConfig.items[parentPath] : undefined;
+        
+        if (parentSettings && parentSettings.format && parentSettings.format !== 'inherit') {
+            return { 
+                ...parentSettings, 
+                ...itemSettings,
+                format: parentSettings.format,
+                isInherited: true, 
+                inheritedFrom: parentPath || '根目录' 
+            };
+        }
+    }
+    
+    // 使用默认配置
+    return { 
+        ...conversionConfig.defaultSettings, 
+        ...itemSettings,
+        isInherited: true, 
+        inheritedFrom: '默认设置' 
+    };
+}
+
+// 更新转换配置
+function updateConversionConfig(assetPath, settings) {
+    vscode.postMessage({ type: 'updateConversionConfig', assetPath, settings });
+}
+
 function selectFiles() { 
+    if (!outputDir) return;
     console.log('selectFiles clicked');
     document.getElementById('fileInput').click(); 
 }
 function selectFolder() { 
+    if (!outputDir) return;
     console.log('selectFolder clicked');
     const input = document.getElementById('folderInput');
     console.log('folderInput element:', input);
@@ -187,11 +250,25 @@ function selectFolder() {
 }
 function selectOutputDir() { vscode.postMessage({type:'selectOutputDir'}); }
 
+let inputDirName = '';  // 记录输入目录名称
+
 function handleFileSelect(e) {
     console.log('handleFileSelect triggered');
     const fileList = e.target.files;
     console.log('files:', fileList?.length);
     if (!fileList) return;
+    
+    // 尝试从第一个文件的 webkitRelativePath 提取根目录名
+    const firstFile = fileList[0];
+    if (firstFile && firstFile.webkitRelativePath) {
+        const rootDir = firstFile.webkitRelativePath.split('/')[0];
+        if (rootDir && rootDir !== inputDirName) {
+            inputDirName = rootDir;
+            // 通知后端输入目录名称（用于查找 conversion.json）
+            vscode.postMessage({ type: 'setInputDir', dir: rootDir });
+        }
+    }
+    
     Array.from(fileList).forEach(file => {
         console.log('file:', file.name, 'webkitRelativePath:', file.webkitRelativePath);
         const relativePath = file.webkitRelativePath ? file.webkitRelativePath.split('/').slice(0,-1).join('/') : '';
@@ -200,12 +277,17 @@ function handleFileSelect(e) {
     e.target.value = '';
 }
 
-function handleDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+function handleDragOver(e) { 
+    if (!outputDir) return;
+    e.preventDefault(); 
+    e.currentTarget.classList.add('drag-over'); 
+}
 function handleDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
 
 function handleDrop(e) {
     e.preventDefault();
     e.currentTarget.classList.remove('drag-over');
+    if (!outputDir) return;
     const items = e.dataTransfer.items;
     if (items) {
         Array.from(items).forEach(item => {
@@ -252,7 +334,8 @@ function processFile(file, relativePath) {
             dataReader.onload = (e2) => {
                 const data = Array.from(new Uint8Array(e2.target.result));
                 files.set(id, { id, name: file.name, relativePath, type, data, blobUrl });
-                vscode.postMessage({ type:'addFile', id, name:file.name, relativePath, data });
+                // 复制文件到 origin 文件夹
+                vscode.postMessage({ type:'copyFileToOrigin', id, name:file.name, relativePath, data });
                 renderGrid();
                 updateStats();
             };
@@ -269,7 +352,8 @@ function processFile(file, relativePath) {
     reader.onload = (e) => {
         const data = Array.from(new Uint8Array(e.target.result));
         files.set(id, { id, name: file.name, relativePath, type, data, blobUrl });
-        vscode.postMessage({ type:'addFile', id, name:file.name, relativePath, data });
+        // 复制文件到 origin 文件夹
+        vscode.postMessage({ type:'copyFileToOrigin', id, name:file.name, relativePath, data });
         renderGrid();
         updateStats();
     };
@@ -377,7 +461,7 @@ function enterFolder(name) {
 function renderGrid() {
     const grid = document.getElementById('fileGridInner');
     if (files.size === 0) {
-        grid.innerHTML = '<div class="empty-hint">拖拽文件或文件夹到此处</div>';
+        grid.innerHTML = '<div class="empty-hint">' + (outputDir ? '拖拽文件或文件夹到此处' : '请先选择输出目录') + '</div>';
         return;
     }
     
@@ -397,6 +481,7 @@ function renderGrid() {
         html += '<div class="thumb"><span class="icon">📁</span></div>';
         html += '<span class="count-badge">'+folder.count+'</span>';
         html += '<div class="info" title="'+folder.name+'">'+folder.name+'</div>';
+        html += '<button class="remove-btn" onclick="removeFolder(event,\\''+folderPath+'\\')">✕</button>';
         html += '</div>';
     });
     
@@ -442,12 +527,45 @@ function selectItem(id) {
 
 function removeFile(e, id) {
     e.stopPropagation();
+    const file = files.get(id);
+    if (!file) return;
+    
     const url = blobUrls.get(id);
     if (url) URL.revokeObjectURL(url);
     blobUrls.delete(id);
     files.delete(id);
-    vscode.postMessage({type:'removeFile', id});
+    // 传递文件名和路径，以便后端删除硬盘上的文件
+    vscode.postMessage({type:'removeFile', id, name: file.name, relativePath: file.relativePath});
     if (selectedId === id) { selectedId = null; renderProperties(); }
+    renderGrid();
+    updateStats();
+}
+
+// 删除文件夹
+function removeFolder(e, folderPath) {
+    e.stopPropagation();
+    
+    // 从内存中删除该文件夹下的所有文件
+    const idsToDelete = [];
+    files.forEach((file, id) => {
+        if (file.relativePath === folderPath || file.relativePath.startsWith(folderPath + '/')) {
+            idsToDelete.push(id);
+        }
+    });
+    idsToDelete.forEach(id => {
+        const url = blobUrls.get(id);
+        if (url) URL.revokeObjectURL(url);
+        blobUrls.delete(id);
+        files.delete(id);
+    });
+    
+    // 通知后端删除硬盘上的文件夹
+    vscode.postMessage({type:'removeFolder', folderPath});
+    
+    if (selectedFolder === folderPath || (selectedFolder && selectedFolder.startsWith(folderPath + '/'))) {
+        selectedFolder = null;
+        renderProperties();
+    }
     renderGrid();
     updateStats();
 }
@@ -474,6 +592,7 @@ function updateStats() {
     files.forEach(f => { if(f.type==='image')img++; else if(f.type==='video')vid++; else if(f.type==='model')mod++; else if(f.type==='font')fnt++; else if(f.type==='glass')gls++; });
     document.getElementById('stats').textContent = '🖼️ '+img+'  🎬 '+vid+'  📦 '+mod+'  🔤 '+fnt+'  🔮 '+gls;
     document.getElementById('convertBtn').disabled = !(files.size && outputDir);
+    document.getElementById('clearBtn').disabled = !outputDir || !files.size;
     updateFilterCounts();
 }
 
@@ -498,36 +617,45 @@ function renderProperties() {
         html += '<div class="file-path">🖼️ '+imgCount+'  🎬 '+vidCount+'  📦 '+modCount+'  🔤 '+fntCount+'  🔮 '+glsCount+'</div>';
         
         if (imgCount > 0) {
-            const isYuv = settings.image?.compression === 'yuv';
-            html += '<div class="prop-group"><div class="prop-group-title">🖼️ 图片设置 ('+imgCount+'个)</div>' +
-                '<div class="prop-row"><label>像素格式:</label><select onchange="updateFolderSetting(\\'image\\',\\'format\\',this.value)">' +
-                '<option value="auto"'+(settings.image?.format==='auto'||!settings.image?.format?' selected':'')+'>自动检测</option>' +
-                '<option value="rgb565"'+(settings.image?.format==='rgb565'?' selected':'')+'>RGB565</option>' +
-                '<option value="rgb888"'+(settings.image?.format==='rgb888'?' selected':'')+'>RGB888</option>' +
-                '<option value="argb8888"'+(settings.image?.format==='argb8888'?' selected':'')+'>ARGB8888</option>' +
-                '<option value="argb8565"'+(settings.image?.format==='argb8565'?' selected':'')+'>ARGB8565</option>' +
-                '<option value="a8"'+(settings.image?.format==='a8'?' selected':'')+'>A8 (Alpha通道)</option>' +
-                '<option value="i8"'+(settings.image?.format==='i8'?' selected':'')+'>I8 (索引色)</option>' +
+            // 使用 conversion.json 配置
+            const folderConfig = getFolderConversionConfig(selectedFolder) || {};
+            const effectiveConfig = resolveEffectiveConfig(selectedFolder);
+            const currentFormat = folderConfig.format || 'adaptive16';
+            const currentCompression = folderConfig.compression || 'none';
+            
+            html += '<div class="prop-group"><div class="prop-group-title">🖼️ 图片转换配置 ('+imgCount+'个)</div>' +
+                '<div class="prop-row"><label>目标格式:</label><select onchange="updateFolderImageConfig(\\'format\\',this.value)">' +
+                '<option value="adaptive16"'+(currentFormat==='adaptive16'?' selected':'')+'>自适应16位</option>' +
+                '<option value="adaptive24"'+(currentFormat==='adaptive24'?' selected':'')+'>自适应24位</option>' +
+                '<option value="RGB565"'+(currentFormat==='RGB565'?' selected':'')+'>RGB565</option>' +
+                '<option value="RGB888"'+(currentFormat==='RGB888'?' selected':'')+'>RGB888</option>' +
+                '<option value="ARGB8565"'+(currentFormat==='ARGB8565'?' selected':'')+'>ARGB8565</option>' +
+                '<option value="ARGB8888"'+(currentFormat==='ARGB8888'?' selected':'')+'>ARGB8888</option>' +
                 '</select></div>' +
-                '<div class="prop-row"><label>压缩:</label><select onchange="updateFolderSetting(\\'image\\',\\'compression\\',this.value);renderProperties()">' +
-                '<option value="none"'+(settings.image?.compression==='none'||!settings.image?.compression?' selected':'')+'>不压缩</option>' +
-                '<option value="rle"'+(settings.image?.compression==='rle'?' selected':'')+'>RLE</option>' +
-                '<option value="fastlz"'+(settings.image?.compression==='fastlz'?' selected':'')+'>FastLZ</option>' +
-                '<option value="yuv"'+(settings.image?.compression==='yuv'?' selected':'')+'>YUV</option>' +
-                '</select></div>' +
-                (isYuv ? '<div class="prop-row"><label>采样模式:</label><select onchange="updateFolderSetting(\\'image\\',\\'yuvSampleMode\\',this.value)">' +
-                '<option value="yuv444"'+(settings.image?.yuvSampleMode==='yuv444'?' selected':'')+'>YUV444 (无损)</option>' +
-                '<option value="yuv422"'+(settings.image?.yuvSampleMode==='yuv422'||!settings.image?.yuvSampleMode?' selected':'')+'>YUV422 (推荐)</option>' +
-                '<option value="yuv411"'+(settings.image?.yuvSampleMode==='yuv411'?' selected':'')+'>YUV411 (高压缩)</option>' +
-                '</select></div>' +
-                '<div class="prop-row"><label>模糊位数:</label><select onchange="updateFolderSetting(\\'image\\',\\'yuvBlurBits\\',+this.value)">' +
-                '<option value="0"'+(settings.image?.yuvBlurBits===0||!settings.image?.yuvBlurBits?' selected':'')+'>0 (无模糊)</option>' +
-                '<option value="1"'+(settings.image?.yuvBlurBits===1?' selected':'')+'>1</option>' +
-                '<option value="2"'+(settings.image?.yuvBlurBits===2?' selected':'')+'>2</option>' +
-                '<option value="4"'+(settings.image?.yuvBlurBits===4?' selected':'')+'>4</option>' +
-                '</select></div>' +
-                '<div class="prop-row"><label>叠加FastLZ:</label><input type="checkbox" '+(settings.image?.yuvFastlz?'checked':'')+' onchange="updateFolderSetting(\\'image\\',\\'yuvFastlz\\',this.checked)"></div>' : '') +
-                '</div>';
+                '<div class="prop-row"><label>压缩方式:</label><select onchange="updateFolderImageConfig(\\'compression\\',this.value)">' +
+                '<option value="none"'+(currentCompression==='none'?' selected':'')+'>不压缩</option>' +
+                '<option value="rle"'+(currentCompression==='rle'?' selected':'')+'>RLE</option>' +
+                '<option value="fastlz"'+(currentCompression==='fastlz'?' selected':'')+'>FastLZ</option>' +
+                '<option value="yuv"'+(currentCompression==='yuv'?' selected':'')+'>YUV</option>' +
+                '</select></div>';
+            
+            // YUV 参数
+            if (currentCompression === 'yuv') {
+                const yuvParams = folderConfig.yuvParams || { sampling: 'YUV422', blur: 'none', fastlzSecondary: false };
+                html += '<div class="prop-row"><label>YUV采样:</label><select onchange="updateFolderYuvParam(\\'sampling\\',this.value)">' +
+                    '<option value="YUV444"'+(yuvParams.sampling==='YUV444'?' selected':'')+'>YUV444</option>' +
+                    '<option value="YUV422"'+(yuvParams.sampling==='YUV422'?' selected':'')+'>YUV422</option>' +
+                    '<option value="YUV411"'+(yuvParams.sampling==='YUV411'?' selected':'')+'>YUV411</option>' +
+                    '</select></div>' +
+                    '<div class="prop-row"><label>模糊程度:</label><select onchange="updateFolderYuvParam(\\'blur\\',this.value)">' +
+                    '<option value="none"'+(yuvParams.blur==='none'?' selected':'')+'>无</option>' +
+                    '<option value="1bit"'+(yuvParams.blur==='1bit'?' selected':'')+'>1bit</option>' +
+                    '<option value="2bit"'+(yuvParams.blur==='2bit'?' selected':'')+'>2bit</option>' +
+                    '<option value="4bit"'+(yuvParams.blur==='4bit'?' selected':'')+'>4bit</option>' +
+                    '</select></div>' +
+                    '<div class="prop-row"><label></label><label style="width:auto;display:flex;align-items:center;gap:4px"><input type="checkbox" '+(yuvParams.fastlzSecondary?'checked':'')+' onchange="updateFolderYuvParam(\\'fastlzSecondary\\',this.checked)">FastLZ二次压缩</label></div>';
+            }
+            html += '</div>';
         }
         
         if (vidCount > 0) {
@@ -620,44 +748,47 @@ function renderProperties() {
     if (file.relativePath) html += '<div class="file-path">📁 '+file.relativePath+'</div>';
     
     if (file.type === 'image') {
-        const effectiveFormat = settings.format || inherited.image?.format || 'auto';
-        const effectiveCompression = settings.compression || inherited.image?.compression || 'none';
-        const isInherited = !settings.format && inherited.image?.format;
-        const isCompressionInherited = !settings.compression && inherited.image?.compression;
-        const isYuv = settings.compression === 'yuv' || (!settings.compression && inherited.image?.compression === 'yuv');
-        html += '<div class="prop-group"><div class="prop-group-title">转换设置'+(isInherited?' <span style="color:var(--vscode-descriptionForeground)">(继承自文件夹)</span>':'')+'</div>' +
-            '<div class="prop-row"><label>像素格式:</label><select onchange="updateSetting(\\'format\\',this.value)">' +
-            '<option value=""'+(settings.format===''||!settings.format?' selected':'')+'>继承 ('+(inherited.image?.format||'自动')+')</option>' +
-            '<option value="auto"'+(settings.format==='auto'?' selected':'')+'>自动检测</option>' +
-            '<option value="rgb565"'+(settings.format==='rgb565'?' selected':'')+'>RGB565</option>' +
-            '<option value="rgb888"'+(settings.format==='rgb888'?' selected':'')+'>RGB888</option>' +
-            '<option value="argb8888"'+(settings.format==='argb8888'?' selected':'')+'>ARGB8888</option>' +
-            '<option value="argb8565"'+(settings.format==='argb8565'?' selected':'')+'>ARGB8565</option>' +
-            '<option value="a8"'+(settings.format==='a8'?' selected':'')+'>A8 (Alpha通道)</option>' +
-            '<option value="i8"'+(settings.format==='i8'?' selected':'')+'>I8 (索引色)</option>' +
+        // 使用 conversion.json 配置
+        const imagePath = file.relativePath ? file.relativePath + '/' + file.name : file.name;
+        const imageConfig = getImageConversionConfig(imagePath) || {};
+        const effectiveConfig = resolveEffectiveConfig(imagePath);
+        const currentFormat = imageConfig.format || 'inherit';
+        const currentCompression = imageConfig.compression || effectiveConfig.compression || 'none';
+        const isInherited = !imageConfig.format || imageConfig.format === 'inherit';
+        
+        html += '<div class="prop-group"><div class="prop-group-title">转换配置'+(isInherited?' <span style="color:var(--vscode-descriptionForeground)">(继承自: '+effectiveConfig.inheritedFrom+')</span>':'')+'</div>' +
+            '<div class="prop-row"><label>目标格式:</label><select onchange="updateImageConfig(\\'format\\',this.value)">' +
+            '<option value="inherit"'+(currentFormat==='inherit'?' selected':'')+'>继承 ('+(effectiveConfig.format||'自适应16位')+')</option>' +
+            '<option value="RGB565"'+(currentFormat==='RGB565'?' selected':'')+'>RGB565</option>' +
+            '<option value="RGB888"'+(currentFormat==='RGB888'?' selected':'')+'>RGB888</option>' +
+            '<option value="ARGB8565"'+(currentFormat==='ARGB8565'?' selected':'')+'>ARGB8565</option>' +
+            '<option value="ARGB8888"'+(currentFormat==='ARGB8888'?' selected':'')+'>ARGB8888</option>' +
+            '<option value="I8"'+(currentFormat==='I8'?' selected':'')+'>I8 (索引色)</option>' +
             '</select></div>' +
-            '<div class="prop-row"><label>压缩:</label><select onchange="updateSetting(\\'compression\\',this.value);renderProperties()">' +
-            '<option value=""'+(settings.compression===''||!settings.compression?' selected':'')+'>继承 ('+(inherited.image?.compression||'不压缩')+')</option>' +
-            '<option value="none"'+(settings.compression==='none'?' selected':'')+'>不压缩</option>' +
-            '<option value="rle"'+(settings.compression==='rle'?' selected':'')+'>RLE</option>' +
-            '<option value="fastlz"'+(settings.compression==='fastlz'?' selected':'')+'>FastLZ</option>' +
-            '<option value="yuv"'+(settings.compression==='yuv'?' selected':'')+'>YUV</option>' +
-            '</select></div>' +
-            (isYuv ? '<div class="prop-row"><label>采样模式:</label><select onchange="updateSetting(\\'yuvSampleMode\\',this.value)">' +
-            '<option value=""'+(!settings.yuvSampleMode?' selected':'')+'>继承 ('+(inherited.image?.yuvSampleMode||'YUV422')+')</option>' +
-            '<option value="yuv444"'+(settings.yuvSampleMode==='yuv444'?' selected':'')+'>YUV444 (无损)</option>' +
-            '<option value="yuv422"'+(settings.yuvSampleMode==='yuv422'?' selected':'')+'>YUV422 (推荐)</option>' +
-            '<option value="yuv411"'+(settings.yuvSampleMode==='yuv411'?' selected':'')+'>YUV411 (高压缩)</option>' +
-            '</select></div>' +
-            '<div class="prop-row"><label>模糊位数:</label><select onchange="updateSetting(\\'yuvBlurBits\\',this.value?+this.value:null)">' +
-            '<option value=""'+(settings.yuvBlurBits===undefined||settings.yuvBlurBits===null?' selected':'')+'>继承 ('+(inherited.image?.yuvBlurBits||0)+')</option>' +
-            '<option value="0"'+(settings.yuvBlurBits===0?' selected':'')+'>0 (无模糊)</option>' +
-            '<option value="1"'+(settings.yuvBlurBits===1?' selected':'')+'>1</option>' +
-            '<option value="2"'+(settings.yuvBlurBits===2?' selected':'')+'>2</option>' +
-            '<option value="4"'+(settings.yuvBlurBits===4?' selected':'')+'>4</option>' +
-            '</select></div>' +
-            '<div class="prop-row"><label>叠加FastLZ:</label><input type="checkbox" '+(settings.yuvFastlz?'checked':'')+' onchange="updateSetting(\\'yuvFastlz\\',this.checked)"></div>' : '') +
-            '</div>';
+            '<div class="prop-row"><label>压缩方式:</label><select onchange="updateImageConfig(\\'compression\\',this.value)">' +
+            '<option value="none"'+(currentCompression==='none'?' selected':'')+'>不压缩</option>' +
+            '<option value="rle"'+(currentCompression==='rle'?' selected':'')+'>RLE</option>' +
+            '<option value="fastlz"'+(currentCompression==='fastlz'?' selected':'')+'>FastLZ</option>' +
+            '<option value="yuv"'+(currentCompression==='yuv'?' selected':'')+'>YUV</option>' +
+            '</select></div>';
+        
+        // YUV 参数
+        if (currentCompression === 'yuv') {
+            const yuvParams = imageConfig.yuvParams || effectiveConfig.yuvParams || { sampling: 'YUV422', blur: 'none', fastlzSecondary: false };
+            html += '<div class="prop-row"><label>YUV采样:</label><select onchange="updateImageYuvParam(\\'sampling\\',this.value)">' +
+                '<option value="YUV444"'+(yuvParams.sampling==='YUV444'?' selected':'')+'>YUV444</option>' +
+                '<option value="YUV422"'+(yuvParams.sampling==='YUV422'?' selected':'')+'>YUV422</option>' +
+                '<option value="YUV411"'+(yuvParams.sampling==='YUV411'?' selected':'')+'>YUV411</option>' +
+                '</select></div>' +
+                '<div class="prop-row"><label>模糊程度:</label><select onchange="updateImageYuvParam(\\'blur\\',this.value)">' +
+                '<option value="none"'+(yuvParams.blur==='none'?' selected':'')+'>无</option>' +
+                '<option value="1bit"'+(yuvParams.blur==='1bit'?' selected':'')+'>1bit</option>' +
+                '<option value="2bit"'+(yuvParams.blur==='2bit'?' selected':'')+'>2bit</option>' +
+                '<option value="4bit"'+(yuvParams.blur==='4bit'?' selected':'')+'>4bit</option>' +
+                '</select></div>' +
+                '<div class="prop-row"><label></label><label style="width:auto;display:flex;align-items:center;gap:4px"><input type="checkbox" '+(yuvParams.fastlzSecondary?'checked':'')+' onchange="updateImageYuvParam(\\'fastlzSecondary\\',this.checked)">FastLZ二次压缩</label></div>';
+        }
+        html += '</div>';
     } else if (file.type === 'video') {
         const iv = inherited.video || {};
         html += '<div class="prop-group"><div class="prop-group-title">转换设置</div>' +
@@ -733,6 +864,86 @@ function updateFolderSetting(category, key, value) {
     if (value === null) delete folderSettings[selectedFolder][category][key];
     else folderSettings[selectedFolder][category][key] = value;
     vscode.postMessage({type:'updateFolderSettings', folderPath: selectedFolder, settings: folderSettings[selectedFolder]});
+}
+
+// 更新文件夹的图片转换配置（保存到 conversion.json）
+function updateFolderImageConfig(key, value) {
+    if (!selectedFolder) return;
+    const currentConfig = getFolderConversionConfig(selectedFolder) || {};
+    const newConfig = { ...currentConfig };
+    
+    if (value === null || value === '') {
+        delete newConfig[key];
+    } else {
+        newConfig[key] = value;
+    }
+    
+    // 如果选择 YUV 压缩但没有 yuvParams，添加默认值
+    if (key === 'compression' && value === 'yuv' && !newConfig.yuvParams) {
+        newConfig.yuvParams = { sampling: 'YUV422', blur: 'none', fastlzSecondary: false };
+    }
+    // 如果不是 YUV 压缩，移除 yuvParams
+    if (key === 'compression' && value !== 'yuv') {
+        delete newConfig.yuvParams;
+    }
+    
+    updateConversionConfig(selectedFolder, newConfig);
+    renderProperties();
+}
+
+// 更新文件夹的 YUV 参数
+function updateFolderYuvParam(key, value) {
+    if (!selectedFolder) return;
+    const currentConfig = getFolderConversionConfig(selectedFolder) || {};
+    const yuvParams = currentConfig.yuvParams || { sampling: 'YUV422', blur: 'none', fastlzSecondary: false };
+    yuvParams[key] = value;
+    
+    const newConfig = { ...currentConfig, yuvParams };
+    updateConversionConfig(selectedFolder, newConfig);
+    renderProperties();
+}
+
+// 更新单个图片的转换配置
+function updateImageConfig(key, value) {
+    const file = files.get(selectedId);
+    if (!file || file.type !== 'image') return;
+    
+    const imagePath = file.relativePath ? file.relativePath + '/' + file.name : file.name;
+    const currentConfig = getImageConversionConfig(imagePath) || {};
+    const newConfig = { ...currentConfig };
+    
+    if (value === null || value === '' || value === 'inherit') {
+        delete newConfig[key];
+    } else {
+        newConfig[key] = value;
+    }
+    
+    // 如果选择 YUV 压缩但没有 yuvParams，添加默认值
+    if (key === 'compression' && value === 'yuv' && !newConfig.yuvParams) {
+        newConfig.yuvParams = { sampling: 'YUV422', blur: 'none', fastlzSecondary: false };
+    }
+    // 如果不是 YUV 压缩，移除 yuvParams
+    if (key === 'compression' && value !== 'yuv') {
+        delete newConfig.yuvParams;
+    }
+    
+    updateConversionConfig(imagePath, newConfig);
+    renderProperties();
+}
+
+// 更新单个图片的 YUV 参数
+function updateImageYuvParam(key, value) {
+    const file = files.get(selectedId);
+    if (!file || file.type !== 'image') return;
+    
+    const imagePath = file.relativePath ? file.relativePath + '/' + file.name : file.name;
+    const currentConfig = getImageConversionConfig(imagePath) || {};
+    const yuvParams = currentConfig.yuvParams || { sampling: 'YUV422', blur: 'none', fastlzSecondary: false };
+    yuvParams[key] = value;
+    
+    const newConfig = { ...currentConfig, yuvParams };
+    updateConversionConfig(imagePath, newConfig);
+    renderProperties();
 }
 
 function updateSetting(key, value) {
@@ -955,11 +1166,107 @@ function previewGlassEffect() {
     requestGlassPreview();
 }
 
+// 更新 UI 启用/禁用状态
+function updateUIState() {
+    const hasOutputDir = !!outputDir;
+    const fileGrid = document.getElementById('fileGrid');
+    const selectFilesBtn = document.getElementById('selectFilesBtn');
+    const selectFolderBtn = document.getElementById('selectFolderBtn');
+    const filterSelect = document.getElementById('filterSelect');
+    const clearBtn = document.getElementById('clearBtn');
+    const convertBtn = document.getElementById('convertBtn');
+    
+    // 文件网格区域
+    if (fileGrid) {
+        if (hasOutputDir) {
+            fileGrid.classList.remove('disabled');
+        } else {
+            fileGrid.classList.add('disabled');
+        }
+    }
+    
+    // 按钮状态和提示
+    if (selectFilesBtn) {
+        selectFilesBtn.disabled = !hasOutputDir;
+        selectFilesBtn.title = hasOutputDir ? '选择文件' : '请先设定输出目录';
+    }
+    if (selectFolderBtn) {
+        selectFolderBtn.disabled = !hasOutputDir;
+        selectFolderBtn.title = hasOutputDir ? '选择文件夹' : '请先设定输出目录';
+    }
+    if (filterSelect) filterSelect.disabled = !hasOutputDir;
+    if (clearBtn) {
+        clearBtn.title = hasOutputDir ? '清空所有文件' : '请先设定输出目录';
+    }
+    if (convertBtn) {
+        convertBtn.title = hasOutputDir ? '开始转换' : '请先设定输出目录';
+    }
+    
+    // 更新空提示文本
+    if (files.size === 0) {
+        const gridInner = document.getElementById('fileGridInner');
+        if (gridInner) {
+            gridInner.innerHTML = '<div class="empty-hint">' + (hasOutputDir ? '拖拽文件或文件夹到此处' : '请先选择输出目录') + '</div>';
+        }
+    }
+}
+
 window.addEventListener('message', e => {
     const msg = e.data;
     if (msg.type === 'outputDirSelected') {
         outputDir = msg.dir;
         document.getElementById('outputDirPath').textContent = msg.dir;
+        updateUIState();
+        updateStats();
+    } else if (msg.type === 'conversionConfigLoaded') {
+        // 加载 conversion.json 配置
+        conversionConfig = msg.config;
+        renderProperties();
+    } else if (msg.type === 'clearFilesUI') {
+        // 后端请求清空 UI（不发送消息回后端）
+        blobUrls.forEach(url => URL.revokeObjectURL(url));
+        blobUrls.clear();
+        files.clear();
+        selectedId = null;
+        selectedFolder = null;
+        currentPath = [];
+        conversionConfig = null;
+        Object.keys(folderSettings).forEach(k => delete folderSettings[k]);
+        renderBreadcrumb();
+        renderGrid();
+        updateStats();
+        renderProperties();
+    } else if (msg.type === 'addFileFromBackend') {
+        // 后端发送的文件，添加到前端
+        const { id, name, relativePath, data } = msg;
+        const type = getFileType(name);
+        if (type === 'unknown') return;
+        
+        // 创建 Blob URL 用于预览
+        const uint8Array = new Uint8Array(data);
+        let blobUrl;
+        if (type === 'glass') {
+            const svgBlob = new Blob([uint8Array], { type: 'image/svg+xml' });
+            blobUrl = URL.createObjectURL(svgBlob);
+        } else {
+            const blob = new Blob([uint8Array]);
+            blobUrl = URL.createObjectURL(blob);
+        }
+        blobUrls.set(id, blobUrl);
+        files.set(id, { id, name, relativePath, type, data, blobUrl });
+        renderGrid();
+        updateStats();
+    } else if (msg.type === 'originLoaded') {
+        // origin 文件夹加载完成
+        updateFilterCounts();
+        renderGrid();
+    } else if (msg.type === 'fileDuplicate') {
+        // 文件重复，从前端移除
+        const url = blobUrls.get(msg.id);
+        if (url) URL.revokeObjectURL(url);
+        blobUrls.delete(msg.id);
+        files.delete(msg.id);
+        renderGrid();
         updateStats();
     } else if (msg.type === 'charsetFileSelected') {
         const charsets = getCharsets(currentCharsetIsFolder);

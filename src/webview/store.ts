@@ -4,7 +4,7 @@
  */
 
 import { create } from 'zustand';
-import { Component, ComponentType, DesignerState, VSCodeAPI } from './types';
+import { Component, ComponentType, DesignerState, VSCodeAPI, AssetFile, ConversionConfig, ItemSettings } from './types';
 import { 
   alignComponents, 
   distributeComponents, 
@@ -211,6 +211,13 @@ export interface DesignerStore extends DesignerState {
   // Project configuration
   setProjectConfig: (config: any) => void;
   initializeWithProjectConfig: (config: any) => void;
+
+  // Conversion config (资源转换配置)
+  selectedAsset: AssetFile | null;
+  conversionConfig: ConversionConfig | null;
+  setSelectedAsset: (asset: AssetFile | null) => void;
+  setConversionConfig: (config: ConversionConfig | null) => void;
+  updateAssetConfig: (path: string, settings: ItemSettings) => void;
 }
 
 let vscodeAPI: VSCodeAPI | null = null;
@@ -290,6 +297,8 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   clipboard: null, // 剪贴板
   clipboardMultiple: [], // 多选剪贴板
   isSimulationRunning: false, // 仿真运行状态
+  selectedAsset: null, // 选中的资源（文件夹或图片）
+  conversionConfig: null, // 转换配置
 
   // Actions
   setComponents: (components) => {
@@ -1795,6 +1804,77 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       canvasBackgroundColor: '#3c3c3c',
       editingMode: 'select',
     });
+  },
+
+  // ============ 资源转换配置 ============
+
+  /**
+   * 设置选中的资源（文件夹或图片）
+   * @param asset 资源对象，null 表示取消选中
+   */
+  setSelectedAsset: (asset: AssetFile | null) => {
+    set({ selectedAsset: asset });
+  },
+
+  /**
+   * 设置转换配置
+   * @param config 转换配置对象
+   */
+  setConversionConfig: (config: ConversionConfig | null) => {
+    set({ conversionConfig: config });
+  },
+
+  /**
+   * 更新指定资源路径的配置
+   * @param path 资源路径（相对于 assets 目录）
+   * @param settings 配置设置
+   */
+  updateAssetConfig: (path: string, settings: ItemSettings) => {
+    const state = get();
+    const currentConfig = state.conversionConfig;
+    
+    if (!currentConfig) {
+      // 如果没有配置，创建新配置
+      const newConfig: ConversionConfig = {
+        version: '1.0',
+        defaultSettings: {
+          format: 'adaptive16',
+          compression: 'adaptive'
+        },
+        items: {
+          [path]: settings
+        }
+      };
+      set({ conversionConfig: newConfig });
+      
+      // 通知后端保存配置
+      if (vscodeAPI) {
+        vscodeAPI.postMessage({
+          command: 'saveConversionConfig',
+          config: newConfig
+        });
+      }
+      return;
+    }
+    
+    // 更新现有配置
+    const newConfig: ConversionConfig = {
+      ...currentConfig,
+      items: {
+        ...currentConfig.items,
+        [path]: settings
+      }
+    };
+    
+    set({ conversionConfig: newConfig });
+    
+    // 通知后端保存配置
+    if (vscodeAPI) {
+      vscodeAPI.postMessage({
+        command: 'saveConversionConfig',
+        config: newConfig
+      });
+    }
   },
 }));
 

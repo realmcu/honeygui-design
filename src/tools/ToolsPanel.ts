@@ -7,6 +7,7 @@ import { VideoConverterService } from '../services/VideoConverterService';
 import { Model3DConverterService } from '../services/Model3DConverterService';
 import { FontConverterService } from '../services/FontConverterService';
 import { GlassConverterService } from '../services/GlassConverterService';
+import { ConversionConfigService, ConversionConfig, TargetFormat, YuvBlur, ItemSettings } from '../services/ConversionConfigService';
 import { getToolsPanelHtml } from './ToolsPanelHtml';
 
 interface FileItem {
@@ -35,6 +36,8 @@ export class ToolsPanel {
     private files: Map<string, FileItem> = new Map();
     private folderSettings: Map<string, any> = new Map();
     private outputDir: string = '';
+    private inputDir: string = '';  // 输入目录（用于读取 conversion.json）
+    private conversionConfig: ConversionConfig | null = null;  // 从 conversion.json 加载的配置
 
     private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
         this.panel = panel;
@@ -77,18 +80,35 @@ export class ToolsPanel {
             case 'addFile':
                 this.addFile(message.id, message.name, message.relativePath, message.data);
                 break;
+            case 'copyFileToOrigin':
+                await this.copyFileToOrigin(message.id, message.name, message.relativePath, message.data);
+                break;
             case 'removeFile':
                 this.files.delete(message.id);
+                // 同时删除硬盘上的文件
+                await this.deleteFileFromOrigin(message.id, message.name, message.relativePath);
+                break;
+            case 'removeFolder':
+                // 删除文件夹及其所有内容
+                await this.deleteFolderFromOrigin(message.folderPath);
                 break;
             case 'clearFiles':
                 this.files.clear();
                 this.folderSettings.clear();
+                this.conversionConfig = null;
+                this.inputDir = '';
+                break;
+            case 'setInputDir':
+                this.setInputDir(message.dir);
                 break;
             case 'updateFileSettings':
                 this.updateFileSettings(message.id, message.settings);
                 break;
             case 'updateFolderSettings':
                 this.folderSettings.set(message.folderPath, message.settings);
+                break;
+            case 'updateConversionConfig':
+                await this.updateConversionConfig(message.assetPath, message.settings);
                 break;
             case 'selectOutputDir':
                 await this.selectOutputDir();
@@ -111,6 +131,211 @@ export class ToolsPanel {
         this.files.set(id, { id, name, relativePath, type, data });
     }
 
+    /**
+     * 从 origin 文件夹删除文件
+     */
+    private async deleteFileFromOrigin(id: string, name: string, relativePath: string): Promise<void> {
+        if (!this.outputDir) return;
+
+        const originDir = path.join(this.outputDir, 'origin');
+        const targetDir = relativePath ? path.join(originDir, relativePath) : originDir;
+        const targetPath = path.join(targetDir, name);
+
+        try {
+            if (fs.existsSync(targetPath)) {
+                fs.unlinkSync(targetPath);
+                logger.info(`已从 origin 删除文件: ${targetPath}`);
+
+                // 同时删除 conversion.json 中的配置
+                if (this.conversionConfig) {
+                    const configPath = relativePath ? `${relativePath}/${name}` : name;
+                    const normalizedPath = configPath.replace(/\\/g, '/');
+                    if (this.conversionConfig.items[normalizedPath]) {
+                        delete this.conversionConfig.items[normalizedPath];
+                        this.saveOriginConversionConfig();
+                    }
+                }
+
+                // 检查父目录是否为空，如果为空则删除
+                this.cleanEmptyDirectories(targetDir, originDir);
+            }
+        } catch (error) {
+            logger.error(`从 origin 删除文件失败: ${error}`);
+        }
+    }
+
+    /**
+     * 从 origin 文件夹删除整个文件夹
+     */
+    private async deleteFolderFromOrigin(folderPath: string): Promise<void> {
+        if (!this.outputDir) return;
+
+        const originDir = path.join(this.outputDir, 'origin');
+        const targetPath = path.join(originDir, folderPath);
+
+        try {
+            if (fs.existsSync(targetPath) && fs.statSync(targetPath).isDirectory()) {
+                // 递归删除文件夹
+                fs.rmSync(targetPath, { recursive: true, force: true });
+                logger.info(`已从 origin 删除文件夹: ${targetPath}`);
+
+                // 从内存中删除该文件夹下的所有文件
+                const filesToDelete: string[] = [];
+                this.files.forEach((file, id) => {
+                    if (file.relativePath === folderPath || file.relativePath.startsWith(folderPath + '/')) {
+                        filesToDelete.push(id);
+                    }
+                });
+                filesToDelete.forEach(id => this.files.delete(id));
+
+                // 删除 conversion.json 中该文件夹及其子项的配置
+                if (this.conversionConfig) {
+                    const normalizedFolderPath = folderPath.replace(/\\/g, '/');
+                    const keysToDelete: string[] = [];
+                    Object.keys(this.conversionConfig.items).forEach(key => {
+                        if (key === normalizedFolderPath || key.startsWith(normalizedFolderPath + '/')) {
+                            keysToDelete.push(key);
+                        }
+                    });
+                    if (keysToDelete.length > 0) {
+                        keysToDelete.forEach(key => delete this.conversionConfig!.items[key]);
+                        this.saveOriginConversionConfig();
+                    }
+                }
+
+                // 通知前端刷新
+                this.panel.webview.postMessage({ type: 'folderDeleted', folderPath });
+            }
+        } catch (error) {
+            logger.error(`从 origin 删除文件夹失败: ${error}`);
+        }
+    }
+
+    /**
+     * 清理空目录
+     */
+    private cleanEmptyDirectories(dirPath: string, rootPath: string): void {
+        try {
+            // 不删除根目录
+            if (dirPath === rootPath) return;
+
+            const files = fs.readdirSync(dirPath);
+            if (files.length === 0) {
+                fs.rmdirSync(dirPath);
+                logger.info(`已删除空目录: ${dirPath}`);
+                // 递归检查父目录
+                const parentDir = path.dirname(dirPath);
+                this.cleanEmptyDirectories(parentDir, rootPath);
+            }
+        } catch (error) {
+            // 忽略错误
+        }
+    }
+
+    /**
+     * 复制文件到 origin 文件夹并添加到文件列表
+     */
+    private async copyFileToOrigin(id: string, name: string, relativePath: string, data: number[]): Promise<void> {
+        const type = this.getFileType(name);
+        if (type === 'unknown') return;
+        
+        if (!this.outputDir) {
+            logger.error('输出目录未设置，无法复制文件到 origin');
+            return;
+        }
+
+        const originDir = path.join(this.outputDir, 'origin');
+        
+        // 确保 origin 目录存在
+        if (!fs.existsSync(originDir)) {
+            fs.mkdirSync(originDir, { recursive: true });
+        }
+
+        // 确保子目录存在
+        const targetDir = relativePath ? path.join(originDir, relativePath) : originDir;
+        if (!fs.existsSync(targetDir)) {
+            fs.mkdirSync(targetDir, { recursive: true });
+        }
+
+        // 检查文件是否已存在且内容相同
+        const targetPath = path.join(targetDir, name);
+        const newData = Buffer.from(data);
+        
+        if (fs.existsSync(targetPath)) {
+            const existingData = fs.readFileSync(targetPath);
+            if (existingData.equals(newData)) {
+                // 文件内容完全相同，忽略此次添加
+                logger.info(`文件已存在且内容相同，跳过: ${targetPath}`);
+                this.panel.webview.postMessage({ type: 'fileDuplicate', id, name, relativePath });
+                return;
+            }
+        }
+
+        // 写入文件
+        try {
+            fs.writeFileSync(targetPath, newData);
+            logger.info(`已复制文件到 origin: ${targetPath}`);
+        } catch (error) {
+            logger.error(`复制文件到 origin 失败: ${error}`);
+            return;
+        }
+
+        // 添加到文件列表
+        this.files.set(id, { id, name, relativePath, type, data });
+    }
+
+    /**
+     * 设置输入目录并尝试加载 conversion.json
+     */
+    private setInputDir(dir: string): void {
+        this.inputDir = dir;
+        this.loadConversionConfig();
+    }
+
+    /**
+     * 加载 conversion.json 配置文件
+     * 查找顺序：输入目录 -> 输入目录的父目录（如果输入目录是 assets）
+     */
+    private loadConversionConfig(): void {
+        if (!this.inputDir) {
+            this.conversionConfig = null;
+            return;
+        }
+
+        const configService = ConversionConfigService.getInstance();
+        
+        // 尝试从输入目录加载（假设输入目录就是 assets 目录）
+        let configPath = path.join(this.inputDir, 'conversion.json');
+        if (fs.existsSync(configPath)) {
+            try {
+                this.conversionConfig = configService.loadConfig(path.dirname(this.inputDir));
+                logger.info(`已加载转换配置: ${configPath}`);
+                return;
+            } catch (error) {
+                logger.error(`加载转换配置失败: ${error}`);
+            }
+        }
+
+        // 尝试从输入目录的父目录加载（如果输入目录名为 assets）
+        if (path.basename(this.inputDir).toLowerCase() === 'assets') {
+            const parentDir = path.dirname(this.inputDir);
+            configPath = path.join(parentDir, 'assets', 'conversion.json');
+            if (fs.existsSync(configPath)) {
+                try {
+                    this.conversionConfig = configService.loadConfig(parentDir);
+                    logger.info(`已加载转换配置: ${configPath}`);
+                    return;
+                } catch (error) {
+                    logger.error(`加载转换配置失败: ${error}`);
+                }
+            }
+        }
+
+        // 没有找到配置文件，使用默认值
+        this.conversionConfig = null;
+        logger.info('未找到 conversion.json，将使用默认转换设置');
+    }
+
     private updateFileSettings(id: string, settings: any): void {
         const file = this.files.get(id);
         if (file) file.settings = settings;
@@ -123,7 +348,235 @@ export class ToolsPanel {
         if (result?.[0]) {
             this.outputDir = result[0].fsPath;
             this.panel.webview.postMessage({ type: 'outputDirSelected', dir: this.outputDir });
+            
+            // 尝试在输出目录或其父目录查找 conversion.json
+            this.tryLoadConversionConfigFromOutputDir();
+            
+            // 自动加载 origin 文件夹中的资源
+            await this.loadOriginFolder();
         }
+    }
+
+    /**
+     * 加载 origin 文件夹中的资源
+     * 如果 origin 文件夹不存在则创建
+     */
+    private async loadOriginFolder(): Promise<void> {
+        if (!this.outputDir) return;
+
+        const originDir = path.join(this.outputDir, 'origin');
+        
+        // 如果 origin 文件夹不存在，创建它
+        if (!fs.existsSync(originDir)) {
+            try {
+                fs.mkdirSync(originDir, { recursive: true });
+                logger.info(`已创建 origin 文件夹: ${originDir}`);
+                vscode.window.showInformationMessage(`已创建 origin 文件夹: ${originDir}`);
+            } catch (error) {
+                logger.error(`创建 origin 文件夹失败: ${error}`);
+                return;
+            }
+            // 新创建的文件夹也需要加载默认配置
+            this.loadOriginConversionConfig();
+            return;
+        }
+
+        // 清空当前文件列表（先清空再加载配置，避免配置被清空）
+        this.files.clear();
+        this.folderSettings.clear();
+        this.panel.webview.postMessage({ type: 'clearFilesUI' });
+
+        // 加载 origin 目录下的 conversion.json 配置（在 clearFilesUI 之后）
+        this.loadOriginConversionConfig();
+
+        // 递归扫描 origin 文件夹
+        const filesToLoad: { filePath: string; relativePath: string }[] = [];
+        this.scanDirectory(originDir, '', filesToLoad);
+
+        if (filesToLoad.length === 0) {
+            logger.info('origin 文件夹为空');
+            return;
+        }
+
+        // 加载所有文件
+        for (const { filePath, relativePath } of filesToLoad) {
+            try {
+                const data = fs.readFileSync(filePath);
+                const fileName = path.basename(filePath);
+                const id = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                
+                // 添加到后端
+                this.addFile(id, fileName, relativePath, Array.from(data));
+                
+                // 通知前端添加文件
+                this.panel.webview.postMessage({
+                    type: 'addFileFromBackend',
+                    id,
+                    name: fileName,
+                    relativePath,
+                    data: Array.from(data)
+                });
+            } catch (error) {
+                logger.error(`加载文件失败: ${filePath}, ${error}`);
+            }
+        }
+
+        logger.info(`已从 origin 文件夹加载 ${filesToLoad.length} 个文件`);
+        this.panel.webview.postMessage({ type: 'originLoaded', count: filesToLoad.length });
+    }
+
+    /**
+     * 递归扫描目录
+     */
+    private scanDirectory(dir: string, relativePath: string, results: { filePath: string; relativePath: string }[]): void {
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        
+        for (const entry of entries) {
+            const fullPath = path.join(dir, entry.name);
+            const entryRelativePath = relativePath ? `${relativePath}/${entry.name}` : entry.name;
+            
+            if (entry.isDirectory()) {
+                // 递归扫描子目录，但相对路径不包含文件名
+                this.scanDirectory(fullPath, relativePath ? `${relativePath}/${entry.name}` : entry.name, results);
+            } else if (entry.isFile()) {
+                const type = this.getFileType(entry.name);
+                if (type !== 'unknown') {
+                    results.push({ filePath: fullPath, relativePath });
+                }
+            }
+        }
+    }
+
+    /**
+     * 尝试从输出目录或其父目录加载 conversion.json
+     */
+    private tryLoadConversionConfigFromOutputDir(): void {
+        if (!this.outputDir) return;
+
+        const configService = ConversionConfigService.getInstance();
+        
+        // 尝试多个可能的位置
+        const possiblePaths = [
+            // 输出目录本身（如果输出目录是 assets）
+            path.join(this.outputDir, 'conversion.json'),
+            // 输出目录的父目录（如果输出目录是 build/assets）
+            path.join(path.dirname(this.outputDir), 'assets', 'conversion.json'),
+            // 输出目录的父父目录（如果输出目录是 project/build/assets）
+            path.join(path.dirname(path.dirname(this.outputDir)), 'assets', 'conversion.json'),
+        ];
+
+        for (const configPath of possiblePaths) {
+            if (fs.existsSync(configPath)) {
+                try {
+                    const projectRoot = path.dirname(path.dirname(configPath));
+                    this.conversionConfig = configService.loadConfig(projectRoot);
+                    logger.info(`已加载转换配置: ${configPath}`);
+                    return;
+                } catch (error) {
+                    logger.error(`加载转换配置失败: ${error}`);
+                }
+            }
+        }
+
+        // 没有找到配置文件
+        this.conversionConfig = null;
+        logger.info('未找到 conversion.json，将使用默认转换设置');
+    }
+
+    /**
+     * 加载 origin 目录下的 conversion.json 配置
+     */
+    private loadOriginConversionConfig(): void {
+        if (!this.outputDir) return;
+
+        const originDir = path.join(this.outputDir, 'origin');
+        const configPath = path.join(originDir, 'conversion.json');
+
+        try {
+            if (fs.existsSync(configPath)) {
+                const content = fs.readFileSync(configPath, 'utf-8');
+                this.conversionConfig = JSON.parse(content) as ConversionConfig;
+                logger.info(`已加载 origin 转换配置: ${configPath}`);
+            } else {
+                // 创建默认配置
+                this.conversionConfig = {
+                    version: '1.0',
+                    defaultSettings: {
+                        format: 'adaptive16',
+                        compression: 'none'
+                    },
+                    items: {}
+                };
+                logger.info('origin 目录下无 conversion.json，使用默认配置');
+            }
+            
+            // 发送配置到前端
+            this.panel.webview.postMessage({
+                type: 'conversionConfigLoaded',
+                config: this.conversionConfig
+            });
+        } catch (error) {
+            logger.error(`加载 origin 转换配置失败: ${error}`);
+            this.conversionConfig = null;
+        }
+    }
+
+    /**
+     * 保存 conversion.json 到 origin 目录
+     */
+    private saveOriginConversionConfig(): void {
+        if (!this.outputDir || !this.conversionConfig) return;
+
+        const originDir = path.join(this.outputDir, 'origin');
+        const configPath = path.join(originDir, 'conversion.json');
+
+        try {
+            // 确保 origin 目录存在
+            if (!fs.existsSync(originDir)) {
+                fs.mkdirSync(originDir, { recursive: true });
+            }
+
+            const content = JSON.stringify(this.conversionConfig, null, 2);
+            fs.writeFileSync(configPath, content, 'utf-8');
+            logger.info(`已保存转换配置到: ${configPath}`);
+        } catch (error) {
+            logger.error(`保存转换配置失败: ${error}`);
+        }
+    }
+
+    /**
+     * 更新资源的转换配置
+     */
+    private async updateConversionConfig(assetPath: string, settings: ItemSettings): Promise<void> {
+        if (!this.conversionConfig) {
+            this.conversionConfig = {
+                version: '1.0',
+                defaultSettings: {
+                    format: 'adaptive16',
+                    compression: 'none'
+                },
+                items: {}
+            };
+        }
+
+        const normalizedPath = assetPath.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+
+        if (Object.keys(settings).length === 0) {
+            // 删除配置
+            delete this.conversionConfig.items[normalizedPath];
+        } else {
+            // 更新配置
+            this.conversionConfig.items[normalizedPath] = settings;
+        }
+
+        // 保存到文件
+        this.saveOriginConversionConfig();
+
+        // 通知前端配置已更新
+        this.panel.webview.postMessage({
+            type: 'conversionConfigLoaded',
+            config: this.conversionConfig
+        });
     }
 
     private async selectCharsetFile(charsetIdx: number, charsetType: string): Promise<void> {
@@ -261,11 +714,22 @@ export class ToolsPanel {
     }
 
     private getEffectiveSettings(file: FileItem): any {
+        // 1. 优先使用用户在 UI 中设置的单个文件设置
         if (file.settings && Object.keys(file.settings).length > 0) {
             return file.settings;
         }
         
-        // 查找继承的文件夹设置
+        // 2. 对于图片类型，尝试从 conversion.json 获取配置
+        if (file.type === 'image' && this.conversionConfig) {
+            // 构建完整的图片路径（包含文件名）
+            const imagePath = file.relativePath ? `${file.relativePath}/${file.name}` : file.name;
+            const configSettings = this.getImageSettingsFromConfig(imagePath);
+            if (configSettings) {
+                return configSettings;
+            }
+        }
+        
+        // 3. 查找继承的文件夹设置（UI 中设置的）
         if (file.relativePath) {
             const parts = file.relativePath.split('/');
             for (let i = parts.length; i > 0; i--) {
@@ -278,7 +742,95 @@ export class ToolsPanel {
             }
         }
         
+        // 4. 返回空对象，使用默认值
         return {};
+    }
+
+    /**
+     * 从 conversion.json 配置中获取图片设置
+     */
+    private getImageSettingsFromConfig(relativePath: string): any | null {
+        if (!this.conversionConfig) {
+            return null;
+        }
+
+        const configService = ConversionConfigService.getInstance();
+        const resolvedConfig = configService.resolveEffectiveConfig(relativePath, this.conversionConfig);
+        
+        // 检查图片是否有透明度（用于自适应格式）
+        const file = Array.from(this.files.values()).find(f => f.relativePath === relativePath);
+        const hasAlpha = file ? this.checkImageHasAlpha(Buffer.from(file.data), file.name) : false;
+        
+        // 解析格式（处理自适应格式）
+        let format = resolvedConfig.format;
+        const itemSettings = this.conversionConfig.items[relativePath.replace(/\\/g, '/')];
+        const effectiveFormat = itemSettings?.format || this.conversionConfig.defaultSettings.format || 'adaptive16';
+        
+        if (effectiveFormat === 'adaptive16' || effectiveFormat === 'adaptive24') {
+            format = configService.resolveAdaptiveFormat(effectiveFormat, hasAlpha);
+        }
+        
+        // 构建设置对象
+        const settings: any = {
+            format: format.toLowerCase(),
+            compression: resolvedConfig.compression
+        };
+        
+        // 如果是 YUV 压缩，添加 YUV 参数
+        if (resolvedConfig.compression === 'yuv' && resolvedConfig.yuvParams) {
+            settings.yuvSampleMode = resolvedConfig.yuvParams.sampling.toLowerCase();
+            settings.yuvBlurBits = this.parseYuvBlurBits(resolvedConfig.yuvParams.blur);
+            settings.yuvFastlz = resolvedConfig.yuvParams.fastlzSecondary;
+        }
+        
+        // 如果配置为 adaptive 压缩，暂时使用不压缩
+        if (resolvedConfig.compression === 'adaptive') {
+            settings.compression = 'none';
+        }
+        
+        return settings;
+    }
+
+    /**
+     * 检查图片数据是否包含透明度
+     */
+    private checkImageHasAlpha(data: Buffer, fileName: string): boolean {
+        try {
+            const ext = path.extname(fileName).toLowerCase();
+            if (ext !== '.png') {
+                return false;
+            }
+            
+            if (data.length < 26) {
+                return false;
+            }
+            
+            // PNG 签名检查
+            const pngSignature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+            for (let i = 0; i < 8; i++) {
+                if (data[i] !== pngSignature[i]) {
+                    return false;
+                }
+            }
+            
+            // IHDR chunk 中的 color type 在偏移 25 处
+            const colorType = data[25];
+            return colorType === 4 || colorType === 6;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    /**
+     * 解析 YUV 模糊位数
+     */
+    private parseYuvBlurBits(blur: YuvBlur): number {
+        switch (blur) {
+            case '1bit': return 1;
+            case '2bit': return 2;
+            case '4bit': return 4;
+            default: return 0;
+        }
     }
 
     /**

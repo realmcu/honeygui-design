@@ -437,7 +437,6 @@ const en = {
 
   // AssetsPanel
   'Drag files here': 'Drag files here',
-  'Image compression settings': 'Image compression settings',
 
   // ComponentTree
   'Drag from component library to add': 'Drag from component library to add',
@@ -526,6 +525,29 @@ const en = {
   // Timer animations
   'Run immediately': 'Run immediately',
   'Timer Animations': 'Timer Animations',
+
+  // Conversion Config Panel
+  'selectAssetToConfig': 'Select a folder or image to configure conversion settings',
+  'Target Format': 'Target Format',
+  'Format': 'Format',
+  'formatAdaptive16': 'Adaptive 16bit',
+  'formatAdaptive24': 'Adaptive 24bit',
+  'formatInherit': 'Inherit from parent',
+  'inheritedFrom': 'Inherited from',
+  'defaultSettings': 'Default settings',
+  'Compression': 'Compression',
+  'Compression Method': 'Compression Method',
+  'compressionNone': 'No compression',
+  'compressionRLE': 'RLE',
+  'compressionFastLZ': 'FastLZ',
+  'compressionYUV': 'YUV (lossy)',
+  'compressionAdaptive': 'Adaptive (lossless)',
+  'adaptiveCompressionHint': 'Compares FastLZ, RLE, and no compression, selects smallest',
+  'YUV Parameters': 'YUV Parameters',
+  'Sampling': 'Sampling',
+  'Blur': 'Blur',
+  'blurNone': 'No blur',
+  'FastLZ Secondary Compression': 'FastLZ secondary compression',
 };
 
 export default en;

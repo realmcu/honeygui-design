@@ -437,7 +437,6 @@ const zhCN = {
 
   // AssetsPanel
   'Drag files here': '拖拽文件到此处',
-  'Image compression settings': '图片压缩设置',
 
   // ComponentTree
   'Drag from component library to add': '从组件库拖拽添加组件',
@@ -526,6 +525,29 @@ const zhCN = {
   // Timer animations
   'Run immediately': '立即运行',
   'Timer Animations': '定时动画',
+
+  // 转换配置面板
+  'selectAssetToConfig': '选择文件夹或图片以配置转换设置',
+  'Target Format': '目标格式',
+  'Format': '格式',
+  'formatAdaptive16': '自适应 16bit',
+  'formatAdaptive24': '自适应 24bit',
+  'formatInherit': '继承父文件夹',
+  'inheritedFrom': '继承自',
+  'defaultSettings': '默认设置',
+  'Compression': '压缩',
+  'Compression Method': '压缩方式',
+  'compressionNone': '不压缩',
+  'compressionRLE': 'RLE',
+  'compressionFastLZ': 'FastLZ',
+  'compressionYUV': 'YUV（有损）',
+  'compressionAdaptive': '无损自适应',
+  'adaptiveCompressionHint': '比较 FastLZ、RLE 和不压缩，选择最小的结果',
+  'YUV Parameters': 'YUV 参数',
+  'Sampling': '采样方式',
+  'Blur': '模糊程度',
+  'blurNone': '不模糊',
+  'FastLZ Secondary Compression': 'FastLZ 二次压缩',
 };
 
 export default zhCN;

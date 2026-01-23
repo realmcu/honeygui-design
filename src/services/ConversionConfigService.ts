@@ -1,0 +1,306 @@
+import * as path from 'path';
+import * as fs from 'fs';
+
+/**
+ * 目标格式枚举
+ */
+export type TargetFormat =
+  | 'RGB565'
+  | 'RGB888'
+  | 'ARGB8565'
+  | 'ARGB8888'
+  | 'I8'
+  | 'adaptive16'
+  | 'adaptive24'
+  | 'inherit';
+
+/**
+ * 压缩方式枚举
+ */
+export type CompressionMethod =
+  | 'none'
+  | 'rle'
+  | 'fastlz'
+  | 'yuv'
+  | 'adaptive';
+
+/**
+ * YUV 采样方式
+ */
+export type YuvSampling = 'YUV444' | 'YUV422' | 'YUV411';
+
+/**
+ * YUV 模糊程度
+ */
+export type YuvBlur = 'none' | '1bit' | '2bit' | '4bit';
+
+/**
+ * YUV 压缩参数
+ */
+export interface YuvParams {
+  sampling: YuvSampling;
+  blur: YuvBlur;
+  fastlzSecondary: boolean;
+}
+
+/**
+ * 单个项目（文件夹或图片）的配置
+ */
+export interface ItemSettings {
+  format?: TargetFormat;
+  compression?: CompressionMethod;
+  yuvParams?: YuvParams;
+}
+
+/**
+ * 完整配置文件结构
+ */
+export interface ConversionConfig {
+  version: string;
+  defaultSettings: ItemSettings;
+  items: Record<string, ItemSettings>;
+}
+
+
+/**
+ * 解析后的有效配置（已处理继承）
+ */
+export interface ResolvedConfig {
+  format: Exclude<TargetFormat, 'inherit' | 'adaptive16' | 'adaptive24'>;
+  compression: CompressionMethod;
+  yuvParams?: YuvParams;
+  isInherited: boolean;
+  inheritedFrom?: string;
+}
+
+/**
+ * 默认配置
+ */
+const DEFAULT_CONFIG: ConversionConfig = {
+  version: '1.0',
+  defaultSettings: {
+    format: 'adaptive16',
+    compression: 'adaptive'
+  },
+  items: {}
+};
+
+/**
+ * 默认 YUV 参数
+ */
+const DEFAULT_YUV_PARAMS: YuvParams = {
+  sampling: 'YUV422',
+  blur: 'none',
+  fastlzSecondary: false
+};
+
+/**
+ * 图片转换配置服务
+ * 处理配置文件的读写和继承解析
+ */
+export class ConversionConfigService {
+  private static instance: ConversionConfigService;
+
+  private constructor() {}
+
+  /**
+   * 获取单例实例
+   */
+  static getInstance(): ConversionConfigService {
+    if (!ConversionConfigService.instance) {
+      ConversionConfigService.instance = new ConversionConfigService();
+    }
+    return ConversionConfigService.instance;
+  }
+
+  /**
+   * 获取配置文件路径
+   * @param projectRoot 项目根目录
+   * @returns 配置文件完整路径
+   */
+  getConfigPath(projectRoot: string): string {
+    return path.join(projectRoot, 'assets', 'conversion.json');
+  }
+
+  /**
+   * 加载配置文件
+   * @param projectRoot 项目根目录
+   * @returns 配置对象，如果文件不存在则返回默认配置
+   */
+  loadConfig(projectRoot: string): ConversionConfig {
+    const configPath = this.getConfigPath(projectRoot);
+    
+    try {
+      if (fs.existsSync(configPath)) {
+        const content = fs.readFileSync(configPath, 'utf-8');
+        const config = JSON.parse(content) as ConversionConfig;
+        return this.validateAndMergeConfig(config);
+      }
+    } catch (error) {
+      console.error('Failed to load conversion config:', error);
+    }
+    
+    return { ...DEFAULT_CONFIG, items: {} };
+  }
+
+
+  /**
+   * 保存配置文件
+   * @param projectRoot 项目根目录
+   * @param config 配置对象
+   */
+  saveConfig(projectRoot: string, config: ConversionConfig): void {
+    const configPath = this.getConfigPath(projectRoot);
+    const configDir = path.dirname(configPath);
+    
+    if (!fs.existsSync(configDir)) {
+      fs.mkdirSync(configDir, { recursive: true });
+    }
+    
+    const content = JSON.stringify(config, null, 2);
+    fs.writeFileSync(configPath, content, 'utf-8');
+  }
+
+  /**
+   * 验证并合并配置
+   */
+  private validateAndMergeConfig(config: Partial<ConversionConfig>): ConversionConfig {
+    return {
+      version: config.version || DEFAULT_CONFIG.version,
+      defaultSettings: { ...DEFAULT_CONFIG.defaultSettings, ...config.defaultSettings },
+      items: config.items || {}
+    };
+  }
+
+  /**
+   * 解析有效配置（处理继承）
+   * @param assetPath 资源路径（相对于 assets 目录）
+   * @param config 完整配置对象
+   * @returns 解析后的有效配置
+   */
+  resolveEffectiveConfig(assetPath: string, config: ConversionConfig): ResolvedConfig {
+    const normalizedPath = assetPath.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+    const itemSettings = config.items[normalizedPath];
+    
+    // 如果有明确配置且不是 inherit，直接使用
+    if (itemSettings && itemSettings.format && itemSettings.format !== 'inherit') {
+      return this.buildResolvedConfig(itemSettings, false);
+    }
+    
+    // 需要继承：查找父级配置
+    const pathParts = normalizedPath.split('/');
+    let inheritedFrom: string | undefined;
+    let inheritedSettings: ItemSettings | undefined;
+    
+    for (let i = pathParts.length - 1; i >= 0; i--) {
+      const parentPath = pathParts.slice(0, i).join('/');
+      const parentSettings = parentPath ? config.items[parentPath] : undefined;
+      
+      if (parentSettings && parentSettings.format && parentSettings.format !== 'inherit') {
+        inheritedSettings = parentSettings;
+        inheritedFrom = parentPath || 'root';
+        break;
+      }
+    }
+    
+    // 如果没有找到父级配置，使用默认配置
+    if (!inheritedSettings) {
+      inheritedSettings = config.defaultSettings;
+      inheritedFrom = 'default';
+    }
+    
+    // 合并当前项的部分配置（如果有）
+    const mergedSettings: ItemSettings = {
+      ...inheritedSettings,
+      ...itemSettings,
+      format: inheritedSettings.format
+    };
+    
+    return this.buildResolvedConfig(mergedSettings, true, inheritedFrom);
+  }
+
+
+  /**
+   * 根据图片是否有透明度解析自适应格式
+   * @param format 原始格式设置
+   * @param hasAlpha 图片是否包含透明度
+   * @returns 解析后的具体格式
+   */
+  resolveAdaptiveFormat(
+    format: TargetFormat,
+    hasAlpha: boolean
+  ): Exclude<TargetFormat, 'inherit' | 'adaptive16' | 'adaptive24'> {
+    switch (format) {
+      case 'adaptive16':
+        return hasAlpha ? 'ARGB8565' : 'RGB565';
+      case 'adaptive24':
+        return hasAlpha ? 'ARGB8888' : 'RGB888';
+      case 'inherit':
+        return 'RGB565';
+      default:
+        return format;
+    }
+  }
+
+  /**
+   * 构建解析后的配置对象
+   */
+  private buildResolvedConfig(
+    settings: ItemSettings,
+    isInherited: boolean,
+    inheritedFrom?: string
+  ): ResolvedConfig {
+    const format = settings.format || 'RGB565';
+    const compression = settings.compression || 'none';
+    
+    let resolvedFormat: Exclude<TargetFormat, 'inherit' | 'adaptive16' | 'adaptive24'>;
+    if (format === 'adaptive16' || format === 'adaptive24' || format === 'inherit') {
+      resolvedFormat = 'RGB565';
+    } else {
+      resolvedFormat = format;
+    }
+    
+    const result: ResolvedConfig = {
+      format: resolvedFormat,
+      compression,
+      isInherited
+    };
+    
+    if (inheritedFrom) {
+      result.inheritedFrom = inheritedFrom;
+    }
+    
+    if (compression === 'yuv' && settings.yuvParams) {
+      result.yuvParams = { ...settings.yuvParams };
+    } else if (compression === 'yuv') {
+      result.yuvParams = { ...DEFAULT_YUV_PARAMS };
+    }
+    
+    return result;
+  }
+
+  /**
+   * 更新单个项目的配置
+   */
+  updateItemConfig(projectRoot: string, assetPath: string, settings: ItemSettings): void {
+    const config = this.loadConfig(projectRoot);
+    const normalizedPath = assetPath.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+    
+    if (Object.keys(settings).length === 0) {
+      delete config.items[normalizedPath];
+    } else {
+      config.items[normalizedPath] = settings;
+    }
+    
+    this.saveConfig(projectRoot, config);
+  }
+
+  /**
+   * 获取单个项目的原始配置（不处理继承）
+   */
+  getItemConfig(projectRoot: string, assetPath: string): ItemSettings | undefined {
+    const config = this.loadConfig(projectRoot);
+    const normalizedPath = assetPath.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+    return config.items[normalizedPath];
+  }
+}

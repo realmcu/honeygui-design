@@ -100,6 +100,7 @@ export class DesignerPanel {
         
         // Initialize Message Handler
         this._messageHandler = new MessageHandler(
+            panel,
             this._assetManager,
             this._codeGenerator,
             this._componentManager,

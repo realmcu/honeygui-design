@@ -10,11 +10,13 @@ import { HmlController } from '../hml/HmlController';
 import { CollaborationService } from '../core/CollaborationService';
 import { ProjectUtils } from '../utils/ProjectUtils';
 import { CodeGenerationService } from '../services/CodeGenerationService';
+import { ConversionConfigService, ConversionConfig } from '../services/ConversionConfigService';
 
 /**
  * 消息处理器 - 负责分发来自Webview的消息
  */
 export class MessageHandler {
+    private readonly _panel: vscode.WebviewPanel;
     private readonly _assetManager: AssetManager;
     private readonly _codeGenerator: CodeGenerator;
     private readonly _componentManager: ComponentManager;
@@ -24,12 +26,14 @@ export class MessageHandler {
     private _autoCodeGenTimer: NodeJS.Timeout | null = null;
 
     constructor(
+        panel: vscode.WebviewPanel,
         assetManager: AssetManager,
         codeGenerator: CodeGenerator,
         componentManager: ComponentManager,
         fileManager: FileManager,
         hmlController: HmlController
     ) {
+        this._panel = panel;
         this._assetManager = assetManager;
         this._codeGenerator = codeGenerator;
         this._componentManager = componentManager;
@@ -154,10 +158,6 @@ export class MessageHandler {
 
             case 'loadAssets':
                 this._assetManager.handleLoadAssets(this._fileManager.currentFilePath);
-                break;
-
-            case 'openImageCompressionSettings':
-                this._handleOpenImageCompressionSettings();
                 break;
 
             case 'getFontFiles':
@@ -314,6 +314,14 @@ export class MessageHandler {
 
             case 'browseCharsetFile':
                 this._handleBrowseCharsetFile(message.componentId, message.charsetIndex, message.fileType, message.filters);
+                break;
+
+            case 'loadConversionConfig':
+                this._handleLoadConversionConfig();
+                break;
+
+            case 'saveConversionConfig':
+                this._handleSaveConversionConfig(message.config);
                 break;
                 
             default:
@@ -509,105 +517,6 @@ export class MessageHandler {
     }
 
     /**
-     * 处理打开图片压缩设置
-     */
-    private async _handleOpenImageCompressionSettings(): Promise<void> {
-        try {
-            const currentFile = this._fileManager.currentFilePath;
-            if (!currentFile) {
-                vscode.window.showErrorMessage(vscode.l10n.t('Current HML file not found'));
-                return;
-            }
-
-            const projectRoot = ProjectUtils.findProjectRoot(currentFile);
-            if (!projectRoot) {
-                vscode.window.showErrorMessage(vscode.l10n.t('Cannot find project root (project.json)'));
-                return;
-            }
-
-            const projectJsonPath = path.join(projectRoot, 'project.json');
-            const config = ProjectUtils.loadProjectConfig(projectRoot);
-            const currentCompression = config.imageCompression || {};
-
-            // 显示快速选择菜单
-            const algorithms = [
-                { label: '$(circle-slash) ' + vscode.l10n.t('No compression'), value: 'none', description: vscode.l10n.t('Original size, fastest') },
-                { label: '$(archive) RLE', value: 'rle', description: vscode.l10n.t('Run-length encoding, good for simple images') },
-                { label: '$(zap) FastLZ', value: 'fastlz', description: vscode.l10n.t('Fast compression, balanced') },
-                { label: '$(color-mode) YUV', value: 'yuv', description: vscode.l10n.t('Color space compression, best ratio') }
-            ];
-
-            const currentAlgorithm = currentCompression.enabled ? (currentCompression.algorithm || 'none') : 'none';
-            
-            const selected = await vscode.window.showQuickPick(algorithms, {
-                placeHolder: vscode.l10n.t('Select image compression algorithm (current: {0})', currentAlgorithm),
-                title: vscode.l10n.t('Image Compression Settings')
-            });
-
-            if (!selected) return;
-
-            let newConfig: any = { enabled: selected.value !== 'none', algorithm: selected.value };
-
-            // 如果选择 YUV，显示额外选项
-            if (selected.value === 'yuv') {
-                const sampleModes = [
-                    { label: 'YUV444', value: 'yuv444', description: vscode.l10n.t('Lossless, largest size') },
-                    { label: 'YUV422', value: 'yuv422', description: vscode.l10n.t('Recommended, good balance') },
-                    { label: 'YUV411', value: 'yuv411', description: vscode.l10n.t('High compression, some quality loss') }
-                ];
-                
-                const sampleMode = await vscode.window.showQuickPick(sampleModes, {
-                    placeHolder: vscode.l10n.t('Select YUV sample mode'),
-                    title: vscode.l10n.t('YUV Sample Mode')
-                });
-                
-                if (sampleMode) {
-                    newConfig.yuvSampleMode = sampleMode.value;
-                }
-
-                const blurBits = [
-                    { label: '0', value: 0, description: vscode.l10n.t('No blur') },
-                    { label: '1', value: 1, description: vscode.l10n.t('Slight blur') },
-                    { label: '2', value: 2, description: vscode.l10n.t('Medium blur') },
-                    { label: '4', value: 4, description: vscode.l10n.t('Strong blur') }
-                ];
-
-                const blur = await vscode.window.showQuickPick(blurBits, {
-                    placeHolder: vscode.l10n.t('Select blur bits (reduces size but loses detail)'),
-                    title: vscode.l10n.t('YUV Blur Bits')
-                });
-
-                if (blur) {
-                    newConfig.yuvBlurBits = blur.value;
-                }
-
-                const useFastlz = await vscode.window.showQuickPick([
-                    { label: vscode.l10n.t('No'), value: false },
-                    { label: vscode.l10n.t('Yes'), value: true, description: vscode.l10n.t('Additional FastLZ compression') }
-                ], {
-                    placeHolder: vscode.l10n.t('Apply FastLZ on top of YUV?'),
-                    title: vscode.l10n.t('YUV + FastLZ')
-                });
-
-                if (useFastlz) {
-                    newConfig.yuvFastlz = useFastlz.value;
-                }
-            }
-
-            // 更新配置文件
-            config.imageCompression = newConfig;
-            fs.writeFileSync(projectJsonPath, JSON.stringify(config, null, 2), 'utf-8');
-            
-            const algorithmName = selected.value === 'none' ? vscode.l10n.t('No compression') : selected.value.toUpperCase();
-            vscode.window.showInformationMessage(vscode.l10n.t('Image compression set to: {0}', algorithmName));
-
-        } catch (error) {
-            logger.error(`[MessageHandler] 打开图片压缩设置失败: ${error}`);
-            vscode.window.showErrorMessage(vscode.l10n.t('Failed to open settings: {0}', String(error)));
-        }
-    }
-
-    /**
      * 处理跳转到槽函数
      */
     private async _handleGotoSlot(componentId: string, componentName: string): Promise<void> {
@@ -668,6 +577,74 @@ export class MessageHandler {
         } catch (error) {
             logger.error(`[MessageHandler] 跳转到槽函数失败: ${error}`);
             vscode.window.showErrorMessage(vscode.l10n.t('Jump failed: {0}', String(error)));
+        }
+    }
+
+    /**
+     * 处理加载转换配置
+     * 从配置文件加载转换配置并发送到 webview
+     */
+    private _handleLoadConversionConfig(): void {
+        try {
+            const projectRoot = this._fileManager.currentFilePath
+                ? ProjectUtils.findProjectRoot(this._fileManager.currentFilePath)
+                : undefined;
+
+            if (!projectRoot) {
+                logger.warn('[MessageHandler] 无法加载转换配置：未找到项目根目录');
+                return;
+            }
+
+            const configService = ConversionConfigService.getInstance();
+            const config = configService.loadConfig(projectRoot);
+
+            // 发送配置到 webview
+            this._panel.webview.postMessage({
+                command: 'conversionConfigLoaded',
+                config
+            });
+
+            logger.debug('[MessageHandler] 转换配置已加载并发送到 webview');
+        } catch (error) {
+            logger.error(`[MessageHandler] 加载转换配置失败: ${error}`);
+            // 发送空配置，让前端使用默认值
+            this._panel.webview.postMessage({
+                command: 'conversionConfigLoaded',
+                config: null,
+                error: error instanceof Error ? error.message : String(error)
+            });
+        }
+    }
+
+    /**
+     * 处理保存转换配置
+     * 将配置保存到配置文件
+     * @param config 转换配置对象
+     */
+    private _handleSaveConversionConfig(config: ConversionConfig): void {
+        try {
+            const projectRoot = this._fileManager.currentFilePath
+                ? ProjectUtils.findProjectRoot(this._fileManager.currentFilePath)
+                : undefined;
+
+            if (!projectRoot) {
+                logger.warn('[MessageHandler] 无法保存转换配置：未找到项目根目录');
+                vscode.window.showErrorMessage(vscode.l10n.t('Cannot find project root (project.json)'));
+                return;
+            }
+
+            if (!config) {
+                logger.warn('[MessageHandler] 无法保存转换配置：配置为空');
+                return;
+            }
+
+            const configService = ConversionConfigService.getInstance();
+            configService.saveConfig(projectRoot, config);
+
+            logger.debug('[MessageHandler] 转换配置已保存');
+        } catch (error) {
+            logger.error(`[MessageHandler] 保存转换配置失败: ${error}`);
+            vscode.window.showErrorMessage(vscode.l10n.t('Failed to save conversion config: {0}', error instanceof Error ? error.message : String(error)));
         }
     }
 }

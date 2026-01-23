@@ -122,3 +122,103 @@ export interface AssetFile {
   size: number;
   children?: AssetFile[]; // 文件夹的子项
 }
+
+
+// ============================================
+// 图片转换配置相关类型定义
+// ============================================
+
+/**
+ * 目标格式枚举
+ * - RGB565, RGB888, ARGB8565, ARGB8888: 固定格式
+ * - I8: 8位索引格式（仅用于图片）
+ * - adaptive16: 自适应16bit（有透明度→ARGB8565，无透明度→RGB565）
+ * - adaptive24: 自适应24bit（有透明度→ARGB8888，无透明度→RGB888）
+ * - inherit: 继承父文件夹设置（仅用于图片）
+ */
+export type TargetFormat =
+  | 'RGB565'
+  | 'RGB888'
+  | 'ARGB8565'
+  | 'ARGB8888'
+  | 'I8'
+  | 'adaptive16'
+  | 'adaptive24'
+  | 'inherit';
+
+/**
+ * 压缩方式枚举
+ * - none: 不压缩
+ * - rle: RLE 压缩
+ * - fastlz: FastLZ 压缩
+ * - yuv: YUV 有损压缩
+ * - adaptive: 无损自适应（比较 FastLZ、RLE、不压缩，选择最小）
+ */
+export type CompressionMethod =
+  | 'none'
+  | 'rle'
+  | 'fastlz'
+  | 'yuv'
+  | 'adaptive';
+
+/**
+ * YUV 采样方式
+ */
+export type YuvSampling = 'YUV444' | 'YUV422' | 'YUV411';
+
+/**
+ * YUV 模糊程度
+ */
+export type YuvBlur = 'none' | '1bit' | '2bit' | '4bit';
+
+/**
+ * YUV 压缩参数
+ */
+export interface YuvParams {
+  /** 采样方式 */
+  sampling: YuvSampling;
+  /** 模糊程度 */
+  blur: YuvBlur;
+  /** FastLZ 二次压缩 */
+  fastlzSecondary: boolean;
+}
+
+/**
+ * 单个项目（文件夹或图片）的配置
+ */
+export interface ItemSettings {
+  /** 目标格式 */
+  format?: TargetFormat;
+  /** 压缩方式 */
+  compression?: CompressionMethod;
+  /** YUV 压缩参数（仅当 compression 为 'yuv' 时有效） */
+  yuvParams?: YuvParams;
+}
+
+/**
+ * 完整配置文件结构
+ */
+export interface ConversionConfig {
+  /** 配置文件版本，如 "1.0" */
+  version: string;
+  /** 根目录默认设置 */
+  defaultSettings: ItemSettings;
+  /** 路径 -> 设置映射 */
+  items: Record<string, ItemSettings>;
+}
+
+/**
+ * 解析后的有效配置（已处理继承）
+ */
+export interface ResolvedConfig {
+  /** 解析后的格式（不包含 inherit、adaptive16、adaptive24） */
+  format: Exclude<TargetFormat, 'inherit' | 'adaptive16' | 'adaptive24'>;
+  /** 压缩方式 */
+  compression: CompressionMethod;
+  /** YUV 压缩参数 */
+  yuvParams?: YuvParams;
+  /** 是否继承自父级 */
+  isInherited: boolean;
+  /** 继承来源路径 */
+  inheritedFrom?: string;
+}

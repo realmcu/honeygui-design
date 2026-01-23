@@ -3,6 +3,7 @@ import { useDesignerStore } from './store';
 import DesignerCanvas from './components/DesignerCanvas';
 import ComponentLibrary, { componentDefinitions } from './components/ComponentLibrary';
 import PropertiesPanel from './components/PropertiesPanel';
+import ConversionConfigPanel from './components/ConversionConfigPanel';
 import ComponentTree from './components/ComponentTree';
 import AssetsPanel from './components/AssetsPanel';
 import Toolbar from './components/Toolbar';
@@ -38,6 +39,8 @@ const App: React.FC = () => {
     showViewRelationModal,
     setShowViewRelationModal,
     updateComponent,
+    selectedAsset,
+    setSelectedAsset,
   } = useDesignerStore();
 
   // Tab 切换状态
@@ -507,6 +510,17 @@ const App: React.FC = () => {
           if (typeof message.isRunning === 'boolean') {
             const store = useDesignerStore.getState();
             store.setSimulationRunning(message.isRunning);
+          }
+          break;
+
+        case 'conversionConfigLoaded':
+          // 加载转换配置
+          if (message.config) {
+            const store = useDesignerStore.getState();
+            store.setConversionConfig(message.config);
+            console.log('[Webview App] 转换配置已加载');
+          } else if (message.error) {
+            console.error('[Webview App] 加载转换配置失败:', message.error);
           }
           break;
       }
@@ -1221,6 +1235,10 @@ const App: React.FC = () => {
 
   const handleComponentSelect = (id: string | null) => {
     selectComponent(id);
+    // 当选择画布上的组件时，清除资源选择，显示属性面板
+    if (id !== null) {
+      setSelectedAsset(null);
+    }
   };
 
   // 统一的右键菜单处理（传递给Canvas和Tree）
@@ -1386,9 +1404,13 @@ const App: React.FC = () => {
           </button>
         </div>
 
-        {/* Right Panel - Properties */}
+        {/* Right Panel - Properties or Conversion Config */}
         <div className="right-panel" style={{ width: `${rightPanel.width}px`, display: rightPanel.isCollapsed ? 'none' : 'flex' }}>
-          <PropertiesPanel />
+          {selectedAsset ? (
+            <ConversionConfigPanel />
+          ) : (
+            <PropertiesPanel />
+          )}
         </div>
       </div>
 

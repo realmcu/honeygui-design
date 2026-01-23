@@ -483,3 +483,22 @@
   border-radius: 3px;
 }
 
+
+/* 选中状态样式 */
+.asset-grid-item.selected {
+  background: var(--vscode-list-activeSelectionBackground);
+  outline: 2px solid var(--vscode-focusBorder);
+  outline-offset: -2px;
+}
+
+.asset-grid-item.selected .asset-preview {
+  border-color: var(--vscode-focusBorder);
+}
+
+.asset-grid-item.selected .asset-name {
+  color: var(--vscode-list-activeSelectionForeground);
+}
+
+.asset-grid-item.selected .asset-actions {
+  opacity: 1;
+}

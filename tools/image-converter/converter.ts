@@ -161,7 +161,10 @@ export class ImageConverter {
 
     /**
      * Convert indexed color image to I8 format
-     * 格式：8 byte header + 4 byte info + palette (ABGR8888) + indices
+     * 未压缩格式：8 byte header + 4 byte info + palette (ABGR8888) + indices
+     * 压缩格式：8 byte header + 4 byte info + palette (ABGR8888) + imdc_header + offset_table + compressed_indices
+     * 
+     * 压缩时只压缩 indices 部分，palette 保持不变
      */
     private async convertI8(
         outputPath: string,
@@ -172,8 +175,10 @@ export class ImageConverter {
         const { indices, palette, maxColors } = indexed;
         const colorCount = palette.length;
 
+        const useCompress = this.compressor !== undefined;
+
         // 8 byte GUI header
-        const header = new RGBDataHeader(width, height, PixelFormat.I8, false);
+        const header = new RGBDataHeader(width, height, PixelFormat.I8, useCompress);
         const headerBuffer = header.pack();
 
         // 4 byte info: 高16位 = colorCount - 1, 低16位 = maxColors - 1
@@ -186,15 +191,12 @@ export class ImageConverter {
         const paletteBuffer = Buffer.alloc(colorCount * 4);
         for (let i = 0; i < colorCount; i++) {
             const { r, g, b, a } = palette[i];
-            // ABGR8888: 按照 [A, B, G, R] 的顺序存储
+            // ABGR8888: 按照 [R, G, B, A] 的顺序存储
             paletteBuffer.writeUInt8(r, i * 4);
             paletteBuffer.writeUInt8(g, i * 4 + 1);
             paletteBuffer.writeUInt8(b, i * 4 + 2);
             paletteBuffer.writeUInt8(a, i * 4 + 3);
         }
-
-        // 索引数据
-        const indexBuffer = Buffer.from(indices);
 
         // Write output
         const dir = path.dirname(outputPath);
@@ -202,8 +204,57 @@ export class ImageConverter {
             fs.mkdirSync(dir, { recursive: true });
         }
 
-        const outputBuffer = Buffer.concat([headerBuffer, infoBuffer, paletteBuffer, indexBuffer]);
-        fs.writeFileSync(outputPath, outputBuffer);
+        if (useCompress && this.compressor) {
+            // 压缩索引数据，每像素 1 字节
+            const indexBuffer = Buffer.from(indices);
+            const pixelBytes = 1;  // I8 格式每像素 1 字节
+            const { compressedData, lineOffsets, params } = this.compressor.compress(
+                indexBuffer,
+                width,
+                height,
+                pixelBytes
+            );
+
+            // Build IMDC header
+            const imdc = new IMDCFileHeader(
+                this.compressor.getAlgorithmType(),
+                params.feature_1,
+                params.feature_2,
+                FORMAT_TO_PIXEL_BYTES[PixelFormat.I8],
+                width,
+                height
+            );
+            const imdcBuffer = imdc.pack();
+
+            // Calculate offsets relative to imdc_file_t start
+            const imdcOffset = 12 + (height + 1) * 4;
+
+            // Build offset table
+            const offsetTable = Buffer.alloc((height + 1) * 4);
+            for (let i = 0; i < height; i++) {
+                const relativeOffset = imdcOffset + lineOffsets[i];
+                offsetTable.writeUInt32LE(relativeOffset, i * 4);
+            }
+            // Write end offset
+            const endOffset = imdcOffset + compressedData.length;
+            offsetTable.writeUInt32LE(endOffset, height * 4);
+
+            // Write output: header + info + palette + imdc + offsets + compressed indices
+            const outputBuffer = Buffer.concat([
+                headerBuffer,
+                infoBuffer,
+                paletteBuffer,
+                imdcBuffer,
+                offsetTable,
+                compressedData
+            ]);
+            fs.writeFileSync(outputPath, outputBuffer);
+        } else {
+            // 未压缩：直接写入索引数据
+            const indexBuffer = Buffer.from(indices);
+            const outputBuffer = Buffer.concat([headerBuffer, infoBuffer, paletteBuffer, indexBuffer]);
+            fs.writeFileSync(outputPath, outputBuffer);
+        }
     }
 
     private async loadPNG(filePath: string): Promise<ImageLoadResult> {

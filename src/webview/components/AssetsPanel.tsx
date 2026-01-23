@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trash2, Edit2, Upload, FolderUp, Settings } from 'lucide-react';
+import { Trash2, Edit2, Upload, FolderUp } from 'lucide-react';
 import { AssetFile } from '../types';
 import { useDesignerStore } from '../store';
 import { t } from '../i18n';
@@ -378,6 +378,9 @@ const AssetsPanel: React.FC = () => {
   const [assets, setAssets] = useState<AssetFile[]>([]);
   const activeCategory = useDesignerStore((state) => state.assetCategory);
   const setActiveCategory = useDesignerStore((state) => state.setAssetCategory);
+  const selectedAsset = useDesignerStore((state) => state.selectedAsset);
+  const setSelectedAsset = useDesignerStore((state) => state.setSelectedAsset);
+  const selectComponent = useDesignerStore((state) => state.selectComponent);
   const [editingAsset, setEditingAsset] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
@@ -506,6 +509,48 @@ const AssetsPanel: React.FC = () => {
     setEditingAsset(null);
   };
 
+  /**
+   * 处理资源点击事件
+   * 点击资源时选中该资源，同时清除组件选中状态
+   * Requirements: 7.1, 7.2
+   */
+  const handleAssetClick = (asset: AssetFile, e: React.MouseEvent) => {
+    // 阻止事件冒泡，避免触发其他点击事件
+    e.stopPropagation();
+    
+    // 选中资源
+    setSelectedAsset(asset);
+    
+    // 清除组件选中状态，使右侧面板显示 ConversionConfigPanel
+    selectComponent(null);
+  };
+
+  /**
+   * 处理文件夹点击事件
+   * 单击选中文件夹，双击进入文件夹
+   * Requirements: 7.1
+   */
+  const handleFolderClick = (folder: AssetFile, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    // 选中文件夹
+    setSelectedAsset(folder);
+    
+    // 清除组件选中状态
+    selectComponent(null);
+  };
+
+  /**
+   * 处理文件夹双击事件
+   * 双击进入文件夹
+   */
+  const handleFolderDoubleClick = (folder: AssetFile, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    // 进入文件夹
+    setCurrentPath([...currentPath, folder.name]);
+  };
+
   const renderAssetItem = (asset: AssetFile) => {
     const ext = getFileExt(asset.name);
     const isImage = IMAGE_EXTS.includes(ext) || SVG_EXTS.includes(ext);
@@ -514,12 +559,14 @@ const AssetsPanel: React.FC = () => {
     const isFont = FONT_EXTS.includes(ext);
     const isGlass = GLASS_EXTS.includes(ext);  // 玻璃效果文件
     const isModelDep = MODEL_DEP_EXTS.includes(ext);  // 模型依赖文件（.mtl, .bin）
+    const isSelected = selectedAsset?.path === asset.path;
     
     return (
       <div 
         key={asset.path} 
-        className="asset-grid-item"
+        className={`asset-grid-item${isSelected ? ' selected' : ''}`}
         draggable
+        onClick={(e) => handleAssetClick(asset, e)}
         onDragStart={(e) => {
           e.dataTransfer.setData('asset-path', asset.relativePath || asset.name);
           e.dataTransfer.effectAllowed = 'copy';
@@ -573,11 +620,14 @@ const AssetsPanel: React.FC = () => {
   };
 
   const renderFolderItem = (folder: AssetFile) => {
+    const isSelected = selectedAsset?.path === folder.path;
+    
     return (
       <div 
         key={folder.path} 
-        className="asset-grid-item folder-item"
-        onClick={() => setCurrentPath([...currentPath, folder.name])}
+        className={`asset-grid-item folder-item${isSelected ? ' selected' : ''}`}
+        onClick={(e) => handleFolderClick(folder, e)}
+        onDoubleClick={(e) => handleFolderDoubleClick(folder, e)}
       >
         <div className="asset-preview folder-preview">
           <div className="file-icon" style={{ fontSize: '48px' }}>📁</div>
@@ -717,13 +767,7 @@ const AssetsPanel: React.FC = () => {
         >
           <FolderUp size={16} />
         </button>
-        <button 
-          className="upload-btn" 
-          onClick={() => window.vscodeAPI?.postMessage({ command: 'openImageCompressionSettings' })}
-          title={t('Image compression settings')}
-        >
-          <Settings size={16} />
-        </button>
+
         <input
           ref={fileInputRef}
           type="file"
