@@ -6,6 +6,8 @@
  * - 使用 gui_win_create 而不是 GUI_VIEW_INSTANCE
  * - 支持 blur 效果（gui_win_enable_blur, gui_win_set_blur_degree）
  * - 不支持视图切换功能
+ * 
+ * 句柄类型：gui_obj_t * (在句柄定义时就使用此类型)
  */
 import { Component } from '../../../hml/types';
 import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';
@@ -25,16 +27,23 @@ export class WindowGenerator implements ComponentCodeGenerator {
     
     let code = '';
     
-    // 创建 window
-    code += `${indentStr}gui_win_t *${component.id} = gui_win_create(${parentRef}, "${component.id}", ${x}, ${y}, ${width}, ${height});\n`;
+    // 创建 window（直接使用 gui_obj_t* 类型指针）
+    code += `${indentStr}${component.id} = (gui_obj_t *)gui_win_create(${parentRef}, "${component.id}", ${x}, ${y}, ${width}, ${height});\n`;
     
     // 设置 blur 效果
     if (enableBlur) {
-      code += `${indentStr}gui_win_enable_blur(${component.id}, true);\n`;
-      code += `${indentStr}gui_win_set_blur_degree(${component.id}, ${blurDegree});\n`;
+      code += `${indentStr}gui_win_enable_blur((gui_win_t *)${component.id}, true);\n`;
+      code += `${indentStr}gui_win_set_blur_degree((gui_win_t *)${component.id}, ${blurDegree});\n`;
     }
-    else {
-      code += `${indentStr}GUI_UNUSED(${component.id});\n`;
+    
+    // 设置可见属性（与 hg_image 保持一致）
+    if (component.visible !== undefined) {
+      code += `${indentStr}gui_obj_show(${component.id}, ${component.visible ? 'true' : 'false'});\n`;
+    }
+
+    // 生成定时器绑定代码（在子组件之前）
+    if (context.generateTimerBindings) {
+      code += context.generateTimerBindings(component, indent);
     }
 
     

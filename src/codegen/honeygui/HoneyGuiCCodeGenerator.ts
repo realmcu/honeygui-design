@@ -201,10 +201,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
         if (comp.type === 'hg_list') {
           code += `extern gui_list_t *${comp.id};\n`;
         }
-        // window 控件使用 gui_win_t * 类型
-        else if (comp.type === 'hg_window') {
-          code += `extern gui_win_t *${comp.id};\n`;
-        }
+        // window 控件使用 gui_obj_t * 类型（与其他组件一致）
         else {
           code += `extern gui_obj_t *${comp.id};\n`;
         }
@@ -265,10 +262,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
         if (comp.type === 'hg_list') {
           code += `gui_list_t *${comp.id} = NULL;\n`;
         }
-        // window 控件使用 gui_win_t * 类型
-        else if (comp.type === 'hg_window') {
-          code += `gui_win_t *${comp.id} = NULL;\n`;
-        }
+        // window 控件使用 gui_obj_t * 类型（与其他组件一致）
         else {
           code += `gui_obj_t *${comp.id} = NULL;\n`;
         }
@@ -553,7 +547,8 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
           return '(gui_obj_t *)view';
         }
         return component.parent;
-      }
+      },
+      generateTimerBindings: this.generateTimerBindings.bind(this)
     };
   }
 

@@ -71,7 +71,7 @@ export interface ComponentStyle {
  * 定时动画动作类型
  */
 export interface TimerAction {
-  type: 'size' | 'position' | 'opacity' | 'rotation' | 'scale' | 'switchView' | 'changeImage';
+  type: 'size' | 'position' | 'opacity' | 'rotation' | 'scale' | 'switchView' | 'changeImage' | 'visibility';
   // 大小动作
   fromW?: number;
   fromH?: number;
@@ -99,6 +99,8 @@ export interface TimerAction {
   switchInStyle?: string;    // 进入动画
   // 更换图片动作（仅 hg_image）
   imagePath?: string;        // 图片路径
+  // 可见性动作
+  visible?: boolean;         // 是否可见（true=显示，false=隐藏）
 }
 
 /**

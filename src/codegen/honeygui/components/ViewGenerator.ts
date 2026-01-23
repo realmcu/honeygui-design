@@ -52,6 +52,14 @@ export class ViewGenerator implements ComponentCodeGenerator {
     // 设置透明度
     code += `${indentStr}    // 设置透明度\n`;
     code += `${indentStr}    gui_view_set_opacity(view, ${opacity});\n`;
+    
+    // 为 hg_view 自己的定时器生成绑定代码（放在设置函数之后）
+    const viewTimerBindings = this.generateViewTimerBindings(component, indent + 1);
+    if (viewTimerBindings.trim()) {
+      code += '\n';
+      code += viewTimerBindings;
+    }
+    
     code += '\n';
     
     // 注册视图切换事件
@@ -108,9 +116,6 @@ export class ViewGenerator implements ComponentCodeGenerator {
         code += `${indentStr}    gui_obj_create_timer(GUI_BASE(${labelId}), ${interval}, true, ${labelId}_time_update_cb);\n`;
       });
     }
-    
-    // 注意：用户配置的定时器现在在 HoneyGuiCCodeGenerator 中为每个组件创建后立即绑定
-    // 不再在 switch_in 中统一绑定
     
     code += `${indentStr}}\n`;
     
@@ -277,5 +282,50 @@ export class ViewGenerator implements ComponentCodeGenerator {
           args: 't->tm_hour, t->tm_min, t->tm_sec'
         };
     }
+  }
+
+  /**
+   * 为 hg_view 组件生成定时器绑定代码
+   * 使用函数入参 view 而不是组件名称
+   */
+  private generateViewTimerBindings(component: Component, indent: number): string {
+    const indentStr = '    '.repeat(indent);
+    const timers = component.data?.timers;
+    
+    if (!timers || !Array.isArray(timers) || timers.length === 0) {
+      return '';
+    }
+
+    let code = '';
+    const name = component.name;
+    
+    // 过滤出启用的定时器
+    const enabledTimers = timers.filter((timer: any) => timer.enabled !== false);
+    
+    if (enabledTimers.length === 0) {
+      return '';
+    }
+
+    code += `${indentStr}// 创建定时器\n`;
+    
+    enabledTimers.forEach((timer: any, index: number) => {
+      const interval = timer.interval || 1000;
+      const reload = timer.reload !== false;
+      
+      // 确定回调函数名
+      let callbackName: string;
+      if (timer.mode === 'custom' && timer.callback) {
+        callbackName = timer.callback;
+      } else {
+        // preset 模式或没有指定回调函数，使用自动生成的名称
+        callbackName = `${name}_timer_${index}_cb`;
+      }
+      
+      // 使用 view 作为变量名（转换为 gui_obj_t*）
+      code += `${indentStr}gui_obj_create_timer((gui_obj_t *)view, ${interval}, ${reload ? 'true' : 'false'}, ${callbackName});\n`;
+      code += `${indentStr}gui_obj_start_timer((gui_obj_t *)view);\n`;
+    });
+
+    return code;
   }
 }

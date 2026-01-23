@@ -816,9 +816,9 @@ void ${callback}(void *obj)\n{\n`;
         code += `        // 无动作，仅等待\n`;
         code += `    }\n`;
       } else {
-        // 检查是否所有动作都不需要段内计数器（跳转界面、更换图片等）
+        // 检查是否所有动作都不需要段内计数器（跳转界面、更换图片、设置可见性等）
         const allNoSegCounter = actions.every((action: any) => 
-          action.type === 'switchView' || action.type === 'changeImage'
+          action.type === 'switchView' || action.type === 'changeImage' || action.type === 'visibility'
         );
         
         // 有动作的段
@@ -870,7 +870,13 @@ void ${callback}(void *obj)\n{\n`;
     let code = '';
     const progressExpr = hasDelay ? `(${cntVar} - ${waitVar}) / ${maxVar}` : `${cntVar} / ${maxVar}`;
     
-    if (action.type === 'changeImage') {
+    if (action.type === 'visibility') {
+      // 设置可见性动作
+      const visible = action.visible !== false; // 默认为 true
+      code += `    // 设置可见性: ${visible ? '显示' : '隐藏'}\n`;
+      code += `    gui_obj_show(target, ${visible ? 'true' : 'false'});\n`;
+      code += `    \n`;
+    } else if (action.type === 'changeImage') {
       // 更换图片动作（仅支持 hg_image）
       let imagePath = action.imagePath || '';
       // 去掉 assets/ 前缀，只保留后面的路径

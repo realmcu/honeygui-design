@@ -53,28 +53,12 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
   };
 
   const handleSelectImagePath = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.png,.jpg,.jpeg,.gif,.bmp,.svg,.webp';
-    input.onchange = (e: Event) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const arrayBuffer = event.target?.result as ArrayBuffer;
-        const uint8Array = new Uint8Array(arrayBuffer);
-        window.vscodeAPI?.postMessage({
-          command: 'saveImageToAssets',
-          fileName: file.name,
-          fileData: Array.from(uint8Array),
-          relativePath: '',
-          componentId: component.id
-        });
-      };
-      reader.readAsArrayBuffer(file);
-    };
-    input.click();
+    // 直接使用后端的 selectImagePath 命令，让后端处理路径检测和复制
+    window.vscodeAPI?.postMessage({
+      command: 'selectImagePath',
+      componentId: component.id,
+      propertyName: 'src'
+    });
   };
 
   const renderImageProperty = (value: any, onChange: (value: any) => void) => {

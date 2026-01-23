@@ -571,14 +571,14 @@ export class AssetManager {
     /**
      * 处理选择图片路径
      */
-    public async handleSelectImagePath(componentId: string, propertyName: string | undefined, currentFilePath: string | undefined): Promise<void> {
+    public async handleSelectImagePath(componentId: string | undefined, propertyName: string | undefined, callbackId: string | undefined, currentFilePath: string | undefined): Promise<void> {
         try {
             const options: vscode.OpenDialogOptions = {
                 canSelectFiles: true,
                 canSelectFolders: false,
                 canSelectMany: false,
                 filters: {
-                    'Images': ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'webp']
+                    'Images': ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'webp', 'bin']
                 },
                 openLabel: '选择图片'
             };
@@ -640,14 +640,27 @@ export class AssetManager {
                 // 获取图片尺寸
                 const imageSize = this.getImageSize(targetPath);
                 
-                // 发送相对路径到webview
-                this._panel.webview.postMessage({
-                    command: 'updateImagePath',
-                    componentId: componentId,
-                    propertyName: propertyName || 'src',
-                    path: relativePath,
-                    imageSize
-                });
+                // 根据不同的调用场景发送不同的消息
+                if (callbackId) {
+                    // 用于定时器动作等需要回调的场景
+                    this._panel.webview.postMessage({
+                        command: 'imageSaved',
+                        callbackId: callbackId,
+                        path: relativePath
+                    });
+                } else if (componentId) {
+                    // 用于更新组件属性的场景
+                    this._panel.webview.postMessage({
+                        command: 'updateImagePath',
+                        componentId: componentId,
+                        propertyName: propertyName || 'src',
+                        path: relativePath,
+                        imageSize
+                    });
+                }
+                
+                // 重新加载资源列表
+                this.handleLoadAssets(currentFilePath);
             }
         } catch (error) {
             logger.error(`[AssetManager] 选择图片失败: ${error}`);

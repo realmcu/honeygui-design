@@ -265,6 +265,8 @@ const en = {
   'Total Duration': 'Total Duration',
   'actions': 'actions',
   'Switch View': 'Switch View',
+  'Set Visibility': 'Set Visibility',
+  'Visibility': 'Visibility',
   'Check Release Area': 'Check Release Area',
   'General': 'General',
   'Data': 'Data',
@@ -520,6 +522,10 @@ const en = {
   'Opacity States': 'Opacity States',
   'Pressed': 'Pressed',
   'Released': 'Released',
+  
+  // Timer animations
+  'Run immediately': 'Run immediately',
+  'Timer Animations': 'Timer Animations',
 };
 
 export default en;

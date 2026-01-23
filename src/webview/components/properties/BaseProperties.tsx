@@ -6,7 +6,6 @@ import { validateComponentId } from '../../utils/validation';
 import { useDesignerStore } from '../../store';
 import { t } from '../../i18n';
 import { TimerAction, TimerConfig } from '../../../hml/types';
-import { TimerProperties } from './TimerProperties';
 
 interface BasePropertiesProps extends PropertyPanelProps {
   disableSize?: boolean;
@@ -250,21 +249,6 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
           </div>
         </div>
       </div>
-
-      {/* Timer Configuration - 使用新的 TimerProperties 组件 */}
-      <TimerProperties
-        componentId={component.id}
-        componentType={component.type}
-        timers={component.data?.timers || []}
-        onUpdate={(timers) => {
-          onUpdate({
-            data: {
-              ...component.data,
-              timers,
-            },
-          });
-        }}
-      />
 
       {/* Visibility and State */}
       <div className="property-group">

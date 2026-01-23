@@ -132,6 +132,9 @@ export const TimerProperties: React.FC<TimerPropertiesProps> = ({
                   onClick={(e) => e.stopPropagation()}
                   style={{ cursor: 'pointer' }}
                 />
+                <span style={{ fontSize: '11px', opacity: 0.7, whiteSpace: 'nowrap' }}>
+                  {t('Run immediately')}
+                </span>
                 <input
                   type="text"
                   value={timer.name || ''}
@@ -569,7 +572,7 @@ const TimerActionEditor: React.FC<{
         <select
           value={action.type}
           onChange={(e) => {
-            const newType = e.target.value as 'size' | 'position' | 'opacity' | 'rotation' | 'scale' | 'switchView' | 'changeImage';
+            const newType = e.target.value as 'size' | 'position' | 'opacity' | 'rotation' | 'scale' | 'switchView' | 'changeImage' | 'visibility';
             const newAction: TimerAction = { type: newType };
             if (newType === 'size') {
               newAction.fromW = 0;
@@ -598,6 +601,8 @@ const TimerActionEditor: React.FC<{
               newAction.switchInStyle = 'SWITCH_IN_FROM_RIGHT_USE_TRANSLATION';
             } else if (newType === 'changeImage') {
               newAction.imagePath = '';
+            } else if (newType === 'visibility') {
+              newAction.visible = true;
             }
             onUpdate(newAction);
           }}
@@ -617,6 +622,7 @@ const TimerActionEditor: React.FC<{
           {componentType === 'hg_image' && <option value="scale">{t('Adjust Scale')}</option>}
           {componentType === 'hg_image' && <option value="changeImage">{t('Change Image')}</option>}
           <option value="switchView">{t('Switch View')}</option>
+          <option value="visibility">{t('Set Visibility')}</option>
         </select>
         <button
           onClick={onDelete}
@@ -635,6 +641,30 @@ const TimerActionEditor: React.FC<{
       </div>
 
       {/* 动作参数 */}
+      {action.type === 'visibility' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div>
+            <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('Visibility')}</label>
+            <select
+              value={action.visible ? 'true' : 'false'}
+              onChange={(e) => onUpdate({ visible: e.target.value === 'true' })}
+              style={{
+                width: '100%',
+                padding: '3px',
+                backgroundColor: 'var(--vscode-input-background)',
+                color: 'var(--vscode-input-foreground)',
+                border: '1px solid var(--vscode-input-border)',
+                borderRadius: '2px',
+                fontSize: '11px',
+              }}
+            >
+              <option value="true">{t('Show')}</option>
+              <option value="false">{t('Hide')}</option>
+            </select>
+          </div>
+        </div>
+      )}
+
       {action.type === 'changeImage' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <div>
@@ -657,45 +687,26 @@ const TimerActionEditor: React.FC<{
               />
               <button
                 onClick={() => {
-                  const input = document.createElement('input');
-                  input.type = 'file';
-                  input.accept = '.png,.jpg,.jpeg,.gif,.bmp,.svg,.webp,.bin';
-                  input.onchange = (e: Event) => {
-                    const file = (e.target as HTMLInputElement).files?.[0];
-                    if (!file) return;
-
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                      const arrayBuffer = event.target?.result as ArrayBuffer;
-                      const uint8Array = new Uint8Array(arrayBuffer);
-                      
-                      // 生成临时回调 ID
-                      const callbackId = `timer_image_${Date.now()}`;
-                      
-                      // 注册一次性消息监听器来接收保存后的路径
-                      const messageHandler = (event: MessageEvent) => {
-                        const message = event.data;
-                        if (message.command === 'imageSaved' && message.callbackId === callbackId) {
-                          // 更新动作的图片路径
-                          onUpdate({ imagePath: message.path });
-                          // 移除监听器
-                          window.removeEventListener('message', messageHandler);
-                        }
-                      };
-                      window.addEventListener('message', messageHandler);
-                      
-                      // 发送保存图片请求
-                      window.vscodeAPI?.postMessage({
-                        command: 'saveImageToAssets',
-                        fileName: file.name,
-                        fileData: Array.from(uint8Array),
-                        relativePath: '',
-                        callbackId: callbackId
-                      });
-                    };
-                    reader.readAsArrayBuffer(file);
+                  // 生成临时回调 ID
+                  const callbackId = `timer_image_${Date.now()}`;
+                  
+                  // 注册一次性消息监听器来接收保存后的路径
+                  const messageHandler = (event: MessageEvent) => {
+                    const message = event.data;
+                    if (message.command === 'imageSaved' && message.callbackId === callbackId) {
+                      // 更新动作的图片路径
+                      onUpdate({ imagePath: message.path });
+                      // 移除监听器
+                      window.removeEventListener('message', messageHandler);
+                    }
                   };
-                  input.click();
+                  window.addEventListener('message', messageHandler);
+                  
+                  // 使用后端的 selectImagePath 命令，让后端处理路径检测和复制
+                  window.vscodeAPI?.postMessage({
+                    command: 'selectImagePath',
+                    callbackId: callbackId
+                  });
                 }}
                 style={{
                   padding: '3px 8px',

@@ -127,7 +127,7 @@ export class MessageHandler {
                 break;
 
             case 'selectImagePath':
-                this._assetManager.handleSelectImagePath(message.componentId, message.propertyName, this._fileManager.currentFilePath);
+                this._assetManager.handleSelectImagePath(message.componentId, message.propertyName, message.callbackId, this._fileManager.currentFilePath);
                 break;
 
             case 'selectGlassPath':

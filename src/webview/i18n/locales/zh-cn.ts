@@ -265,6 +265,8 @@ const zhCN = {
   'Total Duration': '总时间',
   'actions': '个动作',
   'Switch View': '跳转界面',
+  'Set Visibility': '设置可见性',
+  'Visibility': '可见性',
   'Check Release Area': '抬起区域检测',
   'General': '通用',
   'Data': '数据',
@@ -520,6 +522,10 @@ const zhCN = {
   'Opacity States': '透明度状态',
   'Pressed': '按下',
   'Released': '松开',
+  
+  // Timer animations
+  'Run immediately': '立即运行',
+  'Timer Animations': '定时动画',
 };
 
 export default zhCN;

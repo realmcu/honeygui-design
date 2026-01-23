@@ -16,6 +16,7 @@ import {
   SWITCH_IN_STYLES,
 } from '../../../hml/eventTypes';
 import { t } from '../../i18n';
+import { TimerProperties } from './TimerProperties';
 import './EventsPanel.css';
 
 interface EventsPanelProps {
@@ -25,6 +26,7 @@ interface EventsPanelProps {
 
 export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate }) => {
   const [expandedEvents, setExpandedEvents] = useState<Set<number>>(new Set([0]));
+  const [timerExpanded, setTimerExpanded] = useState<boolean>(false);
   const components = useDesignerStore((state) => state.components);
   const allViews = useDesignerStore((state) => state.allViews || []);
 
@@ -354,70 +356,94 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
                 </div>
               ) : (
                 <div className="param-row">
-                  <label>选择目标组件及动作</label>
+                  <label>选择目标组件及动作（每个组件至多选择一个定时动画）</label>
                   <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid var(--vscode-input-border)', borderRadius: '2px', padding: '8px' }}>
-                    {timerComponents.map(comp => (
-                      <div key={comp.id} style={{ marginBottom: '12px', padding: '8px', background: 'var(--vscode-editor-background)', borderRadius: '4px', border: '1px solid var(--vscode-panel-border)' }}>
-                        <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '12px', color: 'var(--vscode-foreground)' }}>{comp.name}</div>
-                        {comp.timers.map(timer => {
-                          const target = action.timerTargets?.find(t => t.componentId === comp.id && t.timerIndex === timer.index);
-                          const isSelected = !!target;
-                          const timerAction = target?.action || 'start';
-                          
-                          return (
-                            <div key={timer.id} style={{ marginLeft: '12px', marginBottom: '8px', padding: '6px', background: 'var(--vscode-input-background)', borderRadius: '2px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <input
-                                  type="checkbox"
-                                  checked={isSelected}
-                                  onChange={(e) => {
-                                    const currentTargets = action.timerTargets || [];
-                                    let newTargets;
-                                    if (e.target.checked) {
-                                      // 添加
-                                      newTargets = [...currentTargets, { componentId: comp.id, timerIndex: timer.index, action: 'start' as const }];
-                                    } else {
-                                      // 移除
-                                      newTargets = currentTargets.filter(t => !(t.componentId === comp.id && t.timerIndex === timer.index));
-                                    }
-                                    handleActionUpdate(eventIndex, actionIndex, { timerTargets: newTargets });
-                                  }}
-                                  style={{ cursor: 'pointer' }}
-                                />
-                                <span style={{ fontSize: '11px', flex: 1 }}>{timer.name}</span>
-                                {isSelected && (
-                                  <select
-                                    value={timerAction}
+                    {timerComponents.map(comp => {
+                      // 找到该组件当前选中的定时器
+                      const selectedTimer = action.timerTargets?.find(t => t.componentId === comp.id);
+                      
+                      return (
+                        <div key={comp.id} style={{ marginBottom: '12px', padding: '8px', background: 'var(--vscode-editor-background)', borderRadius: '4px', border: '1px solid var(--vscode-panel-border)' }}>
+                          <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '12px', color: 'var(--vscode-foreground)' }}>{comp.name}</div>
+                          {comp.timers.map(timer => {
+                            const isSelected = selectedTimer?.timerIndex === timer.index;
+                            const timerAction = selectedTimer?.action || 'start';
+                            
+                            return (
+                              <div key={timer.id} style={{ marginLeft: '12px', marginBottom: '8px', padding: '6px', background: 'var(--vscode-input-background)', borderRadius: '2px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <input
+                                    type="radio"
+                                    name={`timer-${comp.id}-${eventIndex}-${actionIndex}`}
+                                    checked={isSelected}
                                     onChange={(e) => {
-                                      const currentTargets = action.timerTargets || [];
-                                      const newTargets = currentTargets.map(t => 
-                                        (t.componentId === comp.id && t.timerIndex === timer.index)
-                                          ? { ...t, action: e.target.value as 'start' | 'stop' }
-                                          : t
-                                      );
-                                      handleActionUpdate(eventIndex, actionIndex, { timerTargets: newTargets });
+                                      if (e.target.checked) {
+                                        const currentTargets = action.timerTargets || [];
+                                        // 移除该组件的其他定时器选择，添加新选择
+                                        const newTargets = [
+                                          ...currentTargets.filter(t => t.componentId !== comp.id),
+                                          { componentId: comp.id, timerIndex: timer.index, action: 'start' as const }
+                                        ];
+                                        handleActionUpdate(eventIndex, actionIndex, { timerTargets: newTargets });
+                                      }
                                     }}
-                                    onClick={(e) => e.stopPropagation()}
-                                    style={{
-                                      padding: '2px 6px',
-                                      fontSize: '10px',
-                                      backgroundColor: 'var(--vscode-dropdown-background)',
-                                      color: 'var(--vscode-dropdown-foreground)',
-                                      border: '1px solid var(--vscode-dropdown-border)',
-                                      borderRadius: '2px',
-                                      cursor: 'pointer',
-                                    }}
-                                  >
-                                    <option value="start">开启</option>
-                                    <option value="stop">关闭</option>
-                                  </select>
-                                )}
+                                    style={{ cursor: 'pointer' }}
+                                  />
+                                  <span style={{ fontSize: '11px', flex: 1 }}>{timer.name}</span>
+                                  {isSelected && (
+                                    <select
+                                      value={timerAction}
+                                      onChange={(e) => {
+                                        const currentTargets = action.timerTargets || [];
+                                        const newTargets = currentTargets.map(t => 
+                                          (t.componentId === comp.id && t.timerIndex === timer.index)
+                                            ? { ...t, action: e.target.value as 'start' | 'stop' }
+                                            : t
+                                        );
+                                        handleActionUpdate(eventIndex, actionIndex, { timerTargets: newTargets });
+                                      }}
+                                      onClick={(e) => e.stopPropagation()}
+                                      style={{
+                                        padding: '2px 6px',
+                                        fontSize: '10px',
+                                        backgroundColor: 'var(--vscode-dropdown-background)',
+                                        color: 'var(--vscode-dropdown-foreground)',
+                                        border: '1px solid var(--vscode-dropdown-border)',
+                                        borderRadius: '2px',
+                                        cursor: 'pointer',
+                                      }}
+                                    >
+                                      <option value="start">开启</option>
+                                      <option value="stop">关闭</option>
+                                    </select>
+                                  )}
+                                </div>
                               </div>
+                            );
+                          })}
+                          {/* 添加"不选择"选项 */}
+                          <div style={{ marginLeft: '12px', marginBottom: '8px', padding: '6px', background: 'var(--vscode-input-background)', borderRadius: '2px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <input
+                                type="radio"
+                                name={`timer-${comp.id}-${eventIndex}-${actionIndex}`}
+                                checked={!selectedTimer}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    const currentTargets = action.timerTargets || [];
+                                    // 移除该组件的所有定时器选择
+                                    const newTargets = currentTargets.filter(t => t.componentId !== comp.id);
+                                    handleActionUpdate(eventIndex, actionIndex, { timerTargets: newTargets });
+                                  }
+                                }}
+                                style={{ cursor: 'pointer' }}
+                              />
+                              <span style={{ fontSize: '11px', opacity: 0.7 }}>不选择</span>
                             </div>
-                          );
-                        })}
-                      </div>
-                    ))}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -533,6 +559,52 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
       <button className="add-event-btn" onClick={handleAddEvent}>
         + {t('Add Event')}
       </button>
+
+      {/* 定时动画区域 */}
+      <div className="timer-animations-section" style={{ marginTop: '16px', borderTop: '1px solid var(--vscode-panel-border)', paddingTop: '12px' }}>
+        <div 
+          className="timer-section-header" 
+          onClick={() => setTimerExpanded(!timerExpanded)}
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            cursor: 'pointer',
+            padding: '8px',
+            background: 'var(--vscode-editor-background)',
+            borderRadius: '4px',
+            marginBottom: timerExpanded ? '12px' : '0',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '12px', opacity: 0.7 }}>
+              {timerExpanded ? '▼' : '▶'}
+            </span>
+            <span style={{ fontWeight: 'bold', fontSize: '13px' }}>
+              {t('Timer Animations')}
+            </span>
+          </div>
+          <span style={{ fontSize: '11px', opacity: 0.6 }}>
+            {component.data?.timers?.length || 0} {t('Animations')}
+          </span>
+        </div>
+        
+        {timerExpanded && (
+          <TimerProperties
+            componentId={component.id}
+            componentType={component.type}
+            timers={component.data?.timers || []}
+            onUpdate={(timers) => {
+              onUpdate({
+                data: {
+                  ...component.data,
+                  timers,
+                },
+              });
+            }}
+          />
+        )}
+      </div>
     </div>
   );
 };
