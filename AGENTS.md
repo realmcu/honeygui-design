@@ -219,10 +219,10 @@ HmlEditorProvider.resolveCustomTextEditor()
 
 ### Personal Access Token (PAT)
 ```
-CuT7hD8aC69at2EinhwraWti5mCAdt6GSwzsemav8drRUfxJF2LFJQQJ99BLACAAAAAAAAAAAAASAZDO2sRc
+56pIFgjdNu3lkylqZ1gnFI5nQ2VkGWJeFOYufaqzpd56iW5a3rvgJQQJ99CAACAAAAAAAAAAAAASAZDO2UL2
 ```
 
 ### 发布命令
 ```bash
-vsce publish -p CuT7hD8aC69at2EinhwraWti5mCAdt6GSwzsemav8drRUfxJF2LFJQQJ99BLACAAAAAAAAAAAAASAZDO2sRc
+vsce publish -p 56pIFgjdNu3lkylqZ1gnFI5nQ2VkGWJeFOYufaqzpd56iW5a3rvgJQQJ99CAACAAAAAAAAAAAAASAZDO2UL2
 ```
