@@ -346,6 +346,15 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       }, 0);
     }
     
+    // 发送添加组件消息给后端广播（用于协同）
+    if (vscodeAPI) {
+      vscodeAPI.postMessage({
+        command: 'addComponent',
+        parentId: component.parent,
+        component: component
+      });
+    }
+
     // 根据选项决定是否保存
     if (shouldSave) {
       get().saveToFile();
@@ -489,6 +498,16 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
         comp.id === id ? { ...comp, ...finalUpdates } : comp
       ),
     }));
+
+    // 发送更新组件消息给后端广播（用于协同）
+    if (vscodeAPI) {
+      vscodeAPI.postMessage({
+        command: 'updateComponent',
+        componentId: id,
+        updates: finalUpdates
+      });
+    }
+
     get().saveToFile();
   },
 
@@ -661,6 +680,9 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     }));
     
     if (vscodeAPI) {
+      // 协同：发送 deleteComponent 消息以便后端广播
+      vscodeAPI.postMessage({ command: 'deleteComponent', componentId: id });
+
       vscodeAPI.postMessage({ command: 'delete', content: { ids: [id], components: get().components } });
       let message = `删除控件: ${id}`;
       if (cleanedCount > 0) {
