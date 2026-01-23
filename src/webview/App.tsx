@@ -268,6 +268,11 @@ const App: React.FC = () => {
                 console.log('[ViewState] 批量恢复视图状态:', savedState);
               }
               
+              // 添加仿真状态
+              if (typeof message.isSimulationRunning === 'boolean') {
+                batchUpdate.isSimulationRunning = message.isSimulationRunning;
+              }
+              
               // 【关键】一次性更新所有状态，只触发一次渲染
               useDesignerStore.setState(batchUpdate);
               

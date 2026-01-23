@@ -495,6 +495,10 @@ export class FileManager {
         // 获取当前 VSCode 语言设置
         const locale = vscode.env.language;
         
+        // 获取仿真运行状态
+        const SimulationService = require('../simulation/SimulationService').SimulationService;
+        const isSimulationRunning = SimulationService.isSimulationRunning();
+        
         this._panel.webview.postMessage({
             command: 'loadHml',
             content: hmlContent,
@@ -512,7 +516,8 @@ export class FileManager {
             allViews: allViews,
             allHmlFiles: allHmlFiles,
             currentFilePath: this._filePath,
-            locale: locale
+            locale: locale,
+            isSimulationRunning: isSimulationRunning
         });
     }
 
