@@ -238,6 +238,17 @@ const App: React.FC = () => {
               // 添加项目配置
               if (message.projectConfig) {
                 batchUpdate.projectConfig = message.projectConfig;
+                // 同时更新画布尺寸
+                const resolution = message.projectConfig.resolution;
+                if (resolution) {
+                  const parts = resolution.split('X');
+                  if (parts.length === 2) {
+                    batchUpdate.canvasSize = {
+                      width: parseInt(parts[0], 10),
+                      height: parseInt(parts[1], 10)
+                    };
+                  }
+                }
               }
               
               // 添加画布背景色
