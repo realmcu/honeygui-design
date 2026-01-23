@@ -506,6 +506,7 @@ function renderProperties() {
                 '<option value="rgb888"'+(settings.image?.format==='rgb888'?' selected':'')+'>RGB888</option>' +
                 '<option value="argb8888"'+(settings.image?.format==='argb8888'?' selected':'')+'>ARGB8888</option>' +
                 '<option value="argb8565"'+(settings.image?.format==='argb8565'?' selected':'')+'>ARGB8565</option>' +
+                '<option value="a8"'+(settings.image?.format==='a8'?' selected':'')+'>A8 (Alpha通道)</option>' +
                 '<option value="i8"'+(settings.image?.format==='i8'?' selected':'')+'>I8 (索引色)</option>' +
                 '</select></div>' +
                 '<div class="prop-row"><label>压缩:</label><select onchange="updateFolderSetting(\\'image\\',\\'compression\\',this.value);renderProperties()">' +
@@ -632,6 +633,7 @@ function renderProperties() {
             '<option value="rgb888"'+(settings.format==='rgb888'?' selected':'')+'>RGB888</option>' +
             '<option value="argb8888"'+(settings.format==='argb8888'?' selected':'')+'>ARGB8888</option>' +
             '<option value="argb8565"'+(settings.format==='argb8565'?' selected':'')+'>ARGB8565</option>' +
+            '<option value="a8"'+(settings.format==='a8'?' selected':'')+'>A8 (Alpha通道)</option>' +
             '<option value="i8"'+(settings.format==='i8'?' selected':'')+'>I8 (索引色)</option>' +
             '</select></div>' +
             '<div class="prop-row"><label>压缩:</label><select onchange="updateSetting(\\'compression\\',this.value);renderProperties()">' +
