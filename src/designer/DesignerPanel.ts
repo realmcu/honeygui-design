@@ -146,10 +146,10 @@ export class DesignerPanel {
         }, null, this._disposables);
 
         // 处理面板可见性变化
+        // 注意：不再调用 _update()，避免每次切换标签页时重新设置 HTML 导致闪烁
         this._panel.onDidChangeViewState(
             () => {
                 if (this._panel.visible) {
-                    this._update();
                     DesignerPanel.currentPanel = this;
                 }
             },
