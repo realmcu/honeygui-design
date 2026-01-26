@@ -851,13 +851,19 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   centerViewOnCanvas: (componentId) => {
     const state = get();
     const component = state.components.find(c => c.id === componentId);
-    if (!component || !component.position) return;
+    if (!component || !component.position) {
+      console.log('[centerViewOnCanvas] Component not found or no position:', componentId);
+      return;
+    }
     
-    // 获取画布容器的实际尺寸
-    const canvasElement = document.querySelector('.designer-canvas');
-    if (!canvasElement) return;
+    // 获取画布可视区域的尺寸（使用容器而不是画布本身）
+    const containerElement = document.querySelector('.designer-canvas-container');
+    if (!containerElement) {
+      console.log('[centerViewOnCanvas] Canvas container not found');
+      return;
+    }
     
-    const rect = canvasElement.getBoundingClientRect();
+    const rect = containerElement.getBoundingClientRect();
     const viewportWidth = rect.width;
     const viewportHeight = rect.height;
     
@@ -886,6 +892,16 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     // 所以：offset = 视口中心 - 组件中心 * effectiveZoom
     const offsetX = viewportWidth / 2 - compCenterX * effectiveZoom;
     const offsetY = viewportHeight / 2 - compCenterY * effectiveZoom;
+    
+    console.log('[centerViewOnCanvas]', {
+      componentId,
+      absPos: { x: absX, y: absY },
+      compCenter: { x: compCenterX, y: compCenterY },
+      viewport: { width: viewportWidth, height: viewportHeight },
+      zoom: state.zoom,
+      effectiveZoom,
+      offset: { x: offsetX, y: offsetY }
+    });
     
     set({ canvasOffset: { x: offsetX, y: offsetY } });
   },
