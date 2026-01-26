@@ -572,7 +572,7 @@ const TimerActionEditor: React.FC<{
         <select
           value={action.type}
           onChange={(e) => {
-            const newType = e.target.value as 'size' | 'position' | 'opacity' | 'rotation' | 'scale' | 'switchView' | 'changeImage' | 'visibility';
+            const newType = e.target.value as 'size' | 'position' | 'opacity' | 'rotation' | 'scale' | 'switchView' | 'changeImage' | 'imageSequence' | 'visibility';
             const newAction: TimerAction = { type: newType };
             if (newType === 'size') {
               newAction.fromW = 0;
@@ -601,6 +601,8 @@ const TimerActionEditor: React.FC<{
               newAction.switchInStyle = 'SWITCH_IN_FROM_RIGHT_USE_TRANSLATION';
             } else if (newType === 'changeImage') {
               newAction.imagePath = '';
+            } else if (newType === 'imageSequence') {
+              newAction.imageSequence = [];
             } else if (newType === 'visibility') {
               newAction.visible = true;
             }
@@ -621,6 +623,7 @@ const TimerActionEditor: React.FC<{
           {componentType === 'hg_image' && <option value="rotation">{t('Adjust Rotation')}</option>}
           {componentType === 'hg_image' && <option value="scale">{t('Adjust Scale')}</option>}
           {componentType === 'hg_image' && <option value="changeImage">{t('Change Image')}</option>}
+          {componentType === 'hg_image' && <option value="imageSequence">{t('Image Sequence')}</option>}
           <option value="switchView">{t('Switch View')}</option>
           <option value="visibility">{t('Set Visibility')}</option>
         </select>
@@ -722,6 +725,145 @@ const TimerActionEditor: React.FC<{
                 📁
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {action.type === 'imageSequence' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div>
+            <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('Image Sequence')}</label>
+            
+            {/* 文件夹选择按钮 */}
+            <div style={{ marginBottom: '8px' }}>
+              <button
+                onClick={() => {
+                  const callbackId = `timer_folder_${Date.now()}`;
+                  const messageHandler = (event: MessageEvent) => {
+                    const message = event.data;
+                    if (message.command === 'folderImagesSelected' && message.callbackId === callbackId) {
+                      // 更新图片序列
+                      onUpdate({ imageSequence: message.paths });
+                      window.removeEventListener('message', messageHandler);
+                    }
+                  };
+                  window.addEventListener('message', messageHandler);
+                  window.vscodeAPI?.postMessage({
+                    command: 'selectFolderImages',
+                    callbackId: callbackId
+                  });
+                }}
+                style={{
+                  width: '100%',
+                  padding: '6px 12px',
+                  backgroundColor: 'var(--vscode-button-background)',
+                  color: 'var(--vscode-button-foreground)',
+                  border: 'none',
+                  borderRadius: '2px',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}
+              >
+                📁 {t('Select Folder')}
+              </button>
+            </div>
+            
+            {(action.imageSequence || []).map((imgPath, idx) => (
+              <div key={idx} style={{ display: 'flex', gap: '4px', marginBottom: '4px' }}>
+                <span style={{ fontSize: '10px', minWidth: '20px', opacity: 0.7 }}>{idx + 1}.</span>
+                <input
+                  type="text"
+                  value={imgPath}
+                  onChange={(e) => {
+                    const newSeq = [...(action.imageSequence || [])];
+                    newSeq[idx] = e.target.value;
+                    onUpdate({ imageSequence: newSeq });
+                  }}
+                  placeholder="assets/image.bin"
+                  style={{
+                    flex: 1,
+                    padding: '3px',
+                    backgroundColor: 'var(--vscode-input-background)',
+                    color: 'var(--vscode-input-foreground)',
+                    border: '1px solid var(--vscode-input-border)',
+                    borderRadius: '2px',
+                    fontSize: '11px',
+                  }}
+                />
+                <button
+                  onClick={() => {
+                    const callbackId = `timer_seq_${Date.now()}_${idx}`;
+                    const messageHandler = (event: MessageEvent) => {
+                      const message = event.data;
+                      if (message.command === 'imageSaved' && message.callbackId === callbackId) {
+                        const newSeq = [...(action.imageSequence || [])];
+                        newSeq[idx] = message.path;
+                        onUpdate({ imageSequence: newSeq });
+                        window.removeEventListener('message', messageHandler);
+                      }
+                    };
+                    window.addEventListener('message', messageHandler);
+                    window.vscodeAPI?.postMessage({
+                      command: 'selectImagePath',
+                      callbackId: callbackId
+                    });
+                  }}
+                  style={{
+                    padding: '3px 8px',
+                    backgroundColor: 'var(--vscode-button-background)',
+                    color: 'var(--vscode-button-foreground)',
+                    border: 'none',
+                    borderRadius: '2px',
+                    cursor: 'pointer',
+                    fontSize: '11px'
+                  }}
+                  title={t('Select Image File')}
+                >
+                  📁
+                </button>
+                <button
+                  onClick={() => {
+                    const newSeq = (action.imageSequence || []).filter((_, i) => i !== idx);
+                    onUpdate({ imageSequence: newSeq });
+                  }}
+                  style={{
+                    padding: '3px 8px',
+                    backgroundColor: 'var(--vscode-button-secondaryBackground)',
+                    color: 'var(--vscode-button-secondaryForeground)',
+                    border: 'none',
+                    borderRadius: '2px',
+                    cursor: 'pointer',
+                    fontSize: '11px'
+                  }}
+                  title={t('Remove')}
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+            <button
+              onClick={() => {
+                const newSeq = [...(action.imageSequence || []), ''];
+                onUpdate({ imageSequence: newSeq });
+              }}
+              style={{
+                width: '100%',
+                padding: '4px 8px',
+                backgroundColor: 'var(--vscode-button-secondaryBackground)',
+                color: 'var(--vscode-button-secondaryForeground)',
+                border: 'none',
+                borderRadius: '2px',
+                cursor: 'pointer',
+                fontSize: '10px',
+                marginTop: '4px'
+              }}
+            >
+              + {t('Add Image')}
+            </button>
           </div>
         </div>
       )}

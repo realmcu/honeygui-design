@@ -891,6 +891,33 @@ void ${callback}(void *obj)\n{\n`;
       code += `    gui_img_set_image_data((gui_img_t *)target, "${imagePath}");\n`;
       code += `    gui_img_refresh_size((gui_img_t *)target);\n`;
       code += `    \n`;
+    } else if (action.type === 'imageSequence') {
+      // 图片序列动作（仅支持 hg_image）
+      const imageSequence = action.imageSequence || [];
+      if (imageSequence.length > 0) {
+        // 处理图片路径：去掉 assets/ 前缀，改为 .bin 后缀
+        const processedPaths = imageSequence.map((path: string) => {
+          let processed = path;
+          if (processed.startsWith('assets/')) {
+            processed = processed.substring(6);
+          }
+          if (processed && !processed.endsWith('.bin')) {
+            processed = processed.replace(/\.[^.]+$/, '.bin');
+          }
+          return processed;
+        });
+        
+        code += `    // 图片序列动画: ${processedPaths.length} 张图片\n`;
+        code += `    const void *img_data_array[${processedPaths.length}] = {\n`;
+        processedPaths.forEach((path: string, idx: number) => {
+          code += `        "${path}"${idx < processedPaths.length - 1 ? ',' : ''}\n`;
+        });
+        code += `    };\n`;
+        code += `    uint16_t index = (${processedPaths.length} - 1) * ${progressExpr};\n`;
+        code += `    gui_img_set_image_data((gui_img_t *)target, img_data_array[index]);\n`;
+        code += `    gui_img_refresh_size((gui_img_t *)target);\n`;
+        code += `    \n`;
+      }
     } else if (action.type === 'switchView') {
       // 跳转界面动作
       const targetName = action.target || 'unknown_view';

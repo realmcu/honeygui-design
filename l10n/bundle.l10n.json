@@ -115,6 +115,11 @@
   "Failed to save image": "Failed to save image",
   "Cannot determine project path": "Cannot determine project path",
   "Failed to select image": "Failed to select image",
+  "Select Folder": "Select Folder",
+  "No image files found in selected folder": "No image files found in selected folder",
+  "Folder {0} already exists in assets. Overwrite?": "Folder {0} already exists in assets. Overwrite?",
+  "Successfully imported {0} images": "Successfully imported {0} images",
+  "Failed to select folder": "Failed to select folder",
 
   "No undo action available": "No undo action available",
   "No redo action available": "No redo action available",

@@ -680,6 +680,117 @@ export class AssetManager {
     }
 
     /**
+     * 处理选择文件夹中的图片序列
+     */
+    public async handleSelectFolderImages(callbackId: string | undefined, currentFilePath: string | undefined): Promise<void> {
+        try {
+            const options: vscode.OpenDialogOptions = {
+                canSelectFiles: false,
+                canSelectFolders: true,
+                canSelectMany: false,
+                openLabel: vscode.l10n.t('Select Folder')
+            };
+
+            const folderUri = await vscode.window.showOpenDialog(options);
+            if (folderUri && folderUri.length > 0) {
+                const folderPath = folderUri[0].fsPath;
+                
+                if (!currentFilePath) {
+                    vscode.window.showErrorMessage(vscode.l10n.t('Cannot determine project path'));
+                    return;
+                }
+
+                const projectRoot = ProjectUtils.findProjectRoot(currentFilePath);
+                if (!projectRoot) {
+                    vscode.window.showErrorMessage(vscode.l10n.t('Cannot find project root (project.json)'));
+                    return;
+                }
+
+                const assetsDir = path.join(projectRoot, 'assets');
+                
+                // 读取文件夹中的所有图片文件
+                const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg', '.webp', '.bin'];
+                const files = await fs.promises.readdir(folderPath);
+                const imageFiles = files
+                    .filter(file => {
+                        const ext = path.extname(file).toLowerCase();
+                        return imageExtensions.includes(ext);
+                    })
+                    .sort(); // 按文件名排序
+                
+                if (imageFiles.length === 0) {
+                    vscode.window.showWarningMessage(vscode.l10n.t('No image files found in selected folder'));
+                    return;
+                }
+                
+                // 检查文件夹是否已经在 assets 目录中
+                const normalizedFolderPath = path.normalize(folderPath);
+                const normalizedAssetsDir = path.normalize(assetsDir);
+                
+                const imagePaths: string[] = [];
+                
+                if (normalizedFolderPath.startsWith(normalizedAssetsDir)) {
+                    // 文件夹已经在 assets 目录中
+                    for (const file of imageFiles) {
+                        const filePath = path.join(folderPath, file);
+                        const relativeToAssets = path.relative(assetsDir, filePath).replace(/\\/g, '/');
+                        imagePaths.push(`assets/${relativeToAssets}`);
+                    }
+                    logger.info(`[AssetManager] 文件夹已在 assets 目录中，找到 ${imageFiles.length} 张图片`);
+                } else {
+                    // 文件夹在外部，需要复制
+                    const folderName = path.basename(folderPath);
+                    const targetFolder = path.join(assetsDir, folderName);
+                    
+                    // 检查目标文件夹是否存在
+                    if (fs.existsSync(targetFolder)) {
+                        const result = await vscode.window.showWarningMessage(
+                            vscode.l10n.t('Folder {0} already exists in assets. Overwrite?', folderName),
+                            vscode.l10n.t('Overwrite'),
+                            vscode.l10n.t('Cancel')
+                        );
+                        
+                        if (result !== vscode.l10n.t('Overwrite')) {
+                            return;
+                        }
+                    } else {
+                        // 创建目标文件夹
+                        await fs.promises.mkdir(targetFolder, { recursive: true });
+                    }
+                    
+                    // 复制所有图片文件
+                    for (const file of imageFiles) {
+                        const sourcePath = path.join(folderPath, file);
+                        const targetPath = path.join(targetFolder, file);
+                        await fs.promises.copyFile(sourcePath, targetPath);
+                        imagePaths.push(`assets/${folderName}/${file}`);
+                    }
+                    logger.info(`[AssetManager] 已复制 ${imageFiles.length} 张图片到 assets/${folderName}`);
+                }
+                
+                // 发送消息给前端
+                if (callbackId) {
+                    this._panel.webview.postMessage({
+                        command: 'folderImagesSelected',
+                        callbackId: callbackId,
+                        paths: imagePaths
+                    });
+                }
+                
+                // 重新加载资源列表
+                this.handleLoadAssets(currentFilePath);
+                
+                vscode.window.showInformationMessage(
+                    vscode.l10n.t('Successfully imported {0} images', imageFiles.length.toString())
+                );
+            }
+        } catch (error) {
+            logger.error(`[AssetManager] 选择文件夹失败: ${error}`);
+            vscode.window.showErrorMessage(vscode.l10n.t('Failed to select folder'));
+        }
+    }
+
+    /**
      * 处理选择玻璃形状路径
      */
     public async handleSelectGlassPath(componentId: string, currentFilePath: string | undefined): Promise<void> {
