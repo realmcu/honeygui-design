@@ -346,7 +346,21 @@ export class ToolsPanel {
             canSelectFolders: true, canSelectFiles: false, canSelectMany: false, openLabel: '选择输出目录'
         });
         if (result?.[0]) {
-            this.outputDir = result[0].fsPath;
+            const selectedPath = result[0].fsPath;
+            
+            // 如果路径不存在，自动创建（支持 Ubuntu 等系统手动输入路径的场景）
+            if (!fs.existsSync(selectedPath)) {
+                try {
+                    fs.mkdirSync(selectedPath, { recursive: true });
+                    logger.info(`已创建输出目录: ${selectedPath}`);
+                } catch (error) {
+                    logger.error(`创建输出目录失败: ${error}`);
+                    vscode.window.showErrorMessage(`创建目录失败: ${selectedPath}`);
+                    return;
+                }
+            }
+            
+            this.outputDir = selectedPath;
             this.panel.webview.postMessage({ type: 'outputDirSelected', dir: this.outputDir });
             
             // 尝试在输出目录或其父目录查找 conversion.json
