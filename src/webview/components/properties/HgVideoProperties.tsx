@@ -38,22 +38,6 @@ export const HgVideoProperties: React.FC<PropertyPanelProps> = ({ component, onU
       [property]: value
     };
     
-    // 当格式改变时，自动调整质量值到正确范围
-    if (property === 'format') {
-      const currentQuality = component.data?.quality;
-      if (value === 'h264') {
-        // H.264: CRF 0-51，默认 23
-        if (currentQuality === undefined || currentQuality < 0 || currentQuality > 51) {
-          newData.quality = 23;
-        }
-      } else {
-        // MJPEG/AVI: 1-31，默认 1
-        if (currentQuality === undefined || currentQuality < 1 || currentQuality > 31) {
-          newData.quality = 1;
-        }
-      }
-    }
-    
     // 当视频路径改变时，请求获取视频尺寸
     if (property === 'src' && value) {
       const vscodeAPI = (window as any).vscodeAPI;
@@ -71,9 +55,7 @@ export const HgVideoProperties: React.FC<PropertyPanelProps> = ({ component, onU
 
   const videoData = component.data || {};
   const src = videoData.src || '';
-  const format = videoData.format || 'mjpeg';
   const frameRate = videoData.frameRate || 30;
-  const quality = videoData.quality || 85;
   const autoPlay = videoData.autoPlay !== false;
   const loop = videoData.loop === true;
 
@@ -114,23 +96,6 @@ export const HgVideoProperties: React.FC<PropertyPanelProps> = ({ component, onU
                 style={inputStyle}
               />
               <small style={helpTextStyle}>{t('Drag video file from assets panel to canvas')}</small>
-            </div>
-
-            {/* 视频转换设置 */}
-            <div style={{ marginTop: '16px' }}>
-              <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', fontWeight: 600 }}>{t('Conversion Settings')}</h4>
-              
-              <label style={labelStyle}>{t('Output Format')}</label>
-              <select
-                value={format}
-                onChange={(e) => handlePropertyChange('format', e.target.value)}
-                style={inputStyle}
-              >
-                <option value="mjpeg">MJPEG</option>
-                <option value="avi">AVI (MJPEG)</option>
-                <option value="h264">H.264</option>
-              </select>
-              <small style={helpTextStyle}>{t('Video will be converted to this format during compilation')}</small>
 
               <label style={labelStyle}>{t('Frame Rate (FPS)')}</label>
               <input
@@ -142,36 +107,6 @@ export const HgVideoProperties: React.FC<PropertyPanelProps> = ({ component, onU
                 style={inputStyle}
               />
               <small style={helpTextStyle}>{t('Output video frame rate')}</small>
-
-              {(format === 'mjpeg' || format === 'avi') && (
-                <>
-                  <label style={labelStyle}>{t('Quality (1-31)')}</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="31"
-                    value={quality <= 31 ? quality : 1}
-                    onChange={(e) => handlePropertyChange('quality', parseInt(e.target.value) || 1)}
-                    style={inputStyle}
-                  />
-                  <small style={helpTextStyle}>{t('JPEG compression quality, 1=highest, 31=lowest')}</small>
-                </>
-              )}
-
-              {format === 'h264' && (
-                <>
-                  <label style={labelStyle}>{t('CRF Quality (0-51)')}</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="51"
-                    value={quality <= 51 ? quality : 23}
-                    onChange={(e) => handlePropertyChange('quality', parseInt(e.target.value) || 23)}
-                    style={inputStyle}
-                  />
-                  <small style={helpTextStyle}>{t('H.264 CRF value, 0=lossless, 23=default, 51=lowest')}</small>
-                </>
-              )}
             </div>
 
             {/* 播放设置 */}
@@ -185,9 +120,9 @@ export const HgVideoProperties: React.FC<PropertyPanelProps> = ({ component, onU
                   onChange={(e) => handlePropertyChange('autoPlay', e.target.checked)}
                   style={{ marginRight: '8px' }}
                 />
-                自动播放
+                {t('Autoplay')}
               </label>
-              <small style={helpTextStyle}>组件创建后自动开始播放</small>
+              <small style={helpTextStyle}>{t('Start playing automatically after creation')}</small>
 
               <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', cursor: 'pointer', marginTop: '8px' }}>
                 <input
@@ -196,9 +131,9 @@ export const HgVideoProperties: React.FC<PropertyPanelProps> = ({ component, onU
                   onChange={(e) => handlePropertyChange('loop', e.target.checked)}
                   style={{ marginRight: '8px' }}
                 />
-                循环播放
+                {t('Loop')}
               </label>
-              <small style={helpTextStyle}>视频播放结束后自动重新开始</small>
+              <small style={helpTextStyle}>{t('Restart automatically when playback ends')}</small>
             </div>
 
             {/* 提示信息 */}
@@ -211,13 +146,8 @@ export const HgVideoProperties: React.FC<PropertyPanelProps> = ({ component, onU
                 fontSize: '11px',
                 color: 'var(--vscode-descriptionForeground)'
               }}>
-                <strong>格式说明：</strong>
-                <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
-                  <li>MJPEG: Motion JPEG，质量 1-31（1=最高）</li>
-                  <li>AVI: MJPEG 封装，质量 1-31（1=最高）</li>
-                  <li>H.264: 高压缩率，CRF 0-51（23=默认）</li>
-                </ul>
-                编译时自动调用 SDK 工具转换
+                <strong>{t('Format Note')}:</strong>
+                <p style={{ margin: '4px 0 0 0' }}>{t('Video format is configured in Assets panel. Select video file to set output format (MJPEG/AVI/H264).')}</p>
               </div>
             </div>
           </>

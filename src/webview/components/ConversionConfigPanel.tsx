@@ -9,6 +9,7 @@ import { t } from '../i18n';
 import {
   AssetFile,
   TargetFormat,
+  VideoFormat,
   CompressionMethod,
   YuvSampling,
   YuvBlur,
@@ -16,6 +17,9 @@ import {
   ConversionConfig,
 } from '../types';
 import './ConversionConfigPanel.css';
+
+// 视频文件扩展名
+const VIDEO_EXTS = ['mp4', 'avi', 'mov', 'mkv', 'webm'];
 
 // 文件夹可用的格式选项
 const FOLDER_FORMAT_OPTIONS: { value: TargetFormat; label: string }[] = [
@@ -35,6 +39,21 @@ const IMAGE_FORMAT_OPTIONS: { value: TargetFormat; label: string }[] = [
   { value: 'ARGB8565', label: 'ARGB8565' },
   { value: 'ARGB8888', label: 'ARGB8888' },
   { value: 'I8', label: 'I8' },
+];
+
+// 文件夹可用的视频格式选项（不含继承）
+const FOLDER_VIDEO_FORMAT_OPTIONS: { value: VideoFormat; label: string }[] = [
+  { value: 'MJPEG', label: 'MJPEG' },
+  { value: 'AVI', label: 'AVI' },
+  { value: 'H264', label: 'H264' },
+];
+
+// 视频文件可用的格式选项（包含继承选项）
+const VIDEO_FORMAT_OPTIONS: { value: VideoFormat; label: string }[] = [
+  { value: 'inherit', label: 'formatInherit' },
+  { value: 'MJPEG', label: 'MJPEG' },
+  { value: 'AVI', label: 'AVI' },
+  { value: 'H264', label: 'H264' },
 ];
 
 // 压缩方式选项
@@ -119,6 +138,13 @@ const ConversionConfigPanel: React.FC<ConversionConfigPanelProps> = () => {
 
   // 判断是否是文件夹
   const isFolder = selectedAsset?.type === 'folder';
+  
+  // 判断是否是视频文件
+  const isVideo = useMemo(() => {
+    if (!selectedAsset || isFolder) return false;
+    const ext = selectedAsset.name.split('.').pop()?.toLowerCase() || '';
+    return VIDEO_EXTS.includes(ext);
+  }, [selectedAsset, isFolder]);
 
   // 获取当前资源的配置
   const currentSettings = useMemo((): ItemSettings => {
@@ -129,7 +155,7 @@ const ConversionConfigPanel: React.FC<ConversionConfigPanelProps> = () => {
     return conversionConfig.items[assetPath] || {};
   }, [selectedAsset, conversionConfig]);
 
-  // 获取有效配置（处理继承）
+  // 获取有效配置（处理继承）- 图片格式
   const effectiveSettings = useMemo((): { settings: ItemSettings; isInherited: boolean; inheritedFrom?: string } => {
     if (!selectedAsset || !conversionConfig) {
       return { settings: {}, isInherited: false };
@@ -166,6 +192,115 @@ const ConversionConfigPanel: React.FC<ConversionConfigPanelProps> = () => {
     };
   }, [selectedAsset, conversionConfig]);
 
+  // 获取有效视频配置（处理继承）
+  const effectiveVideoSettings = useMemo((): { videoFormat: VideoFormat; isInherited: boolean; inheritedFrom?: string } => {
+    if (!selectedAsset || !conversionConfig) {
+      return { videoFormat: 'MJPEG', isInherited: false };
+    }
+
+    const assetPath = (selectedAsset.relativePath || selectedAsset.name).replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+    const itemSettings = conversionConfig.items[assetPath];
+
+    // 如果有明确配置且不是 inherit，直接使用
+    if (itemSettings && itemSettings.videoFormat && itemSettings.videoFormat !== 'inherit') {
+      return { videoFormat: itemSettings.videoFormat, isInherited: false };
+    }
+
+    // 需要继承：查找父级配置
+    const pathParts = assetPath.split('/');
+    for (let i = pathParts.length - 1; i >= 0; i--) {
+      const parentPath = pathParts.slice(0, i).join('/');
+      const parentSettings = parentPath ? conversionConfig.items[parentPath] : undefined;
+
+      if (parentSettings && parentSettings.videoFormat && parentSettings.videoFormat !== 'inherit') {
+        return {
+          videoFormat: parentSettings.videoFormat,
+          isInherited: true,
+          inheritedFrom: parentPath || t('Root'),
+        };
+      }
+    }
+
+    // 使用默认值 MJPEG
+    return {
+      videoFormat: 'MJPEG',
+      isInherited: true,
+      inheritedFrom: t('defaultSettings'),
+    };
+  }, [selectedAsset, conversionConfig]);
+
+  // 获取有效视频质量（处理继承）
+  const effectiveVideoQuality = useMemo((): { quality: number | undefined; isInherited: boolean; inheritedFrom?: string } => {
+    if (!selectedAsset || !conversionConfig) {
+      return { quality: undefined, isInherited: false };
+    }
+
+    const assetPath = (selectedAsset.relativePath || selectedAsset.name).replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+    const itemSettings = conversionConfig.items[assetPath];
+
+    // 如果有明确配置，直接使用
+    if (itemSettings && itemSettings.videoQuality !== undefined) {
+      return { quality: itemSettings.videoQuality, isInherited: false };
+    }
+
+    // 需要继承：查找父级配置
+    const pathParts = assetPath.split('/');
+    for (let i = pathParts.length - 1; i >= 0; i--) {
+      const parentPath = pathParts.slice(0, i).join('/');
+      const parentSettings = parentPath ? conversionConfig.items[parentPath] : undefined;
+
+      if (parentSettings && parentSettings.videoQuality !== undefined) {
+        return {
+          quality: parentSettings.videoQuality,
+          isInherited: true,
+          inheritedFrom: parentPath || t('Root'),
+        };
+      }
+    }
+
+    // 没有配置，返回 undefined（使用默认值）
+    return {
+      quality: undefined,
+      isInherited: false,
+    };
+  }, [selectedAsset, conversionConfig]);
+
+  // 获取有效视频帧率（处理继承）
+  const effectiveVideoFrameRate = useMemo((): { frameRate: number | undefined; isInherited: boolean; inheritedFrom?: string } => {
+    if (!selectedAsset || !conversionConfig) {
+      return { frameRate: undefined, isInherited: false };
+    }
+
+    const assetPath = (selectedAsset.relativePath || selectedAsset.name).replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+    const itemSettings = conversionConfig.items[assetPath];
+
+    // 如果有明确配置，直接使用
+    if (itemSettings && itemSettings.videoFrameRate !== undefined) {
+      return { frameRate: itemSettings.videoFrameRate, isInherited: false };
+    }
+
+    // 需要继承：查找父级配置
+    const pathParts = assetPath.split('/');
+    for (let i = pathParts.length - 1; i >= 0; i--) {
+      const parentPath = pathParts.slice(0, i).join('/');
+      const parentSettings = parentPath ? conversionConfig.items[parentPath] : undefined;
+
+      if (parentSettings && parentSettings.videoFrameRate !== undefined) {
+        return {
+          frameRate: parentSettings.videoFrameRate,
+          isInherited: true,
+          inheritedFrom: parentPath || t('Root'),
+        };
+      }
+    }
+
+    // 没有配置，返回 undefined（使用默认值）
+    return {
+      frameRate: undefined,
+      isInherited: false,
+    };
+  }, [selectedAsset, conversionConfig]);
+
   // 处理格式变更
   const handleFormatChange = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -175,6 +310,52 @@ const ConversionConfigPanel: React.FC<ConversionConfigPanelProps> = () => {
       updateAssetConfig(assetPath, {
         ...currentSettings,
         format: newFormat,
+      });
+    },
+    [selectedAsset, currentSettings, updateAssetConfig]
+  );
+
+  // 处理视频格式变更
+  const handleVideoFormatChange = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      if (!selectedAsset) return;
+      const newFormat = e.target.value as VideoFormat;
+      const assetPath = selectedAsset.relativePath || selectedAsset.name;
+      updateAssetConfig(assetPath, {
+        ...currentSettings,
+        videoFormat: newFormat,
+      }, 'videoFormat'); // 传递变更字段，触发代码生成
+    },
+    [selectedAsset, currentSettings, updateAssetConfig]
+  );
+
+  // 处理视频质量变更
+  const handleVideoQualityChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!selectedAsset) return;
+      const value = e.target.value;
+      const assetPath = selectedAsset.relativePath || selectedAsset.name;
+      // 允许空值（使用默认值）
+      const quality = value === '' ? undefined : parseInt(value, 10);
+      updateAssetConfig(assetPath, {
+        ...currentSettings,
+        videoQuality: quality,
+      });
+    },
+    [selectedAsset, currentSettings, updateAssetConfig]
+  );
+
+  // 处理视频帧率变更
+  const handleVideoFrameRateChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!selectedAsset) return;
+      const value = e.target.value;
+      const assetPath = selectedAsset.relativePath || selectedAsset.name;
+      // 允许空值（使用默认值）
+      const frameRate = value === '' ? undefined : parseInt(value, 10);
+      updateAssetConfig(assetPath, {
+        ...currentSettings,
+        videoFrameRate: frameRate,
       });
     },
     [selectedAsset, currentSettings, updateAssetConfig]
@@ -273,9 +454,188 @@ const ConversionConfigPanel: React.FC<ConversionConfigPanelProps> = () => {
   }
 
   const formatOptions = isFolder ? FOLDER_FORMAT_OPTIONS : IMAGE_FORMAT_OPTIONS;
+  const videoFormatOptions = isFolder ? FOLDER_VIDEO_FORMAT_OPTIONS : VIDEO_FORMAT_OPTIONS;
   const currentFormat = currentSettings.format || (isFolder ? 'adaptive16' : 'inherit');
+  const currentVideoFormat = currentSettings.videoFormat || (isFolder ? 'MJPEG' : 'inherit');
   const currentCompression = currentSettings.compression || 'adaptive';
   const showYuvParams = currentCompression === 'yuv' || effectiveSettings.settings.compression === 'yuv';
+
+  // 渲染图片设置区域
+  const renderImageSettings = () => (
+    <div className="config-group">
+      <div className="config-group-title">🖼️ {t('Image Settings')}</div>
+      <div className="config-item">
+        <label>{t('Target Format')}</label>
+        <select value={currentFormat} onChange={handleFormatChange}>
+          {formatOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label.startsWith('format') || option.label.startsWith('compression') || option.label.startsWith('blur')
+                ? t(option.label as any)
+                : option.label}
+            </option>
+          ))}
+        </select>
+        {/* 继承状态指示器 */}
+        {effectiveSettings.isInherited && currentFormat === 'inherit' && (
+          <div className="inherited-indicator">
+            <span className="icon">↩️</span>
+            <span>
+              {t('inheritedFrom')}: {effectiveSettings.inheritedFrom} (
+              {getFormatLabel(effectiveSettings.settings.format || 'RGB565')})
+            </span>
+          </div>
+        )}
+      </div>
+      <div className="config-item">
+        <label>{t('Compression Method')}</label>
+        <select value={currentCompression} onChange={handleCompressionChange}>
+          {COMPRESSION_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {t(option.label as any)}
+            </option>
+          ))}
+        </select>
+        {currentCompression === 'adaptive' && (
+          <div className="config-hint">{t('adaptiveCompressionHint')}</div>
+        )}
+      </div>
+
+      {/* YUV 参数配置 */}
+      {showYuvParams && (
+        <div className="yuv-params-section">
+          <div className="yuv-params-title">{t('YUV Parameters')}</div>
+          <div className="yuv-params-grid">
+            <div className="yuv-param-item">
+              <label>{t('Sampling')}</label>
+              <select
+                value={currentSettings.yuvParams?.sampling || effectiveSettings.settings.yuvParams?.sampling || 'YUV422'}
+                onChange={handleYuvSamplingChange}
+              >
+                {YUV_SAMPLING_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="yuv-param-item">
+              <label>{t('Blur')}</label>
+              <select
+                value={currentSettings.yuvParams?.blur || effectiveSettings.settings.yuvParams?.blur || 'none'}
+                onChange={handleYuvBlurChange}
+              >
+                {YUV_BLUR_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {getBlurLabel(option.value)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="checkbox-wrapper">
+              <input
+                type="checkbox"
+                id="fastlzSecondary"
+                checked={
+                  currentSettings.yuvParams?.fastlzSecondary ??
+                  effectiveSettings.settings.yuvParams?.fastlzSecondary ??
+                  false
+                }
+                onChange={handleFastlzSecondaryChange}
+              />
+              <label htmlFor="fastlzSecondary">{t('FastLZ Secondary Compression')}</label>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // 渲染视频设置区域
+  const renderVideoSettings = () => {
+    // 获取有效的视频格式（用于确定质量范围）
+    const effectiveFormat = currentVideoFormat === 'inherit' 
+      ? effectiveVideoSettings.videoFormat 
+      : currentVideoFormat;
+    
+    // 根据格式确定质量范围和默认值
+    const isH264 = effectiveFormat === 'H264';
+    const qualityMin = isH264 ? 0 : 1;
+    const qualityMax = isH264 ? 51 : 31;
+    const qualityDefault = isH264 ? 23 : 1;
+    const qualityLabel = isH264 ? t('CRF Quality (0-51)') : t('Quality (1-31)');
+    const qualityHint = isH264 ? t('H.264 CRF value, 0=lossless, 23=default, 51=lowest') : t('JPEG compression quality, 1=highest, 31=lowest');
+    
+    // 当前质量值和帧率值
+    const currentQuality = currentSettings.videoQuality;
+    const currentFrameRate = currentSettings.videoFrameRate;
+    
+    return (
+      <div className="config-group">
+        <div className="config-group-title">🎬 {t('Video Settings')}</div>
+        <div className="config-item">
+          <label>{t('Target Format')}</label>
+          <select value={currentVideoFormat} onChange={handleVideoFormatChange}>
+            {videoFormatOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label === 'formatInherit' ? t('formatInherit') : option.label}
+              </option>
+            ))}
+          </select>
+          {/* 视频格式继承状态指示器 */}
+          {effectiveVideoSettings.isInherited && currentVideoFormat === 'inherit' && (
+            <div className="inherited-indicator">
+              <span className="icon">↩️</span>
+              <span>
+                {t('inheritedFrom')}: {effectiveVideoSettings.inheritedFrom} ({effectiveVideoSettings.videoFormat})
+              </span>
+            </div>
+          )}
+        </div>
+        <div className="config-item">
+          <label>{qualityLabel}</label>
+          <input
+            type="number"
+            min={qualityMin}
+            max={qualityMax}
+            value={currentQuality ?? ''}
+            placeholder={String(qualityDefault)}
+            onChange={handleVideoQualityChange}
+          />
+          <div className="config-hint">{qualityHint}</div>
+          {/* 视频质量继承状态指示器 */}
+          {effectiveVideoQuality.isInherited && currentQuality === undefined && (
+            <div className="inherited-indicator">
+              <span className="icon">↩️</span>
+              <span>
+                {t('inheritedFrom')}: {effectiveVideoQuality.inheritedFrom} ({effectiveVideoQuality.quality})
+              </span>
+            </div>
+          )}
+        </div>
+        <div className="config-item">
+          <label>{t('Frame Rate (FPS)')}</label>
+          <input
+            type="number"
+            min={1}
+            max={60}
+            value={currentFrameRate ?? ''}
+            placeholder="30"
+            onChange={handleVideoFrameRateChange}
+          />
+          <div className="config-hint">{t('Output video frame rate')}</div>
+          {/* 视频帧率继承状态指示器 */}
+          {effectiveVideoFrameRate.isInherited && currentFrameRate === undefined && (
+            <div className="inherited-indicator">
+              <span className="icon">↩️</span>
+              <span>
+                {t('inheritedFrom')}: {effectiveVideoFrameRate.inheritedFrom} ({effectiveVideoFrameRate.frameRate})
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="conversion-config-panel">
@@ -286,7 +646,7 @@ const ConversionConfigPanel: React.FC<ConversionConfigPanelProps> = () => {
         {/* 资源信息 */}
         <div className="asset-info-section">
           <div className="asset-name">
-            <span className="asset-icon">{isFolder ? '📁' : '🖼️'}</span>
+            <span className="asset-icon">{isFolder ? '📁' : isVideo ? '🎬' : '🖼️'}</span>
             <span>{selectedAsset.name}</span>
           </div>
           {selectedAsset.relativePath && (
@@ -294,98 +654,20 @@ const ConversionConfigPanel: React.FC<ConversionConfigPanelProps> = () => {
           )}
         </div>
 
-        {/* 格式配置 */}
-        <div className="config-group">
-          <div className="config-group-title">{t('Target Format')}</div>
-          <div className="config-item">
-            <label>{t('Format')}</label>
-            <select value={currentFormat} onChange={handleFormatChange}>
-              {formatOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label.startsWith('format') || option.label.startsWith('compression') || option.label.startsWith('blur')
-                    ? t(option.label as any)
-                    : option.label}
-                </option>
-              ))}
-            </select>
-            {/* 继承状态指示器 */}
-            {effectiveSettings.isInherited && currentFormat === 'inherit' && (
-              <div className="inherited-indicator">
-                <span className="icon">↩️</span>
-                <span>
-                  {t('inheritedFrom')}: {effectiveSettings.inheritedFrom} (
-                  {getFormatLabel(effectiveSettings.settings.format || 'RGB565')})
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* 压缩配置 */}
-        <div className="config-group">
-          <div className="config-group-title">{t('Compression')}</div>
-          <div className="config-item">
-            <label>{t('Compression Method')}</label>
-            <select value={currentCompression} onChange={handleCompressionChange}>
-              {COMPRESSION_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {t(option.label as any)}
-                </option>
-              ))}
-            </select>
-            {currentCompression === 'adaptive' && (
-              <div className="config-hint">{t('adaptiveCompressionHint')}</div>
-            )}
-          </div>
-
-          {/* YUV 参数配置 */}
-          {showYuvParams && (
-            <div className="yuv-params-section">
-              <div className="yuv-params-title">{t('YUV Parameters')}</div>
-              <div className="yuv-params-grid">
-                <div className="yuv-param-item">
-                  <label>{t('Sampling')}</label>
-                  <select
-                    value={currentSettings.yuvParams?.sampling || effectiveSettings.settings.yuvParams?.sampling || 'YUV422'}
-                    onChange={handleYuvSamplingChange}
-                  >
-                    {YUV_SAMPLING_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="yuv-param-item">
-                  <label>{t('Blur')}</label>
-                  <select
-                    value={currentSettings.yuvParams?.blur || effectiveSettings.settings.yuvParams?.blur || 'none'}
-                    onChange={handleYuvBlurChange}
-                  >
-                    {YUV_BLUR_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {getBlurLabel(option.value)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="checkbox-wrapper">
-                  <input
-                    type="checkbox"
-                    id="fastlzSecondary"
-                    checked={
-                      currentSettings.yuvParams?.fastlzSecondary ??
-                      effectiveSettings.settings.yuvParams?.fastlzSecondary ??
-                      false
-                    }
-                    onChange={handleFastlzSecondaryChange}
-                  />
-                  <label htmlFor="fastlzSecondary">{t('FastLZ Secondary Compression')}</label>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+        {/* 根据资源类型显示不同的配置区域 */}
+        {isFolder ? (
+          <>
+            {/* 文件夹：同时显示图片和视频设置 */}
+            {renderImageSettings()}
+            {renderVideoSettings()}
+          </>
+        ) : isVideo ? (
+          /* 视频文件：只显示视频设置 */
+          renderVideoSettings()
+        ) : (
+          /* 图片文件：只显示图片设置 */
+          renderImageSettings()
+        )}
       </div>
     </div>
   );

@@ -419,6 +419,10 @@ const zhCN = {
 
   // HgVideoProperties
   'Video size is determined by source file': '视频尺寸由源文件决定',
+  'Start playing automatically after creation': '组件创建后自动开始播放',
+  'Restart automatically when playback ends': '视频播放结束后自动重新开始',
+  'Format Note': '格式说明',
+  'Video format is configured in Assets panel. Select video file to set output format (MJPEG/AVI/H264).': '视频格式在资源面板中配置。选择视频文件可设置输出格式（MJPEG/AVI/H264）。',
 
   // GeometryProperties - Gradient
   'Gradient Settings': '渐变设置',
@@ -529,7 +533,9 @@ const zhCN = {
   // 转换配置面板
   'selectAssetToConfig': '选择文件夹或图片以配置转换设置',
   'Target Format': '目标格式',
+  'Video Format': '视频格式',
   'Format': '格式',
+  'Image Settings': '图片设置',
   'formatAdaptive16': '自适应 16bit',
   'formatAdaptive24': '自适应 24bit',
   'formatInherit': '继承父文件夹',

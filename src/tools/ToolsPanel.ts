@@ -117,7 +117,7 @@ export class ToolsPanel {
                 await this.selectCharsetFile(message.charsetIdx, message.charsetType);
                 break;
             case 'startConvert':
-                await this.startConvert();
+                await this.startConvert(message.baseAddr);
                 break;
             case 'previewGlass':
                 await this.previewGlass(message.id, message.data, message.settings);
@@ -621,7 +621,7 @@ export class ToolsPanel {
         }
     }
 
-    private async startConvert(): Promise<void> {
+    private async startConvert(baseAddr: string = '0x704D1000'): Promise<void> {
         if (!this.outputDir || this.files.size === 0) return;
 
         const results: any[] = [];
@@ -636,6 +636,12 @@ export class ToolsPanel {
             const result = await this.convertFile(file);
             results.push(result);
             completed++;
+        }
+
+        // 转换完成后，打包成 ROMFS
+        const romfsResult = await this.generateRomfs(baseAddr);
+        if (romfsResult) {
+            results.push(romfsResult);
         }
 
         this.panel.webview.postMessage({ type: 'convertComplete', results });
@@ -868,6 +874,61 @@ export class ToolsPanel {
                 success: false,
                 error: error.message
             });
+        }
+    }
+
+    /**
+     * 生成 ROMFS 打包文件和 ui_resource.h
+     */
+    private async generateRomfs(baseAddr: string): Promise<any> {
+        if (!this.outputDir) {
+            return { success: false, error: '输出目录未设置', fileName: 'romfs.bin' };
+        }
+
+        try {
+            const { execSync } = require('child_process');
+            const mkromfsScript = path.join(__dirname, '..', '..', 'tools', 'mkromfs_for_honeygui.py');
+            
+            if (!fs.existsSync(mkromfsScript)) {
+                return { success: false, error: 'mkromfs 脚本不存在', fileName: 'romfs.bin' };
+            }
+
+            // 检测 Python 命令
+            let pythonCmd = 'python';
+            try {
+                execSync('python --version', { stdio: 'pipe' });
+            } catch {
+                try {
+                    execSync('python3 --version', { stdio: 'pipe' });
+                    pythonCmd = 'python3';
+                } catch {
+                    return { success: false, error: 'Python 未安装或不在 PATH 中', fileName: 'romfs.bin' };
+                }
+            }
+
+            const romfsBinOutput = path.join(this.outputDir, 'romfs.bin');
+
+            // 生成二进制文件（同时会生成 ui_resource.h）
+            execSync(`${pythonCmd} "${mkromfsScript}" -i "${this.outputDir}" -o "${romfsBinOutput}" -a ${baseAddr} -b`, {
+                cwd: this.outputDir,
+                stdio: 'pipe',
+                windowsHide: true
+            });
+
+            logger.info(`ROMFS 打包完成: ${romfsBinOutput}`);
+            
+            // 检查 ui_resource.h 是否生成
+            const headerPath = path.join(this.outputDir, 'ui_resource.h');
+            const headerGenerated = fs.existsSync(headerPath);
+
+            return { 
+                success: true, 
+                fileName: 'romfs.bin',
+                message: `ROMFS 打包完成 (基地址: ${baseAddr})${headerGenerated ? '，ui_resource.h 已生成' : ''}`
+            };
+        } catch (error: any) {
+            logger.error(`ROMFS 打包失败: ${error.message}`);
+            return { success: false, error: error.message, fileName: 'romfs.bin' };
         }
     }
 

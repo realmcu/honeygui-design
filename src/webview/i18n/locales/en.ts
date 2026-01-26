@@ -419,6 +419,10 @@ const en = {
 
   // HgVideoProperties
   'Video size is determined by source file': 'Video size is determined by source file',
+  'Start playing automatically after creation': 'Start playing automatically after creation',
+  'Restart automatically when playback ends': 'Restart automatically when playback ends',
+  'Format Note': 'Format Note',
+  'Video format is configured in Assets panel. Select video file to set output format (MJPEG/AVI/H264).': 'Video format is configured in Assets panel. Select video file to set output format (MJPEG/AVI/H264).',
 
   // GeometryProperties - Gradient
   'Gradient Settings': 'Gradient Settings',
@@ -529,7 +533,9 @@ const en = {
   // Conversion Config Panel
   'selectAssetToConfig': 'Select a folder or image to configure conversion settings',
   'Target Format': 'Target Format',
+  'Video Format': 'Video Format',
   'Format': 'Format',
+  'Image Settings': 'Image Settings',
   'formatAdaptive16': 'Adaptive 16bit',
   'formatAdaptive24': 'Adaptive 24bit',
   'formatInherit': 'Inherit from parent',

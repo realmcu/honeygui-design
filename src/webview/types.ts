@@ -147,6 +147,15 @@ export type TargetFormat =
   | 'inherit';
 
 /**
+ * 视频目标格式枚举
+ * - MJPEG: Motion JPEG 格式
+ * - AVI: AVI 容器格式
+ * - H264: H.264 编码格式
+ * - inherit: 继承父文件夹设置（仅用于视频文件）
+ */
+export type VideoFormat = 'MJPEG' | 'AVI' | 'H264' | 'inherit';
+
+/**
  * 压缩方式枚举
  * - none: 不压缩
  * - rle: RLE 压缩
@@ -187,8 +196,14 @@ export interface YuvParams {
  * 单个项目（文件夹或图片）的配置
  */
 export interface ItemSettings {
-  /** 目标格式 */
+  /** 图片目标格式 */
   format?: TargetFormat;
+  /** 视频目标格式 */
+  videoFormat?: VideoFormat;
+  /** 视频质量（MJPEG/AVI: 1-31, H264: 0-51） */
+  videoQuality?: number;
+  /** 视频帧率 (FPS) */
+  videoFrameRate?: number;
   /** 压缩方式 */
   compression?: CompressionMethod;
   /** YUV 压缩参数（仅当 compression 为 'yuv' 时有效） */

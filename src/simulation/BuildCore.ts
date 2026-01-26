@@ -6,6 +6,7 @@ import { VideoConverterService } from '../services/VideoConverterService';
 import { Model3DConverterService } from '../services/Model3DConverterService';
 import { FontConverterService, FontConvertOptions } from '../services/FontConverterService';
 import { GlassConverterService, GlassConvertOptions, GlassConvertResult } from '../services/GlassConverterService';
+import { ConversionConfigService, VideoFormat } from '../services/ConversionConfigService';
 import { ProjectConfig, DEFAULT_ROMFS_BASE_ADDR } from '../common/ProjectConfig';
 import { RomfsConfig } from '../common/RomfsConfig';
 import { buildSConstruct } from './SConstructTemplate';
@@ -438,6 +439,10 @@ export class BuildCore {
         // 获取项目中所有视频组件的配置
         const videoComponentConfigs = await this.getVideoComponentConfigs();
         
+        // 加载 conversion.json 配置
+        const conversionConfigService = ConversionConfigService.getInstance();
+        const conversionConfig = conversionConfigService.loadConfig(this.projectRoot);
+        
         // 支持的视频格式
         const videoExts = [
             '.mp4', '.avi', '.mov', '.mkv', '.webm', '.flv', '.wmv',
@@ -462,12 +467,25 @@ export class BuildCore {
                         config.src.endsWith(normalizedPath)
                     );
                     
-                    // 使用组件配置或默认配置
+                    // 从 conversion.json 解析视频格式（处理继承）
+                    const resolvedVideoFormat = this.resolveVideoFormat(normalizedPath, conversionConfig);
+                    
+                    // 从 conversion.json 解析视频质量（处理继承）
+                    const resolvedVideoQuality = this.resolveVideoQuality(normalizedPath, conversionConfig);
+                    
+                    // 从 conversion.json 解析视频帧率（处理继承）
+                    const resolvedVideoFrameRate = this.resolveVideoFrameRate(normalizedPath, conversionConfig);
+                    
+                    // 优先级：组件配置 > conversion.json > 项目配置 > 默认值
                     const configFormat = componentConfig?.format || 
+                        resolvedVideoFormat ||
                         (this.projectConfig.videoFormat as 'mjpeg' | 'avi' | 'h264') || 'mjpeg';
                     
-                    // 获取原始质量值
-                    const rawQuality = componentConfig?.quality ?? this.projectConfig.videoQuality;
+                    // 获取原始质量值：组件配置 > conversion.json > 项目配置
+                    const rawQuality = componentConfig?.quality ?? resolvedVideoQuality ?? this.projectConfig.videoQuality;
+                    
+                    // 获取帧率：组件配置 > conversion.json > 项目配置 > 默认值 30
+                    const frameRate = componentConfig?.frameRate ?? resolvedVideoFrameRate ?? this.projectConfig.videoFrameRate ?? 30;
                     
                     // 根据格式校验和修正质量值
                     const quality = this.normalizeVideoQuality(rawQuality, configFormat);
@@ -475,13 +493,13 @@ export class BuildCore {
                     const options = componentConfig ? {
                         format: configFormat,
                         quality: quality,
-                        frameRate: componentConfig.frameRate || 30,
+                        frameRate: frameRate,
                         crop: componentConfig.crop,
                         scale: componentConfig.scale
                     } : {
                         format: configFormat,
                         quality: quality,
-                        frameRate: this.projectConfig.videoFrameRate || 30
+                        frameRate: frameRate
                     };
                     
                     // 生成输出路径
@@ -505,6 +523,105 @@ export class BuildCore {
         
         // 并行执行所有转换任务
         return Promise.all(convertTasks);
+    }
+    
+    /**
+     * 解析视频格式配置（处理继承）
+     * @param assetPath 资源路径（相对于 assets 目录）
+     * @param config conversion.json 配置
+     * @returns 解析后的视频格式，如果没有配置则返回 undefined
+     */
+    private resolveVideoFormat(
+        assetPath: string, 
+        config: { items: Record<string, { videoFormat?: VideoFormat }> }
+    ): 'mjpeg' | 'avi' | 'h264' | undefined {
+        const normalizedPath = assetPath.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+        const itemSettings = config.items[normalizedPath];
+        
+        // 如果有明确配置且不是 inherit，直接使用
+        if (itemSettings?.videoFormat && itemSettings.videoFormat !== 'inherit') {
+            return itemSettings.videoFormat.toLowerCase() as 'mjpeg' | 'avi' | 'h264';
+        }
+        
+        // 需要继承：查找父级配置
+        const pathParts = normalizedPath.split('/');
+        for (let i = pathParts.length - 1; i >= 0; i--) {
+            const parentPath = pathParts.slice(0, i).join('/');
+            const parentSettings = parentPath ? config.items[parentPath] : undefined;
+            
+            if (parentSettings?.videoFormat && parentSettings.videoFormat !== 'inherit') {
+                return parentSettings.videoFormat.toLowerCase() as 'mjpeg' | 'avi' | 'h264';
+            }
+        }
+        
+        // 没有找到配置，返回 undefined（让调用方使用默认值）
+        return undefined;
+    }
+
+    /**
+     * 解析视频质量配置（处理继承）
+     * @param assetPath 资源路径（相对于 assets 目录）
+     * @param config conversion.json 配置
+     * @returns 解析后的视频质量，如果没有配置则返回 undefined
+     */
+    private resolveVideoQuality(
+        assetPath: string, 
+        config: { items: Record<string, { videoQuality?: number }> }
+    ): number | undefined {
+        const normalizedPath = assetPath.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+        const itemSettings = config.items[normalizedPath];
+        
+        // 如果有明确配置，直接使用
+        if (itemSettings?.videoQuality !== undefined) {
+            return itemSettings.videoQuality;
+        }
+        
+        // 需要继承：查找父级配置
+        const pathParts = normalizedPath.split('/');
+        for (let i = pathParts.length - 1; i >= 0; i--) {
+            const parentPath = pathParts.slice(0, i).join('/');
+            const parentSettings = parentPath ? config.items[parentPath] : undefined;
+            
+            if (parentSettings?.videoQuality !== undefined) {
+                return parentSettings.videoQuality;
+            }
+        }
+        
+        // 没有找到配置，返回 undefined（让调用方使用默认值）
+        return undefined;
+    }
+
+    /**
+     * 解析视频帧率配置（处理继承）
+     * @param assetPath 资源路径（相对于 assets 目录）
+     * @param config conversion.json 配置
+     * @returns 解析后的视频帧率，如果没有配置则返回 undefined
+     */
+    private resolveVideoFrameRate(
+        assetPath: string, 
+        config: { items: Record<string, { videoFrameRate?: number }> }
+    ): number | undefined {
+        const normalizedPath = assetPath.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+        const itemSettings = config.items[normalizedPath];
+        
+        // 如果有明确配置，直接使用
+        if (itemSettings?.videoFrameRate !== undefined) {
+            return itemSettings.videoFrameRate;
+        }
+        
+        // 需要继承：查找父级配置
+        const pathParts = normalizedPath.split('/');
+        for (let i = pathParts.length - 1; i >= 0; i--) {
+            const parentPath = pathParts.slice(0, i).join('/');
+            const parentSettings = parentPath ? config.items[parentPath] : undefined;
+            
+            if (parentSettings?.videoFrameRate !== undefined) {
+                return parentSettings.videoFrameRate;
+            }
+        }
+        
+        // 没有找到配置，返回 undefined（让调用方使用默认值）
+        return undefined;
     }
 
     /**

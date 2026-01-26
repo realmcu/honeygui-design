@@ -49,6 +49,8 @@ export function getToolsPanelHtml(): string {
             <span>输出目录:</span>
             <button onclick="selectOutputDir()">选择目录</button>
             <span id="outputDirPath" class="output-path">未选择</span>
+            <span class="base-addr-label">基地址:</span>
+            <input type="text" id="baseAddrInput" class="base-addr-input" value="0x704D1000" placeholder="0x704D1000" title="ROMFS 基地址，用于嵌入式烧录">
         </div>
         <div class="footer">
             <div class="stats" id="stats">🖼️ 0  🎬 0  📦 0</div>
@@ -128,6 +130,8 @@ h1{font-size:16px;margin-bottom:12px}
 .add-charset{margin-top:4px;font-size:10px;padding:3px 8px}
 .output-section{display:flex;align-items:center;gap:10px;padding:10px 0;font-size:13px}
 .output-path{flex:1;padding:6px 10px;background:var(--vscode-textBlockQuote-background);border-radius:4px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.base-addr-label{margin-left:10px;white-space:nowrap}
+.base-addr-input{width:110px;padding:4px 8px;background:var(--vscode-input-background);border:1px solid var(--vscode-input-border);color:var(--vscode-input-foreground);border-radius:4px;font-size:12px;font-family:monospace}
 .footer{display:flex;justify-content:space-between;align-items:center;padding:10px 0}
 .stats{font-size:13px}
 .actions{display:flex;gap:8px}
@@ -1125,7 +1129,8 @@ function startConvert() {
     document.getElementById('progressSection').style.display = 'block';
     document.getElementById('results').style.display = 'none';
     document.getElementById('convertBtn').disabled = true;
-    vscode.postMessage({type:'startConvert'});
+    const baseAddr = document.getElementById('baseAddrInput').value || '0x704D1000';
+    vscode.postMessage({type:'startConvert', baseAddr: baseAddr});
 }
 
 // 玻璃效果设置更新（带防抖的自动预览）

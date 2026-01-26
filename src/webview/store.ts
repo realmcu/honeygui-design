@@ -217,7 +217,13 @@ export interface DesignerStore extends DesignerState {
   conversionConfig: ConversionConfig | null;
   setSelectedAsset: (asset: AssetFile | null) => void;
   setConversionConfig: (config: ConversionConfig | null) => void;
-  updateAssetConfig: (path: string, settings: ItemSettings) => void;
+  /**
+   * 更新资源配置
+   * @param path 资源路径（相对于 assets 目录）
+   * @param settings 配置设置
+   * @param changedField 变更的字段名（可选，用于触发特定行为如代码生成）
+   */
+  updateAssetConfig: (path: string, settings: ItemSettings, changedField?: string) => void;
 }
 
 let vscodeAPI: VSCodeAPI | null = null;
@@ -1844,8 +1850,9 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
    * 更新指定资源路径的配置
    * @param path 资源路径（相对于 assets 目录）
    * @param settings 配置设置
+   * @param changedField 变更的字段名（可选，用于触发特定行为如代码生成）
    */
-  updateAssetConfig: (path: string, settings: ItemSettings) => {
+  updateAssetConfig: (path: string, settings: ItemSettings, changedField?: string) => {
     const state = get();
     const currentConfig = state.conversionConfig;
     
@@ -1867,7 +1874,9 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       if (vscodeAPI) {
         vscodeAPI.postMessage({
           command: 'saveConversionConfig',
-          config: newConfig
+          config: newConfig,
+          changedPath: path,
+          changedField: changedField
         });
       }
       return;
@@ -1888,7 +1897,9 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     if (vscodeAPI) {
       vscodeAPI.postMessage({
         command: 'saveConversionConfig',
-        config: newConfig
+        config: newConfig,
+        changedPath: path,
+        changedField: changedField
       });
     }
   },

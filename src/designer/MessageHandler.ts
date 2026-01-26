@@ -321,7 +321,7 @@ export class MessageHandler {
                 break;
 
             case 'saveConversionConfig':
-                this._handleSaveConversionConfig(message.config);
+                this._handleSaveConversionConfig(message.config, message.changedPath, message.changedField);
                 break;
                 
             default:
@@ -620,8 +620,10 @@ export class MessageHandler {
      * 处理保存转换配置
      * 将配置保存到配置文件
      * @param config 转换配置对象
+     * @param changedPath 变更的资源路径（可选）
+     * @param changedField 变更的字段名（可选）
      */
-    private _handleSaveConversionConfig(config: ConversionConfig): void {
+    private _handleSaveConversionConfig(config: ConversionConfig, changedPath?: string, changedField?: string): void {
         try {
             const projectRoot = this._fileManager.currentFilePath
                 ? ProjectUtils.findProjectRoot(this._fileManager.currentFilePath)
@@ -642,6 +644,14 @@ export class MessageHandler {
             configService.saveConfig(projectRoot, config);
 
             logger.debug('[MessageHandler] 转换配置已保存');
+            
+            // 如果是视频格式变更，自动触发代码生成
+            if (changedField === 'videoFormat') {
+                logger.info('[MessageHandler] 视频格式变更，自动触发代码生成');
+                this.handleGenerateCode().catch(err => {
+                    logger.error(`[MessageHandler] 自动代码生成失败: ${err}`);
+                });
+            }
         } catch (error) {
             logger.error(`[MessageHandler] 保存转换配置失败: ${error}`);
             vscode.window.showErrorMessage(vscode.l10n.t('Failed to save conversion config: {0}', error instanceof Error ? error.message : String(error)));
