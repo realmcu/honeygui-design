@@ -624,6 +624,9 @@ export class ToolsPanel {
     private async startConvert(baseAddr: string = '0x704D1000'): Promise<void> {
         if (!this.outputDir || this.files.size === 0) return;
 
+        // 删除上一次生成的 ROMFS 文件，避免重复打包导致文件大小暴增
+        this.cleanPreviousRomfsFiles();
+
         const results: any[] = [];
         let completed = 0;
         const total = this.files.size;
@@ -735,6 +738,15 @@ export class ToolsPanel {
             }
         }
         
+        // 2.1 对于视频类型，尝试从 conversion.json 获取配置
+        if (file.type === 'video' && this.conversionConfig) {
+            const videoPath = file.relativePath ? `${file.relativePath}/${file.name}` : file.name;
+            const configSettings = this.getVideoSettingsFromConfig(videoPath);
+            if (configSettings) {
+                return configSettings;
+            }
+        }
+        
         // 3. 查找继承的文件夹设置（UI 中设置的）
         if (file.relativePath) {
             const parts = file.relativePath.split('/');
@@ -840,6 +852,53 @@ export class ToolsPanel {
     }
 
     /**
+     * 从 conversion.json 配置中获取视频设置
+     */
+    private getVideoSettingsFromConfig(relativePath: string): any | null {
+        if (!this.conversionConfig) {
+            return null;
+        }
+
+        const normalizedPath = relativePath.replace(/\\/g, '/');
+        
+        // 查找文件自身的配置
+        let itemSettings = this.conversionConfig.items[normalizedPath];
+        
+        // 如果没有，查找父文件夹的配置
+        if (!itemSettings) {
+            const pathParts = normalizedPath.split('/');
+            for (let i = pathParts.length - 1; i >= 0; i--) {
+                const parentPath = pathParts.slice(0, i).join('/');
+                if (parentPath && this.conversionConfig.items[parentPath]) {
+                    itemSettings = this.conversionConfig.items[parentPath];
+                    break;
+                }
+            }
+        }
+        
+        if (!itemSettings) {
+            return null;
+        }
+        
+        // 检查是否有视频相关配置
+        if (!itemSettings.videoFormat && !itemSettings.videoQuality && !itemSettings.videoFrameRate) {
+            return null;
+        }
+        
+        // 构建设置对象
+        const settings: any = {
+            format: itemSettings.videoFormat || 'mjpeg',
+            quality: itemSettings.videoQuality || 1
+        };
+        
+        if (itemSettings.videoFrameRate) {
+            settings.frameRate = itemSettings.videoFrameRate;
+        }
+        
+        return settings;
+    }
+
+    /**
      * 预览玻璃效果
      */
     private async previewGlass(id: string, data: number[], settings: any): Promise<void> {
@@ -878,19 +937,40 @@ export class ToolsPanel {
     }
 
     /**
-     * 生成 ROMFS 打包文件和 ui_resource.h
+     * 清理上一次生成的 ROMFS 文件，避免重复打包导致文件大小暴增
+     */
+    private cleanPreviousRomfsFiles(): void {
+        if (!this.outputDir) return;
+
+        const filesToDelete = ['app_romfs.c', 'app_romfs.bin', 'ui_resource.h'];
+        
+        for (const fileName of filesToDelete) {
+            const filePath = path.join(this.outputDir, fileName);
+            try {
+                if (fs.existsSync(filePath)) {
+                    fs.unlinkSync(filePath);
+                    logger.info(`已删除旧文件: ${filePath}`);
+                }
+            } catch (error) {
+                logger.error(`删除旧文件失败: ${filePath}, ${error}`);
+            }
+        }
+    }
+
+    /**
+     * 生成 ROMFS 打包文件（romfs.c 和 romfs.bin）和 ui_resource.h
      */
     private async generateRomfs(baseAddr: string): Promise<any> {
         if (!this.outputDir) {
-            return { success: false, error: '输出目录未设置', fileName: 'romfs.bin' };
+            return { success: false, error: '输出目录未设置', fileName: 'romfs' };
         }
 
         try {
             const { execSync } = require('child_process');
-            const mkromfsScript = path.join(__dirname, '..', '..', 'tools', 'mkromfs_for_honeygui.py');
+            const mkromfsScript = path.join(__dirname, '..', '..', '..', 'tools', 'mkromfs_for_honeygui.py');
             
             if (!fs.existsSync(mkromfsScript)) {
-                return { success: false, error: 'mkromfs 脚本不存在', fileName: 'romfs.bin' };
+                return { success: false, error: 'mkromfs 脚本不存在', fileName: 'romfs' };
             }
 
             // 检测 Python 命令
@@ -902,11 +982,20 @@ export class ToolsPanel {
                     execSync('python3 --version', { stdio: 'pipe' });
                     pythonCmd = 'python3';
                 } catch {
-                    return { success: false, error: 'Python 未安装或不在 PATH 中', fileName: 'romfs.bin' };
+                    return { success: false, error: 'Python 未安装或不在 PATH 中', fileName: 'romfs' };
                 }
             }
 
-            const romfsBinOutput = path.join(this.outputDir, 'romfs.bin');
+            const romfsCOutput = path.join(this.outputDir, 'app_romfs.c');
+            const romfsBinOutput = path.join(this.outputDir, 'app_romfs.bin');
+
+            // 生成 C 文件
+            execSync(`${pythonCmd} "${mkromfsScript}" -i "${this.outputDir}" -o "${romfsCOutput}" -a ${baseAddr}`, {
+                cwd: this.outputDir,
+                stdio: 'pipe',
+                windowsHide: true
+            });
+            logger.info(`ROMFS C 文件生成完成: ${romfsCOutput}`);
 
             // 生成二进制文件（同时会生成 ui_resource.h）
             execSync(`${pythonCmd} "${mkromfsScript}" -i "${this.outputDir}" -o "${romfsBinOutput}" -a ${baseAddr} -b`, {
@@ -914,8 +1003,7 @@ export class ToolsPanel {
                 stdio: 'pipe',
                 windowsHide: true
             });
-
-            logger.info(`ROMFS 打包完成: ${romfsBinOutput}`);
+            logger.info(`ROMFS 二进制文件生成完成: ${romfsBinOutput}`);
             
             // 检查 ui_resource.h 是否生成
             const headerPath = path.join(this.outputDir, 'ui_resource.h');
@@ -923,12 +1011,12 @@ export class ToolsPanel {
 
             return { 
                 success: true, 
-                fileName: 'romfs.bin',
+                fileName: 'app_romfs.c / app_romfs.bin',
                 message: `ROMFS 打包完成 (基地址: ${baseAddr})${headerGenerated ? '，ui_resource.h 已生成' : ''}`
             };
         } catch (error: any) {
             logger.error(`ROMFS 打包失败: ${error.message}`);
-            return { success: false, error: error.message, fileName: 'romfs.bin' };
+            return { success: false, error: error.message, fileName: 'romfs' };
         }
     }
 

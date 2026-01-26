@@ -663,14 +663,20 @@ function renderProperties() {
         }
         
         if (vidCount > 0) {
+            // 使用 conversion.json 配置
+            const folderVideoConfig = getFolderConversionConfig(selectedFolder) || {};
+            const currentVideoFormat = folderVideoConfig.videoFormat || 'mjpeg';
+            const currentVideoQuality = folderVideoConfig.videoQuality || 1;
+            const currentVideoFrameRate = folderVideoConfig.videoFrameRate || '';
+            
             html += '<div class="prop-group"><div class="prop-group-title">🎬 视频设置 ('+vidCount+'个)</div>' +
-                '<div class="prop-row"><label>格式:</label><select onchange="updateFolderSetting(\\'video\\',\\'format\\',this.value)">' +
-                '<option value="mjpeg"'+(settings.video?.format==='mjpeg'||!settings.video?.format?' selected':'')+'>MJPEG</option>' +
-                '<option value="avi"'+(settings.video?.format==='avi'?' selected':'')+'>AVI</option>' +
-                '<option value="h264"'+(settings.video?.format==='h264'?' selected':'')+'>H.264</option>' +
+                '<div class="prop-row"><label>格式:</label><select onchange="updateFolderVideoConfig(\\'videoFormat\\',this.value)">' +
+                '<option value="mjpeg"'+(currentVideoFormat==='mjpeg'?' selected':'')+'>MJPEG</option>' +
+                '<option value="avi"'+(currentVideoFormat==='avi'?' selected':'')+'>AVI</option>' +
+                '<option value="h264"'+(currentVideoFormat==='h264'?' selected':'')+'>H.264</option>' +
                 '</select></div>' +
-                '<div class="prop-row"><label>质量:</label><input type="number" min="1" max="31" value="'+(settings.video?.quality||1)+'" onchange="updateFolderSetting(\\'video\\',\\'quality\\',+this.value)"></div>' +
-                '<div class="prop-row"><label>帧率:</label><input type="number" value="'+(settings.video?.frameRate||'')+'" placeholder="保持原始" onchange="updateFolderSetting(\\'video\\',\\'frameRate\\',this.value?+this.value:null)"></div></div>';
+                '<div class="prop-row"><label>质量:</label><input type="number" min="1" max="31" value="'+currentVideoQuality+'" onchange="updateFolderVideoConfig(\\'videoQuality\\',+this.value)"></div>' +
+                '<div class="prop-row"><label>帧率:</label><input type="number" value="'+currentVideoFrameRate+'" placeholder="保持原始" onchange="updateFolderVideoConfig(\\'videoFrameRate\\',this.value?+this.value:null)"></div></div>';
         }
         
         if (modCount > 0) {
@@ -794,16 +800,26 @@ function renderProperties() {
         }
         html += '</div>';
     } else if (file.type === 'video') {
-        const iv = inherited.video || {};
+        // 使用 conversion.json 配置
+        const videoPath = file.relativePath ? file.relativePath + '/' + file.name : file.name;
+        const videoConfig = getImageConversionConfig(videoPath) || {};
+        const effectiveConfig = resolveEffectiveConfig(videoPath);
+        const currentFormat = videoConfig.videoFormat || '';
+        const currentQuality = videoConfig.videoQuality || '';
+        const currentFrameRate = videoConfig.videoFrameRate || '';
+        const inheritedFormat = effectiveConfig.videoFormat || 'mjpeg';
+        const inheritedQuality = effectiveConfig.videoQuality || 1;
+        const inheritedFrameRate = effectiveConfig.videoFrameRate || '';
+        
         html += '<div class="prop-group"><div class="prop-group-title">转换设置</div>' +
-            '<div class="prop-row"><label>格式:</label><select onchange="updateSetting(\\'format\\',this.value)">' +
-            '<option value=""'+(!settings.format?' selected':'')+'>继承 ('+(iv.format||'MJPEG')+')</option>' +
-            '<option value="mjpeg"'+(settings.format==='mjpeg'?' selected':'')+'>MJPEG</option>' +
-            '<option value="avi"'+(settings.format==='avi'?' selected':'')+'>AVI</option>' +
-            '<option value="h264"'+(settings.format==='h264'?' selected':'')+'>H.264</option>' +
+            '<div class="prop-row"><label>格式:</label><select onchange="updateVideoConfig(\\'videoFormat\\',this.value)">' +
+            '<option value=""'+(!currentFormat?' selected':'')+'>继承 ('+inheritedFormat.toUpperCase()+')</option>' +
+            '<option value="mjpeg"'+(currentFormat==='mjpeg'?' selected':'')+'>MJPEG</option>' +
+            '<option value="avi"'+(currentFormat==='avi'?' selected':'')+'>AVI</option>' +
+            '<option value="h264"'+(currentFormat==='h264'?' selected':'')+'>H.264</option>' +
             '</select></div>' +
-            '<div class="prop-row"><label>质量:</label><input type="number" min="1" max="31" value="'+(settings.quality||'')+'" placeholder="继承 ('+(iv.quality||1)+')" onchange="updateSetting(\\'quality\\',this.value?+this.value:null)"></div>' +
-            '<div class="prop-row"><label>帧率:</label><input type="number" value="'+(settings.frameRate||'')+'" placeholder="'+(iv.frameRate||'保持原始')+'" onchange="updateSetting(\\'frameRate\\',this.value?+this.value:null)"></div></div>';
+            '<div class="prop-row"><label>质量:</label><input type="number" min="1" max="31" value="'+currentQuality+'" placeholder="继承 ('+inheritedQuality+')" onchange="updateVideoConfig(\\'videoQuality\\',this.value?+this.value:null)"></div>' +
+            '<div class="prop-row"><label>帧率:</label><input type="number" value="'+currentFrameRate+'" placeholder="'+(inheritedFrameRate||'保持原始')+'" onchange="updateVideoConfig(\\'videoFrameRate\\',this.value?+this.value:null)"></div></div>';
     } else if (file.type === 'font') {
         const ifnt = inherited.font || {};
         const charsets = settings.characterSets || ifnt.characterSets || [{type:'range',value:'0x20-0x7E'}];
@@ -907,6 +923,22 @@ function updateFolderYuvParam(key, value) {
     renderProperties();
 }
 
+// 更新文件夹的视频转换配置（保存到 conversion.json）
+function updateFolderVideoConfig(key, value) {
+    if (!selectedFolder) return;
+    const currentConfig = getFolderConversionConfig(selectedFolder) || {};
+    const newConfig = { ...currentConfig };
+    
+    if (value === null || value === '') {
+        delete newConfig[key];
+    } else {
+        newConfig[key] = value;
+    }
+    
+    updateConversionConfig(selectedFolder, newConfig);
+    renderProperties();
+}
+
 // 更新单个图片的转换配置
 function updateImageConfig(key, value) {
     const file = files.get(selectedId);
@@ -947,6 +979,25 @@ function updateImageYuvParam(key, value) {
     
     const newConfig = { ...currentConfig, yuvParams };
     updateConversionConfig(imagePath, newConfig);
+    renderProperties();
+}
+
+// 更新单个视频的转换配置（保存到 conversion.json）
+function updateVideoConfig(key, value) {
+    const file = files.get(selectedId);
+    if (!file || file.type !== 'video') return;
+    
+    const videoPath = file.relativePath ? file.relativePath + '/' + file.name : file.name;
+    const currentConfig = getImageConversionConfig(videoPath) || {};
+    const newConfig = { ...currentConfig };
+    
+    if (value === null || value === '') {
+        delete newConfig[key];
+    } else {
+        newConfig[key] = value;
+    }
+    
+    updateConversionConfig(videoPath, newConfig);
     renderProperties();
 }
 
