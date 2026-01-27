@@ -335,15 +335,8 @@ export class BuildCore {
                     if (!trimmed) continue;
                     if (trimmed.includes('Warning: Command is too long')) continue;
                     
-                    // stderr 通常是错误信息，显示出来
-                    // 包括：error:, Error:, undefined reference, multiple definition, collect2
-                    if (trimmed.includes('error:') || trimmed.includes('Error:') ||
-                        trimmed.includes('undefined reference') || 
-                        trimmed.includes('multiple definition') ||
-                        trimmed.includes('collect2') ||
-                        trimmed.includes('ld returned')) {
-                        this.logger.log(trimmed, true);
-                    }
+                    // stderr 输出全部显示，便于排查编译错误
+                    this.logger.log(trimmed, true);
                 }
             });
 

@@ -509,7 +509,9 @@ export class ToolsPanel {
                 this.scanDirectory(fullPath, relativePath ? `${relativePath}/${entry.name}` : entry.name, results);
             } else if (entry.isFile()) {
                 const type = this.getFileType(entry.name);
-                if (type !== 'unknown') {
+                const ext = path.extname(entry.name).toLowerCase();
+                // 也扫描 .bin 文件（可能是 GLTF 的 buffer 文件）
+                if (type !== 'unknown' || ext === '.bin') {
                     results.push({ filePath: fullPath, relativePath });
                 }
             }
@@ -700,14 +702,43 @@ export class ToolsPanel {
         let completed = 0;
         const total = this.files.size;
 
+        // 按类型分组文件，确保转换顺序正确：
+        // 1. 先转换图片（3D 模型的纹理依赖图片的 .bin 文件）
+        // 2. 再转换视频
+        // 3. 再转换 3D 模型（需要查找已转换的纹理 .bin）
+        // 4. 最后转换字体和玻璃效果
+        const filesByType: Map<string, FileItem[]> = new Map();
+        const typeOrder = ['image', 'video', 'model', 'font', 'glass'];
+        
+        for (const type of typeOrder) {
+            filesByType.set(type, []);
+        }
+        
         for (const file of this.files.values()) {
-            this.panel.webview.postMessage({ 
-                type: 'progress', current: completed, total, fileName: file.name 
-            });
+            const typeFiles = filesByType.get(file.type);
+            if (typeFiles) {
+                typeFiles.push(file);
+            } else {
+                // 未知类型放到最后
+                if (!filesByType.has('unknown')) {
+                    filesByType.set('unknown', []);
+                }
+                filesByType.get('unknown')!.push(file);
+            }
+        }
 
-            const result = await this.convertFile(file);
-            results.push(result);
-            completed++;
+        // 按顺序转换各类型文件
+        for (const type of [...typeOrder, 'unknown']) {
+            const files = filesByType.get(type) || [];
+            for (const file of files) {
+                this.panel.webview.postMessage({ 
+                    type: 'progress', current: completed, total, fileName: file.name 
+                });
+
+                const result = await this.convertFile(file);
+                results.push(result);
+                completed++;
+            }
         }
 
         // 转换完成后，打包成 ROMFS

@@ -169,6 +169,7 @@ const VIDEO_EXTS = ['.mp4','.avi','.mov','.mkv','.webm'];
 const MODEL_EXTS = ['.obj','.gltf','.mtl'];
 const FONT_EXTS = ['.ttf','.otf'];
 const GLASS_EXTS = ['.glass'];
+const AUXILIARY_EXTS = ['.bin'];  // 辅助文件（如 GLTF 的 buffer 文件）
 
 function getFileType(name) {
     const ext = name.toLowerCase().match(/\\.[^.]+$/)?.[0] || '';
@@ -177,6 +178,7 @@ function getFileType(name) {
     if (MODEL_EXTS.includes(ext)) return 'model';
     if (FONT_EXTS.includes(ext)) return 'font';
     if (GLASS_EXTS.includes(ext)) return 'glass';
+    if (AUXILIARY_EXTS.includes(ext)) return 'auxiliary';
     return 'unknown';
 }
 
@@ -197,41 +199,70 @@ function getFolderConversionConfig(folderPath) {
 // 解析有效配置（处理继承）
 function resolveEffectiveConfig(assetPath) {
     if (!conversionConfig) {
-        return { format: 'adaptive16', compression: 'none', isInherited: true, inheritedFrom: '默认' };
+        return { format: 'adaptive16', compression: 'none', videoFormat: 'mjpeg', isInherited: true, inheritedFrom: '默认' };
     }
     
     const normalizedPath = (assetPath || '').replace(/\\\\/g, '/').replace(/^\\/+|\\/+$/g, '');
-    const itemSettings = conversionConfig.items[normalizedPath];
+    const itemSettings = conversionConfig.items[normalizedPath] || {};
     
-    // 如果有明确配置且不是 inherit，直接使用
-    if (itemSettings && itemSettings.format && itemSettings.format !== 'inherit') {
+    // 检查是否有明确的图片格式配置
+    const hasExplicitFormat = itemSettings.format && itemSettings.format !== 'inherit';
+    // 检查是否有明确的视频格式配置
+    const hasExplicitVideoFormat = itemSettings.videoFormat && itemSettings.videoFormat !== 'inherit';
+    
+    // 如果图片和视频格式都有明确配置，直接返回
+    if (hasExplicitFormat && hasExplicitVideoFormat) {
         return { ...itemSettings, isInherited: false };
     }
     
     // 需要继承：查找父级配置
     const pathParts = normalizedPath.split('/');
+    let inheritedFormat = null;
+    let inheritedVideoFormat = null;
+    let inheritedFrom = '默认设置';
+    let parentSettings = {};
+    
     for (let i = pathParts.length - 1; i >= 0; i--) {
         const parentPath = pathParts.slice(0, i).join('/');
-        const parentSettings = parentPath ? conversionConfig.items[parentPath] : undefined;
+        const settings = parentPath ? conversionConfig.items[parentPath] : undefined;
         
-        if (parentSettings && parentSettings.format && parentSettings.format !== 'inherit') {
-            return { 
-                ...parentSettings, 
-                ...itemSettings,
-                format: parentSettings.format,
-                isInherited: true, 
-                inheritedFrom: parentPath || '根目录' 
-            };
+        if (settings) {
+            // 继承图片格式
+            if (!inheritedFormat && settings.format && settings.format !== 'inherit') {
+                inheritedFormat = settings.format;
+                if (!inheritedVideoFormat) inheritedFrom = parentPath || '根目录';
+            }
+            // 继承视频格式
+            if (!inheritedVideoFormat && settings.videoFormat && settings.videoFormat !== 'inherit') {
+                inheritedVideoFormat = settings.videoFormat;
+                inheritedFrom = parentPath || '根目录';
+            }
+            // 合并其他设置
+            parentSettings = { ...settings, ...parentSettings };
         }
+        
+        // 如果都找到了，可以提前退出
+        if (inheritedFormat && inheritedVideoFormat) break;
     }
     
-    // 使用默认配置
-    return { 
-        ...conversionConfig.defaultSettings, 
+    // 构建最终配置
+    const result = {
+        ...conversionConfig.defaultSettings,
+        ...parentSettings,
         ...itemSettings,
-        isInherited: true, 
-        inheritedFrom: '默认设置' 
+        isInherited: !hasExplicitFormat || !hasExplicitVideoFormat,
+        inheritedFrom
     };
+    
+    // 应用继承的格式
+    if (!hasExplicitFormat) {
+        result.format = inheritedFormat || conversionConfig.defaultSettings?.format || 'adaptive16';
+    }
+    if (!hasExplicitVideoFormat) {
+        result.videoFormat = inheritedVideoFormat || 'mjpeg';
+    }
+    
+    return result;
 }
 
 // 更新转换配置
@@ -326,6 +357,18 @@ function processFile(file, relativePath) {
     if (type === 'unknown' && ext !== '.bin') return;
     
     const id = Date.now() + '_' + Math.random().toString(36).substr(2,9);
+    
+    // 辅助文件（如 GLTF 的 .bin buffer 文件）只复制到 origin，不显示在 UI 中
+    if (type === 'auxiliary') {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const data = Array.from(new Uint8Array(e.target.result));
+            // 只复制文件，不添加到 files 列表
+            vscode.postMessage({ type:'copyFileToOrigin', id, name:file.name, relativePath, data });
+        };
+        reader.readAsArrayBuffer(file);
+        return;
+    }
     
     // 对 .glass 文件，需要以 SVG 类型创建 blob 以便正确预览
     let blobUrl;

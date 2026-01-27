@@ -148,13 +148,21 @@ export class OBJParser {
                     relativeTexturePath = path.relative(assetsRoot, textureAbsPath);
                 } else {
                     // 如果找不到 assets 目录（比如在 Resource Conversion Tools 中），
-                    // 直接使用纹理文件名，在 outputDir 同级目录查找
+                    // 直接使用纹理文件名，在 outputDir 中查找
                     relativeTexturePath = path.basename(texturePath);
                 }
                 
                 // 5. 替换扩展名为 .bin
-                const textureBinPath = relativeTexturePath.replace(/\.(png|jpe?g|bmp)$/i, '.bin');
-                const binPath = path.join(outputDir, textureBinPath);
+                const textureBinName = relativeTexturePath.replace(/\.(png|jpe?g|bmp)$/i, '.bin');
+                let binPath = path.join(outputDir, textureBinName);
+                
+                // 6. 如果在 outputDir 直接找不到，尝试在 outputDir 的子目录中递归查找
+                if (!fs.existsSync(binPath)) {
+                    const foundPath = this.findTextureInDir(outputDir, path.basename(textureBinName));
+                    if (foundPath) {
+                        binPath = foundPath;
+                    }
+                }
                 
                 if (fs.existsSync(binPath)) {
                     textures.push(fs.readFileSync(binPath));
@@ -191,6 +199,31 @@ export class OBJParser {
             texcoord: parts[1] ? parseInt(parts[1]) - 1 : -1,
             normal: parts[2] ? parseInt(parts[2]) - 1 : -1,
         };
+    }
+
+    /**
+     * 在目录中递归查找指定文件名的纹理
+     * 用于资源转换工具场景，OBJ 文件在临时目录时无法通过 assets 路径查找
+     */
+    private findTextureInDir(dir: string, fileName: string): string | null {
+        if (!fs.existsSync(dir)) return null;
+        
+        try {
+            const entries = fs.readdirSync(dir, { withFileTypes: true });
+            for (const entry of entries) {
+                const fullPath = path.join(dir, entry.name);
+                if (entry.isFile() && entry.name === fileName) {
+                    return fullPath;
+                }
+                if (entry.isDirectory()) {
+                    const found = this.findTextureInDir(fullPath, fileName);
+                    if (found) return found;
+                }
+            }
+        } catch (e) {
+            // 忽略权限错误等
+        }
+        return null;
     }
 
     private createDefaultMaterial(): Material {
