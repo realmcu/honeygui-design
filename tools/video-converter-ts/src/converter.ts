@@ -209,6 +209,13 @@ export class VideoConverter {
     targetFps: number,
     crf: number
   ): Promise<ConversionResult> {
+    // Ensure output directory exists
+    const outputDir = path.dirname(outputPath);
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
+    
+
     // Create temp H264 file
     const tempH264 = outputPath + '.temp.h264';
     
