@@ -166,7 +166,7 @@ let conversionConfig = null;  // conversion.json 配置
 
 const IMAGE_EXTS = ['.png','.jpg','.jpeg','.bmp'];
 const VIDEO_EXTS = ['.mp4','.avi','.mov','.mkv','.webm'];
-const MODEL_EXTS = ['.obj','.gltf'];
+const MODEL_EXTS = ['.obj','.gltf','.mtl'];
 const FONT_EXTS = ['.ttf','.otf'];
 const GLASS_EXTS = ['.glass'];
 
@@ -320,7 +320,10 @@ function processEntry(entry, relativePath) {
 
 function processFile(file, relativePath) {
     const type = getFileType(file.name);
-    if (type === 'unknown') return;
+    const ext = file.name.toLowerCase().match(/\.[^.]+$/)?.[0] || '';
+    
+    // 特殊处理：.bin 文件可能是 GLTF buffer，允许通过，由后端判断
+    if (type === 'unknown' && ext !== '.bin') return;
     
     const id = Date.now() + '_' + Math.random().toString(36).substr(2,9);
     
@@ -355,6 +358,7 @@ function processFile(file, relativePath) {
     const reader = new FileReader();
     reader.onload = (e) => {
         const data = Array.from(new Uint8Array(e.target.result));
+        // 所有文件都添加到前端（包括 bin），后端会处理类型识别
         files.set(id, { id, name: file.name, relativePath, type, data, blobUrl });
         // 复制文件到 origin 文件夹
         vscode.postMessage({ type:'copyFileToOrigin', id, name:file.name, relativePath, data });
@@ -1295,7 +1299,14 @@ window.addEventListener('message', e => {
     } else if (msg.type === 'addFileFromBackend') {
         // 后端发送的文件，添加到前端
         const { id, name, relativePath, data } = msg;
-        const type = getFileType(name);
+        let type = getFileType(name);
+        
+        // 特殊处理：后端发送的 bin 文件一定是 GLTF buffer（已经过后端验证）
+        const ext = name.toLowerCase().match(/\.[^.]+$/)?.[0] || '';
+        if (type === 'unknown' && ext === '.bin') {
+            type = 'model';
+        }
+        
         if (type === 'unknown') return;
         
         // 创建 Blob URL 用于预览

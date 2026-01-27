@@ -69,10 +69,29 @@ export class ToolsPanel {
         const ext = path.extname(fileName).toLowerCase();
         if (['.png', '.jpg', '.jpeg', '.bmp'].includes(ext)) return 'image';
         if (['.mp4', '.avi', '.mov', '.mkv', '.webm'].includes(ext)) return 'video';
-        if (['.obj', '.gltf'].includes(ext)) return 'model';
+        if (['.obj', '.gltf', '.mtl'].includes(ext)) return 'model';
         if (['.ttf', '.otf'].includes(ext)) return 'font';
         if (['.glass'].includes(ext)) return 'glass';
+        
+        // .bin 文件需要特殊处理：只有当存在同名 .gltf 文件时才识别为 model 类型
+        if (ext === '.bin') {
+            // 这个判断会在 addFile 时进行，这里先返回 unknown
+            // 实际判断在 handleMessage 的 addFile 中
+            return 'unknown';
+        }
+        
         return 'unknown';
+    }
+    
+    /**
+     * 检查 bin 文件是否是 GLTF 的辅助文件
+     */
+    private isGltfBufferFile(fileName: string, relativePath: string): boolean {
+        const gltfName = fileName.replace(/\.bin$/i, '.gltf');
+        // 检查是否有同名的 gltf 文件
+        return Array.from(this.files.values()).some(
+            f => f.name === gltfName && f.relativePath === relativePath
+        );
     }
 
     private async handleMessage(message: any): Promise<void> {
@@ -126,8 +145,37 @@ export class ToolsPanel {
     }
 
     private addFile(id: string, name: string, relativePath: string, data: number[]): void {
-        const type = this.getFileType(name);
-        if (type === 'unknown') return;
+        let type = this.getFileType(name);
+        
+        // 特殊处理 .bin 文件：
+        // 如果有同名 .gltf 文件，识别为 model 类型（GLTF buffer）
+        // 否则可能是字体等其他类型的 bin，暂时标记为 unknown
+        if (type === 'unknown' && path.extname(name).toLowerCase() === '.bin') {
+            if (this.isGltfBufferFile(name, relativePath)) {
+                type = 'model';
+            }
+            // 注意：即使是 unknown，也继续处理，让前端显示
+        }
+        
+        // 如果添加的是 GLTF 文件，检查是否有对应的 bin 文件需要更新类型
+        if (type === 'model' && path.extname(name).toLowerCase() === '.gltf') {
+            const binName = name.replace(/\.gltf$/i, '.bin');
+            // 查找对应的 bin 文件并更新其类型
+            for (const [fileId, file] of this.files.entries()) {
+                if (file.name === binName && file.relativePath === relativePath && file.type === 'unknown') {
+                    file.type = 'model';
+                    logger.info(`已将 ${binName} 识别为 GLTF buffer 文件`);
+                    // 通知前端更新显示（如果之前没显示的话）
+                    this.panel.webview.postMessage({ 
+                        type: 'updateFileType', 
+                        id: fileId, 
+                        newType: 'model'
+                    });
+                    break;
+                }
+            }
+        }
+        
         this.files.set(id, { id, name, relativePath, type, data });
     }
 
@@ -236,8 +284,15 @@ export class ToolsPanel {
      * 复制文件到 origin 文件夹并添加到文件列表
      */
     private async copyFileToOrigin(id: string, name: string, relativePath: string, data: number[]): Promise<void> {
-        const type = this.getFileType(name);
-        if (type === 'unknown') return;
+        let type = this.getFileType(name);
+        
+        // 特殊处理 .bin 文件（与 addFile 逻辑一致）
+        if (type === 'unknown' && path.extname(name).toLowerCase() === '.bin') {
+            // 暂时接受 bin 文件，可能是 GLTF buffer
+            // 先保存到 origin，后续会判断
+        } else if (type === 'unknown') {
+            return;
+        }
         
         if (!this.outputDir) {
             logger.error('输出目录未设置，无法复制文件到 origin');
@@ -280,8 +335,8 @@ export class ToolsPanel {
             return;
         }
 
-        // 添加到文件列表
-        this.files.set(id, { id, name, relativePath, type, data });
+        // 添加到文件列表（使用与 addFile 相同的逻辑）
+        this.addFile(id, name, relativePath, data);
     }
 
     /**
@@ -666,9 +721,10 @@ export class ToolsPanel {
 
     private async convertFile(file: FileItem): Promise<any> {
         const tempDir = require('os').tmpdir();
-        // 字体文件使用原始文件名（因为转换器会用文件名生成输出名）
+        // 字体文件和 3D 模型文件使用原始文件名（因为它们之间有文件名依赖关系）
         // 其他类型使用带 ID 的名称避免冲突
-        const tempFileName = file.type === 'font' ? file.name : `honeygui_${file.id}_${file.name}`;
+        const useOriginalName = file.type === 'font' || file.type === 'model';
+        const tempFileName = useOriginalName ? file.name : `honeygui_${file.id}_${file.name}`;
         const tempInput = path.join(tempDir, tempFileName);
         
         try {
@@ -705,9 +761,50 @@ export class ToolsPanel {
                     break;
                 case 'model':
                     const ext = path.extname(file.name).toLowerCase();
+                    
+                    // MTL 和 BIN 文件是辅助文件，不需要单独转换
+                    if (ext === '.mtl') {
+                        return { success: true, fileName: file.name, skipped: true, message: 'MTL 文件作为 OBJ 的辅助文件，无需单独转换' };
+                    }
+                    if (ext === '.bin') {
+                        return { success: true, fileName: file.name, skipped: true, message: 'BIN 文件作为 GLTF 的辅助文件，无需单独转换' };
+                    }
+                    
                     const prefix = ext === '.gltf' ? 'gltf_desc_' : 'desc_';
                     outputPath = path.join(outputSubDir, prefix + file.name.replace(/\.[^.]+$/, '.bin'));
-                    result = await this.model3DConverter.convert(tempInput, outputPath, this.outputDir);
+                    
+                    // 对于 OBJ 文件，需要检查并复制 MTL 文件到临时目录
+                    if (ext === '.obj') {
+                        const mtlName = file.name.replace(/\.obj$/i, '.mtl');
+                        const mtlFile = Array.from(this.files.values()).find(
+                            f => f.name === mtlName && f.relativePath === file.relativePath
+                        );
+                        if (mtlFile) {
+                            const tempMtlPath = path.join(tempDir, mtlName);
+                            fs.writeFileSync(tempMtlPath, Buffer.from(mtlFile.data));
+                            logger.info(`已复制 MTL 文件到临时目录: ${tempMtlPath}`);
+                        } else {
+                            logger.warn(`未找到对应的 MTL 文件: ${mtlName}`);
+                        }
+                    }
+                    
+                    // 对于 GLTF 文件，需要检查并复制 BIN 文件到临时目录
+                    if (ext === '.gltf') {
+                        const binName = file.name.replace(/\.gltf$/i, '.bin');
+                        const binFile = Array.from(this.files.values()).find(
+                            f => f.name === binName && f.relativePath === file.relativePath
+                        );
+                        if (binFile) {
+                            const tempBinPath = path.join(tempDir, binName);
+                            fs.writeFileSync(tempBinPath, Buffer.from(binFile.data));
+                            logger.info(`已复制 GLTF BIN 文件到临时目录: ${tempBinPath}`);
+                        } else {
+                            logger.warn(`未找到对应的 GLTF BIN 文件: ${binName}`);
+                        }
+                    }
+                    
+                    // 传递 outputSubDir 而不是 this.outputDir，这样纹理查找路径才正确
+                    result = await this.model3DConverter.convert(tempInput, outputPath, outputSubDir);
                     break;
                 case 'font':
                     outputPath = outputSubDir;

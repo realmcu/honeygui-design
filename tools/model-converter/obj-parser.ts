@@ -147,7 +147,8 @@ export class OBJParser {
                 if (path.basename(assetsRoot) === 'assets') {
                     relativeTexturePath = path.relative(assetsRoot, textureAbsPath);
                 } else {
-                    // 如果找不到 assets 目录，使用纹理文件名
+                    // 如果找不到 assets 目录（比如在 Resource Conversion Tools 中），
+                    // 直接使用纹理文件名，在 outputDir 同级目录查找
                     relativeTexturePath = path.basename(texturePath);
                 }
                 
@@ -162,6 +163,7 @@ export class OBJParser {
                     console.warn(`[OBJ Parser] ✗ Texture bin not found: ${binPath}`);
                     console.warn(`[OBJ Parser]   MTL texture path: ${texturePath}`);
                     console.warn(`[OBJ Parser]   Resolved to: ${relativeTexturePath}`);
+                    console.warn(`[OBJ Parser]   Looking in: ${outputDir}`);
                     textures.push(Buffer.alloc(0));
                 }
             } else {

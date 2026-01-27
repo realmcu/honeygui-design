@@ -241,12 +241,13 @@ export class GLTFParser {
                     if (image.uri && outputDir) {
                         console.log(`[GLTF Parser] Found texture URI: ${image.uri}`);
                         
-                        // GLTF 中的纹理路径是相对于 GLTF 文件的，需要转换为相对于 assets 根目录的路径
+                        // GLTF 中的纹理路径是相对于 GLTF 文件的
                         // 例如：
                         // - GLTF: project/assets/3D/flag.gltf
-                        // - GLTF 中: textures/flag.png (相对于 GLTF)
-                        // - 实际图片: project/assets/3D/textures/flag.png
-                        // - 需要查找: build/assets/3D/textures/flag.bin
+                        // - GLTF 中: US_Flag_Dirty.png (相对于 GLTF)
+                        // - 实际图片: project/assets/3D/US_Flag_Dirty.png
+                        // - 转换后: project/build/assets/3D/US_Flag_Dirty.bin
+                        // - outputDir: project/build/assets/3D
                         
                         // 1. 将 GLTF 中的相对路径解析为绝对路径（相对于 GLTF 文件目录）
                         const textureAbsPath = path.join(baseDir, image.uri);
@@ -265,7 +266,8 @@ export class GLTFParser {
                         if (path.basename(assetsRoot) === 'assets') {
                             relativeTexturePath = path.relative(assetsRoot, textureAbsPath);
                         } else {
-                            // 如果找不到 assets 目录，使用纹理文件名
+                            // 如果找不到 assets 目录（比如在 Resource Conversion Tools 中），
+                            // 直接使用纹理文件名，在 outputDir 同级目录查找
                             relativeTexturePath = path.basename(image.uri);
                         }
                         
@@ -281,6 +283,7 @@ export class GLTFParser {
                             console.warn(`[GLTF Parser] ✗ Texture bin not found: ${binPath}`);
                             console.warn(`[GLTF Parser]   GLTF texture URI: ${image.uri}`);
                             console.warn(`[GLTF Parser]   Resolved to: ${relativeTexturePath}`);
+                            console.warn(`[GLTF Parser]   Looking in: ${outputDir}`);
                         }
                     }
                 }
