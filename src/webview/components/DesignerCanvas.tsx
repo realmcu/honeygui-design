@@ -4,12 +4,14 @@ import { Component, ComponentType } from '../types';
 import { useCanvasZoom } from '../hooks/useCanvasZoom';
 import { useCanvasDrag } from '../hooks/useCanvasDrag';
 import { useContextMenu } from '../hooks/useContextMenu';
+import { useComponentResize } from '../hooks/useComponentResize';
 import { calculateComponentStyle, createComponentHandlers } from '../utils/componentRenderer';
 import { widgetRegistry } from './widgets';
 import { ContextMenu } from './ContextMenu';
 import { executeMenuAction, MenuActionHelpers } from '../services/contextMenuActions';
 import { ViewConnectionLayer } from './ViewConnectionLayer';
 import { AlignmentGuides, AlignmentLine } from './AlignmentGuides';
+import { ResizeHandles, ResizeDirection } from './ResizeHandles';
 import { calculateAlignment } from '../utils/alignmentHelper';
 import { getAbsolutePosition, findComponentAtPosition, isContainerType } from '../utils/componentUtils';
 import { t } from '../i18n';
@@ -72,6 +74,19 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
   
   // 使用右键菜单 Hook
   const { menuState, showMenu, hideMenu } = useContextMenu();
+  
+  // 使用组件调整大小 Hook
+  const {
+    isResizing,
+    resizingComponentId,
+    handleResizeStart,
+    handleResizeMove,
+    handleResizeEnd,
+  } = useComponentResize({
+    zoom,
+    canvasOffset,
+    updateComponent,
+  });
   
   // 菜单动作辅助函数
   const menuActionHelpers: MenuActionHelpers = {
@@ -267,6 +282,12 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
     // 如果正在拖动画布，不处理组件拖动
     if (isDragging) return;
     
+    // 如果正在调整大小，处理 resize
+    if (isResizing) {
+      handleResizeMove(e.nativeEvent, e.shiftKey);
+      return;
+    }
+    
     // 如果有待拖动的组件，检查是否移动了足够距离
     if (pendingDragComponent && !draggedComponent) {
       const deltaX = Math.abs(e.clientX - dragStart.x);
@@ -380,6 +401,12 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
   };
 
   const handleComponentMouseUp = () => {
+    // 如果正在调整大小，结束 resize
+    if (isResizing) {
+      handleResizeEnd();
+      return;
+    }
+    
     // 处理跨容器拖拽
     if (draggedComponent) {
       // 多选跨容器拖拽
@@ -537,6 +564,14 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
       );
     }
 
+    // 是否显示 resize handles（仅对 hg_label 类型，选中且未锁定的组件）
+    const showResizeHandles = component.type === 'hg_label' && (isSelected || isMultiSelected) && !component.locked && !isResizing;
+
+    // 处理 resize 开始
+    const onResizeStartHandler = (e: React.MouseEvent, direction: ResizeDirection, compId: string) => {
+      handleResizeStart(e, direction, compId, component);
+    };
+
     // 容器组件需要渲染子组件
     const isContainer = isContainerType(component.type);
     
@@ -547,10 +582,33 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
         return child ? renderComponent(child, componentList) : null;
       });
 
-      return <Widget key={component.id} component={component} style={style} handlers={handlers}>{children}</Widget>;
+      return (
+        <Widget key={component.id} component={component} style={style} handlers={handlers}>
+          {children}
+          {showResizeHandles && (
+            <ResizeHandles
+              componentId={component.id}
+              width={component.position.width}
+              height={component.position.height}
+              onResizeStart={onResizeStartHandler}
+            />
+          )}
+        </Widget>
+      );
     }
 
-    return <Widget key={component.id} component={component} style={style} handlers={handlers} />;
+    return (
+      <Widget key={component.id} component={component} style={style} handlers={handlers}>
+        {showResizeHandles && (
+          <ResizeHandles
+            componentId={component.id}
+            width={component.position.width}
+            height={component.position.height}
+            onResizeStart={onResizeStartHandler}
+          />
+        )}
+      </Widget>
+    );
   };
 
   // 处理设计区域的滚动

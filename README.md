@@ -29,7 +29,7 @@
 
 ### 支持的组件
 - 容器：`hg_view`, `hg_window`
-- 基础控件：`hg_button`, `hg_text`, `hg_image`, `hg_switch`
+- 基础控件：`hg_button`, `hg_label`, `hg_image`, `hg_switch`
 - 输入控件：`hg_input`, `hg_checkbox`, `hg_radio`
 - 高级控件：`hg_progressbar`, `hg_slider`, `hg_canvas`
 - 多媒体：`hg_video`, `hg_3d`

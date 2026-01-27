@@ -73,7 +73,6 @@ export const COMPONENT_SUPPORTED_EVENTS: Record<string, EventType[]> = {
   hg_window: ['onClick', 'onLongPress', 'onTouchDown', 'onTouchUp', 'onMessage'],
   hg_button: ['onClick', 'onLongPress', 'onTouchDown', 'onTouchUp', 'onMessage'],
   hg_image: ['onClick', 'onLongPress', 'onTouchDown', 'onTouchUp', 'onMessage'],
-  hg_text: ['onClick', 'onLongPress', 'onMessage'],
   hg_label: ['onClick', 'onLongPress', 'onMessage'],
   hg_switch: ['onClick', 'onCheckedChange', 'onMessage'],
   hg_checkbox: ['onClick', 'onCheckedChange', 'onMessage'],

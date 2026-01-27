@@ -1181,8 +1181,7 @@ const App: React.FC = () => {
     // 应用默认数据
     const defaultData: Record<string, any> = {
       text: componentType === 'hg_button' ? 'Button' :
-            componentType === 'hg_label' ? 'Label' :
-            componentType === 'hg_text' ? 'Text' : '',
+            componentType === 'hg_label' ? 'Label' : '',
     };
     componentDef.properties
       .filter(prop => prop.group === 'data' && prop.defaultValue !== undefined)

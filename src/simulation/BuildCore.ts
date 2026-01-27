@@ -1046,8 +1046,8 @@ export class BuildCore {
     /**
      * 按字体文件和配置分组，合并相同配置的字符集
      * 
-     * 相同的字体文件 + fontSize + fontType + renderMode 视为同一组，
-     * 合并它们的文本内容和附加字符集
+     * 位图字体：相同的字体文件 + fontSize + fontType + renderMode 视为同一组
+     * 矢量字体：相同的字体文件 + fontType 视为同一组，fontSize 取最大值（高精度可渲染小字）
      */
     private groupLabelConfigsByFont(configs: Array<{
         fontFile: string;
@@ -1074,22 +1074,30 @@ export class BuildCore {
         }>();
 
         for (const config of configs) {
-            // 生成分组键
-            const key = `${config.fontFile}|${config.fontSize}|${config.fontType}|${config.renderMode}`;
+            // 生成分组键：矢量字体不按 fontSize 和 renderMode 分组
+            const key = config.fontType === 'vector'
+                ? `${config.fontFile}|vector`
+                : `${config.fontFile}|${config.fontSize}|${config.fontType}|${config.renderMode}`;
             
             if (!groups.has(key)) {
                 groups.set(key, {
                     fontFile: config.fontFile,
                     fontSize: config.fontSize,
                     fontType: config.fontType,
-                    renderMode: config.renderMode,
+                    renderMode: config.fontType === 'vector' ? 8 : config.renderMode,
                     charSet: new Set(),
                     additionalCharSets: new Set()
                 });
             }
             
-            // 将文本中的每个字符添加到字符集
             const group = groups.get(key)!;
+            
+            // 矢量字体：取最大字号（高精度可渲染小字）
+            if (config.fontType === 'vector' && config.fontSize > group.fontSize) {
+                group.fontSize = config.fontSize;
+            }
+            
+            // 将文本中的每个字符添加到字符集
             for (const char of config.text) {
                 group.charSet.add(char);
             }

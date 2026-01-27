@@ -626,7 +626,7 @@ export const GlassWidget: React.FC<WidgetProps> = ({ component, style, handlers 
       }
       
       // 文本
-      else if ((comp.type === 'hg_text' || comp.type === 'hg_label') && d.text) {
+      else if (comp.type === 'hg_label' && d.text) {
         const fontSize = d.fontSize || 14;
         const fontColor = d.fontColor || s.color || '#ffffff';
         tempCtx.font = `${fontSize}px sans-serif`;

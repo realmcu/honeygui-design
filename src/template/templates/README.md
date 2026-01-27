@@ -45,7 +45,7 @@ templates/
     screenWidth="{{width}}"
     screenHeight="{{height}}">
     <hg_view id="mainView" x="0" y="0" w="{{width}}" h="{{height}}">
-        <hg_text id="title" x="{{titleX}}" y="{{titleY}}" w="200" h="40" 
+        <hg_label id="title" x="{{titleX}}" y="{{titleY}}" w="200" h="40" 
                  text="Hello" fontSize="24" color="#FFFFFF" />
     </hg_view>
 </hg_screen>

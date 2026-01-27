@@ -14,7 +14,7 @@ import { logger } from '../utils/Logger';
 class ComponentRegistry {
   private static readonly VALID_COMPONENTS = new Set([
     // HoneyGUI标准组件 (hg_前缀)
-    'hg_button', 'hg_text', 'hg_image', 'hg_input',
+    'hg_button', 'hg_image', 'hg_input',
     'hg_checkbox', 'hg_radio', 'hg_progressbar', 'hg_slider',
     'hg_switch', 'hg_canvas', 'hg_list', 'hg_list_item', 'hg_grid', 'hg_tab',
     'hg_label', 'hg_glass',

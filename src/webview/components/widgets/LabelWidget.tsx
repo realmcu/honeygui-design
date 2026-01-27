@@ -3,7 +3,7 @@ import { WidgetProps } from './types';
 import { useFontLoader } from '../../hooks/useFontLoader';
 import { useFontGlyphCheck } from '../../hooks/useFontGlyphCheck';
 
-export const LabelWidget: React.FC<WidgetProps> = ({ component, style, handlers }) => {
+export const LabelWidget: React.FC<WidgetProps> = ({ component, style, handlers, children }) => {
   const fontPath = component.data?.fontFile;
   const { fontFamily, isLoading: fontLoading } = useFontLoader(fontPath);
   const timeFormat = component.data?.timeFormat || '';
@@ -274,6 +274,7 @@ export const LabelWidget: React.FC<WidgetProps> = ({ component, style, handlers 
               {missingChars.length > 5 && ` 等${missingChars.length}个字符`}
             </span>
           )}
+          {children}
         </div>
       );
     }
@@ -292,6 +293,7 @@ export const LabelWidget: React.FC<WidgetProps> = ({ component, style, handlers 
           {missingChars.length > 5 && ` 等${missingChars.length}个字符`}
         </span>
       )}
+      {children}
     </div>
   );
 };

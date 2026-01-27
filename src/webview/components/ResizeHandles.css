@@ -1,0 +1,32 @@
+/**
+ * Resize Handles Styles
+ * 组件调整大小手柄样式
+ */
+
+.resize-handle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background-color: #007ACC;
+  border: 1px solid #ffffff;
+  border-radius: 1px;
+  z-index: 10000;
+  box-sizing: border-box;
+}
+
+.resize-handle:hover {
+  background-color: #0098ff;
+  transform: scale(1.2);
+}
+
+/* 四角手柄 */
+.resize-handle-nw { cursor: nw-resize; }
+.resize-handle-ne { cursor: ne-resize; }
+.resize-handle-sw { cursor: sw-resize; }
+.resize-handle-se { cursor: se-resize; }
+
+/* 四边中点手柄 */
+.resize-handle-n { cursor: n-resize; }
+.resize-handle-s { cursor: s-resize; }
+.resize-handle-w { cursor: w-resize; }
+.resize-handle-e { cursor: e-resize; }

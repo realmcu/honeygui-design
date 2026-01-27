@@ -62,7 +62,7 @@ HmlEditorProvider.resolveCustomTextEditor()
 
 ### 组件类型
 - **容器**: `hg_view`, `hg_window` (可包含子组件)
-- **基础控件**: `hg_button`, `hg_text`, `hg_image` (必须在容器内)
+- **基础控件**: `hg_button`, `hg_label`, `hg_image` (必须在容器内)
 - **输入控件**: `hg_input`, `hg_checkbox`, `hg_radio` (必须在容器内)
 - **图形控件**: `hg_canvas`, `hg_progressbar`, `hg_slider` (必须在容器内)
 - **多媒体控件**: `hg_video`, `hg_audio` (必须在容器内)
