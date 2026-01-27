@@ -164,6 +164,25 @@ const App: React.FC = () => {
       const message = event.data;
 
       switch (message.command) {
+        case 'updateProjectConfig':
+          // 更新项目配置（在 loadHml 之前就可以获取）
+          if (message.projectConfig) {
+            const resolution = message.projectConfig.resolution;
+            if (resolution) {
+              const parts = resolution.split('X');
+              if (parts.length === 2) {
+                useDesignerStore.setState({
+                  projectConfig: message.projectConfig,
+                  canvasSize: {
+                    width: parseInt(parts[0], 10),
+                    height: parseInt(parts[1], 10)
+                  }
+                });
+              }
+            }
+          }
+          break;
+          
         case 'setLocale':
           // Set locale from extension
           if (message.locale) {
@@ -801,8 +820,28 @@ const App: React.FC = () => {
     // 生成唯一组件ID
     const componentId = `${componentType}_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
     
-    // 默认位置：容器中心偏移
-    const { width: defWidth, height: defHeight } = componentDef.defaultSize;
+    // 默认位置和尺寸
+    let defWidth = componentDef.defaultSize.width;
+    let defHeight = componentDef.defaultSize.height;
+    
+    // 对于 hg_view，使用项目配置的分辨率作为默认大小
+    if (componentType === 'hg_view') {
+      const state = useDesignerStore.getState();
+      // 优先从 canvasSize 读取（已加载的文件）
+      if (state.canvasSize && (state.canvasSize.width !== 800 || state.canvasSize.height !== 480)) {
+        defWidth = state.canvasSize.width;
+        defHeight = state.canvasSize.height;
+      } 
+      // 如果 canvasSize 是默认值，从 projectConfig 读取
+      else if (state.projectConfig?.resolution) {
+        const parts = state.projectConfig.resolution.split('X');
+        if (parts.length === 2) {
+          defWidth = parseInt(parts[0], 10) || defWidth;
+          defHeight = parseInt(parts[1], 10) || defHeight;
+        }
+      }
+    }
+    
     const positionX = Math.max(0, Math.floor((targetContainer.position.width - defWidth) / 2));
     const positionY = Math.max(0, Math.floor((targetContainer.position.height - defHeight) / 2));
 
@@ -1055,13 +1094,24 @@ const App: React.FC = () => {
     let positionY = y;
     
     // 对于hg_view，使用项目配置的分辨率作为默认大小
-    const canvasSize = useDesignerStore.getState().canvasSize;
-    let width = componentType === 'hg_view' && canvasSize 
-      ? canvasSize.width 
-      : componentDef.defaultSize.width;
-    let height = componentType === 'hg_view' && canvasSize 
-      ? canvasSize.height 
-      : componentDef.defaultSize.height;
+    let width = componentDef.defaultSize.width;
+    let height = componentDef.defaultSize.height;
+    
+    if (componentType === 'hg_view') {
+      // 优先从 canvasSize 读取（已加载的文件）
+      if (state.canvasSize && (state.canvasSize.width !== 800 || state.canvasSize.height !== 480)) {
+        width = state.canvasSize.width;
+        height = state.canvasSize.height;
+      } 
+      // 如果 canvasSize 是默认值，从 projectConfig 读取
+      else if (state.projectConfig?.resolution) {
+        const parts = state.projectConfig.resolution.split('X');
+        if (parts.length === 2) {
+          width = parseInt(parts[0], 10) || width;
+          height = parseInt(parts[1], 10) || height;
+        }
+      }
+    }
     
     let parent: string | null = null;
 

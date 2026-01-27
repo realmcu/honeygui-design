@@ -11,6 +11,7 @@ import { CollaborationService } from '../core/CollaborationService';
 import { ProjectUtils } from '../utils/ProjectUtils';
 import { CodeGenerationService } from '../services/CodeGenerationService';
 import { ConversionConfigService, ConversionConfig } from '../services/ConversionConfigService';
+import { ProjectConfigLoader } from '../utils/ProjectConfigLoader';
 
 /**
  * 消息处理器 - 负责分发来自Webview的消息
@@ -72,6 +73,16 @@ export class MessageHandler {
             case 'ready':
                 logger.info('[MessageHandler] 收到前端ready消息');
                 try {
+                    // 立即发送项目配置，避免前端在 loadHml 之前创建组件时 projectConfig 为 null
+                    const projectConfig = ProjectConfigLoader.loadConfig(this._fileManager.currentFilePath);
+                    if (projectConfig) {
+                        this._panel.webview.postMessage({
+                            command: 'updateProjectConfig',
+                            projectConfig: projectConfig
+                        });
+                        logger.info('[MessageHandler] 已发送项目配置到前端');
+                    }
+                    
                     await this._fileManager.reloadCurrentDocument();
                 } catch (error) {
                     logger.error(`[MessageHandler] reloadCurrentDocument失败: ${error}`);
