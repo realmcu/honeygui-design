@@ -56,12 +56,23 @@ export const ListWidget: React.FC<WidgetProps> = ({ component, style, handlers, 
       const { components, updateComponent, addComponent } = getState();
       
       const noteNum = (component.data?.noteNum as number) || 5;
-      const itemWidth = (component.style?.itemWidth as number) || 100;
-      const itemHeight = (component.style?.itemHeight as number) || 100;
-      const space = (component.style?.space as number) || 0;
+      const itemWidth = parseInt(String(component.style?.itemWidth)) || 100;
+      const itemHeight = parseInt(String(component.style?.itemHeight)) || 100;
+      const space = parseInt(String(component.style?.space)) || 0;
       const direction = (component.style?.direction as string) || 'VERTICAL';
       const isVertical = direction === 'VERTICAL';
       const currentChildren = component.children || [];
+      
+      // 调试日志：打印 list 的配置
+      console.log(`[ListWidget] List config:`, {
+        id: component.id,
+        noteNum,
+        itemWidth,
+        itemHeight,
+        space,
+        direction,
+        styleRaw: component.style
+      });
       
       // 只同步垂直/水平方向上与项尺寸相关的维度
       const positionUpdates: Partial<typeof component.position> = {};
@@ -86,10 +97,87 @@ export const ListWidget: React.FC<WidgetProps> = ({ component, style, handlers, 
         c => c.type === 'hg_list_item' && c.parent === component.id
       );
       
-      // 如果已经有 list_item 子组件，不要重新创建
-      // 位置由 HML 解析器在加载时根据 itemWidth/itemHeight/space 计算
+      // 如果已经有 list_item 子组件，只处理数量变化
       if (existingListItems.length > 0) {
-        // 不修改 children 数组，保持原有的子组件关系
+        const currentCount = existingListItems.length;
+        
+        // 如果数量匹配，不做任何处理
+        if (currentCount === noteNum) {
+          return;
+        }
+        
+        // 数量增加：创建新的 list_item
+        if (currentCount < noteNum) {
+          const otherChildren = currentChildren.filter(childId => {
+            const child = components.find(c => c.id === childId);
+            return child && child.type !== 'hg_list_item';
+          });
+          
+          const newChildren = [...currentChildren];
+          
+          for (let i = currentCount; i < noteNum; i++) {
+            const itemId = `${component.id}_item_${i + 1}`;
+            
+            // 调试日志
+            console.log(`[ListWidget] Creating item ${i}: itemHeight=${itemHeight}, space=${space}, index=${i}`);
+            
+            const position = calculateItemPosition(
+              i, itemWidth, itemHeight, space, isVertical
+            );
+            
+            console.log(`[ListWidget] Calculated position for item ${i}:`, position);
+            
+            const newItem: Component = {
+              id: itemId,
+              type: 'hg_list_item',
+              name: `List Item ${i + 1}`,
+              position,
+              visible: true,
+              enabled: true,
+              locked: true,
+              zIndex: i,
+              children: [],
+              parent: component.id,
+              style: {},
+              data: { index: i },
+            };
+            addComponent(newItem);
+            newChildren.push(itemId);
+          }
+          
+          updateComponent(component.id, { children: newChildren });
+        }
+        
+        // 数量减少：删除多余的 list_item
+        if (currentCount > noteNum) {
+          const { removeComponent } = getState();
+          const itemsToKeep: string[] = [];
+          const itemsToDelete: string[] = [];
+          
+          for (let i = 0; i < currentCount; i++) {
+            const itemId = `${component.id}_item_${i + 1}`;
+            if (i < noteNum) {
+              itemsToKeep.push(itemId);
+            } else {
+              itemsToDelete.push(itemId);
+            }
+          }
+          
+          itemsToDelete.forEach(id => {
+            removeComponent(id);
+          });
+          
+          // 保留其他类型的子组件
+          const otherChildren = currentChildren.filter(childId => {
+            const child = components.find(c => c.id === childId);
+            return child && child.type !== 'hg_list_item';
+          });
+          
+          updateComponent(component.id, { 
+            children: [...itemsToKeep, ...otherChildren] 
+          });
+        }
+        
         return;
       }
       
@@ -122,7 +210,7 @@ export const ListWidget: React.FC<WidgetProps> = ({ component, style, handlers, 
             visible: true,
             enabled: true,
             locked: true,
-            zIndex: 1,
+            zIndex: i,
             children: [],
             parent: component.id,
             style: {},

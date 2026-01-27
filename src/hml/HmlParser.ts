@@ -578,7 +578,7 @@ export class HmlParser {
     const numericProps = new Set([
       'fontSize', 'borderRadius', 'padding', 'margin',
       'titleBarHeight', 'radius', 'startAngle', 'endAngle', 'strokeWidth',
-      'itemWidth', 'itemHeight', 'opacity'
+      'itemWidth', 'itemHeight', 'space', 'opacity'
     ]);
 
     const dataProps = new Set([
