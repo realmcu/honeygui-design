@@ -399,6 +399,71 @@ export class CreateProjectPanel {
         fs.mkdirSync(path.join(projectPath, 'src'), { recursive: true });
         fs.mkdirSync(path.join(projectPath, 'assets'), { recursive: true });
 
+        // 创建 conversion.json 资源转换配置文件
+        const isZhCn = vscode.env.language.startsWith('zh');
+        const conversionConfigContent = isZhCn ? `{
+  "_comment": [
+    "资源转换配置文件 - 用于配置图片、视频等资源的转换参数",
+    "",
+    "【图片默认值】",
+    "  format: adaptive16 (自适应16位: 有透明度→ARGB8565, 无透明度→RGB565)",
+    "  compression: none (不压缩)",
+    "  可选格式: RGB565, RGB888, ARGB8565, ARGB8888, I8, adaptive16, adaptive24",
+    "  可选压缩: none, rle, fastlz, yuv, adaptive",
+    "",
+    "【视频默认值】",
+    "  format: MJPEG",
+    "  quality: 1 (最高质量, MJPEG/AVI范围1-31, H264范围0-51)",
+    "  frameRate: 保持原始帧率",
+    "  可选格式: MJPEG, AVI, H264",
+    "",
+    "【字体默认值】",
+    "  输出格式: 位图字体 (.bin)",
+    "",
+    "【3D模型默认值】",
+    "  输出格式: HoneyGUI 3D格式 (.bin)"
+  ],
+  "version": "1.0",
+  "defaultSettings": {
+    "format": "adaptive16",
+    "compression": "none"
+  },
+  "items": {}
+}` : `{
+  "_comment": [
+    "Asset conversion config file - Configure conversion parameters for images, videos, etc.",
+    "",
+    "[Image Defaults]",
+    "  format: adaptive16 (Adaptive 16-bit: with alpha→ARGB8565, without alpha→RGB565)",
+    "  compression: none",
+    "  Available formats: RGB565, RGB888, ARGB8565, ARGB8888, I8, adaptive16, adaptive24",
+    "  Available compressions: none, rle, fastlz, yuv, adaptive",
+    "",
+    "[Video Defaults]",
+    "  format: MJPEG",
+    "  quality: 1 (Best quality, MJPEG/AVI range 1-31, H264 range 0-51)",
+    "  frameRate: Keep original frame rate",
+    "  Available formats: MJPEG, AVI, H264",
+    "",
+    "[Font Defaults]",
+    "  Output format: Bitmap font (.bin)",
+    "",
+    "[3D Model Defaults]",
+    "  Output format: HoneyGUI 3D format (.bin)"
+  ],
+  "version": "1.0",
+  "defaultSettings": {
+    "format": "adaptive16",
+    "compression": "none"
+  },
+  "items": {}
+}`;
+        fs.writeFileSync(
+            path.join(projectPath, 'assets', 'conversion.json'),
+            conversionConfigContent,
+            'utf8'
+        );
+
         // 使用HmlTemplateManager生成文件内容
         // 创建 {ProjectName}Main.hml 文件（直接放在 ui/ 下）
         const hmlFileName = `${projectName}Main.hml`;
