@@ -570,6 +570,20 @@ const AssetsPanel: React.FC = () => {
         onDragStart={(e) => {
           e.dataTransfer.setData('asset-path', asset.relativePath || asset.name);
           e.dataTransfer.effectAllowed = 'copy';
+          
+          // 设置自定义拖拽图像，只显示预览区域，不包含文件名
+          const previewEl = e.currentTarget.querySelector('.asset-preview') as HTMLElement;
+          if (previewEl) {
+            // 获取预览区域内的图片或其他元素
+            const imgEl = previewEl.querySelector('img');
+            if (imgEl && imgEl.complete && imgEl.naturalWidth > 0) {
+              // 使用图片本身作为拖拽图像
+              e.dataTransfer.setDragImage(imgEl, imgEl.width / 2, imgEl.height / 2);
+            } else {
+              // 对于非图片资源，使用预览区域
+              e.dataTransfer.setDragImage(previewEl, previewEl.offsetWidth / 2, previewEl.offsetHeight / 2);
+            }
+          }
         }}
       >
         <div className="asset-preview">
