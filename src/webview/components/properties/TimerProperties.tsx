@@ -46,7 +46,7 @@ export const TimerProperties: React.FC<TimerPropertiesProps> = ({
     const timerIndex = timers.length;
     const newTimer: TimerConfig = {
       id: `timer_${timerIndex}`,
-      name: `定时动画 ${timerIndex + 1}`,
+      name: `${t('Animation')} ${timerIndex + 1}`,
       enabled: timers.length === 0,
       interval: 1000,
       reload: true,

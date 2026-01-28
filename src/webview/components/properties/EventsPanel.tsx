@@ -223,7 +223,7 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
           name: comp.name || comp.id,
           timers: timers.map((timer: any, index: number) => ({
             id: timer.id,
-            name: timer.name || `定时动画 ${index + 1}`,
+            name: timer.name || `${t('Animation')} ${index + 1}`,
             index,
           })),
         });
