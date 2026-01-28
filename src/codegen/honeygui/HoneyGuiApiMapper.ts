@@ -68,6 +68,20 @@ export class HoneyGuiApiMapper {
       includeHeader: 'gui_text.h'
     });
 
+    // 时间标签（复用 label 的配置）
+    this.mappings.set('hg_time_label', {
+      componentType: 'hg_time_label',
+      createFunction: 'gui_text_create',
+      propertySetters: [
+        { property: 'fontFile', apiFunction: 'gui_text_type_set' },
+        { property: 'text', apiFunction: 'gui_text_content_set' },
+        { property: 'fontSize', apiFunction: 'gui_text_size_set' },
+        { property: 'color', apiFunction: 'gui_text_color_set', valueTransform: this.colorToHex }
+      ],
+      eventHandlers: [],
+      includeHeader: 'gui_text.h'
+    });
+
     // 滚动文本（基于 gui_text）
     this.mappings.set('hg_scroll_text', {
       componentType: 'hg_scroll_text',

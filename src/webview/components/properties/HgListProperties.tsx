@@ -331,7 +331,7 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
                   type="select"
                   value={style}
                   onChange={handleStyleSelectChange}
-                  options={loop ? ['LIST_CLASSIC', 'LIST_CIRCLE', 'LIST_ZOOM', 'LIST_FADE', 'LIST_FAN', 'LIST_HELIX', 'LIST_CURL'] : ['LIST_CLASSIC', 'LIST_CIRCLE', 'LIST_ZOOM', 'LIST_CARD', 'LIST_FADE', 'LIST_FAN', 'LIST_HELIX', 'LIST_CURL']}
+                  options={loop ? ['LIST_CLASSIC', 'LIST_CIRCLE', 'LIST_ZOOM', 'LIST_ZOOM_CYLINDER', 'LIST_FADE', 'LIST_FAN', 'LIST_HELIX', 'LIST_CURL'] : ['LIST_CLASSIC', 'LIST_CIRCLE', 'LIST_ZOOM', 'LIST_ZOOM_CYLINDER', 'LIST_CARD', 'LIST_FADE', 'LIST_FAN', 'LIST_HELIX', 'LIST_CURL']}
                 />
                 {loop && style === 'LIST_CARD' && (
                   <div style={{ fontSize: '11px', color: 'var(--vscode-errorForeground)', marginTop: '4px' }}>

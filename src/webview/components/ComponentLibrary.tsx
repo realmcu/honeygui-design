@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+﻿import React, { useState, useRef, useEffect } from 'react';
 import { ComponentType, ComponentDefinition } from '../types';
 import { t } from '../i18n';
 import './ComponentLibrary.css';
@@ -238,7 +238,7 @@ const componentDefinitions: ComponentDefinition[] = [
       { name: 'itemHeight', label: 'Item Height', type: 'number', defaultValue: 100, group: 'style' },
       { name: 'space', label: 'Item Spacing', type: 'number', defaultValue: 5, group: 'style' },
       { name: 'direction', label: 'Direction', type: 'select', defaultValue: 'VERTICAL', options: ['VERTICAL', 'HORIZONTAL'], group: 'style' },
-      { name: 'style', label: 'Style', type: 'select', defaultValue: 'LIST_CLASSIC', options: ['LIST_CLASSIC', 'LIST_CIRCLE', 'LIST_ZOOM', 'LIST_CARD', 'LIST_FADE', 'LIST_FAN', 'LIST_HELIX', 'LIST_CURL'], group: 'style' },
+      { name: 'style', label: 'Style', type: 'select', defaultValue: 'LIST_CLASSIC', options: ['LIST_CLASSIC', 'LIST_CIRCLE', 'LIST_ZOOM', 'LIST_ZOOM_CYLINDER', 'LIST_CARD', 'LIST_FADE', 'LIST_FAN', 'LIST_HELIX', 'LIST_CURL'], group: 'style' },
       { name: 'cardStackLocation', label: 'Stack Location Distance', type: 'number', defaultValue: 0, group: 'style' },
       { name: 'noteNum', label: 'Item Count', type: 'number', defaultValue: 5, group: 'data' },
       { name: 'autoAlign', label: 'Auto Align', type: 'boolean', defaultValue: true, group: 'general' },

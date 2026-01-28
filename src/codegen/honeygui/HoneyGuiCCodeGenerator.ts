@@ -160,6 +160,17 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       code += `#include "gui_win.h"\n`;
     }
 
+    // 检查是否有文本相关组件（label, time_label, scroll_text）
+    const hasTextComponent = componentTypes.includes('hg_label') || 
+                            componentTypes.includes('hg_time_label') || 
+                            componentTypes.includes('hg_scroll_text');
+    
+    // 如果有文本组件，先包含字体相关头文件
+    if (hasTextComponent) {
+      code += `#include "draw_font.h"\n`;
+      code += `#include "font_types.h"\n`;
+    }
+
     // 检查是否有滚动文本
     const hasScrollText = this.components.some(c => c.type === 'hg_label' && (c.data?.enableScroll === true || c.data?.enableScroll === 'true'));
     if (hasScrollText) {
@@ -835,6 +846,12 @@ static void ${component.id}_breath_anim_cb(void *p)
         return enableScroll ? 'gui_scroll_text_t' : 'gui_text_t';
       case 'hg_list':
         return 'gui_list_t';
+      case 'hg_arc':
+        return 'gui_arc_t';
+      case 'hg_rect':
+        return 'gui_rounded_rect_t';
+      case 'hg_circle':
+        return 'gui_circle_t';
       default:
         return 'gui_obj_t';
     }
