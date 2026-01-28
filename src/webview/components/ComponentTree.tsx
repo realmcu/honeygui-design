@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useDesignerStore } from '../store';
 import { ChevronDown, ChevronRight, Eye, EyeOff, Lock, Unlock } from 'lucide-react';
+import { componentIconMap } from './ComponentLibrary';
 import { t } from '../i18n';
 import './ComponentTree.css';
 
@@ -305,12 +306,8 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
 
   // 获取组件图标
   const getComponentIcon = () => {
-    if (component.type === 'hg_list') {
-      return '📋';
-    } else if (component.type === 'hg_list_item') {
-      return '📄';
-    }
-    return '📦';
+    // 使用组件库中定义的图标
+    return componentIconMap[component.type] || '📦';
   };
 
   // 获取组件显示名称

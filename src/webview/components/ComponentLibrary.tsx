@@ -388,6 +388,18 @@ const componentCategories = [
   { name: 'Multimedia', types: ['hg_video', 'hg_3d', 'hg_lottie'] }
 ];
 
+/**
+ * 组件图标映射表
+ * 用于在组件树和其他地方显示统一的组件图标
+ */
+const componentIconMap: Record<string, string> = componentDefinitions.reduce((acc, def) => {
+  acc[def.type] = def.icon;
+  return acc;
+}, {} as Record<string, string>);
+
+// 添加不在组件库中显示但需要图标的组件
+componentIconMap['hg_list_item'] = '📄';
+
 const ComponentLibrary: React.FC<ComponentLibraryProps> = ({ onComponentDragStart, onCreateComponent }) => {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(componentCategories.map(c => c.name))
@@ -530,4 +542,4 @@ const ComponentLibrary: React.FC<ComponentLibraryProps> = ({ onComponentDragStar
 };
 
 export default ComponentLibrary;
-export { componentDefinitions };
+export { componentDefinitions, componentIconMap };
