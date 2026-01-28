@@ -8,7 +8,7 @@ import { Model3DConverterService } from '../services/Model3DConverterService';
 import { FontConverterService } from '../services/FontConverterService';
 import { GlassConverterService } from '../services/GlassConverterService';
 import { ConversionConfigService, ConversionConfig, TargetFormat, YuvBlur, ItemSettings } from '../services/ConversionConfigService';
-import { getToolsPanelHtml } from './ToolsPanelHtml';
+import { getToolsPanelHtml, getToolsPanelTranslations } from './ToolsPanelHtml';
 
 interface FileItem {
     id: string;
@@ -48,7 +48,7 @@ export class ToolsPanel {
         this.fontConverter = new FontConverterService();
         this.glassConverter = new GlassConverterService();
 
-        this.panel.webview.html = getToolsPanelHtml();
+        this.panel.webview.html = getToolsPanelHtml(getToolsPanelTranslations());
         this.panel.onDidDispose(() => this.dispose(), null, this.disposables);
         this.panel.webview.onDidReceiveMessage(msg => this.handleMessage(msg), null, this.disposables);
     }
@@ -59,7 +59,7 @@ export class ToolsPanel {
             return;
         }
         const panel = vscode.window.createWebviewPanel(
-            ToolsPanel.viewType, '资源转换工具', vscode.ViewColumn.One,
+            ToolsPanel.viewType, vscode.l10n.t('Resource Conversion Tool'), vscode.ViewColumn.One,
             { enableScripts: true, retainContextWhenHidden: true }
         );
         ToolsPanel.currentPanel = new ToolsPanel(panel, extensionUri);

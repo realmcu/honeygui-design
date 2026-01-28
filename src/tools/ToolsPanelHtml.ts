@@ -1,71 +1,239 @@
-export function getToolsPanelHtml(): string {
+import * as vscode from 'vscode';
+
+/** 资源转换工具翻译接口 */
+export interface ToolsPanelTranslations {
+    title: string;
+    all: string;
+    image: string;
+    video: string;
+    model3d: string;
+    font: string;
+    glass: string;
+    selectFiles: string;
+    selectFolder: string;
+    pleaseSetOutputDirFirst: string;
+    root: string;
+    properties: string;
+    selectFileToViewSettings: string;
+    outputDir: string;
+    selectDir: string;
+    notSelected: string;
+    baseAddr: string;
+    baseAddrTooltip: string;
+    clear: string;
+    startConvert: string;
+    preparing: string;
+    dragFilesHere: string;
+    pleaseSelectOutputDirFirst: string;
+    currentFolderEmpty: string;
+    imageConversionConfig: string;
+    targetFormat: string;
+    compression: string;
+    adaptive16: string;
+    adaptive24: string;
+    noCompression: string;
+    yuvSampling: string;
+    blurLevel: string;
+    none: string;
+    fastlzSecondary: string;
+    videoSettings: string;
+    format: string;
+    quality: string;
+    frameRate: string;
+    keepOriginal: string;
+    noExtraSettings: string;
+    fontSettings: string;
+    outputFormat: string;
+    bitmapFont: string;
+    vectorFont: string;
+    vectorFontHint: string;
+    fontSize: string;
+    fixed: string;
+    renderMode: string;
+    bit1Mono: string;
+    bit2Gray4: string;
+    bit4Gray16: string;
+    bit8Gray256: string;
+    cropMode: string;
+    auto: string;
+    enabled: string;
+    disabled: string;
+    characterSet: string;
+    addCharacterSet: string;
+    glassSettings: string;
+    effectArea: string;
+    effectIntensity: string;
+    conversionConfig: string;
+    inheritedFrom: string;
+    inherit: string;
+    defaultSettings: string;
+    unicodeRange: string;
+    customChars: string;
+    charsetFile: string;
+    codepageFile: string;
+    rangeFormat: string;
+    cstTxtFile: string;
+    egCP936: string;
+    browse: string;
+    complete: string;
+    success: string;
+    failed: string;
+    generatingPreview: string;
+    previewFailed: string;
+}
+
+/** 获取资源转换工具翻译 */
+export function getToolsPanelTranslations(): ToolsPanelTranslations {
+    return {
+        title: vscode.l10n.t('Resource Conversion Tool'),
+        all: vscode.l10n.t('All'),
+        image: vscode.l10n.t('Image'),
+        video: vscode.l10n.t('Video'),
+        model3d: vscode.l10n.t('3D Model'),
+        font: vscode.l10n.t('Font'),
+        glass: vscode.l10n.t('Glass'),
+        selectFiles: vscode.l10n.t('Select Files'),
+        selectFolder: vscode.l10n.t('Select Folder'),
+        pleaseSetOutputDirFirst: vscode.l10n.t('Please set output directory first'),
+        root: vscode.l10n.t('Root'),
+        properties: vscode.l10n.t('Properties'),
+        selectFileToViewSettings: vscode.l10n.t('Select file to view settings'),
+        outputDir: vscode.l10n.t('Output Directory'),
+        selectDir: vscode.l10n.t('Select Directory'),
+        notSelected: vscode.l10n.t('Not Selected'),
+        baseAddr: vscode.l10n.t('Base Address'),
+        baseAddrTooltip: vscode.l10n.t('ROMFS base address for embedded flashing'),
+        clear: vscode.l10n.t('Clear'),
+        startConvert: vscode.l10n.t('Start Convert'),
+        preparing: vscode.l10n.t('Preparing...'),
+        dragFilesHere: vscode.l10n.t('Drag files or folders here'),
+        pleaseSelectOutputDirFirst: vscode.l10n.t('Please select output directory first'),
+        currentFolderEmpty: vscode.l10n.t('Current folder is empty'),
+        imageConversionConfig: vscode.l10n.t('Image Conversion Config'),
+        targetFormat: vscode.l10n.t('Target Format'),
+        compression: vscode.l10n.t('Compression'),
+        adaptive16: vscode.l10n.t('Adaptive 16-bit'),
+        adaptive24: vscode.l10n.t('Adaptive 24-bit'),
+        noCompression: vscode.l10n.t('No Compression'),
+        yuvSampling: vscode.l10n.t('YUV Sampling'),
+        blurLevel: vscode.l10n.t('Blur Level'),
+        none: vscode.l10n.t('None'),
+        fastlzSecondary: vscode.l10n.t('FastLZ Secondary Compression'),
+        videoSettings: vscode.l10n.t('Video Settings'),
+        format: vscode.l10n.t('Format'),
+        quality: vscode.l10n.t('Quality'),
+        frameRate: vscode.l10n.t('Frame Rate'),
+        keepOriginal: vscode.l10n.t('Keep Original'),
+        noExtraSettings: vscode.l10n.t('No extra settings'),
+        fontSettings: vscode.l10n.t('Font Settings'),
+        outputFormat: vscode.l10n.t('Output Format'),
+        bitmapFont: vscode.l10n.t('Bitmap Font'),
+        vectorFont: vscode.l10n.t('Vector Font'),
+        vectorFontHint: vscode.l10n.t('Vector font supports runtime size adjustment'),
+        fontSize: vscode.l10n.t('Font Size'),
+        fixed: vscode.l10n.t('Fixed'),
+        renderMode: vscode.l10n.t('Render Mode'),
+        bit1Mono: vscode.l10n.t('1-bit (Mono)'),
+        bit2Gray4: vscode.l10n.t('2-bit (4 Gray)'),
+        bit4Gray16: vscode.l10n.t('4-bit (16 Gray)'),
+        bit8Gray256: vscode.l10n.t('8-bit (256 Gray)'),
+        cropMode: vscode.l10n.t('Crop Mode'),
+        auto: vscode.l10n.t('Auto'),
+        enabled: vscode.l10n.t('Enabled'),
+        disabled: vscode.l10n.t('Disabled'),
+        characterSet: vscode.l10n.t('Character Set'),
+        addCharacterSet: vscode.l10n.t('+ Add Character Set'),
+        glassSettings: vscode.l10n.t('Glass Settings'),
+        effectArea: vscode.l10n.t('Effect Area'),
+        effectIntensity: vscode.l10n.t('Effect Intensity'),
+        conversionConfig: vscode.l10n.t('Conversion Config'),
+        inheritedFrom: vscode.l10n.t('Inherited from'),
+        inherit: vscode.l10n.t('Inherit'),
+        defaultSettings: vscode.l10n.t('Default Settings'),
+        unicodeRange: vscode.l10n.t('Unicode Range'),
+        customChars: vscode.l10n.t('Custom Characters'),
+        charsetFile: vscode.l10n.t('Charset File'),
+        codepageFile: vscode.l10n.t('CodePage File'),
+        rangeFormat: vscode.l10n.t('Format: start-end'),
+        cstTxtFile: vscode.l10n.t('.cst / .txt file'),
+        egCP936: vscode.l10n.t('e.g. CP936'),
+        browse: vscode.l10n.t('Browse'),
+        complete: vscode.l10n.t('Complete'),
+        success: vscode.l10n.t('success'),
+        failed: vscode.l10n.t('failed'),
+        generatingPreview: vscode.l10n.t('Generating preview...'),
+        previewFailed: vscode.l10n.t('Preview failed'),
+    };
+}
+
+export function getToolsPanelHtml(t: ToolsPanelTranslations): string {
     return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>资源转换工具</title>
+    <title>${t.title}</title>
     <style>${getStyles()}</style>
 </head>
 <body>
     <div class="container">
-        <h1>🔧 资源转换工具</h1>
+        <h1>🔧 ${t.title}</h1>
         <div class="main-layout">
             <div class="left-panel">
                 <div class="panel-header">
                     <select class="filter-select" id="filterSelect" onchange="setFilter(this.value)" disabled>
-                        <option value="all">全部</option>
-                        <option value="image">🖼️ 图片</option>
-                        <option value="video">🎬 视频</option>
-                        <option value="model">📦 3D模型</option>
-                        <option value="font">🔤 字体</option>
-                        <option value="glass">🔮 玻璃</option>
+                        <option value="all">${t.all}</option>
+                        <option value="image">🖼️ ${t.image}</option>
+                        <option value="video">🎬 ${t.video}</option>
+                        <option value="model">📦 ${t.model3d}</option>
+                        <option value="font">🔤 ${t.font}</option>
+                        <option value="glass">🔮 ${t.glass}</option>
                     </select>
                     <div class="header-buttons">
-                        <button class="icon-btn" id="selectFilesBtn" onclick="selectFiles()" title="请先设定输出目录" disabled>📁</button>
-                        <button class="icon-btn" id="selectFolderBtn" onclick="selectFolder()" title="请先设定输出目录" disabled>📂</button>
+                        <button class="icon-btn" id="selectFilesBtn" onclick="selectFiles()" title="${t.pleaseSetOutputDirFirst}" disabled>📁</button>
+                        <button class="icon-btn" id="selectFolderBtn" onclick="selectFolder()" title="${t.pleaseSetOutputDirFirst}" disabled>📂</button>
                     </div>
                 </div>
                 <div class="breadcrumb" id="breadcrumb">
-                    <span class="breadcrumb-item" onclick="navigateTo(-1)">🏠 根目录</span>
+                    <span class="breadcrumb-item" onclick="navigateTo(-1)">🏠 ${t.root}</span>
                 </div>
                 <div class="file-grid disabled" id="fileGrid" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
                     <div class="file-grid-inner" id="fileGridInner">
-                        <div class="empty-hint">请先选择输出目录</div>
+                        <div class="empty-hint">${t.pleaseSelectOutputDirFirst}</div>
                     </div>
                 </div>
                 <input type="file" id="fileInput" multiple accept=".png,.jpg,.jpeg,.bmp,.gif,.mp4,.avi,.mov,.mkv,.webm,.obj,.gltf,.ttf,.otf,.svg" style="display:none" onchange="handleFileSelect(event)">
                 <input type="file" id="folderInput" multiple webkitdirectory="" directory="" style="display:none" onchange="handleFileSelect(event)">
             </div>
             <div class="right-panel">
-                <div class="panel-header">属性设置</div>
+                <div class="panel-header">${t.properties}</div>
                 <div class="properties" id="properties">
                     <div class="preview-area" id="previewArea"></div>
-                    <div class="no-selection">选择文件查看设置</div>
+                    <div class="no-selection">${t.selectFileToViewSettings}</div>
                 </div>
             </div>
         </div>
         <div class="output-section">
-            <span>输出目录:</span>
-            <button onclick="selectOutputDir()">选择目录</button>
-            <span id="outputDirPath" class="output-path">未选择</span>
-            <span class="base-addr-label">基地址:</span>
-            <input type="text" id="baseAddrInput" class="base-addr-input" value="0x704D1000" placeholder="0x704D1000" title="ROMFS 基地址，用于嵌入式烧录">
+            <span>${t.outputDir}:</span>
+            <button onclick="selectOutputDir()">${t.selectDir}</button>
+            <span id="outputDirPath" class="output-path">${t.notSelected}</span>
+            <span class="base-addr-label">${t.baseAddr}:</span>
+            <input type="text" id="baseAddrInput" class="base-addr-input" value="0x704D1000" placeholder="0x704D1000" title="${t.baseAddrTooltip}">
         </div>
         <div class="footer">
             <div class="stats" id="stats">🖼️ 0  🎬 0  📦 0</div>
             <div class="actions">
-                <button id="clearBtn" onclick="clearAll()" title="请先设定输出目录" disabled>🗑️ 清空</button>
-                <button id="convertBtn" onclick="startConvert()" title="请先设定输出目录" disabled>▶️ 开始转换</button>
+                <button id="clearBtn" onclick="clearAll()" title="${t.pleaseSetOutputDirFirst}" disabled>🗑️ ${t.clear}</button>
+                <button id="convertBtn" onclick="startConvert()" title="${t.pleaseSetOutputDirFirst}" disabled>▶️ ${t.startConvert}</button>
             </div>
         </div>
         <div class="progress-section" id="progressSection" style="display:none">
             <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-            <div class="progress-text" id="progressText">准备中...</div>
+            <div class="progress-text" id="progressText">${t.preparing}</div>
         </div>
         <div class="results" id="results" style="display:none"></div>
     </div>
-    <script>${getScript()}</script>
+    <script>${getScript(t)}</script>
 </body>
 </html>`;
 }
@@ -151,8 +319,9 @@ button:disabled{opacity:.5;cursor:not-allowed}
 `;
 }
 
-function getScript(): string {
+function getScript(t: ToolsPanelTranslations): string {
     return `
+const T = ${JSON.stringify(t)};
 const vscode = acquireVsCodeApi();
 const files = new Map();
 const blobUrls = new Map();
@@ -199,7 +368,7 @@ function getFolderConversionConfig(folderPath) {
 // 解析有效配置（处理继承）
 function resolveEffectiveConfig(assetPath) {
     if (!conversionConfig) {
-        return { format: 'adaptive16', compression: 'none', videoFormat: 'mjpeg', isInherited: true, inheritedFrom: '默认' };
+        return { format: 'adaptive16', compression: 'none', videoFormat: 'mjpeg', isInherited: true, inheritedFrom: T.defaultSettings };
     }
     
     const normalizedPath = (assetPath || '').replace(/\\\\/g, '/').replace(/^\\/+|\\/+$/g, '');
@@ -219,7 +388,7 @@ function resolveEffectiveConfig(assetPath) {
     const pathParts = normalizedPath.split('/');
     let inheritedFormat = null;
     let inheritedVideoFormat = null;
-    let inheritedFrom = '默认设置';
+    let inheritedFrom = T.defaultSettings;
     let parentSettings = {};
     
     for (let i = pathParts.length - 1; i >= 0; i--) {
@@ -426,12 +595,12 @@ function updateFilterCounts() {
     files.forEach(f => { if(f.type==='image')img++; else if(f.type==='video')vid++; else if(f.type==='model')mod++; else if(f.type==='font')fnt++; else if(f.type==='glass')gls++; });
     const total = img + vid + mod + fnt + gls;
     const sel = document.getElementById('filterSelect');
-    sel.options[0].text = '全部 ('+total+')';
-    sel.options[1].text = '🖼️ 图片 ('+img+')';
-    sel.options[2].text = '🎬 视频 ('+vid+')';
-    sel.options[3].text = '📦 3D模型 ('+mod+')';
-    sel.options[4].text = '🔤 字体 ('+fnt+')';
-    sel.options[5].text = '🔮 玻璃 ('+gls+')';
+    sel.options[0].text = T.all+' ('+total+')';
+    sel.options[1].text = '🖼️ '+T.image+' ('+img+')';
+    sel.options[2].text = '🎬 '+T.video+' ('+vid+')';
+    sel.options[3].text = '📦 '+T.model3d+' ('+mod+')';
+    sel.options[4].text = '🔤 '+T.font+' ('+fnt+')';
+    sel.options[5].text = '🔮 '+T.glass+' ('+gls+')';
 }
 
 function getCurrentContent() {
@@ -482,7 +651,7 @@ function renderBreadcrumb() {
         return;
     }
     bc.style.display = 'flex';
-    let html = '<span class="breadcrumb-item" onclick="navigateTo(-1)">🏠 根目录</span>';
+    let html = '<span class="breadcrumb-item" onclick="navigateTo(-1)">🏠 '+T.root+'</span>';
     currentPath.forEach((name, i) => {
         html += '<span class="breadcrumb-separator">/</span>';
         html += '<span class="breadcrumb-item" onclick="navigateTo('+i+')">'+name+'</span>';
@@ -512,14 +681,14 @@ function enterFolder(name) {
 function renderGrid() {
     const grid = document.getElementById('fileGridInner');
     if (files.size === 0) {
-        grid.innerHTML = '<div class="empty-hint">' + (outputDir ? '拖拽文件或文件夹到此处' : '请先选择输出目录') + '</div>';
+        grid.innerHTML = '<div class="empty-hint">' + (outputDir ? T.dragFilesHere : T.pleaseSelectOutputDirFirst) + '</div>';
         return;
     }
     
     const { folders, files: currentFiles } = getCurrentContent();
     
     if (folders.length === 0 && currentFiles.length === 0) {
-        grid.innerHTML = '<div class="empty-hint">当前文件夹为空</div>';
+        grid.innerHTML = '<div class="empty-hint">'+T.currentFolderEmpty+'</div>';
         return;
     }
     
@@ -674,17 +843,17 @@ function renderProperties() {
             const currentFormat = folderConfig.format || 'adaptive16';
             const currentCompression = folderConfig.compression || 'none';
             
-            html += '<div class="prop-group"><div class="prop-group-title">🖼️ 图片转换配置 ('+imgCount+'个)</div>' +
-                '<div class="prop-row"><label>目标格式:</label><select onchange="updateFolderImageConfig(\\'format\\',this.value)">' +
-                '<option value="adaptive16"'+(currentFormat==='adaptive16'?' selected':'')+'>自适应16位</option>' +
-                '<option value="adaptive24"'+(currentFormat==='adaptive24'?' selected':'')+'>自适应24位</option>' +
+            html += '<div class="prop-group"><div class="prop-group-title">🖼️ '+T.imageConversionConfig+' ('+imgCount+')</div>' +
+                '<div class="prop-row"><label>'+T.targetFormat+':</label><select onchange="updateFolderImageConfig(\\'format\\',this.value)">' +
+                '<option value="adaptive16"'+(currentFormat==='adaptive16'?' selected':'')+'>'+T.adaptive16+'</option>' +
+                '<option value="adaptive24"'+(currentFormat==='adaptive24'?' selected':'')+'>'+T.adaptive24+'</option>' +
                 '<option value="RGB565"'+(currentFormat==='RGB565'?' selected':'')+'>RGB565</option>' +
                 '<option value="RGB888"'+(currentFormat==='RGB888'?' selected':'')+'>RGB888</option>' +
                 '<option value="ARGB8565"'+(currentFormat==='ARGB8565'?' selected':'')+'>ARGB8565</option>' +
                 '<option value="ARGB8888"'+(currentFormat==='ARGB8888'?' selected':'')+'>ARGB8888</option>' +
                 '</select></div>' +
-                '<div class="prop-row"><label>压缩方式:</label><select onchange="updateFolderImageConfig(\\'compression\\',this.value)">' +
-                '<option value="none"'+(currentCompression==='none'?' selected':'')+'>不压缩</option>' +
+                '<div class="prop-row"><label>'+T.compression+':</label><select onchange="updateFolderImageConfig(\\'compression\\',this.value)">' +
+                '<option value="none"'+(currentCompression==='none'?' selected':'')+'>'+T.noCompression+'</option>' +
                 '<option value="rle"'+(currentCompression==='rle'?' selected':'')+'>RLE</option>' +
                 '<option value="fastlz"'+(currentCompression==='fastlz'?' selected':'')+'>FastLZ</option>' +
                 '<option value="yuv"'+(currentCompression==='yuv'?' selected':'')+'>YUV</option>' +
@@ -693,18 +862,18 @@ function renderProperties() {
             // YUV 参数
             if (currentCompression === 'yuv') {
                 const yuvParams = folderConfig.yuvParams || { sampling: 'YUV422', blur: 'none', fastlzSecondary: false };
-                html += '<div class="prop-row"><label>YUV采样:</label><select onchange="updateFolderYuvParam(\\'sampling\\',this.value)">' +
+                html += '<div class="prop-row"><label>'+T.yuvSampling+':</label><select onchange="updateFolderYuvParam(\\'sampling\\',this.value)">' +
                     '<option value="YUV444"'+(yuvParams.sampling==='YUV444'?' selected':'')+'>YUV444</option>' +
                     '<option value="YUV422"'+(yuvParams.sampling==='YUV422'?' selected':'')+'>YUV422</option>' +
                     '<option value="YUV411"'+(yuvParams.sampling==='YUV411'?' selected':'')+'>YUV411</option>' +
                     '</select></div>' +
-                    '<div class="prop-row"><label>模糊程度:</label><select onchange="updateFolderYuvParam(\\'blur\\',this.value)">' +
-                    '<option value="none"'+(yuvParams.blur==='none'?' selected':'')+'>无</option>' +
+                    '<div class="prop-row"><label>'+T.blurLevel+':</label><select onchange="updateFolderYuvParam(\\'blur\\',this.value)">' +
+                    '<option value="none"'+(yuvParams.blur==='none'?' selected':'')+'>'+T.none+'</option>' +
                     '<option value="1bit"'+(yuvParams.blur==='1bit'?' selected':'')+'>1bit</option>' +
                     '<option value="2bit"'+(yuvParams.blur==='2bit'?' selected':'')+'>2bit</option>' +
                     '<option value="4bit"'+(yuvParams.blur==='4bit'?' selected':'')+'>4bit</option>' +
                     '</select></div>' +
-                    '<div class="prop-row"><label></label><label style="width:auto;display:flex;align-items:center;gap:4px"><input type="checkbox" '+(yuvParams.fastlzSecondary?'checked':'')+' onchange="updateFolderYuvParam(\\'fastlzSecondary\\',this.checked)">FastLZ二次压缩</label></div>';
+                    '<div class="prop-row"><label></label><label style="width:auto;display:flex;align-items:center;gap:4px"><input type="checkbox" '+(yuvParams.fastlzSecondary?'checked':'')+' onchange="updateFolderYuvParam(\\'fastlzSecondary\\',this.checked)">'+T.fastlzSecondary+'</label></div>';
             }
             html += '</div>';
         }
@@ -716,18 +885,18 @@ function renderProperties() {
             const currentVideoQuality = folderVideoConfig.videoQuality || 1;
             const currentVideoFrameRate = folderVideoConfig.videoFrameRate || '';
             
-            html += '<div class="prop-group"><div class="prop-group-title">🎬 视频设置 ('+vidCount+'个)</div>' +
-                '<div class="prop-row"><label>格式:</label><select onchange="updateFolderVideoConfig(\\'videoFormat\\',this.value)">' +
+            html += '<div class="prop-group"><div class="prop-group-title">🎬 '+T.videoSettings+' ('+vidCount+')</div>' +
+                '<div class="prop-row"><label>'+T.format+':</label><select onchange="updateFolderVideoConfig(\\'videoFormat\\',this.value)">' +
                 '<option value="mjpeg"'+(currentVideoFormat==='mjpeg'?' selected':'')+'>MJPEG</option>' +
                 '<option value="avi"'+(currentVideoFormat==='avi'?' selected':'')+'>AVI</option>' +
                 '<option value="h264"'+(currentVideoFormat==='h264'?' selected':'')+'>H.264</option>' +
                 '</select></div>' +
-                '<div class="prop-row"><label>质量:</label><input type="number" min="1" max="31" value="'+currentVideoQuality+'" onchange="updateFolderVideoConfig(\\'videoQuality\\',+this.value)"></div>' +
-                '<div class="prop-row"><label>帧率:</label><input type="number" value="'+currentVideoFrameRate+'" placeholder="保持原始" onchange="updateFolderVideoConfig(\\'videoFrameRate\\',this.value?+this.value:null)"></div></div>';
+                '<div class="prop-row"><label>'+T.quality+':</label><input type="number" min="1" max="31" value="'+currentVideoQuality+'" onchange="updateFolderVideoConfig(\\'videoQuality\\',+this.value)"></div>' +
+                '<div class="prop-row"><label>'+T.frameRate+':</label><input type="number" value="'+currentVideoFrameRate+'" placeholder="'+T.keepOriginal+'" onchange="updateFolderVideoConfig(\\'videoFrameRate\\',this.value?+this.value:null)"></div></div>';
         }
         
         if (modCount > 0) {
-            html += '<div class="prop-group"><div class="prop-group-title">📦 3D模型 ('+modCount+'个)</div><div style="font-size:11px;color:var(--vscode-descriptionForeground)">无额外设置</div></div>';
+            html += '<div class="prop-group"><div class="prop-group-title">📦 '+T.model3d+' ('+modCount+')</div><div style="font-size:11px;color:var(--vscode-descriptionForeground)">'+T.noExtraSettings+'</div></div>';
         }
         
         if (fntCount > 0) {
@@ -735,35 +904,35 @@ function renderProperties() {
             const isVector = settings.font?.outputFormat === 'vector';
             const displayFontSize = isVector ? 32 : (settings.font?.fontSize || 32);
             const displayRenderMode = isVector ? 8 : (settings.font?.renderMode || 4);
-            html += '<div class="prop-group"><div class="prop-group-title">🔤 字体设置 ('+fntCount+'个)</div>' +
-                '<div class="prop-row"><label>输出格式:</label><select onchange="handleFolderOutputFormatChange(this.value)">' +
-                '<option value="bitmap"'+(!settings.font?.outputFormat||settings.font?.outputFormat==='bitmap'?' selected':'')+'>点阵字体</option>' +
-                '<option value="vector"'+(settings.font?.outputFormat==='vector'?' selected':'')+'>矢量字体</option>' +
+            html += '<div class="prop-group"><div class="prop-group-title">🔤 '+T.fontSettings+' ('+fntCount+')</div>' +
+                '<div class="prop-row"><label>'+T.outputFormat+':</label><select onchange="handleFolderOutputFormatChange(this.value)">' +
+                '<option value="bitmap"'+(!settings.font?.outputFormat||settings.font?.outputFormat==='bitmap'?' selected':'')+'>'+T.bitmapFont+'</option>' +
+                '<option value="vector"'+(settings.font?.outputFormat==='vector'?' selected':'')+'>'+T.vectorFont+'</option>' +
                 '</select></div>' +
-                (isVector ? '<div style="font-size:10px;color:var(--vscode-descriptionForeground);margin:-4px 0 6px 65px;">矢量字体渲染支持字号调整，无需修改当前配置</div>' : '') +
-                '<div class="prop-row"><label>字号:</label><input type="number" min="8" max="200" value="'+displayFontSize+'" onchange="updateFolderSetting(\\'font\\',\\'fontSize\\',+this.value)"'+(isVector?' disabled style="opacity:0.5"':'')+'>'+
-                (isVector ? '<span style="font-size:10px;color:var(--vscode-descriptionForeground);margin-left:4px">(固定)</span>' : '') + '</div>' +
-                '<div class="prop-row"><label>渲染模式:</label><select onchange="updateFolderSetting(\\'font\\',\\'renderMode\\',+this.value)"'+(isVector?' disabled style="opacity:0.5"':'')+'>'+
-                '<option value="1"'+(displayRenderMode===1?' selected':'')+'>1位 (单色)</option>' +
-                '<option value="2"'+(displayRenderMode===2?' selected':'')+'>2位 (4级灰度)</option>' +
-                '<option value="4"'+(displayRenderMode===4?' selected':'')+'>4位 (16级灰度)</option>' +
-                '<option value="8"'+(displayRenderMode===8?' selected':'')+'>8位 (256级灰度)</option>' +
-                '</select>'+(isVector ? '<span style="font-size:10px;color:var(--vscode-descriptionForeground);margin-left:4px">(固定)</span>' : '')+'</div>' +
-                '<div class="prop-row"><label>裁剪模式:</label><select onchange="updateFolderSetting(\\'font\\',\\'crop\\',this.value)">' +
-                '<option value="auto"'+(!settings.font?.crop||settings.font?.crop==='auto'?' selected':'')+'>自动</option>' +
-                '<option value="true"'+(settings.font?.crop==='true'?' selected':'')+'>启用</option>' +
-                '<option value="false"'+(settings.font?.crop==='false'?' selected':'')+'>禁用</option>' +
+                (isVector ? '<div style="font-size:10px;color:var(--vscode-descriptionForeground);margin:-4px 0 6px 65px;">'+T.vectorFontHint+'</div>' : '') +
+                '<div class="prop-row"><label>'+T.fontSize+':</label><input type="number" min="8" max="200" value="'+displayFontSize+'" onchange="updateFolderSetting(\\'font\\',\\'fontSize\\',+this.value)"'+(isVector?' disabled style="opacity:0.5"':'')+'>'+
+                (isVector ? '<span style="font-size:10px;color:var(--vscode-descriptionForeground);margin-left:4px">('+T.fixed+')</span>' : '') + '</div>' +
+                '<div class="prop-row"><label>'+T.renderMode+':</label><select onchange="updateFolderSetting(\\'font\\',\\'renderMode\\',+this.value)"'+(isVector?' disabled style="opacity:0.5"':'')+'>'+
+                '<option value="1"'+(displayRenderMode===1?' selected':'')+'>'+T.bit1Mono+'</option>' +
+                '<option value="2"'+(displayRenderMode===2?' selected':'')+'>'+T.bit2Gray4+'</option>' +
+                '<option value="4"'+(displayRenderMode===4?' selected':'')+'>'+T.bit4Gray16+'</option>' +
+                '<option value="8"'+(displayRenderMode===8?' selected':'')+'>'+T.bit8Gray256+'</option>' +
+                '</select>'+(isVector ? '<span style="font-size:10px;color:var(--vscode-descriptionForeground);margin-left:4px">('+T.fixed+')</span>' : '')+'</div>' +
+                '<div class="prop-row"><label>'+T.cropMode+':</label><select onchange="updateFolderSetting(\\'font\\',\\'crop\\',this.value)">' +
+                '<option value="auto"'+(!settings.font?.crop||settings.font?.crop==='auto'?' selected':'')+'>'+T.auto+'</option>' +
+                '<option value="true"'+(settings.font?.crop==='true'?' selected':'')+'>'+T.enabled+'</option>' +
+                '<option value="false"'+(settings.font?.crop==='false'?' selected':'')+'>'+T.disabled+'</option>' +
                 '</select></div>' +
-                '<div class="prop-group-title" style="margin-top:8px">字符集</div>' +
+                '<div class="prop-group-title" style="margin-top:8px">'+T.characterSet+'</div>' +
                 '<div class="charset-list" id="folderCharsetList">' + renderCharsetItems(charsets, true) + '</div>' +
-                '<button class="add-charset" onclick="addFolderCharset()">+ 添加字符集</button>' +
+                '<button class="add-charset" onclick="addFolderCharset()">'+T.addCharacterSet+'</button>' +
                 '</div>';
         }
         
         if (glsCount > 0) {
-            html += '<div class="prop-group"><div class="prop-group-title">🔮 玻璃设置 ('+glsCount+'个)</div>' +
-                '<div class="prop-row"><label>效果区域:</label><input type="number" min="0" max="100" value="'+(settings.glass?.blurRadius||50)+'" onchange="updateFolderSetting(\\'glass\\',\\'blurRadius\\',+this.value)"><span style="font-size:10px;color:var(--vscode-descriptionForeground);margin-left:4px">%</span></div>' +
-                '<div class="prop-row"><label>效果强度:</label><input type="number" min="0" max="100" value="'+(settings.glass?.blurIntensity||50)+'" onchange="updateFolderSetting(\\'glass\\',\\'blurIntensity\\',+this.value)"><span style="font-size:10px;color:var(--vscode-descriptionForeground);margin-left:4px">%</span></div>' +
+            html += '<div class="prop-group"><div class="prop-group-title">🔮 '+T.glassSettings+' ('+glsCount+')</div>' +
+                '<div class="prop-row"><label>'+T.effectArea+':</label><input type="number" min="0" max="100" value="'+(settings.glass?.blurRadius||50)+'" onchange="updateFolderSetting(\\'glass\\',\\'blurRadius\\',+this.value)"><span style="font-size:10px;color:var(--vscode-descriptionForeground);margin-left:4px">%</span></div>' +
+                '<div class="prop-row"><label>'+T.effectIntensity+':</label><input type="number" min="0" max="100" value="'+(settings.glass?.blurIntensity||50)+'" onchange="updateFolderSetting(\\'glass\\',\\'blurIntensity\\',+this.value)"><span style="font-size:10px;color:var(--vscode-descriptionForeground);margin-left:4px">%</span></div>' +
                 '</div>';
         }
         
@@ -772,12 +941,12 @@ function renderProperties() {
     }
     
     if (!selectedId) {
-        props.innerHTML = '<div class="preview-area"></div><div class="no-selection">选择文件或文件夹查看设置</div>';
+        props.innerHTML = '<div class="preview-area"></div><div class="no-selection">'+T.selectFileToViewSettings+'</div>';
         return;
     }
     
     const file = files.get(selectedId);
-    if (!file) { props.innerHTML = '<div class="no-selection">文件不存在</div>'; return; }
+    if (!file) { props.innerHTML = '<div class="no-selection">'+T.failed+'</div>'; return; }
     
     const inherited = getInheritedSettings(file);
     const settings = file.settings || {};
@@ -793,7 +962,7 @@ function renderProperties() {
         // 玻璃效果：显示预览图或加载状态
         html += '<div id="glassPreviewArea">' +
             '<img id="glassPreviewImage" src="'+file.blobUrl+'" style="max-width:100%;max-height:180px;border-radius:4px">' +
-            '<div id="glassPreviewLoading" style="display:none;padding:40px;color:var(--vscode-descriptionForeground);text-align:center">⏳ 生成预览中...</div>' +
+            '<div id="glassPreviewLoading" style="display:none;padding:40px;color:var(--vscode-descriptionForeground);text-align:center">⏳ '+T.generatingPreview+'</div>' +
             '<div id="glassPreviewError" style="display:none;padding:10px;color:#f44;font-size:11px;text-align:center"></div>' +
             '</div>';
     } else {
@@ -813,17 +982,17 @@ function renderProperties() {
         const currentCompression = imageConfig.compression || effectiveConfig.compression || 'none';
         const isInherited = !imageConfig.format || imageConfig.format === 'inherit';
         
-        html += '<div class="prop-group"><div class="prop-group-title">转换配置'+(isInherited?' <span style="color:var(--vscode-descriptionForeground)">(继承自: '+effectiveConfig.inheritedFrom+')</span>':'')+'</div>' +
-            '<div class="prop-row"><label>目标格式:</label><select onchange="updateImageConfig(\\'format\\',this.value)">' +
-            '<option value="inherit"'+(currentFormat==='inherit'?' selected':'')+'>继承 ('+(effectiveConfig.format||'自适应16位')+')</option>' +
+        html += '<div class="prop-group"><div class="prop-group-title">'+T.conversionConfig+(isInherited?' <span style="color:var(--vscode-descriptionForeground)">('+T.inheritedFrom+': '+effectiveConfig.inheritedFrom+')</span>':'')+'</div>' +
+            '<div class="prop-row"><label>'+T.targetFormat+':</label><select onchange="updateImageConfig(\\'format\\',this.value)">' +
+            '<option value="inherit"'+(currentFormat==='inherit'?' selected':'')+'>'+T.inherit+' ('+(effectiveConfig.format||T.adaptive16)+')</option>' +
             '<option value="RGB565"'+(currentFormat==='RGB565'?' selected':'')+'>RGB565</option>' +
             '<option value="RGB888"'+(currentFormat==='RGB888'?' selected':'')+'>RGB888</option>' +
             '<option value="ARGB8565"'+(currentFormat==='ARGB8565'?' selected':'')+'>ARGB8565</option>' +
             '<option value="ARGB8888"'+(currentFormat==='ARGB8888'?' selected':'')+'>ARGB8888</option>' +
-            '<option value="I8"'+(currentFormat==='I8'?' selected':'')+'>I8 (索引色)</option>' +
+            '<option value="I8"'+(currentFormat==='I8'?' selected':'')+'>I8</option>' +
             '</select></div>' +
-            '<div class="prop-row"><label>压缩方式:</label><select onchange="updateImageConfig(\\'compression\\',this.value)">' +
-            '<option value="none"'+(currentCompression==='none'?' selected':'')+'>不压缩</option>' +
+            '<div class="prop-row"><label>'+T.compression+':</label><select onchange="updateImageConfig(\\'compression\\',this.value)">' +
+            '<option value="none"'+(currentCompression==='none'?' selected':'')+'>'+T.noCompression+'</option>' +
             '<option value="rle"'+(currentCompression==='rle'?' selected':'')+'>RLE</option>' +
             '<option value="fastlz"'+(currentCompression==='fastlz'?' selected':'')+'>FastLZ</option>' +
             '<option value="yuv"'+(currentCompression==='yuv'?' selected':'')+'>YUV</option>' +
@@ -832,18 +1001,18 @@ function renderProperties() {
         // YUV 参数
         if (currentCompression === 'yuv') {
             const yuvParams = imageConfig.yuvParams || effectiveConfig.yuvParams || { sampling: 'YUV422', blur: 'none', fastlzSecondary: false };
-            html += '<div class="prop-row"><label>YUV采样:</label><select onchange="updateImageYuvParam(\\'sampling\\',this.value)">' +
+            html += '<div class="prop-row"><label>'+T.yuvSampling+':</label><select onchange="updateImageYuvParam(\\'sampling\\',this.value)">' +
                 '<option value="YUV444"'+(yuvParams.sampling==='YUV444'?' selected':'')+'>YUV444</option>' +
                 '<option value="YUV422"'+(yuvParams.sampling==='YUV422'?' selected':'')+'>YUV422</option>' +
                 '<option value="YUV411"'+(yuvParams.sampling==='YUV411'?' selected':'')+'>YUV411</option>' +
                 '</select></div>' +
-                '<div class="prop-row"><label>模糊程度:</label><select onchange="updateImageYuvParam(\\'blur\\',this.value)">' +
-                '<option value="none"'+(yuvParams.blur==='none'?' selected':'')+'>无</option>' +
+                '<div class="prop-row"><label>'+T.blurLevel+':</label><select onchange="updateImageYuvParam(\\'blur\\',this.value)">' +
+                '<option value="none"'+(yuvParams.blur==='none'?' selected':'')+'>'+T.none+'</option>' +
                 '<option value="1bit"'+(yuvParams.blur==='1bit'?' selected':'')+'>1bit</option>' +
                 '<option value="2bit"'+(yuvParams.blur==='2bit'?' selected':'')+'>2bit</option>' +
                 '<option value="4bit"'+(yuvParams.blur==='4bit'?' selected':'')+'>4bit</option>' +
                 '</select></div>' +
-                '<div class="prop-row"><label></label><label style="width:auto;display:flex;align-items:center;gap:4px"><input type="checkbox" '+(yuvParams.fastlzSecondary?'checked':'')+' onchange="updateImageYuvParam(\\'fastlzSecondary\\',this.checked)">FastLZ二次压缩</label></div>';
+                '<div class="prop-row"><label></label><label style="width:auto;display:flex;align-items:center;gap:4px"><input type="checkbox" '+(yuvParams.fastlzSecondary?'checked':'')+' onchange="updateImageYuvParam(\\'fastlzSecondary\\',this.checked)">'+T.fastlzSecondary+'</label></div>';
         }
         html += '</div>';
     } else if (file.type === 'video') {
@@ -858,15 +1027,15 @@ function renderProperties() {
         const inheritedQuality = effectiveConfig.videoQuality || 1;
         const inheritedFrameRate = effectiveConfig.videoFrameRate || '';
         
-        html += '<div class="prop-group"><div class="prop-group-title">转换设置</div>' +
-            '<div class="prop-row"><label>格式:</label><select onchange="updateVideoConfig(\\'videoFormat\\',this.value)">' +
-            '<option value=""'+(!currentFormat?' selected':'')+'>继承 ('+inheritedFormat.toUpperCase()+')</option>' +
+        html += '<div class="prop-group"><div class="prop-group-title">'+T.conversionConfig+'</div>' +
+            '<div class="prop-row"><label>'+T.format+':</label><select onchange="updateVideoConfig(\\'videoFormat\\',this.value)">' +
+            '<option value=""'+(!currentFormat?' selected':'')+'>'+T.inherit+' ('+inheritedFormat.toUpperCase()+')</option>' +
             '<option value="mjpeg"'+(currentFormat==='mjpeg'?' selected':'')+'>MJPEG</option>' +
             '<option value="avi"'+(currentFormat==='avi'?' selected':'')+'>AVI</option>' +
             '<option value="h264"'+(currentFormat==='h264'?' selected':'')+'>H.264</option>' +
             '</select></div>' +
-            '<div class="prop-row"><label>质量:</label><input type="number" min="1" max="31" value="'+currentQuality+'" placeholder="继承 ('+inheritedQuality+')" onchange="updateVideoConfig(\\'videoQuality\\',this.value?+this.value:null)"></div>' +
-            '<div class="prop-row"><label>帧率:</label><input type="number" value="'+currentFrameRate+'" placeholder="'+(inheritedFrameRate||'保持原始')+'" onchange="updateVideoConfig(\\'videoFrameRate\\',this.value?+this.value:null)"></div></div>';
+            '<div class="prop-row"><label>'+T.quality+':</label><input type="number" min="1" max="31" value="'+currentQuality+'" placeholder="'+T.inherit+' ('+inheritedQuality+')" onchange="updateVideoConfig(\\'videoQuality\\',this.value?+this.value:null)"></div>' +
+            '<div class="prop-row"><label>'+T.frameRate+':</label><input type="number" value="'+currentFrameRate+'" placeholder="'+(inheritedFrameRate||T.keepOriginal)+'" onchange="updateVideoConfig(\\'videoFrameRate\\',this.value?+this.value:null)"></div></div>';
     } else if (file.type === 'font') {
         const ifnt = inherited.font || {};
         const charsets = settings.characterSets || ifnt.characterSets || [{type:'range',value:'0x20-0x7E'}];
@@ -874,42 +1043,42 @@ function renderProperties() {
         const isVector = effectiveOutputFormat === 'vector';
         const displayFontSize = isVector ? 32 : (settings.fontSize || ifnt.fontSize || 32);
         const displayRenderMode = isVector ? 8 : (settings.renderMode || ifnt.renderMode || 4);
-        html += '<div class="prop-group"><div class="prop-group-title">转换设置</div>' +
-            '<div class="prop-row"><label>输出格式:</label><select onchange="handleFileOutputFormatChange(this.value)">' +
-            '<option value=""'+(!settings.outputFormat?' selected':'')+'>继承 ('+(ifnt.outputFormat==='vector'?'矢量':'点阵')+')</option>' +
-            '<option value="bitmap"'+(settings.outputFormat==='bitmap'?' selected':'')+'>点阵字体</option>' +
-            '<option value="vector"'+(settings.outputFormat==='vector'?' selected':'')+'>矢量字体</option>' +
+        html += '<div class="prop-group"><div class="prop-group-title">'+T.conversionConfig+'</div>' +
+            '<div class="prop-row"><label>'+T.outputFormat+':</label><select onchange="handleFileOutputFormatChange(this.value)">' +
+            '<option value=""'+(!settings.outputFormat?' selected':'')+'>'+T.inherit+' ('+(ifnt.outputFormat==='vector'?T.vectorFont:T.bitmapFont)+')</option>' +
+            '<option value="bitmap"'+(settings.outputFormat==='bitmap'?' selected':'')+'>'+T.bitmapFont+'</option>' +
+            '<option value="vector"'+(settings.outputFormat==='vector'?' selected':'')+'>'+T.vectorFont+'</option>' +
             '</select></div>' +
-            (isVector ? '<div style="font-size:10px;color:var(--vscode-descriptionForeground);margin:-4px 0 6px 65px;">矢量字体渲染支持字号调整，无需修改当前配置</div>' : '') +
-            '<div class="prop-row"><label>字号:</label><input type="number" min="8" max="200" value="'+(isVector?'':settings.fontSize||'')+'" placeholder="'+(isVector?'32 (固定)':'继承 ('+(ifnt.fontSize||32)+')')+'" onchange="updateSetting(\\'fontSize\\',this.value?+this.value:null)"'+(isVector?' disabled style="opacity:0.5"':'')+'>'+
-            (isVector ? '<span style="font-size:10px;color:var(--vscode-descriptionForeground);margin-left:4px">(固定)</span>' : '') + '</div>' +
-            '<div class="prop-row"><label>渲染模式:</label><select onchange="updateSetting(\\'renderMode\\',this.value?+this.value:null)"'+(isVector?' disabled style="opacity:0.5"':'')+'>'+
-            '<option value=""'+(!settings.renderMode&&!isVector?' selected':'')+'>继承 ('+(ifnt.renderMode||4)+'位)</option>' +
-            '<option value="1"'+(!isVector&&settings.renderMode===1?' selected':'')+'>1位 (单色)</option>' +
-            '<option value="2"'+(!isVector&&settings.renderMode===2?' selected':'')+'>2位 (4级灰度)</option>' +
-            '<option value="4"'+(!isVector&&settings.renderMode===4?' selected':'')+'>4位 (16级灰度)</option>' +
-            '<option value="8"'+(isVector||settings.renderMode===8?' selected':'')+'>8位 (256级灰度)</option>' +
-            '</select>'+(isVector ? '<span style="font-size:10px;color:var(--vscode-descriptionForeground);margin-left:4px">(固定)</span>' : '')+'</div>' +
-            '<div class="prop-row"><label>裁剪模式:</label><select onchange="updateSetting(\\'crop\\',this.value||null)">' +
-            '<option value=""'+(!settings.crop?' selected':'')+'>继承 ('+(ifnt.crop==='true'?'启用':ifnt.crop==='false'?'禁用':'自动')+')</option>' +
-            '<option value="auto"'+(settings.crop==='auto'?' selected':'')+'>自动</option>' +
-            '<option value="true"'+(settings.crop==='true'?' selected':'')+'>启用</option>' +
-            '<option value="false"'+(settings.crop==='false'?' selected':'')+'>禁用</option>' +
+            (isVector ? '<div style="font-size:10px;color:var(--vscode-descriptionForeground);margin:-4px 0 6px 65px;">'+T.vectorFontHint+'</div>' : '') +
+            '<div class="prop-row"><label>'+T.fontSize+':</label><input type="number" min="8" max="200" value="'+(isVector?'':settings.fontSize||'')+'" placeholder="'+(isVector?'32 ('+T.fixed+')':T.inherit+' ('+(ifnt.fontSize||32)+')')+'" onchange="updateSetting(\\'fontSize\\',this.value?+this.value:null)"'+(isVector?' disabled style="opacity:0.5"':'')+'>'+
+            (isVector ? '<span style="font-size:10px;color:var(--vscode-descriptionForeground);margin-left:4px">('+T.fixed+')</span>' : '') + '</div>' +
+            '<div class="prop-row"><label>'+T.renderMode+':</label><select onchange="updateSetting(\\'renderMode\\',this.value?+this.value:null)"'+(isVector?' disabled style="opacity:0.5"':'')+'>'+
+            '<option value=""'+(!settings.renderMode&&!isVector?' selected':'')+'>'+T.inherit+' ('+(ifnt.renderMode||4)+'bit)</option>' +
+            '<option value="1"'+(!isVector&&settings.renderMode===1?' selected':'')+'>'+T.bit1Mono+'</option>' +
+            '<option value="2"'+(!isVector&&settings.renderMode===2?' selected':'')+'>'+T.bit2Gray4+'</option>' +
+            '<option value="4"'+(!isVector&&settings.renderMode===4?' selected':'')+'>'+T.bit4Gray16+'</option>' +
+            '<option value="8"'+(isVector||settings.renderMode===8?' selected':'')+'>'+T.bit8Gray256+'</option>' +
+            '</select>'+(isVector ? '<span style="font-size:10px;color:var(--vscode-descriptionForeground);margin-left:4px">('+T.fixed+')</span>' : '')+'</div>' +
+            '<div class="prop-row"><label>'+T.cropMode+':</label><select onchange="updateSetting(\\'crop\\',this.value||null)">' +
+            '<option value=""'+(!settings.crop?' selected':'')+'>'+T.inherit+' ('+(ifnt.crop==='true'?T.enabled:ifnt.crop==='false'?T.disabled:T.auto)+')</option>' +
+            '<option value="auto"'+(settings.crop==='auto'?' selected':'')+'>'+T.auto+'</option>' +
+            '<option value="true"'+(settings.crop==='true'?' selected':'')+'>'+T.enabled+'</option>' +
+            '<option value="false"'+(settings.crop==='false'?' selected':'')+'>'+T.disabled+'</option>' +
             '</select></div>' +
-            '<div class="prop-group-title" style="margin-top:8px">字符集</div>' +
+            '<div class="prop-group-title" style="margin-top:8px">'+T.characterSet+'</div>' +
             '<div class="charset-list" id="fileCharsetList">' + renderCharsetItems(charsets, false) + '</div>' +
-            '<button class="add-charset" onclick="addFileCharset()">+ 添加字符集</button>' +
+            '<button class="add-charset" onclick="addFileCharset()">'+T.addCharacterSet+'</button>' +
             '</div>';
     } else if (file.type === 'glass') {
         const igls = inherited.glass || {};
-        html += '<div class="prop-group"><div class="prop-group-title">转换设置</div>' +
-            '<div class="prop-row"><label>效果区域:</label><input type="number" min="0" max="100" value="'+(settings.blurRadius||'')+'" placeholder="继承 ('+(igls.blurRadius||50)+')" onchange="updateGlassSetting(\\'blurRadius\\',this.value?+this.value:null)"><span style="font-size:10px;color:var(--vscode-descriptionForeground);margin-left:4px">%</span></div>' +
-            '<div class="prop-row"><label>效果强度:</label><input type="number" min="0" max="100" value="'+(settings.blurIntensity||'')+'" placeholder="继承 ('+(igls.blurIntensity||50)+')" onchange="updateGlassSetting(\\'blurIntensity\\',this.value?+this.value:null)"><span style="font-size:10px;color:var(--vscode-descriptionForeground);margin-left:4px">%</span></div>' +
+        html += '<div class="prop-group"><div class="prop-group-title">'+T.conversionConfig+'</div>' +
+            '<div class="prop-row"><label>'+T.effectArea+':</label><input type="number" min="0" max="100" value="'+(settings.blurRadius||'')+'" placeholder="'+T.inherit+' ('+(igls.blurRadius||50)+')" onchange="updateGlassSetting(\\'blurRadius\\',this.value?+this.value:null)"><span style="font-size:10px;color:var(--vscode-descriptionForeground);margin-left:4px">%</span></div>' +
+            '<div class="prop-row"><label>'+T.effectIntensity+':</label><input type="number" min="0" max="100" value="'+(settings.blurIntensity||'')+'" placeholder="'+T.inherit+' ('+(igls.blurIntensity||50)+')" onchange="updateGlassSetting(\\'blurIntensity\\',this.value?+this.value:null)"><span style="font-size:10px;color:var(--vscode-descriptionForeground);margin-left:4px">%</span></div>' +
             '</div>';
         // 选中 glass 文件时自动请求预览
         setTimeout(() => requestGlassPreview(), 100);
     } else {
-        html += '<div class="prop-group"><div class="prop-group-title">转换设置</div><div style="font-size:11px;color:var(--vscode-descriptionForeground)">3D模型无额外设置</div></div>';
+        html += '<div class="prop-group"><div class="prop-group-title">'+T.conversionConfig+'</div><div style="font-size:11px;color:var(--vscode-descriptionForeground)">'+T.noExtraSettings+'</div></div>';
     }
     
     props.innerHTML = html;
@@ -1127,20 +1296,20 @@ function renderCharsetItems(charsets, isFolder) {
     return charsets.map((cs, i) => {
         const prefix = isFolder ? 'folder' : 'file';
         const needBrowse = cs.type === 'file' || cs.type === 'codepage';
-        const placeholders = {range:'如: 0x20-0x7E', string:'直接输入字符', file:'点击浏览选择', codepage:'点击浏览选择'};
-        const hints = {range:'格式: 起始码-结束码', string:'', file:'.cst / .txt 文件', codepage:'如 CP936'};
+        const placeholders = {range:T.rangeFormat, string:T.customChars, file:T.browse, codepage:T.browse};
+        const hints = {range:T.rangeFormat, string:'', file:T.cstTxtFile, codepage:T.egCP936};
         // 文件类型只显示文件名
         const displayValue = needBrowse && cs.value ? cs.value.split(/[\\\\/]/).pop() : (cs.value || '');
         return '<div class="charset-item">' +
             '<div class="charset-row">' +
             '<select onchange="updateCharsetType('+i+',this.value,'+isFolder+')">' +
-            '<option value="range"'+(cs.type==='range'?' selected':'')+'>Unicode范围</option>' +
-            '<option value="string"'+(cs.type==='string'?' selected':'')+'>自定义字符</option>' +
-            '<option value="file"'+(cs.type==='file'?' selected':'')+'>Charset文件</option>' +
-            '<option value="codepage"'+(cs.type==='codepage'?' selected':'')+'>CodePage文件</option>' +
+            '<option value="range"'+(cs.type==='range'?' selected':'')+'>'+T.unicodeRange+'</option>' +
+            '<option value="string"'+(cs.type==='string'?' selected':'')+'>'+T.customChars+'</option>' +
+            '<option value="file"'+(cs.type==='file'?' selected':'')+'>'+T.charsetFile+'</option>' +
+            '<option value="codepage"'+(cs.type==='codepage'?' selected':'')+'>'+T.codepageFile+'</option>' +
             '</select>' +
             '<input type="text" id="'+prefix+'Charset'+i+'" value="'+displayValue+'" placeholder="'+placeholders[cs.type]+'" onchange="updateCharsetValue('+i+',this.value,'+isFolder+')"'+(needBrowse?' readonly':'')+' title="'+(cs.value||'')+'">' +
-            (needBrowse ? '<button class="browse-btn" onclick="browseCharsetFile('+i+',\\''+cs.type+'\\','+isFolder+')">浏览</button>' : '') +
+            (needBrowse ? '<button class="browse-btn" onclick="browseCharsetFile('+i+',\\''+cs.type+'\\','+isFolder+')">'+T.browse+'</button>' : '') +
             (charsets.length > 1 ? '<span class="remove-charset" onclick="removeCharset('+i+','+isFolder+')">✕</span>' : '') +
             '</div>' +
             (hints[cs.type] ? '<div class="charset-hint">'+hints[cs.type]+'</div>' : '') +
@@ -1291,25 +1460,25 @@ function updateUIState() {
     // 按钮状态和提示
     if (selectFilesBtn) {
         selectFilesBtn.disabled = !hasOutputDir;
-        selectFilesBtn.title = hasOutputDir ? '选择文件' : '请先设定输出目录';
+        selectFilesBtn.title = hasOutputDir ? T.selectFiles : T.pleaseSetOutputDirFirst;
     }
     if (selectFolderBtn) {
         selectFolderBtn.disabled = !hasOutputDir;
-        selectFolderBtn.title = hasOutputDir ? '选择文件夹' : '请先设定输出目录';
+        selectFolderBtn.title = hasOutputDir ? T.selectFolder : T.pleaseSetOutputDirFirst;
     }
     if (filterSelect) filterSelect.disabled = !hasOutputDir;
     if (clearBtn) {
-        clearBtn.title = hasOutputDir ? '清空所有文件' : '请先设定输出目录';
+        clearBtn.title = hasOutputDir ? T.clear : T.pleaseSetOutputDirFirst;
     }
     if (convertBtn) {
-        convertBtn.title = hasOutputDir ? '开始转换' : '请先设定输出目录';
+        convertBtn.title = hasOutputDir ? T.startConvert : T.pleaseSetOutputDirFirst;
     }
     
     // 更新空提示文本
     if (files.size === 0) {
         const gridInner = document.getElementById('fileGridInner');
         if (gridInner) {
-            gridInner.innerHTML = '<div class="empty-hint">' + (hasOutputDir ? '拖拽文件或文件夹到此处' : '请先选择输出目录') + '</div>';
+            gridInner.innerHTML = '<div class="empty-hint">' + (hasOutputDir ? T.dragFilesHere : T.pleaseSelectOutputDirFirst) + '</div>';
         }
     }
 }
@@ -1394,7 +1563,7 @@ window.addEventListener('message', e => {
         const ok = msg.results.filter(x=>x.success).length;
         const fail = msg.results.length - ok;
         r.className = 'results ' + (fail ? (ok ? 'mixed' : 'error') : 'success');
-        r.textContent = '完成: ' + ok + ' 成功, ' + fail + ' 失败';
+        r.textContent = T.complete+': ' + ok + ' '+T.success+', ' + fail + ' '+T.failed;
         if (fail) r.textContent += '\\n' + msg.results.filter(x=>!x.success).map(x=>x.fileName+': '+x.error).join('\\n');
     } else if (msg.type === 'glassPreviewResult') {
         // 处理玻璃预览结果
@@ -1418,7 +1587,7 @@ window.addEventListener('message', e => {
                 img.style.display = 'block';
             }
             if (errorEl) {
-                errorEl.textContent = '预览失败: ' + (msg.error || '未知错误');
+                errorEl.textContent = T.previewFailed+': ' + (msg.error || '');
                 errorEl.style.display = 'block';
             }
         }
