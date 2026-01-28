@@ -197,14 +197,9 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
     this.components.forEach(comp => {
       // 跳过 hg_view、hg_3d 和 hg_list_item（list_item 由 note_design 回调处理）
       if (comp.type !== 'hg_view' && comp.type !== 'hg_3d' && comp.type !== 'hg_list_item') {
-        // list 控件使用 gui_list_t * 类型
-        if (comp.type === 'hg_list') {
-          code += `extern gui_list_t *${comp.id};\n`;
-        }
-        // window 控件使用 gui_obj_t * 类型（与其他组件一致）
-        else {
-          code += `extern gui_obj_t *${comp.id};\n`;
-        }
+        // 根据组件类型使用正确的句柄类型
+        const handleType = this.getComponentHandleType(comp);
+        code += `extern ${handleType} *${comp.id};\n`;
         
         // 如果是拆分时间格式的时间标签，添加子组件声明
         if (comp.type === 'hg_time_label' && comp.data?.timeFormat === 'HH:mm-split') {
@@ -258,14 +253,9 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
     this.components.forEach(comp => {
       // 跳过 hg_view、hg_3d 和 hg_list_item（list_item 由 note_design 回调处理）
       if (comp.type !== 'hg_view' && comp.type !== 'hg_3d' && comp.type !== 'hg_list_item') {
-        // list 控件使用 gui_list_t * 类型
-        if (comp.type === 'hg_list') {
-          code += `gui_list_t *${comp.id} = NULL;\n`;
-        }
-        // window 控件使用 gui_obj_t * 类型（与其他组件一致）
-        else {
-          code += `gui_obj_t *${comp.id} = NULL;\n`;
-        }
+        // 根据组件类型使用正确的句柄类型
+        const handleType = this.getComponentHandleType(comp);
+        code += `${handleType} *${comp.id} = NULL;\n`;
         
         // 如果是拆分时间格式的时间标签，添加子组件定义
         if (comp.type === 'hg_time_label' && comp.data?.timeFormat === 'HH:mm-split') {
@@ -828,6 +818,25 @@ static void ${component.id}_breath_anim_cb(void *p)
       case 'YYYY-MM-DD HH:mm:ss': return 22;
       case 'MM-DD HH:mm': return 16;
       default: return 10;
+    }
+  }
+
+  /**
+   * 根据组件类型获取正确的句柄类型
+   */
+  private getComponentHandleType(comp: Component): string {
+    // 检查是否启用滚动（滚动文本使用 gui_scroll_text_t）
+    const enableScroll = comp.data?.enableScroll === true || comp.data?.enableScroll === 'true';
+    
+    switch (comp.type) {
+      case 'hg_label':
+        return enableScroll ? 'gui_scroll_text_t' : 'gui_text_t';
+      case 'hg_time_label':
+        return enableScroll ? 'gui_scroll_text_t' : 'gui_text_t';
+      case 'hg_list':
+        return 'gui_list_t';
+      default:
+        return 'gui_obj_t';
     }
   }
 }
