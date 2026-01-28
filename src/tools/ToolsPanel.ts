@@ -67,7 +67,7 @@ export class ToolsPanel {
 
     private getFileType(fileName: string): 'image' | 'video' | 'model' | 'font' | 'glass' | 'unknown' {
         const ext = path.extname(fileName).toLowerCase();
-        if (['.png', '.jpg', '.jpeg', '.bmp'].includes(ext)) return 'image';
+        if (['.png', '.jpg', '.jpeg', '.bmp', '.gif'].includes(ext)) return 'image';
         if (['.mp4', '.avi', '.mov', '.mkv', '.webm'].includes(ext)) return 'video';
         if (['.obj', '.gltf', '.mtl'].includes(ext)) return 'model';
         if (['.ttf', '.otf'].includes(ext)) return 'font';

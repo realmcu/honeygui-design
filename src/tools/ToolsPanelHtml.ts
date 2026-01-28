@@ -34,7 +34,7 @@ export function getToolsPanelHtml(): string {
                         <div class="empty-hint">请先选择输出目录</div>
                     </div>
                 </div>
-                <input type="file" id="fileInput" multiple accept=".png,.jpg,.jpeg,.bmp,.mp4,.avi,.mov,.mkv,.webm,.obj,.gltf,.ttf,.otf,.svg" style="display:none" onchange="handleFileSelect(event)">
+                <input type="file" id="fileInput" multiple accept=".png,.jpg,.jpeg,.bmp,.gif,.mp4,.avi,.mov,.mkv,.webm,.obj,.gltf,.ttf,.otf,.svg" style="display:none" onchange="handleFileSelect(event)">
                 <input type="file" id="folderInput" multiple webkitdirectory="" directory="" style="display:none" onchange="handleFileSelect(event)">
             </div>
             <div class="right-panel">
@@ -164,7 +164,7 @@ let filterType = 'all';
 const folderSettings = {};
 let conversionConfig = null;  // conversion.json 配置
 
-const IMAGE_EXTS = ['.png','.jpg','.jpeg','.bmp'];
+const IMAGE_EXTS = ['.png','.jpg','.jpeg','.bmp','.gif'];
 const VIDEO_EXTS = ['.mp4','.avi','.mov','.mkv','.webm'];
 const MODEL_EXTS = ['.obj','.gltf','.mtl'];
 const FONT_EXTS = ['.ttf','.otf'];
