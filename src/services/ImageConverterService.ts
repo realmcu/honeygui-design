@@ -116,7 +116,7 @@ export class ImageConverterService {
         const configService = ConversionConfigService.getInstance();
         const config = configService.loadConfig(projectRoot);
 
-        const imageExts = ['.png', '.jpg', '.jpeg', '.bmp'];
+        const imageExts = ['.png', '.jpg', '.jpeg', '.bmp', '.gif'];
         const items: Array<{ input: string; output: string; options?: ImageConvertOptions }> = [];
 
         const scanDir = (dir: string) => {
@@ -126,11 +126,17 @@ export class ImageConverterService {
                     scanDir(fullPath);
                 } else if (imageExts.includes(path.extname(entry.name).toLowerCase())) {
                     const relativePath = path.relative(assetsDir, fullPath);
-                    const outputPath = path.join(outputDir, relativePath.replace(/\.(png|jpe?g|bmp)$/i, '.bin'));
+                    const outputPath = path.join(outputDir, relativePath.replace(/\.(png|jpe?g|bmp|gif)$/i, '.bin'));
                     
-                    // 为每个图片解析其特定的配置
-                    const imageOptions = this.resolveImageOptions(relativePath, fullPath, config, fallbackOptions);
-                    items.push({ input: fullPath, output: outputPath, options: imageOptions });
+                    // GIF 文件不需要配置选项，直接打包原始数据
+                    const ext = path.extname(entry.name).toLowerCase();
+                    if (ext === '.gif') {
+                        items.push({ input: fullPath, output: outputPath });
+                    } else {
+                        // 为每个图片解析其特定的配置
+                        const imageOptions = this.resolveImageOptions(relativePath, fullPath, config, fallbackOptions);
+                        items.push({ input: fullPath, output: outputPath, options: imageOptions });
+                    }
                 }
             }
         };

@@ -5,6 +5,14 @@
 import { PixelFormat, PixelBytes } from './types';
 
 /**
+ * GIF 文件头信息（从 GIF 文件中解析）
+ */
+export interface GIFInfo {
+    width: number;
+    height: number;
+}
+
+/**
  * gui_rgb_data_head_t - 8 bytes
  */
 export class RGBDataHeader {
@@ -101,4 +109,61 @@ export class IMDCFileHeader {
         
         return buffer;
     }
+}
+
+
+/**
+ * gui_gif_file_head_t - 16 bytes header + GIF data
+ * 
+ * Structure:
+ * - gui_rgb_data_head_t img_header (8 bytes)
+ * - uint32_t size (4 bytes) - GIF 原始数据大小
+ * - uint32_t dummy (4 bytes) - 对齐填充
+ * - uint8_t gif[] - GIF 原始数据
+ */
+export class GIFFileHeader {
+    private header: RGBDataHeader;
+    private gifSize: number;
+
+    constructor(width: number, height: number, gifDataSize: number) {
+        this.header = new RGBDataHeader(width, height, PixelFormat.GIF, false);
+        this.gifSize = gifDataSize;
+    }
+
+    pack(): Buffer {
+        const headerBuffer = this.header.pack();  // 8 bytes
+        const sizeBuffer = Buffer.alloc(8);       // size (4) + dummy (4)
+        
+        sizeBuffer.writeUInt32LE(this.gifSize, 0);
+        sizeBuffer.writeUInt32LE(0, 4);  // dummy for alignment
+        
+        return Buffer.concat([headerBuffer, sizeBuffer]);
+    }
+}
+
+/**
+ * 从 GIF 文件数据中解析宽高信息
+ * GIF 文件格式：
+ * - 0-2: 'GIF'
+ * - 3-5: '87a' 或 '89a'
+ * - 6-7: 宽度 (little-endian)
+ * - 8-9: 高度 (little-endian)
+ */
+export function parseGIFInfo(buffer: Buffer): GIFInfo | null {
+    // 检查 GIF 签名
+    if (buffer.length < 10) {
+        return null;
+    }
+    
+    const signature = buffer.toString('ascii', 0, 3);
+    const version = buffer.toString('ascii', 3, 6);
+    
+    if (signature !== 'GIF' || (version !== '87a' && version !== '89a')) {
+        return null;
+    }
+    
+    const width = buffer.readUInt16LE(6);
+    const height = buffer.readUInt16LE(8);
+    
+    return { width, height };
 }

@@ -8,7 +8,7 @@ import { PNG } from 'pngjs';
 import * as jpeg from 'jpeg-js';
 import * as bmp from 'bmp-js';
 import { PixelFormat, FORMAT_TO_PIXEL_BYTES, FORMAT_TO_BPP } from './types';
-import { RGBDataHeader, IMDCFileHeader } from './headers';
+import { RGBDataHeader, IMDCFileHeader, GIFFileHeader, parseGIFInfo } from './headers';
 import { convertPixels } from './pixel-converter';
 import { CompressionAlgorithm } from './compress/base';
 
@@ -56,6 +56,13 @@ export class ImageConverter {
         const isPNG = buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47;
         const isJPEG = buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF;
         const isBMP = buffer[0] === 0x42 && buffer[1] === 0x4D; // 'BM'
+        const isGIF = buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46; // 'GIF'
+        
+        // GIF 特殊处理：直接打包原始数据，不做像素转换
+        if (isGIF) {
+            await this.convertGIF(inputPath, outputPath, buffer);
+            return;
+        }
         
         let result: ImageLoadResult;
 
@@ -66,7 +73,7 @@ export class ImageConverter {
         } else if (isBMP) {
             result = await this.loadBMP(inputPath);
         } else {
-            throw new Error(`Unsupported image format (not PNG, JPEG or BMP)`);
+            throw new Error(`Unsupported image format (not PNG, JPEG, BMP or GIF)`);
         }
 
         const { pixels, width, height, hasAlpha, indexed } = result;
@@ -157,6 +164,44 @@ export class ImageConverter {
             const outputBuffer = Buffer.concat([headerBuffer, pixelData]);
             fs.writeFileSync(outputPath, outputBuffer);
         }
+    }
+
+    /**
+     * Convert GIF to HoneyGUI bin format
+     * GIF 格式直接打包原始数据，不做像素转换
+     * 
+     * 输出格式：
+     * - gui_rgb_data_head_t (8 bytes) - type = GIF (14)
+     * - uint32_t size (4 bytes) - GIF 原始数据大小
+     * - uint32_t dummy (4 bytes) - 对齐填充
+     * - uint8_t gif[] - GIF 原始数据
+     */
+    private async convertGIF(
+        inputPath: string,
+        outputPath: string,
+        gifData: Buffer
+    ): Promise<void> {
+        // 解析 GIF 信息获取宽高
+        const gifInfo = parseGIFInfo(gifData);
+        if (!gifInfo) {
+            throw new Error(`Invalid GIF file: ${inputPath}`);
+        }
+
+        const { width, height } = gifInfo;
+
+        // 构建 GIF 文件头
+        const header = new GIFFileHeader(width, height, gifData.length);
+        const headerBuffer = header.pack();
+
+        // 确保输出目录存在
+        const dir = path.dirname(outputPath);
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+
+        // 写入输出：header (16 bytes) + GIF 原始数据
+        const outputBuffer = Buffer.concat([headerBuffer, gifData]);
+        fs.writeFileSync(outputPath, outputBuffer);
     }
 
     /**
