@@ -11,6 +11,13 @@ export interface ImageCompressionConfig {
     yuvFastlz?: boolean;          // YUV 是否叠加 FastLZ
 }
 
+// 强制转换配置（支持精确路径和 glob 模式）
+export interface AlwaysConvertConfig {
+    images?: string[];   // 图片资源路径或 glob 模式，如 "icons/**/*.png" 或 "icon1.png"
+    videos?: string[];   // 视频资源路径或 glob 模式
+    models?: string[];   // 3D 模型资源路径或 glob 模式
+}
+
 export interface ProjectConfig {
     name?: string;
     version?: string;
@@ -37,6 +44,9 @@ export interface ProjectConfig {
     videoFormat?: 'mjpeg' | 'avi' | 'h264';  // 默认视频输出格式
     videoQuality?: number;    // 视频质量 (0-100)，默认 85
     videoFrameRate?: number;  // 视频帧率，默认 30
+    
+    // 强制转换配置（用于标记需要转换但暂未使用的资源）
+    alwaysConvert?: AlwaysConvertConfig;
     
     designer?: {
         canvasBackgroundColor?: string;

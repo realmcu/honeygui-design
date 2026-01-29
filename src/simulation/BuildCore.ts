@@ -1,12 +1,13 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import { spawn } from 'child_process';
-import { ImageConverterService } from '../services/ImageConverterService';
+import { minimatch } from 'minimatch';
+import { ImageConverterService, ImageConvertOptions, ConvertResult, CompressionType, YuvSampleMode, YuvBlurBits } from '../services/ImageConverterService';
 import { VideoConverterService } from '../services/VideoConverterService';
 import { Model3DConverterService } from '../services/Model3DConverterService';
 import { FontConverterService, FontConvertOptions } from '../services/FontConverterService';
 import { GlassConverterService, GlassConvertOptions, GlassConvertResult } from '../services/GlassConverterService';
-import { ConversionConfigService, VideoFormat } from '../services/ConversionConfigService';
+import { ConversionConfigService, VideoFormat, ConversionConfig, YuvBlur } from '../services/ConversionConfigService';
 import { ProjectConfig, DEFAULT_ROMFS_BASE_ADDR } from '../common/ProjectConfig';
 import { RomfsConfig } from '../common/RomfsConfig';
 import { buildSConstruct } from './SConstructTemplate';
@@ -147,7 +148,12 @@ Return('objs')
             fs.mkdirSync(outputDir, { recursive: true });
         }
 
-        // 转换图片资源
+        // 扫描 HML 文件，获取所有使用的资源
+        this.logger.log('扫描 HML 文件中的资源引用...');
+        const usedAssets = await this.scanUsedAssets();
+        this.logger.log(`找到 ${usedAssets.images.size} 个图片, ${usedAssets.videos.size} 个视频, ${usedAssets.models.size} 个3D模型`);
+
+        // 转换图片资源（只转换使用的）
         this.logger.log('转换图片资源...');
         const imageConverter = new ImageConverterService();
         
@@ -164,7 +170,7 @@ Return('objs')
             this.logger.log(`使用压缩算法: ${imageOptions.compression}`);
         }
         
-        const imageResults = await imageConverter.convertAssetsDir(assetsDir, outputDir, imageOptions);
+        const imageResults = await this.convertUsedImages(assetsDir, outputDir, usedAssets.images, imageOptions);
 
         const imageFailed = imageResults.filter(r => !r.success);
         if (imageFailed.length > 0) {
@@ -181,7 +187,7 @@ Return('objs')
         const svgCount = this.copySvgAssets(assetsDir, outputDir);
         this.logger.log(`SVG 拷贝完成: ${svgCount} 个`);
 
-        // 转换视频资源
+        // 转换视频资源（只转换使用的）
         this.logger.log('检查视频资源...');
         const videoConverter = new VideoConverterService((msg) => {
             this.logger.log(msg);
@@ -193,11 +199,12 @@ Return('objs')
             this.logger.log('FFmpeg 未找到，跳过视频转换。请安装 FFmpeg 并添加到系统 PATH。', true);
             this.logger.log('视频转换跳过: 0 个');
         } else {
-            // 获取视频组件配置并进行智能转换
-            const videoResults = await this.convertVideosWithComponentConfig(
+            // 获取视频组件配置并进行智能转换（只转换使用的）
+            const videoResults = await this.convertUsedVideos(
                 videoConverter,
                 assetsDir,
-                outputDir
+                outputDir,
+                usedAssets.videos
             );
 
             const videoFailed = videoResults.filter(r => !r.success);
@@ -221,10 +228,9 @@ Return('objs')
 
 
 
-        // 转换 3D 模型资源（不再需要 sdkPath）
+        // 转换 3D 模型资源（只转换使用的）
         this.logger.log('转换 3D 模型资源...');
-        const model3DConverter = new Model3DConverterService();
-        const model3DResults = await model3DConverter.convertAssetsDir(assetsDir, outputDir);
+        const model3DResults = await this.convertUsedModels(assetsDir, outputDir, usedAssets.models);
 
         const model3DFailed = model3DResults.filter(r => !r.success);
         if (model3DFailed.length > 0) {
@@ -459,6 +465,470 @@ Return('objs')
         }
 
         return defaultResolution;
+    }
+
+    /**
+     * 扫描 HML 文件中使用的所有资源
+     */
+    private async scanUsedAssets(): Promise<{
+        images: Set<string>;
+        videos: Set<string>;
+        models: Set<string>;
+    }> {
+        const images = new Set<string>();
+        const videos = new Set<string>();
+        const models = new Set<string>();
+
+        const uiDir = path.join(this.projectRoot, 'ui');
+        if (fs.existsSync(uiDir)) {
+            // 递归扫描 HML 文件
+            const scanDir = (dir: string) => {
+                const entries = fs.readdirSync(dir, { withFileTypes: true });
+                for (const entry of entries) {
+                    const fullPath = path.join(dir, entry.name);
+                    if (entry.isDirectory()) {
+                        scanDir(fullPath);
+                    } else if (entry.name.endsWith('.hml')) {
+                        try {
+                            const content = fs.readFileSync(fullPath, 'utf-8');
+                            this.extractAssetReferences(content, images, videos, models);
+                        } catch (error) {
+                            this.logger.log(`读取 HML 文件失败: ${fullPath} - ${error}`, true);
+                        }
+                    }
+                }
+            };
+
+            scanDir(uiDir);
+        }
+
+        // 添加 alwaysConvert 配置中的资源
+        this.addAlwaysConvertAssets(images, videos, models);
+
+        return { images, videos, models };
+    }
+
+    /**
+     * 添加 alwaysConvert 配置中标记的资源（支持精确路径和 glob 模式）
+     */
+    private addAlwaysConvertAssets(
+        images: Set<string>,
+        videos: Set<string>,
+        models: Set<string>
+    ): void {
+        const alwaysConvert = this.projectConfig.alwaysConvert;
+        if (!alwaysConvert) {
+            return;
+        }
+
+        const assetsDir = path.join(this.projectRoot, 'assets');
+        if (!fs.existsSync(assetsDir)) {
+            return;
+        }
+
+        // 收集 assets 目录下的所有文件
+        const allFiles: string[] = [];
+        const scanDir = (dir: string) => {
+            const entries = fs.readdirSync(dir, { withFileTypes: true });
+            for (const entry of entries) {
+                const fullPath = path.join(dir, entry.name);
+                if (entry.isDirectory()) {
+                    scanDir(fullPath);
+                } else {
+                    const relativePath = path.relative(assetsDir, fullPath).replace(/\\/g, '/');
+                    allFiles.push(relativePath);
+                }
+            }
+        };
+        scanDir(assetsDir);
+
+        // 匹配图片（支持精确路径和 glob 模式）
+        if (alwaysConvert.images && Array.isArray(alwaysConvert.images)) {
+            for (const pattern of alwaysConvert.images) {
+                // 检查是否是精确路径
+                if (allFiles.includes(pattern)) {
+                    images.add(pattern);
+                } else {
+                    // 使用 glob 模式匹配
+                    for (const file of allFiles) {
+                        if (minimatch(file, pattern)) {
+                            images.add(file);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 匹配视频
+        if (alwaysConvert.videos && Array.isArray(alwaysConvert.videos)) {
+            for (const pattern of alwaysConvert.videos) {
+                if (allFiles.includes(pattern)) {
+                    videos.add(pattern);
+                } else {
+                    for (const file of allFiles) {
+                        if (minimatch(file, pattern)) {
+                            videos.add(file);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 匹配 3D 模型
+        if (alwaysConvert.models && Array.isArray(alwaysConvert.models)) {
+            for (const pattern of alwaysConvert.models) {
+                if (allFiles.includes(pattern)) {
+                    models.add(pattern);
+                } else {
+                    for (const file of allFiles) {
+                        if (minimatch(file, pattern)) {
+                            models.add(file);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 从 HML 内容中提取资源引用
+     */
+    private extractAssetReferences(
+        hmlContent: string,
+        images: Set<string>,
+        videos: Set<string>,
+        models: Set<string>
+    ): void {
+        // 匹配所有标签的 src 属性
+        const srcRegex = /src\s*=\s*["']([^"']+)["']/g;
+        let match;
+
+        while ((match = srcRegex.exec(hmlContent)) !== null) {
+            let assetPath = match[1];
+            
+            // 移除 assets/ 前缀
+            if (assetPath.startsWith('assets/')) {
+                assetPath = assetPath.substring(7);
+            }
+
+            // 根据扩展名分类
+            const ext = path.extname(assetPath).toLowerCase();
+            
+            // 图片格式
+            const imageExts = ['.png', '.jpg', '.jpeg', '.bmp', '.gif', '.svg'];
+            if (imageExts.includes(ext)) {
+                images.add(assetPath);
+                continue;
+            }
+
+            // 视频格式
+            const videoExts = ['.mp4', '.avi', '.mov', '.mkv', '.webm', '.flv', '.wmv', '.m4v', '.3gp', '.asf', '.rm', '.rmvb', '.vob', '.ts'];
+            if (videoExts.includes(ext)) {
+                videos.add(assetPath);
+                continue;
+            }
+
+            // 3D 模型格式
+            const modelExts = ['.obj', '.gltf', '.glb'];
+            if (modelExts.includes(ext)) {
+                models.add(assetPath);
+                continue;
+            }
+        }
+
+        // 特殊处理：fontFile 属性（字体文件已经在 convertFontsWithLabelConfig 中处理）
+        // 特殊处理：hg_glass 的 src（玻璃效果文件已经在 convertGlassWithComponentConfig 中处理）
+    }
+
+    /**
+     * 转换使用的图片资源
+     */
+    private async convertUsedImages(
+        assetsDir: string,
+        outputDir: string,
+        usedImages: Set<string>,
+        fallbackOptions?: ImageConvertOptions
+    ): Promise<ConvertResult[]> {
+        if (usedImages.size === 0) {
+            return [];
+        }
+
+        // 获取项目根目录
+        const projectRoot = path.dirname(assetsDir);
+        
+        // 加载 conversion.json 配置
+        const configService = ConversionConfigService.getInstance();
+        const config = configService.loadConfig(projectRoot);
+
+        const imageConverter = new ImageConverterService();
+        const items: Array<{ input: string; output: string; options?: ImageConvertOptions }> = [];
+
+        for (const relativePath of usedImages) {
+            const fullPath = path.join(assetsDir, relativePath);
+            
+            // 检查文件是否存在
+            if (!fs.existsSync(fullPath)) {
+                this.logger.log(`图片文件不存在: ${relativePath}`, true);
+                continue;
+            }
+
+            const outputPath = path.join(outputDir, relativePath.replace(/\.(png|jpe?g|bmp|gif|svg)$/i, '.bin'));
+            
+            // GIF 和 SVG 文件特殊处理
+            const ext = path.extname(relativePath).toLowerCase();
+            if (ext === '.gif') {
+                items.push({ input: fullPath, output: outputPath });
+            } else if (ext === '.svg') {
+                // SVG 直接拷贝，不转换
+                const destDir = path.dirname(outputPath.replace(/\.bin$/, '.svg'));
+                if (!fs.existsSync(destDir)) {
+                    fs.mkdirSync(destDir, { recursive: true });
+                }
+                fs.copyFileSync(fullPath, outputPath.replace(/\.bin$/, '.svg'));
+            } else {
+                // 为每个图片解析其特定的配置
+                const imageOptions = this.resolveImageOptions(relativePath, fullPath, config, fallbackOptions);
+                items.push({ input: fullPath, output: outputPath, options: imageOptions });
+            }
+        }
+
+        return imageConverter.convertBatch(items);
+    }
+
+    /**
+     * 转换使用的视频资源
+     */
+    private async convertUsedVideos(
+        videoConverter: VideoConverterService,
+        assetsDir: string,
+        outputDir: string,
+        usedVideos: Set<string>
+    ): Promise<any[]> {
+        if (usedVideos.size === 0) {
+            return [];
+        }
+
+        // 获取项目中所有视频组件的配置
+        const videoComponentConfigs = await this.getVideoComponentConfigs();
+        
+        // 加载 conversion.json 配置
+        const conversionConfigService = ConversionConfigService.getInstance();
+        const conversionConfig = conversionConfigService.loadConfig(this.projectRoot);
+        
+        const convertTasks: Array<Promise<any>> = [];
+
+        for (const relativePath of usedVideos) {
+            const fullPath = path.join(assetsDir, relativePath);
+            
+            // 检查文件是否存在
+            if (!fs.existsSync(fullPath)) {
+                this.logger.log(`视频文件不存在: ${relativePath}`, true);
+                continue;
+            }
+
+            const normalizedPath = relativePath.replace(/\\/g, '/');
+            
+            // 查找使用此视频的组件配置
+            const componentConfig = videoComponentConfigs.find(config => 
+                config.src === normalizedPath || 
+                config.src === `assets/${normalizedPath}` ||
+                config.src.endsWith(normalizedPath)
+            );
+            
+            // 从 conversion.json 解析视频格式（处理继承）
+            const resolvedVideoFormat = this.resolveVideoFormat(normalizedPath, conversionConfig);
+            
+            // 从 conversion.json 解析视频质量（处理继承）
+            const resolvedVideoQuality = this.resolveVideoQuality(normalizedPath, conversionConfig);
+            
+            // 从 conversion.json 解析视频帧率（处理继承）
+            const resolvedVideoFrameRate = this.resolveVideoFrameRate(normalizedPath, conversionConfig);
+            
+            // 优先级：组件配置 > conversion.json > 项目配置 > 默认值
+            const configFormat = componentConfig?.format || 
+                resolvedVideoFormat ||
+                (this.projectConfig.videoFormat as 'mjpeg' | 'avi' | 'h264') || 'mjpeg';
+            
+            // 获取原始质量值：组件配置 > conversion.json > 项目配置
+            const rawQuality = componentConfig?.quality ?? resolvedVideoQuality ?? this.projectConfig.videoQuality;
+            
+            // 获取帧率：组件配置 > conversion.json > 项目配置 > 默认值 30
+            const frameRate = componentConfig?.frameRate ?? resolvedVideoFrameRate ?? this.projectConfig.videoFrameRate ?? 30;
+            
+            // 根据格式校验和修正质量值
+            const quality = this.normalizeVideoQuality(rawQuality, configFormat);
+            
+            const options = componentConfig ? {
+                format: configFormat,
+                quality: quality,
+                frameRate: frameRate,
+                crop: componentConfig.crop,
+                scale: componentConfig.scale
+            } : {
+                format: configFormat,
+                quality: quality,
+                frameRate: frameRate
+            };
+            
+            // 生成输出路径
+            const outputExt = this.getVideoOutputExtension(options.format);
+            const outputPath = path.join(
+                outputDir,
+                relativePath.replace(/\.[^.]+$/i, outputExt)
+            );
+            
+            // 添加转换任务
+            convertTasks.push(
+                videoConverter.convert(fullPath, outputPath, options)
+            );
+            
+            this.logger.log(`计划转换: ${normalizedPath} -> ${options.format} (${outputExt})`);
+        }
+
+        // 并行执行所有转换任务
+        return Promise.all(convertTasks);
+    }
+
+    /**
+     * 转换使用的 3D 模型资源
+     */
+    private async convertUsedModels(
+        assetsDir: string,
+        outputDir: string,
+        usedModels: Set<string>
+    ): Promise<any[]> {
+        if (usedModels.size === 0) {
+            return [];
+        }
+
+        const model3DConverter = new Model3DConverterService();
+        const convertTasks: Array<Promise<any>> = [];
+
+        for (const relativePath of usedModels) {
+            const fullPath = path.join(assetsDir, relativePath);
+            
+            // 检查文件是否存在
+            if (!fs.existsSync(fullPath)) {
+                this.logger.log(`3D模型文件不存在: ${relativePath}`, true);
+                continue;
+            }
+
+            const outputPath = path.join(outputDir, relativePath.replace(/\.(obj|gltf|glb)$/i, '.bin'));
+            
+            // 添加转换任务
+            convertTasks.push(
+                model3DConverter.convert(fullPath, outputPath)
+            );
+        }
+
+        // 并行执行所有转换任务
+        return Promise.all(convertTasks);
+    }
+
+    /**
+     * 解析单个图片的转换选项
+     * @param relativePath 相对于 assets 目录的路径
+     * @param fullPath 图片完整路径
+     * @param config 转换配置
+     * @param fallbackOptions 回退选项
+     */
+    private resolveImageOptions(
+        relativePath: string,
+        fullPath: string,
+        config: ConversionConfig,
+        fallbackOptions?: ImageConvertOptions
+    ): ImageConvertOptions {
+        const configService = ConversionConfigService.getInstance();
+        const resolvedConfig = configService.resolveEffectiveConfig(relativePath, config);
+        
+        // 检查图片是否有透明度（用于自适应格式）
+        const hasAlpha = this.checkImageHasAlpha(fullPath);
+        
+        // 解析格式（处理自适应格式）
+        let format = resolvedConfig.format;
+        const itemSettings = config.items[relativePath.replace(/\\/g, '/')];
+        const effectiveFormat = itemSettings?.format || config.defaultSettings.format || 'adaptive16';
+        
+        if (effectiveFormat === 'adaptive16' || effectiveFormat === 'adaptive24') {
+            format = configService.resolveAdaptiveFormat(effectiveFormat, hasAlpha);
+        }
+        
+        // 构建选项
+        const options: ImageConvertOptions = {
+            format: format.toLowerCase(),
+            compression: resolvedConfig.compression as CompressionType
+        };
+        
+        // 如果是 YUV 压缩，添加 YUV 参数
+        if (resolvedConfig.compression === 'yuv' && resolvedConfig.yuvParams) {
+            options.yuvSampleMode = resolvedConfig.yuvParams.sampling.toLowerCase() as YuvSampleMode;
+            options.yuvBlurBits = this.parseYuvBlurBits(resolvedConfig.yuvParams.blur);
+            options.yuvFastlz = resolvedConfig.yuvParams.fastlzSecondary;
+        }
+        
+        // 如果配置为 adaptive 压缩，使用回退选项或默认不压缩
+        if (resolvedConfig.compression === 'adaptive') {
+            // TODO: 实现自适应压缩选择逻辑
+            // 目前先使用回退选项或不压缩
+            if (fallbackOptions?.compression) {
+                options.compression = fallbackOptions.compression;
+                options.yuvSampleMode = fallbackOptions.yuvSampleMode;
+                options.yuvBlurBits = fallbackOptions.yuvBlurBits;
+                options.yuvFastlz = fallbackOptions.yuvFastlz;
+            } else {
+                options.compression = 'none';
+            }
+        }
+        
+        return options;
+    }
+
+    /**
+     * 检查图片是否包含透明度
+     */
+    private checkImageHasAlpha(imagePath: string): boolean {
+        try {
+            // 简单判断：PNG 文件可能有透明度，其他格式通常没有
+            const ext = path.extname(imagePath).toLowerCase();
+            if (ext !== '.png') {
+                return false;
+            }
+            
+            // 读取 PNG 文件头来判断是否有 alpha 通道
+            const buffer = fs.readFileSync(imagePath);
+            if (buffer.length < 26) {
+                return false;
+            }
+            
+            // PNG 签名检查
+            const pngSignature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+            for (let i = 0; i < 8; i++) {
+                if (buffer[i] !== pngSignature[i]) {
+                    return false;
+                }
+            }
+            
+            // IHDR chunk 中的 color type 在偏移 25 处
+            // Color type 4 = Grayscale with alpha
+            // Color type 6 = RGBA
+            const colorType = buffer[25];
+            return colorType === 4 || colorType === 6;
+        } catch (error) {
+            // 如果无法读取，假设没有透明度
+            return false;
+        }
+    }
+
+    /**
+     * 解析 YUV 模糊位数
+     */
+    private parseYuvBlurBits(blur: YuvBlur): YuvBlurBits {
+        switch (blur) {
+            case '1bit': return 1;
+            case '2bit': return 2;
+            case '4bit': return 4;
+            default: return 0;
+        }
     }
 
     /**
