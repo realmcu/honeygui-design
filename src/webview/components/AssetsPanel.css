@@ -373,34 +373,36 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.7);
+  justify-content: space-between;
+  background: rgba(0, 0, 0, 0.8);
   backdrop-filter: blur(4px);
-  padding: 2px 4px;
+  padding: 4px 6px;
+  min-height: 28px;
 }
 
 .asset-grid-item .asset-name {
   flex: 1;
-  font-size: 9px;
-  text-align: center;
+  font-size: 10px;
+  text-align: left;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   line-height: 1.2;
   color: rgba(255, 255, 255, 0.9);
+  margin-right: 4px;
 }
 
 .asset-grid-item .asset-actions {
-  position: absolute;
-  top: 2px;
-  right: 2px;
   display: flex;
   gap: 2px;
   opacity: 0;
   transition: opacity 0.2s;
-  background: rgba(0, 0, 0, 0.6);
-  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.asset-grid-item .asset-actions .action-btn {
   padding: 2px;
+  font-size: 10px;
 }
 
 .asset-grid-item:hover .asset-actions {
@@ -499,4 +501,32 @@
 
 .asset-grid-item.selected .asset-actions {
   opacity: 1;
+}
+
+/* 强制转换按钮样式 */
+.action-btn.force-convert-btn {
+  opacity: 0.5;
+}
+
+.action-btn.force-convert-btn:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.action-btn.force-convert-btn.active {
+  opacity: 1;
+  color: var(--vscode-charts-yellow);
+}
+
+.action-btn.force-convert-btn.active:hover {
+  background: rgba(255, 193, 7, 0.2);
+}
+
+/* 强制转换资源的视觉标记 */
+.asset-grid-item.always-convert {
+  border: 2px solid var(--vscode-charts-blue);
+}
+
+.asset-grid-item.always-convert .asset-preview {
+  border-color: var(--vscode-charts-blue);
 }

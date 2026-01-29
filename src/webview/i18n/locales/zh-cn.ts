@@ -450,6 +450,11 @@ const zhCN = {
 
   // AssetsPanel
   'Drag files here': '拖拽文件到此处',
+  'Always convert': '强制转换',
+  'Remove from always convert': '取消强制转换',
+  'Add to always convert': '标记为强制转换',
+  'Force convert': '强制转换',
+  'This asset will always be converted during build': '此资源在编译时将始终被转换',
 
   // ComponentTree
   'Drag from component library to add': '从组件库拖拽添加组件',

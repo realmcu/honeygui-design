@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trash2, Edit2, Upload, FolderUp } from 'lucide-react';
+import { Trash2, Edit2, Upload, FolderUp, Zap } from 'lucide-react';
 import { AssetFile } from '../types';
 import { useDesignerStore } from '../store';
 import { t } from '../i18n';
@@ -386,6 +386,7 @@ const AssetsPanel: React.FC = () => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [gridColumns, setGridColumns] = useState(3);
   const [currentPath, setCurrentPath] = useState<string[]>([]);  // 当前浏览路径
+  const [alwaysConvertAssets, setAlwaysConvertAssets] = useState<Set<string>>(new Set());  // 强制转换的资源集合
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
 
@@ -478,6 +479,15 @@ const AssetsPanel: React.FC = () => {
       const message = event.data;
       if (message.command === 'assetsLoaded') {
         setAssets(message.assets || []);
+      } else if (message.command === 'alwaysConvertUpdated') {
+        // 更新强制转换资源列表
+        const alwaysConvert = message.alwaysConvert || { images: [], videos: [], models: [] };
+        const allAssets = new Set<string>([
+          ...(alwaysConvert.images || []),
+          ...(alwaysConvert.videos || []),
+          ...(alwaysConvert.models || [])
+        ]);
+        setAlwaysConvertAssets(allAssets);
       }
     };
 
@@ -507,6 +517,23 @@ const AssetsPanel: React.FC = () => {
       });
     }
     setEditingAsset(null);
+  };
+
+  /**
+   * 处理切换强制转换状态
+   */
+  const handleToggleAlwaysConvert = (assetPath: string) => {
+    window.vscodeAPI?.postMessage({
+      command: 'toggleAlwaysConvert',
+      assetPath: assetPath
+    });
+  };
+
+  /**
+   * 检查资源是否在强制转换列表中
+   */
+  const isAlwaysConvert = (assetPath: string): boolean => {
+    return alwaysConvertAssets.has(assetPath);
   };
 
   /**
@@ -560,11 +587,12 @@ const AssetsPanel: React.FC = () => {
     const isGlass = GLASS_EXTS.includes(ext);  // 玻璃效果文件
     const isModelDep = MODEL_DEP_EXTS.includes(ext);  // 模型依赖文件（.mtl, .bin）
     const isSelected = selectedAsset?.path === asset.path;
+    const isMarkedAlwaysConvert = asset.relativePath ? isAlwaysConvert(asset.relativePath) : false;
     
     return (
       <div 
         key={asset.path} 
-        className={`asset-grid-item${isSelected ? ' selected' : ''}`}
+        className={`asset-grid-item${isSelected ? ' selected' : ''}${isMarkedAlwaysConvert ? ' always-convert' : ''}`}
         draggable
         onClick={(e) => handleAssetClick(asset, e)}
         onDragStart={(e) => {
@@ -621,6 +649,19 @@ const AssetsPanel: React.FC = () => {
             <span className="asset-name" title={asset.name}>{asset.name}</span>
           )}
           <div className="asset-actions">
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                if (asset.relativePath) {
+                  handleToggleAlwaysConvert(asset.relativePath);
+                }
+              }} 
+              title={isMarkedAlwaysConvert ? t('Remove from always convert') : t('Add to always convert')} 
+              className={`action-btn force-convert-btn${isMarkedAlwaysConvert ? ' active' : ''}`}
+              disabled={!asset.relativePath}
+            >
+              <Zap size={12} />
+            </button>
             <button onClick={() => handleRename(asset.path)} title={t('Rename')} className="action-btn">
               <Edit2 size={12} />
             </button>

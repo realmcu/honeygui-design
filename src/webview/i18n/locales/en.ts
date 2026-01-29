@@ -450,6 +450,11 @@ const en = {
 
   // AssetsPanel
   'Drag files here': 'Drag files here',
+  'Always convert': 'Always convert',
+  'Remove from always convert': 'Remove from always convert',
+  'Add to always convert': 'Mark as always convert',
+  'Force convert': 'Force convert',
+  'This asset will always be converted during build': 'This asset will always be converted during build',
 
   // ComponentTree
   'Drag from component library to add': 'Drag from component library to add',

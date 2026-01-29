@@ -338,6 +338,10 @@ export class MessageHandler {
             case 'saveConversionConfig':
                 this._handleSaveConversionConfig(message.config, message.changedPath, message.changedField);
                 break;
+
+            case 'toggleAlwaysConvert':
+                this._handleToggleAlwaysConvert(message.assetPath);
+                break;
                 
             default:
                 logger.warn(`[MessageHandler] 未知消息命令: ${message.command}`);
@@ -670,6 +674,94 @@ export class MessageHandler {
         } catch (error) {
             logger.error(`[MessageHandler] 保存转换配置失败: ${error}`);
             vscode.window.showErrorMessage(vscode.l10n.t('Failed to save conversion config: {0}', error instanceof Error ? error.message : String(error)));
+        }
+    }
+
+    /**
+     * 处理切换资源的强制转换状态
+     * @param assetPath 资源相对路径（相对于 assets 目录）
+     */
+    private _handleToggleAlwaysConvert(assetPath: string): void {
+        try {
+            const projectRoot = this._fileManager.currentFilePath
+                ? ProjectUtils.findProjectRoot(this._fileManager.currentFilePath)
+                : undefined;
+
+            if (!projectRoot) {
+                logger.warn('[MessageHandler] 无法切换强制转换：未找到项目根目录');
+                vscode.window.showErrorMessage(vscode.l10n.t('Cannot find project root (project.json)'));
+                return;
+            }
+
+            // 读取 project.json
+            const projectConfigPath = path.join(projectRoot, 'project.json');
+            if (!fs.existsSync(projectConfigPath)) {
+                logger.warn('[MessageHandler] project.json 不存在');
+                vscode.window.showErrorMessage(vscode.l10n.t('project.json not found'));
+                return;
+            }
+
+            const projectConfig = JSON.parse(fs.readFileSync(projectConfigPath, 'utf-8'));
+
+            // 确保 alwaysConvert 配置存在
+            if (!projectConfig.alwaysConvert) {
+                projectConfig.alwaysConvert = {
+                    images: [],
+                    videos: [],
+                    models: []
+                };
+            }
+
+            // 判断资源类型
+            const ext = path.extname(assetPath).toLowerCase();
+            const imageExts = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.svg'];
+            const videoExts = ['.mp4', '.avi', '.mov', '.mkv', '.webm'];
+            const modelExts = ['.gltf', '.glb', '.obj'];
+
+            let category: 'images' | 'videos' | 'models' | null = null;
+            if (imageExts.includes(ext)) {
+                category = 'images';
+            } else if (videoExts.includes(ext)) {
+                category = 'videos';
+            } else if (modelExts.includes(ext)) {
+                category = 'models';
+            }
+
+            if (!category) {
+                logger.warn(`[MessageHandler] 不支持的资源类型: ${ext}`);
+                return;
+            }
+
+            // 确保分类数组存在
+            if (!projectConfig.alwaysConvert[category]) {
+                projectConfig.alwaysConvert[category] = [];
+            }
+
+            // 切换状态
+            const index = projectConfig.alwaysConvert[category].indexOf(assetPath);
+            if (index >= 0) {
+                // 已存在，移除
+                projectConfig.alwaysConvert[category].splice(index, 1);
+                logger.info(`[MessageHandler] 已从强制转换列表移除: ${assetPath}`);
+            } else {
+                // 不存在，添加
+                projectConfig.alwaysConvert[category].push(assetPath);
+                logger.info(`[MessageHandler] 已添加到强制转换列表: ${assetPath}`);
+            }
+
+            // 保存 project.json
+            fs.writeFileSync(projectConfigPath, JSON.stringify(projectConfig, null, 2), 'utf-8');
+
+            // 通知前端更新状态
+            this._panel.webview.postMessage({
+                command: 'alwaysConvertUpdated',
+                alwaysConvert: projectConfig.alwaysConvert
+            });
+
+            logger.debug('[MessageHandler] 强制转换配置已更新');
+        } catch (error) {
+            logger.error(`[MessageHandler] 切换强制转换失败: ${error}`);
+            vscode.window.showErrorMessage(vscode.l10n.t('Failed to toggle always convert: {0}', error instanceof Error ? error.message : String(error)));
         }
     }
 }

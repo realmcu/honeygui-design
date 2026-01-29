@@ -47,6 +47,20 @@ export class AssetManager {
             const configService = ConversionConfigService.getInstance();
             const conversionConfig = configService.loadConfig(projectRoot);
 
+            // 读取 project.json 获取 alwaysConvert 配置
+            const projectConfigPath = path.join(projectRoot, 'project.json');
+            let alwaysConvert = { images: [], videos: [], models: [] };
+            if (fs.existsSync(projectConfigPath)) {
+                try {
+                    const projectConfig = JSON.parse(fs.readFileSync(projectConfigPath, 'utf-8'));
+                    if (projectConfig.alwaysConvert) {
+                        alwaysConvert = projectConfig.alwaysConvert;
+                    }
+                } catch (error) {
+                    logger.warn(`[Assets] 读取 project.json 失败: ${error}`);
+                }
+            }
+
             // 发送资源列表到webview
             this._panel.webview.postMessage({
                 command: 'assetsLoaded',
@@ -57,6 +71,12 @@ export class AssetManager {
             this._panel.webview.postMessage({
                 command: 'conversionConfigLoaded',
                 config: conversionConfig
+            });
+
+            // 发送 alwaysConvert 配置到webview
+            this._panel.webview.postMessage({
+                command: 'alwaysConvertUpdated',
+                alwaysConvert
             });
         } catch (error) {
             logger.error(`加载资源列表失败: ${error}`);
