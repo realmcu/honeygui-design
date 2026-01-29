@@ -74,6 +74,50 @@ export class BuildCore {
             this.generateConfig();
         }
 
+        // 确保 menu_config.py 存在
+        const menuConfigSource = path.join(win32SimSource, 'menu_config.py');
+        const menuConfigDest = path.join(this.buildDir, 'menu_config.py');
+        if (fs.existsSync(menuConfigSource) && !fs.existsSync(menuConfigDest)) {
+            fs.copyFileSync(menuConfigSource, menuConfigDest);
+            this.logger.log('menu_config.py 拷贝完成');
+        }
+
+        // 确保链接脚本文件存在
+        const linkerScriptSource = path.join(win32SimSource, 'honeygui_mingw.ld');
+        const linkerScriptDest = path.join(this.buildDir, 'honeygui_mingw.ld');
+        if (fs.existsSync(linkerScriptSource) && !fs.existsSync(linkerScriptDest)) {
+            fs.copyFileSync(linkerScriptSource, linkerScriptDest);
+            this.logger.log('honeygui_mingw.ld 拷贝完成');
+        }
+
+        // 确保 main.c 存在
+        const mainSource = path.join(win32SimSource, 'main.c');
+        const mainDest = path.join(this.buildDir, 'main.c');
+        if (fs.existsSync(mainSource) && !fs.existsSync(mainDest)) {
+            fs.copyFileSync(mainSource, mainDest);
+            this.logger.log('main.c 拷贝完成');
+        }
+
+        // 创建 SConscript（编译 main.c 和 app_romfs.c）
+        const sconscriptPath = path.join(this.buildDir, 'SConscript');
+        if (!fs.existsSync(sconscriptPath)) {
+            const sconscriptContent = `# SConscript for build directory
+from building import *
+
+cwd = GetCurrentDir()
+inc = [cwd]
+
+# 编译 main.c 和 app_romfs.c
+src = ['main.c', 'app_romfs.c']
+
+objs = DefineGroup('build', src, depend = [''], CPPPATH = inc)
+
+Return('objs')
+`;
+            fs.writeFileSync(sconscriptPath, sconscriptContent, 'utf-8');
+            this.logger.log('SConscript 文件已生成');
+        }
+
         this.modifySConstruct();
         this.logger.log('编译目录准备完成');
     }
@@ -378,7 +422,6 @@ export class BuildCore {
 
     private modifySConstruct(): void {
         const sconstructPath = path.join(this.buildDir, 'SConstruct');
-        if (!fs.existsSync(sconstructPath)) return;
 
         const libSim = this.libSimPath.replace(/\\/g, '/');
         const projectSrc = this.projectRoot.replace(/\\/g, '/') + '/src';
@@ -394,6 +437,7 @@ export class BuildCore {
         });
 
         fs.writeFileSync(sconstructPath, content, 'utf-8');
+        this.logger.log('SConstruct 文件已生成');
     }
 
     /**
