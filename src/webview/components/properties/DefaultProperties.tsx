@@ -1038,16 +1038,36 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                 </div>
                 {/* 字体类型 */}
                 <div className="property-item">
-                  <label>{t('Font Type')}</label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    {t('Font Type')}
+                    <span
+                      title={`${t('Bitmap font')}: ${t('Bitmap font hint')}\n${t('Vector font')}: ${t('Vector font hint')}`}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '14px',
+                        height: '14px',
+                        borderRadius: '50%',
+                        backgroundColor: 'var(--vscode-badge-background)',
+                        color: 'var(--vscode-badge-foreground)',
+                        fontSize: '10px',
+                        cursor: 'help',
+                        fontWeight: 'bold',
+                      }}
+                    >
+                      ?
+                    </span>
+                  </label>
                   <PropertyEditor
                     type="select"
                     value={(component.data as any)?.fontType || 'bitmap'}
                     onChange={(value) => handleDataChange('fontType', value)}
-                    options={['bitmap', 'vector']}
+                    options={[
+                      { value: 'bitmap', label: t('Bitmap font') },
+                      { value: 'vector', label: t('Vector font') },
+                    ]}
                   />
-                  <span style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '2px' }}>
-                    {(component.data as any)?.fontType === 'vector' ? t('Vector font') : t('Bitmap font')}
-                  </span>
                 </div>
                 {/* 渲染模式 - 仅点阵字体显示 */}
                 {((component.data as any)?.fontType || 'bitmap') === 'bitmap' && (

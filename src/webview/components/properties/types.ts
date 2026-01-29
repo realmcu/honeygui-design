@@ -10,7 +10,7 @@ export interface PropertyEditorProps {
   type: 'string' | 'number' | 'boolean' | 'color' | 'select';
   value: any;
   onChange: (value: any) => void;
-  options?: string[];
+  options?: (string | { value: string; label: string })[];
   disabled?: boolean;
   title?: string;
 }

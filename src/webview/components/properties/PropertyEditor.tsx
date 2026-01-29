@@ -93,11 +93,15 @@ export const PropertyEditor: React.FC<PropertyEditorProps> = ({
           disabled={disabled}
           style={{ ...inputStyle, ...disabledStyle }}
         >
-          {options?.map((option: string) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
+          {options?.map((option: string | { value: string; label: string }) => {
+            const optionValue = typeof option === 'string' ? option : option.value;
+            const optionLabel = typeof option === 'string' ? option : option.label;
+            return (
+              <option key={optionValue} value={optionValue}>
+                {optionLabel}
+              </option>
+            );
+          })}
         </select>
       );
 

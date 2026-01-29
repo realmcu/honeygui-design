@@ -299,6 +299,8 @@ const zhCN = {
   'Spacing': '间距',
   'Vector font': '矢量字体',
   'Bitmap font': '点阵字体',
+  'Bitmap font hint': '预渲染字形，固定字号，渲染速度快',
+  'Vector font hint': '可任意缩放大小，支持字体变换，渲染速度一般',
   'grayscale': '灰度',
   'Accurate Preview': '精确预览',
   'Design Preview': '设计预览',

@@ -299,6 +299,8 @@ const en = {
   'Spacing': 'Spacing',
   'Vector font': 'Vector font',
   'Bitmap font': 'Bitmap font',
+  'Bitmap font hint': 'Pre-rendered glyphs, fixed size, fast rendering',
+  'Vector font hint': 'Scalable to any size, supports font transforms, moderate rendering speed',
   'grayscale': 'grayscale',
   'Accurate Preview': 'Accurate Preview',
   'Design Preview': 'Design Preview',
