@@ -252,6 +252,10 @@ const en = {
   'Image Sequence': 'Image Sequence',
   'Add Image': 'Add Image',
   'Select Folder': 'Select Folder',
+  'Switch Timer': 'Switch Timer',
+  'Target Timer': 'Target Timer',
+  'No other timers available. Please add another timer first.': 'No other timers available. Please add another timer first.',
+  'Enter the timer ID to switch to (e.g., timer_0, timer_1)': 'Enter the timer ID to switch to (e.g., timer_0, timer_1)',
   'From': 'From',
   'To': 'To',
   'From Angle': 'From Angle',
@@ -531,6 +535,7 @@ const en = {
   
   // Timer animations
   'Run immediately': 'Run immediately',
+  'Bind on component creation': 'Bind on component creation',
   'Timer Animations': 'Timer Animations',
 
   // Conversion Config Panel

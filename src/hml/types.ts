@@ -71,7 +71,7 @@ export interface ComponentStyle {
  * 定时动画动作类型
  */
 export interface TimerAction {
-  type: 'size' | 'position' | 'opacity' | 'rotation' | 'scale' | 'switchView' | 'changeImage' | 'imageSequence' | 'visibility';
+  type: 'size' | 'position' | 'opacity' | 'rotation' | 'scale' | 'switchView' | 'changeImage' | 'imageSequence' | 'visibility' | 'switchTimer';
   // 大小动作
   fromW?: number;
   fromH?: number;
@@ -103,6 +103,8 @@ export interface TimerAction {
   imageSequence?: string[];  // 图片路径数组
   // 可见性动作
   visible?: boolean;         // 是否可见（true=显示，false=隐藏）
+  // 切换定时动画动作
+  timerId?: string;          // 要切换到的定时动画ID
 }
 
 /**
@@ -119,7 +121,8 @@ export interface AnimationSegment {
 export interface TimerConfig {
   id: string;  // 动画唯一标识
   name?: string;  // 动画名称（用于注释）
-  enabled: boolean;  // 是否绑定到组件（只有一个可以为 true）
+  enabled: boolean;  // 是否在创建组件时绑定到组件（只有一个可以为 true）
+  runImmediately?: boolean;  // 是否立即运行（不等待 interval，当前帧立即执行）
   interval: number;  // 动画间隔（毫秒）
   reload: boolean;  // 是否重复执行
   mode: 'preset' | 'custom';  // 动画模式：预设动作或自定义函数

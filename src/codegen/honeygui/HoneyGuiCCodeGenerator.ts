@@ -589,7 +589,10 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
           const timerName = timer.name || timer.id;
           code += `${indentStr}// 绑定定时器: ${timerName}\n`;
           code += `${indentStr}gui_obj_create_timer((gui_obj_t *)${component.id}, ${timer.interval}, ${timer.reload !== false ? 'true' : 'false'}, ${callback});\n`;
-          code += `${indentStr}gui_obj_start_timer((gui_obj_t *)${component.id});\n`;
+          // 如果没有设置立即运行，则调用 gui_obj_start_timer
+          if (!timer.runImmediately) {
+            code += `${indentStr}gui_obj_start_timer((gui_obj_t *)${component.id});\n`;
+          }
         });
       }
     }

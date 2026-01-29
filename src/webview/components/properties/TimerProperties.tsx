@@ -133,7 +133,7 @@ export const TimerProperties: React.FC<TimerPropertiesProps> = ({
                   style={{ cursor: 'pointer' }}
                 />
                 <span style={{ fontSize: '11px', opacity: 0.7, whiteSpace: 'nowrap' }}>
-                  {t('Run immediately')}
+                  {t('Bind on component creation')}
                 </span>
                 <input
                   type="text"
@@ -201,6 +201,17 @@ export const TimerProperties: React.FC<TimerPropertiesProps> = ({
                       onChange={(value) => handleUpdateTimer(timer.id, { reload: value })}
                     />
                     <span style={{ fontSize: '12px' }}>{t('Repeat animation')}</span>
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <PropertyEditor
+                      type="boolean"
+                      value={timer.runImmediately || false}
+                      onChange={(value) => handleUpdateTimer(timer.id, { runImmediately: value })}
+                    />
+                    <span style={{ fontSize: '12px' }}>{t('Run immediately')}</span>
                   </div>
                 </div>
 
@@ -347,6 +358,12 @@ const TimerPresetMode: React.FC<{
   const [expandedSegmentIndex, setExpandedSegmentIndex] = useState<number | null>(
     segments.length > 0 ? 0 : null
   );
+  
+  // 获取当前组件的所有定时动画（从父组件传递）
+  const componentId = useDesignerStore((state) => state.selectedComponent);
+  const components = useDesignerStore((state) => state.components);
+  const currentComponent = components.find(c => c.id === componentId);
+  const allTimers = currentComponent?.data?.timers || [];
 
   const handleAddSegment = () => {
     const newSegment: AnimationSegment = {
@@ -513,6 +530,8 @@ const TimerPresetMode: React.FC<{
                     onUpdate={(updates) => handleUpdateAction(segmentIndex, actionIndex, updates)}
                     onDelete={() => handleDeleteAction(segmentIndex, actionIndex)}
                     availableViews={getAvailableViews()}
+                    availableTimers={allTimers}
+                    currentTimerId={timer.id}
                   />
                 </div>
               ))}
@@ -565,14 +584,21 @@ const TimerActionEditor: React.FC<{
   onUpdate: (updates: Partial<TimerAction>) => void;
   onDelete: () => void;
   availableViews: Array<{ id: string; name: string; file: string }>;
-}> = ({ action, componentType, onUpdate, onDelete, availableViews }) => {
+  availableTimers: TimerConfig[];
+  currentTimerId: string;
+}> = ({ action, componentType, onUpdate, onDelete, availableViews, availableTimers, currentTimerId }) => {
+  const components = useDesignerStore((state) => state.components);
+  
+  // 获取除当前定时器外的其他定时器
+  const otherTimers = availableTimers.filter(t => t.id !== currentTimerId);
+
   return (
     <>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
         <select
           value={action.type}
           onChange={(e) => {
-            const newType = e.target.value as 'size' | 'position' | 'opacity' | 'rotation' | 'scale' | 'switchView' | 'changeImage' | 'imageSequence' | 'visibility';
+            const newType = e.target.value as 'size' | 'position' | 'opacity' | 'rotation' | 'scale' | 'switchView' | 'changeImage' | 'imageSequence' | 'visibility' | 'switchTimer';
             const newAction: TimerAction = { type: newType };
             if (newType === 'size') {
               newAction.fromW = 0;
@@ -605,6 +631,8 @@ const TimerActionEditor: React.FC<{
               newAction.imageSequence = [];
             } else if (newType === 'visibility') {
               newAction.visible = true;
+            } else if (newType === 'switchTimer') {
+              newAction.timerId = '';
             }
             onUpdate(newAction);
           }}
@@ -625,6 +653,7 @@ const TimerActionEditor: React.FC<{
           {componentType === 'hg_image' && <option value="changeImage">{t('Change Image')}</option>}
           {componentType === 'hg_image' && <option value="imageSequence">{t('Image Sequence')}</option>}
           <option value="switchView">{t('Switch View')}</option>
+          <option value="switchTimer">{t('Switch Timer')}</option>
           <option value="visibility">{t('Set Visibility')}</option>
         </select>
         <button
@@ -932,6 +961,47 @@ const TimerActionEditor: React.FC<{
                 <option key={s.value} value={s.value}>{s.label}</option>
               ))}
             </select>
+          </div>
+        </div>
+      )}
+
+      {action.type === 'switchTimer' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div>
+            <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('Target Timer')}</label>
+            {otherTimers.length === 0 ? (
+              <div style={{ 
+                padding: '8px', 
+                backgroundColor: 'var(--vscode-inputValidation-warningBackground)',
+                border: '1px solid var(--vscode-inputValidation-warningBorder)',
+                borderRadius: '2px',
+                fontSize: '11px',
+                color: 'var(--vscode-inputValidation-warningForeground)'
+              }}>
+                ⚠️ {t('No other timers available. Please add another timer first.')}
+              </div>
+            ) : (
+              <select
+                value={action.timerId || ''}
+                onChange={(e) => onUpdate({ timerId: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '3px',
+                  backgroundColor: 'var(--vscode-input-background)',
+                  color: 'var(--vscode-input-foreground)',
+                  border: '1px solid var(--vscode-input-border)',
+                  borderRadius: '2px',
+                  fontSize: '11px',
+                }}
+              >
+                <option value="">-- {t('Select')} --</option>
+                {otherTimers.map(t => (
+                  <option key={t.id} value={t.id}>
+                    {t.name || t.id}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
         </div>
       )}

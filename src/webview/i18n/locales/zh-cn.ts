@@ -252,6 +252,10 @@ const zhCN = {
   'Image Sequence': '图片序列',
   'Add Image': '添加图片',
   'Select Folder': '选择文件夹',
+  'Switch Timer': '切换定时动画',
+  'Target Timer': '目标定时动画',
+  'No other timers available. Please add another timer first.': '没有其他可用的定时动画，请先添加另一个定时动画。',
+  'Enter the timer ID to switch to (e.g., timer_0, timer_1)': '输入要切换到的定时动画ID（例如：timer_0, timer_1）',
   'From': '初始值',
   'To': '目标值',
   'From Angle': '起始角度',
@@ -531,6 +535,7 @@ const zhCN = {
   
   // Timer animations
   'Run immediately': '立即运行',
+  'Bind on component creation': '创建组件时绑定',
   'Timer Animations': '定时动画',
 
   // 转换配置面板

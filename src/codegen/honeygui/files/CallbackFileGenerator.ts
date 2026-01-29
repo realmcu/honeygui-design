@@ -738,7 +738,7 @@ void ${callback}(void *obj)\n{\n`;
     
     // 为每个动作生成代码
     actions.forEach((action: any) => {
-      code += this.generateActionCode(action, delayStart > 0, 'cnt', 'cnt_wait', 'cnt_max');
+      code += this.generateActionCode(action, delayStart > 0, 'cnt', 'cnt_wait', 'cnt_max', component);
     });
     
     // 增加计数器
@@ -816,9 +816,9 @@ void ${callback}(void *obj)\n{\n`;
         code += `        // 无动作，仅等待\n`;
         code += `    }\n`;
       } else {
-        // 检查是否所有动作都不需要段内计数器（跳转界面、更换图片、设置可见性等）
+        // 检查是否所有动作都不需要段内计数器（跳转界面、更换图片、设置可见性、切换定时动画等）
         const allNoSegCounter = actions.every((action: any) => 
-          action.type === 'switchView' || action.type === 'changeImage' || action.type === 'visibility'
+          action.type === 'switchView' || action.type === 'changeImage' || action.type === 'visibility' || action.type === 'switchTimer'
         );
         
         // 有动作的段
@@ -834,7 +834,7 @@ void ${callback}(void *obj)\n{\n`;
         
         // 为每个动作生成代码
         actions.forEach((action: any) => {
-          const actionCode = this.generateActionCode(action, false, 'seg_cnt', '', 'seg_cnt_max');
+          const actionCode = this.generateActionCode(action, false, 'seg_cnt', '', 'seg_cnt_max', component);
           // 缩进处理
           const indentedCode = actionCode.split('\n').map(line => line ? `        ${line}` : line).join('\n');
           code += indentedCode;
@@ -866,7 +866,7 @@ void ${callback}(void *obj)\n{\n`;
   /**
    * 生成单个动作的代码
    */
-  private generateActionCode(action: any, hasDelay: boolean, cntVar: string, waitVar: string, maxVar: string): string {
+  private generateActionCode(action: any, hasDelay: boolean, cntVar: string, waitVar: string, maxVar: string, component?: Component): string {
     let code = '';
     const progressExpr = hasDelay ? `(${cntVar} - ${waitVar}) / ${maxVar}` : `${cntVar} / ${maxVar}`;
     
@@ -925,6 +925,41 @@ void ${callback}(void *obj)\n{\n`;
       const switchInStyle = action.switchInStyle || 'SWITCH_IN_FROM_RIGHT_USE_TRANSLATION';
       code += `    // 跳转界面: ${targetName}\n`;
       code += `    gui_view_switch_direct(gui_view_get_current(), "${targetName}", ${switchOutStyle}, ${switchInStyle});\n`;
+      code += `    \n`;
+    } else if (action.type === 'switchTimer') {
+      // 切换定时动画动作
+      const timerId = action.timerId || '';
+      if (!timerId) {
+        code += `    // 警告：未指定目标定时动画ID\n`;
+        return code;
+      }
+      
+      // 查找目标定时器配置
+      const targetTimer = component?.data?.timers?.find((t: any) => t.id === timerId);
+      if (!targetTimer) {
+        code += `    // 警告：未找到定时动画 ${timerId}\n`;
+        return code;
+      }
+      
+      // 生成回调函数名
+      let callback: string;
+      if (targetTimer.mode === 'preset') {
+        callback = `${component?.id}_${targetTimer.id}_cb`;
+      } else if (targetTimer.mode === 'custom' && targetTimer.callback) {
+        callback = targetTimer.callback;
+      } else {
+        code += `    // 警告：定时动画 ${timerId} 配置无效\n`;
+        return code;
+      }
+      
+      const timerName = targetTimer.name || targetTimer.id;
+      code += `    // 切换定时动画: ${timerName}\n`;
+      code += `    gui_obj_create_timer(target, ${targetTimer.interval}, ${targetTimer.reload !== false ? 'true' : 'false'}, ${callback});\n`;
+      // 如果目标定时器没有设置立即运行，则调用 gui_obj_start_timer
+      if (!targetTimer.runImmediately) {
+        code += `    gui_obj_start_timer(target);\n`;
+      }
+      code += `    return; // 切换定时动画后立即返回\n`;
       code += `    \n`;
     } else if (action.type === 'position') {
       // 调整位置动作
