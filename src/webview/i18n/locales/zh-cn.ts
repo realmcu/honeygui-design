@@ -268,6 +268,7 @@ const zhCN = {
   'Size': '尺寸',
   'Segment': '动画段',
   'Add Segment': '添加动画段',
+  'Drag to reorder': '拖动以重新排序',
   'Duration (ms)': '持续时间 (ms)',
   'Total Duration': '总时间',
   'actions': '个动作',
@@ -397,6 +398,7 @@ const zhCN = {
   'Blend Mode': '渲染模式',
   'Foreground Color': '前景色',
   'High Quality Rendering': '抗锯齿',
+  'Enable Clipping': '启用裁剪',
 
   // HgVideoProperties
   'Video Settings': '视频设置',

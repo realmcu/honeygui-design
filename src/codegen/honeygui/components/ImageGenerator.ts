@@ -52,6 +52,11 @@ export class ImageGenerator implements ComponentCodeGenerator {
       code += `${indentStr}gui_img_set_quality((gui_img_t *)${component.id}, true);\n`;
     }
 
+    // 4. 裁剪设置
+    if (component.data?.needClip === true) {
+      code += `${indentStr}((gui_img_t *)${component.id})->need_clip = true;\n`;
+    }
+
     // 获取变换配置
     const transform = component.style?.transform;
     

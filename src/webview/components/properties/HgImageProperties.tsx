@@ -266,6 +266,17 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
                 style={{ marginTop: '4px' }}
               />
             </div>
+
+            {/* 裁剪开关 */}
+            <div className="property-item">
+              <label>{t('Enable Clipping')}</label>
+              <input
+                type="checkbox"
+                checked={component.data?.needClip === true}
+                onChange={(e) => handleDataChange('needClip', e.target.checked)}
+                style={{ marginTop: '4px' }}
+              />
+            </div>
           </div>
 
           {/* 变换属性 */}

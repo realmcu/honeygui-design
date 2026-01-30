@@ -268,6 +268,7 @@ const en = {
   'Size': 'Size',
   'Segment': 'Segment',
   'Add Segment': 'Add Segment',
+  'Drag to reorder': 'Drag to reorder',
   'Duration (ms)': 'Duration (ms)',
   'Total Duration': 'Total Duration',
   'actions': 'actions',
@@ -397,6 +398,7 @@ const en = {
   'Blend Mode': 'Blend Mode',
   'Foreground Color': 'Foreground Color',
   'High Quality Rendering': 'Anti-aliasing',
+  'Enable Clipping': 'Enable Clipping',
 
   // HgVideoProperties
   'Video Settings': 'Video Settings',

@@ -390,6 +390,67 @@ const TimerPresetMode: React.FC<{
     }
   };
 
+  // 拖拽相关状态
+  const [draggedSegmentIndex, setDraggedSegmentIndex] = React.useState<number | null>(null);
+  const [dragOverSegmentIndex, setDragOverSegmentIndex] = React.useState<number | null>(null);
+
+  // 处理拖拽开始
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedSegmentIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  // 处理拖拽经过
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (draggedSegmentIndex !== null && draggedSegmentIndex !== index) {
+      setDragOverSegmentIndex(index);
+    }
+  };
+
+  // 处理拖拽离开
+  const handleDragLeave = () => {
+    setDragOverSegmentIndex(null);
+  };
+
+  // 处理放置
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (draggedSegmentIndex === null || draggedSegmentIndex === dropIndex) {
+      setDraggedSegmentIndex(null);
+      setDragOverSegmentIndex(null);
+      return;
+    }
+
+    // 重新排列动画段
+    const newSegments = [...segments];
+    const [draggedSegment] = newSegments.splice(draggedSegmentIndex, 1);
+    newSegments.splice(dropIndex, 0, draggedSegment);
+    
+    onUpdate({ segments: newSegments });
+
+    // 更新展开状态
+    if (expandedSegmentIndex === draggedSegmentIndex) {
+      setExpandedSegmentIndex(dropIndex);
+    } else if (expandedSegmentIndex !== null) {
+      if (draggedSegmentIndex < expandedSegmentIndex && dropIndex >= expandedSegmentIndex) {
+        setExpandedSegmentIndex(expandedSegmentIndex - 1);
+      } else if (draggedSegmentIndex > expandedSegmentIndex && dropIndex <= expandedSegmentIndex) {
+        setExpandedSegmentIndex(expandedSegmentIndex + 1);
+      }
+    }
+
+    setDraggedSegmentIndex(null);
+    setDragOverSegmentIndex(null);
+  };
+
+  // 处理拖拽结束
+  const handleDragEnd = () => {
+    setDraggedSegmentIndex(null);
+    setDragOverSegmentIndex(null);
+  };
+
   const handleAddAction = (segmentIndex: number) => {
     const segment = segments[segmentIndex];
     let newAction: TimerAction;
@@ -445,27 +506,57 @@ const TimerPresetMode: React.FC<{
       {segments.map((segment, segmentIndex) => (
         <div
           key={segmentIndex}
+          onDragOver={(e) => handleDragOver(e, segmentIndex)}
+          onDragLeave={handleDragLeave}
+          onDrop={(e) => handleDrop(e, segmentIndex)}
           style={{
             marginBottom: '8px',
             padding: '8px',
             background: 'var(--vscode-input-background)',
             borderRadius: '4px',
-            border: '1px solid var(--vscode-input-border)',
+            border: dragOverSegmentIndex === segmentIndex 
+              ? '2px dashed var(--vscode-focusBorder)' 
+              : '1px solid var(--vscode-input-border)',
+            opacity: draggedSegmentIndex === segmentIndex ? 0.5 : 1,
+            transition: 'border 0.2s, opacity 0.2s',
           }}
         >
           {/* 段头部 */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
             <div
-              style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, cursor: 'pointer' }}
-              onClick={() => setExpandedSegmentIndex(expandedSegmentIndex === segmentIndex ? null : segmentIndex)}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}
             >
-              <span style={{ fontSize: '11px', fontWeight: 'bold' }}>
+              <span 
+                draggable
+                onDragStart={(e) => handleDragStart(e, segmentIndex)}
+                onDragEnd={handleDragEnd}
+                style={{ 
+                  fontSize: '14px', 
+                  opacity: 0.6, 
+                  cursor: 'grab',
+                  padding: '2px 4px',
+                  userSelect: 'none',
+                }} 
+                title={t('Drag to reorder')}
+              >
+                ⋮⋮
+              </span>
+              <span 
+                style={{ fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}
+                onClick={() => setExpandedSegmentIndex(expandedSegmentIndex === segmentIndex ? null : segmentIndex)}
+              >
                 {t('Segment')} {segmentIndex + 1}
               </span>
-              <span style={{ fontSize: '10px', opacity: 0.7 }}>
+              <span 
+                style={{ fontSize: '10px', opacity: 0.7, cursor: 'pointer' }}
+                onClick={() => setExpandedSegmentIndex(expandedSegmentIndex === segmentIndex ? null : segmentIndex)}
+              >
                 ({segment.duration}ms, {segment.actions.length} {t('actions')})
               </span>
-              <span style={{ fontSize: '12px', opacity: 0.7 }}>
+              <span 
+                style={{ fontSize: '12px', opacity: 0.7, cursor: 'pointer' }}
+                onClick={() => setExpandedSegmentIndex(expandedSegmentIndex === segmentIndex ? null : segmentIndex)}
+              >
                 {expandedSegmentIndex === segmentIndex ? '▼' : '▶'}
               </span>
             </div>
@@ -647,7 +738,7 @@ const TimerActionEditor: React.FC<{
         >
           {componentType === 'hg_window' && <option value="size">{t('Adjust Size')}</option>}
           <option value="position">{t('Adjust Position')}</option>
-          {componentType === 'hg_image' && <option value="opacity">{t('Adjust Opacity')}</option>}
+          <option value="opacity">{t('Adjust Opacity')}</option>
           {componentType === 'hg_image' && <option value="rotation">{t('Adjust Rotation')}</option>}
           {componentType === 'hg_image' && <option value="scale">{t('Adjust Scale')}</option>}
           {componentType === 'hg_image' && <option value="changeImage">{t('Change Image')}</option>}

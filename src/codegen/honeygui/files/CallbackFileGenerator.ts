@@ -639,12 +639,17 @@ void ${callback}(void *obj)
         code += `    target->h = h_cur;\n`;
         code += `    \n`;
       } else if (action.type === 'opacity') {
-        // 调整透明度动作（仅支持 hg_image）
+        // 调整透明度动作
         code += `    // 调整透明度: ${action.from} -> ${action.to}\n`;
         code += `    const uint8_t opacity_origin = ${action.from};\n`;
         code += `    const uint8_t opacity_target = ${action.to};\n`;
         code += `    int16_t opacity_cur = opacity_origin + (opacity_target - opacity_origin) * cnt / cnt_max;\n`;
-        code += `    gui_img_set_opacity((gui_img_t *)target, opacity_cur);\n`;
+        // hg_image 使用 gui_img_set_opacity，其他组件使用 target->opacity_value
+        if (component.type === 'hg_image') {
+          code += `    gui_img_set_opacity((gui_img_t *)target, opacity_cur);\n`;
+        } else {
+          code += `    target->opacity_value = opacity_cur;\n`;
+        }
         code += `    \n`;
       } else if (action.type === 'rotation') {
         // 调整旋转动作（仅支持 hg_image）
@@ -985,12 +990,17 @@ void ${callback}(void *obj)\n{\n`;
       code += `    target->h = h_cur;\n`;
       code += `    \n`;
     } else if (action.type === 'opacity') {
-      // 调整透明度动作（仅支持 hg_image）
+      // 调整透明度动作
       code += `    // 调整透明度: ${action.from} -> ${action.to}\n`;
       code += `    const uint8_t opacity_origin = ${action.from};\n`;
       code += `    const uint8_t opacity_target = ${action.to};\n`;
       code += `    int16_t opacity_cur = opacity_origin + (opacity_target - opacity_origin) * ${progressExpr};\n`;
-      code += `    gui_img_set_opacity((gui_img_t *)target, opacity_cur);\n`;
+      // hg_image 使用 gui_img_set_opacity，其他组件使用 target->opacity_value
+      if (component?.type === 'hg_image') {
+        code += `    gui_img_set_opacity((gui_img_t *)target, opacity_cur);\n`;
+      } else {
+        code += `    target->opacity_value = opacity_cur;\n`;
+      }
       code += `    \n`;
     } else if (action.type === 'rotation') {
       // 调整旋转动作（仅支持 hg_image）
