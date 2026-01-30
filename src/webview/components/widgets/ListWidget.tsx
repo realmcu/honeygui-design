@@ -97,11 +97,33 @@ export const ListWidget: React.FC<WidgetProps> = ({ component, style, handlers, 
         c => c.type === 'hg_list_item' && c.parent === component.id
       );
       
-      // 如果已经有 list_item 子组件，只处理数量变化
+      // 如果已经有 list_item 子组件，处理数量变化和位置更新
       if (existingListItems.length > 0) {
         const currentCount = existingListItems.length;
         
-        // 如果数量匹配，不做任何处理
+        // 首先，更新所有已存在的 list_item 的位置和尺寸
+        existingListItems.forEach((item, index) => {
+          const newPosition = calculateItemPosition(
+            index, itemWidth, itemHeight, space, isVertical
+          );
+          
+          // 检查位置或尺寸是否有变化
+          const hasPositionChange = 
+            item.position.x !== newPosition.x ||
+            item.position.y !== newPosition.y ||
+            item.position.width !== newPosition.width ||
+            item.position.height !== newPosition.height;
+          
+          if (hasPositionChange) {
+            console.log(`[ListWidget] Updating item ${index} position:`, {
+              old: item.position,
+              new: newPosition
+            });
+            updateComponent(item.id, { position: newPosition });
+          }
+        });
+        
+        // 如果数量匹配，只更新位置，不处理数量
         if (currentCount === noteNum) {
           return;
         }
