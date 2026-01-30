@@ -296,7 +296,7 @@ const zhCN = {
   'Horizontal': '水平',
   'Vertical': '竖直',
   'Line Break': '换行',
-  'Break at word boundaries': '英文按���格断词，避免单词被截断',
+  'Break at word boundaries': '英文按空格断词，避免单词被截断',
   'Spacing': '间距',
   'Vector font': '矢量字体',
   'Bitmap font': '点阵字体',

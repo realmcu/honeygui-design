@@ -245,7 +245,8 @@ export class LabelGenerator implements ComponentCodeGenerator {
     }
 
     const fontFileName = path.basename(fontFile);
-    const fontName = fontFileName.replace(/\.(ttf|otf|woff|woff2)$/i, '');
+    // 去掉扩展名，并将 - 替换为 _（与字体转换器保持一致）
+    const fontName = fontFileName.replace(/\.(ttf|otf|woff|woff2)$/i, '').replace(/-/g, '_');
     
     const fontType = component.data?.fontType || 'bitmap';
     const fontSize = component.data?.fontSize || 16;
