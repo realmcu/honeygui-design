@@ -521,4 +521,49 @@ export class FileManager {
         });
     }
 
+    /**
+     * 发送协作同步的组件数据到前端
+     * 用于访客接收主机文档时，不依赖本地文件路径
+     */
+    public sendCollaborationUpdate(): void {
+        try {
+            const hmlDocument = this._hmlController.currentDocument;
+            if (!hmlDocument) {
+                logger.warn('[FileManager] sendCollaborationUpdate: 没有当前文档');
+                return;
+            }
+            
+            const frontendComponents = this._hmlController.prepareComponentsForFrontend(hmlDocument);
+            const hmlContent = this._hmlController.serializeDocument();
+            
+            logger.info(`[FileManager] 发送协作同步数据，组件数: ${frontendComponents.length}`);
+            
+            // 获取当前 VSCode 语言设置
+            const locale = vscode.env.language;
+            
+            this._panel.webview.postMessage({
+                command: 'loadHml',
+                content: hmlContent,
+                document: {
+                    ...hmlDocument,
+                    view: {
+                        ...hmlDocument.view,
+                        components: frontendComponents
+                    }
+                },
+                components: frontendComponents,
+                projectConfig: null,  // 协作模式下可能没有项目配置
+                designerConfig: { canvasBackgroundColor: '#3c3c3c' },
+                projectRoot: null,
+                allViews: [],
+                allHmlFiles: [],
+                currentFilePath: this._filePath || 'collaboration',
+                locale: locale,
+                isSimulationRunning: false
+            });
+        } catch (error) {
+            logger.error(`[FileManager] sendCollaborationUpdate失败: ${error}`);
+        }
+    }
+
 }

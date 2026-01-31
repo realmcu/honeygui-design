@@ -571,6 +571,25 @@ const en = {
   'Blur': 'Blur',
   'blurNone': 'No blur',
   'FastLZ Secondary Compression': 'FastLZ secondary compression',
+
+  // Collaboration
+  'Collaboration': 'Collaboration',
+  'Disconnected': 'Disconnected',
+  'Connecting...': 'Connecting...',
+  'Connected': 'Connected',
+  'Hosting': 'Hosting',
+  'Unknown': 'Unknown',
+  'connected': 'connected',
+  'Host Mode': 'Host Mode',
+  'Port': 'Port',
+  'Start Host': 'Start Host',
+  'Host Running': 'Host Running',
+  'Stop Host': 'Stop Host',
+  'Join Session': 'Join Session',
+  'Address': 'Address',
+  'Connect': 'Connect',
+  'Connected to Host': 'Connected to Host',
+  'Disconnect': 'Disconnect',
 };
 
 export default en;

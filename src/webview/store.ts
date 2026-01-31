@@ -141,7 +141,7 @@ export interface DesignerStore extends DesignerState {
   setEditingMode: (mode: 'select' | 'move' | 'resize') => void;
   setCanvasBackgroundColor: (color: string) => void;
   centerViewOnCanvas: (componentId: string) => void;
-  saveViewState: (uiState?: { leftPanelTab?: 'components' | 'assets' | 'tree'; leftPanelVisible?: boolean; rightPanelVisible?: boolean; leftPanelWidth?: number; rightPanelWidth?: number }) => void;
+  saveViewState: (uiState?: { leftPanelTab?: 'components' | 'assets' | 'tree' | 'collaboration'; leftPanelVisible?: boolean; rightPanelVisible?: boolean; leftPanelWidth?: number; rightPanelWidth?: number }) => void;
   restoreViewState: (filePath: string) => { restored: boolean; state?: ViewState };
   
   // View connections
@@ -224,6 +224,32 @@ export interface DesignerStore extends DesignerState {
    * @param changedField 变更的字段名（可选，用于触发特定行为如代码生成）
    */
   updateAssetConfig: (path: string, settings: ItemSettings, changedField?: string) => void;
+
+  // Collaboration (多人协作)
+  collaborationRole: 'none' | 'host' | 'guest';
+  collaborationStatus: 'disconnected' | 'connecting' | 'connected' | 'hosting';
+  collaborationHostAddress: string;
+  collaborationHostPort: number;
+  collaborationPeerCount: number;
+  collaborationError: string | null;
+  setCollaborationState: (state: {
+    role?: 'none' | 'host' | 'guest';
+    status?: 'disconnected' | 'connecting' | 'connected' | 'hosting';
+    hostAddress?: string;
+    hostPort?: number;
+    peerCount?: number;
+    error?: string | null;
+  }) => void;
+  resetCollaborationState: () => void;
+  startHost: (port: number) => void;
+  stopHost: () => void;
+  joinSession: (address: string) => void;
+  leaveSession: () => void;
+  
+  // 远程增量更新（协作模式，不触发保存）
+  remoteAddComponent: (component: Component) => void;
+  remoteUpdateComponent: (id: string, updates: Partial<Component>) => void;
+  remoteDeleteComponent: (id: string) => void;
 }
 
 let vscodeAPI: VSCodeAPI | null = null;
@@ -243,7 +269,7 @@ interface ViewState {
   zoom: number;
   canvasOffset: { x: number; y: number };
   selectedComponent: string | null;  // 选中的组件
-  leftPanelTab: 'components' | 'assets' | 'tree';  // 左侧面板 Tab
+  leftPanelTab: 'components' | 'assets' | 'tree' | 'collaboration';  // 左侧面板 Tab
   leftPanelVisible: boolean;  // 左侧面板是否可见
   rightPanelVisible: boolean;  // 右侧面板是否可见
   leftPanelWidth?: number;  // 左侧面板宽度
@@ -305,6 +331,14 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   isSimulationRunning: false, // 仿真运行状态
   selectedAsset: null, // 选中的资源（文件夹或图片）
   conversionConfig: null, // 转换配置
+
+  // Collaboration state (多人协作状态)
+  collaborationRole: 'none' as 'none' | 'host' | 'guest',
+  collaborationStatus: 'disconnected' as 'disconnected' | 'connecting' | 'connected' | 'hosting',
+  collaborationHostAddress: '',
+  collaborationHostPort: 3000,
+  collaborationPeerCount: 0,
+  collaborationError: null as string | null,
 
   // Actions
   setComponents: (components) => {
@@ -1902,6 +1936,159 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
         changedField: changedField
       });
     }
+  },
+
+  // Collaboration methods (多人协作方法)
+  setCollaborationState: (state) => {
+    set((current) => ({
+      collaborationRole: state.role ?? current.collaborationRole,
+      collaborationStatus: state.status ?? current.collaborationStatus,
+      collaborationHostAddress: state.hostAddress ?? current.collaborationHostAddress,
+      collaborationHostPort: state.hostPort ?? current.collaborationHostPort,
+      collaborationPeerCount: state.peerCount ?? current.collaborationPeerCount,
+      collaborationError: state.error !== undefined ? state.error : current.collaborationError,
+    }));
+  },
+
+  resetCollaborationState: () => {
+    set({
+      collaborationRole: 'none',
+      collaborationStatus: 'disconnected',
+      collaborationHostAddress: '',
+      collaborationHostPort: 3000,
+      collaborationPeerCount: 0,
+      collaborationError: null,
+    });
+  },
+
+  startHost: (port: number) => {
+    set({
+      collaborationStatus: 'connecting',
+      collaborationHostPort: port,
+      collaborationError: null,
+    });
+    if (vscodeAPI) {
+      vscodeAPI.postMessage({
+        command: 'startHost',
+        port: port,
+      });
+    }
+  },
+
+  stopHost: () => {
+    if (vscodeAPI) {
+      vscodeAPI.postMessage({
+        command: 'stopHost',
+      });
+    }
+    set({
+      collaborationRole: 'none',
+      collaborationStatus: 'disconnected',
+      collaborationHostAddress: '',
+      collaborationPeerCount: 0,
+      collaborationError: null,
+    });
+  },
+
+  joinSession: (address: string) => {
+    set({
+      collaborationStatus: 'connecting',
+      collaborationHostAddress: address,
+      collaborationError: null,
+    });
+    if (vscodeAPI) {
+      vscodeAPI.postMessage({
+        command: 'joinSession',
+        address: address,
+      });
+    }
+  },
+
+  leaveSession: () => {
+    if (vscodeAPI) {
+      vscodeAPI.postMessage({
+        command: 'leaveSession',
+      });
+    }
+    set({
+      collaborationRole: 'none',
+      collaborationStatus: 'disconnected',
+      collaborationHostAddress: '',
+      collaborationPeerCount: 0,
+      collaborationError: null,
+    });
+  },
+
+  // 远程增量更新方法（协作模式，不触发保存和广播）
+  remoteAddComponent: (component: Component) => {
+    set((state) => {
+      const newComponents = [...state.components];
+      
+      // 检查是否已存在相同ID的组件
+      if (newComponents.some(c => c.id === component.id)) {
+        return state;
+      }
+      
+      // 如果组件有父组件引用，更新父组件的children数组
+      if (component.parent && typeof component.parent === 'string') {
+        const parentIndex = newComponents.findIndex(comp => comp.id === component.parent);
+        if (parentIndex !== -1) {
+          if (!newComponents[parentIndex].children) {
+            newComponents[parentIndex] = { ...newComponents[parentIndex], children: [] };
+          }
+          if (!newComponents[parentIndex].children!.includes(component.id)) {
+            newComponents[parentIndex] = {
+              ...newComponents[parentIndex],
+              children: [...newComponents[parentIndex].children!, component.id]
+            };
+          }
+        }
+      }
+      
+      newComponents.push(component);
+      return { components: newComponents };
+    });
+  },
+
+  remoteUpdateComponent: (id: string, updates: Partial<Component>) => {
+    set((state) => ({
+      components: state.components.map((comp) =>
+        comp.id === id ? { ...comp, ...updates } : comp
+      ),
+    }));
+  },
+
+  remoteDeleteComponent: (id: string) => {
+    set((state) => {
+      const component = state.components.find(c => c.id === id);
+      if (!component) return state;
+      
+      // 收集要删除的组件ID（包括子组件）
+      const idsToDelete = new Set<string>();
+      const collectIds = (compId: string) => {
+        idsToDelete.add(compId);
+        const comp = state.components.find(c => c.id === compId);
+        if (comp?.children) {
+          comp.children.forEach(childId => collectIds(childId));
+        }
+      };
+      collectIds(id);
+      
+      return {
+        components: state.components
+          .filter(c => !idsToDelete.has(c.id))
+          .map(c => {
+            // 更新父组件的 children 数组
+            if (c.children && c.children.includes(id)) {
+              return { ...c, children: c.children.filter(childId => childId !== id) };
+            }
+            return c;
+          }),
+        // 如果删除的是当前选中的组件，清除选中状态
+        selectedComponent: state.selectedComponent && idsToDelete.has(state.selectedComponent) ? null : state.selectedComponent,
+        selectedComponents: state.selectedComponents.filter(sid => !idsToDelete.has(sid)),
+      };
+    });
   },
 }));
 

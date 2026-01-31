@@ -6,6 +6,7 @@ import PropertiesPanel from './components/PropertiesPanel';
 import ConversionConfigPanel from './components/ConversionConfigPanel';
 import ComponentTree from './components/ComponentTree';
 import AssetsPanel from './components/AssetsPanel';
+import CollaborationPanel from './components/CollaborationPanel';
 import Toolbar from './components/Toolbar';
 import { ViewRelationModal } from './components/ViewRelationModal';
 import { CanvasEditorModal } from './components/CanvasEditorModal';
@@ -44,7 +45,7 @@ const App: React.FC = () => {
   } = useDesignerStore();
 
   // Tab 切换状态
-  const [activeTab, setActiveTab] = React.useState<'components' | 'assets' | 'tree'>('components');
+  const [activeTab, setActiveTab] = React.useState<'components' | 'assets' | 'tree' | 'collaboration'>('components');
   
   // 文件加载状态（用于避免切换时的闪烁）
   const [isLoadingFile, setIsLoadingFile] = React.useState(false);
@@ -540,6 +541,50 @@ const App: React.FC = () => {
             console.log('[Webview App] 转换配置已加载');
           } else if (message.error) {
             console.error('[Webview App] 加载转换配置失败:', message.error);
+          }
+          break;
+
+        case 'collaborationStateChanged':
+          // 更新协作状态
+          if (message.state) {
+            const store = useDesignerStore.getState();
+            store.setCollaborationState({
+              role: message.state.role,
+              status: message.state.status,
+              hostAddress: message.state.hostAddress,
+              hostPort: message.state.hostPort,
+              peerCount: message.state.peerCount,
+              error: message.state.error,
+            });
+            console.log('[Webview App] 协作状态已更新:', message.state);
+          }
+          break;
+
+        // 协作增量更新消息处理（避免闪烁）
+        case 'remoteAddComponent':
+          // 远程添加组件
+          if (message.component) {
+            const store = useDesignerStore.getState();
+            store.remoteAddComponent(message.component);
+            console.log('[Webview App] 远程添加组件:', message.component.id);
+          }
+          break;
+
+        case 'remoteUpdateComponent':
+          // 远程更新组件
+          if (message.componentId && message.updates) {
+            const store = useDesignerStore.getState();
+            store.remoteUpdateComponent(message.componentId, message.updates);
+            console.log('[Webview App] 远程更新组件:', message.componentId);
+          }
+          break;
+
+        case 'remoteDeleteComponent':
+          // 远程删除组件
+          if (message.componentId) {
+            const store = useDesignerStore.getState();
+            store.remoteDeleteComponent(message.componentId);
+            console.log('[Webview App] 远程删除组件:', message.componentId);
           }
           break;
       }
@@ -1379,6 +1424,12 @@ const App: React.FC = () => {
             >
               {t('Component Tree')}
             </button>
+            <button 
+              className={`tab-header ${activeTab === 'collaboration' ? 'active' : ''}`}
+              onClick={() => setActiveTab('collaboration')}
+            >
+              {t('Collaboration')}
+            </button>
           </div>
 
           {/* Tab Content */}
@@ -1386,6 +1437,7 @@ const App: React.FC = () => {
             {activeTab === 'components' && <ComponentLibrary onComponentDragStart={() => {}} onCreateComponent={handleCreateComponentFromLibrary} />}
             {activeTab === 'assets' && <AssetsPanel />}
             {activeTab === 'tree' && <ComponentTree onContextMenu={handleComponentContextMenu} />}
+            {activeTab === 'collaboration' && <CollaborationPanel />}
           </div>
         </div>
 

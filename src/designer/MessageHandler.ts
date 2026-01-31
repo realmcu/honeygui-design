@@ -55,7 +55,8 @@ export class MessageHandler {
             'addComponent',
             'updateComponent',
             'deleteComponent',
-            'saveImageToAssets'
+            'saveImageToAssets',
+            'save'  // 保存时也广播完整文档
         ];
 
         // 如果已连接协同，且是需要广播的命令，且该命令不是来自远程（即来自本地Webview操作）
@@ -341,6 +342,23 @@ export class MessageHandler {
 
             case 'toggleAlwaysConvert':
                 this._handleToggleAlwaysConvert(message.assetPath);
+                break;
+
+            // Collaboration commands
+            case 'startHost':
+                this._handleStartHost(message.port);
+                break;
+
+            case 'stopHost':
+                this._handleStopHost();
+                break;
+
+            case 'joinSession':
+                this._handleJoinSession(message.address);
+                break;
+
+            case 'leaveSession':
+                this._handleLeaveSession();
                 break;
                 
             default:
@@ -763,5 +781,157 @@ export class MessageHandler {
             logger.error(`[MessageHandler] 切换强制转换失败: ${error}`);
             vscode.window.showErrorMessage(vscode.l10n.t('Failed to toggle always convert: {0}', error instanceof Error ? error.message : String(error)));
         }
+    }
+
+    // ============ Collaboration Methods ============
+
+    /**
+     * 处理启动主机请求
+     */
+    private async _handleStartHost(port: number): Promise<void> {
+        try {
+            logger.info(`[MessageHandler] 启动协作主机，端口: ${port}`);
+            const address = await this._collaborationService.startHost(port);
+            
+            // 通知前端更新状态
+            this._panel.webview.postMessage({
+                command: 'collaborationStateChanged',
+                state: {
+                    role: 'host',
+                    status: 'hosting',
+                    hostAddress: address,
+                    hostPort: port,
+                    peerCount: 0,
+                    error: null
+                }
+            });
+
+            vscode.window.showInformationMessage(
+                vscode.l10n.t('Collaboration service started, invite others to connect: {0}', address)
+            );
+        } catch (error) {
+            logger.error(`[MessageHandler] 启动协作主机失败: ${error}`);
+            
+            // 通知前端更新错误状态
+            this._panel.webview.postMessage({
+                command: 'collaborationStateChanged',
+                state: {
+                    role: 'none',
+                    status: 'disconnected',
+                    error: error instanceof Error ? error.message : String(error)
+                }
+            });
+        }
+    }
+
+    /**
+     * 处理停止主机请求
+     */
+    private _handleStopHost(): void {
+        try {
+            logger.info('[MessageHandler] 停止协作主机');
+            this._collaborationService.stop();
+            
+            // 通知前端更新状态
+            this._panel.webview.postMessage({
+                command: 'collaborationStateChanged',
+                state: {
+                    role: 'none',
+                    status: 'disconnected',
+                    hostAddress: '',
+                    peerCount: 0,
+                    error: null
+                }
+            });
+
+            vscode.window.showInformationMessage(vscode.l10n.t('Collaboration service stopped'));
+        } catch (error) {
+            logger.error(`[MessageHandler] 停止协作主机失败: ${error}`);
+        }
+    }
+
+    /**
+     * 处理加入会话请求
+     */
+    private async _handleJoinSession(address: string): Promise<void> {
+        try {
+            logger.info(`[MessageHandler] 加入协作会话: ${address}`);
+            await this._collaborationService.joinSession(address);
+            
+            // 通知前端更新状态
+            this._panel.webview.postMessage({
+                command: 'collaborationStateChanged',
+                state: {
+                    role: 'guest',
+                    status: 'connected',
+                    hostAddress: address,
+                    error: null
+                }
+            });
+
+            vscode.window.showInformationMessage(
+                vscode.l10n.t('Successfully joined collaboration: {0}', address)
+            );
+        } catch (error) {
+            logger.error(`[MessageHandler] 加入协作会话失败: ${error}`);
+            
+            // 通知前端更新错误状态
+            this._panel.webview.postMessage({
+                command: 'collaborationStateChanged',
+                state: {
+                    role: 'none',
+                    status: 'disconnected',
+                    error: error instanceof Error ? error.message : String(error)
+                }
+            });
+        }
+    }
+
+    /**
+     * 处理离开会话请求
+     */
+    private _handleLeaveSession(): void {
+        try {
+            logger.info('[MessageHandler] 离开协作会话');
+            this._collaborationService.stop();
+            
+            // 通知前端更新状态
+            this._panel.webview.postMessage({
+                command: 'collaborationStateChanged',
+                state: {
+                    role: 'none',
+                    status: 'disconnected',
+                    hostAddress: '',
+                    error: null
+                }
+            });
+
+            vscode.window.showInformationMessage(vscode.l10n.t('Disconnected from collaboration'));
+        } catch (error) {
+            logger.error(`[MessageHandler] 离开协作会话失败: ${error}`);
+        }
+    }
+
+    /**
+     * 发送协作状态到前端
+     */
+    public sendCollaborationState(): void {
+        const role = this._collaborationService.role;
+        let status: 'disconnected' | 'connecting' | 'connected' | 'hosting' = 'disconnected';
+        
+        if (this._collaborationService.isHost) {
+            status = 'hosting';
+        } else if (this._collaborationService.isGuest) {
+            status = 'connected';
+        }
+
+        this._panel.webview.postMessage({
+            command: 'collaborationStateChanged',
+            state: {
+                role: role,
+                status: status,
+                error: null
+            }
+        });
     }
 }

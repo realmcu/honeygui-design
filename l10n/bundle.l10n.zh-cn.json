@@ -304,5 +304,10 @@
   "success": "成功",
   "failed": "失败",
   "Generating preview...": "生成预览中...",
-  "Preview failed": "预览失败"
+  "Preview failed": "预览失败",
+
+  "Collaboration service started, invite others to connect: {0}": "协作服务已启动，邀请其他人连接: {0}",
+  "Collaboration service stopped": "协作服务已停止",
+  "Successfully joined collaboration: {0}": "已成功加入协作: {0}",
+  "Disconnected from collaboration": "已断开协作连接"
 }

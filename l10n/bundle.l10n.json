@@ -304,5 +304,10 @@
   "success": "success",
   "failed": "failed",
   "Generating preview...": "Generating preview...",
-  "Preview failed": "Preview failed"
+  "Preview failed": "Preview failed",
+
+  "Collaboration service started, invite others to connect: {0}": "Collaboration service started, invite others to connect: {0}",
+  "Collaboration service stopped": "Collaboration service stopped",
+  "Successfully joined collaboration: {0}": "Successfully joined collaboration: {0}",
+  "Disconnected from collaboration": "Disconnected from collaboration"
 }

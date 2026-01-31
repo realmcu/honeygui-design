@@ -95,6 +95,9 @@ export class CollaborationService extends EventEmitter {
                         peerId
                     }));
 
+                    // 通知对等方数量变化
+                    this.emit('peerCountChanged', this._peers.size);
+
                     ws.on('message', (data) => {
                         this.handleMessage(peerId, data.toString());
                     });
@@ -102,6 +105,8 @@ export class CollaborationService extends EventEmitter {
                     ws.on('close', () => {
                         this._peers.delete(peerId);
                         logger.info(`[Collaboration] Client disconnected: ${peerId}`);
+                        // 通知对等方数量变化
+                        this.emit('peerCountChanged', this._peers.size);
                     });
                 });
 

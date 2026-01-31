@@ -120,7 +120,8 @@ export class DesignerPanel {
             this._hmlController,
             this._fileManager,
             this._messageHandler,
-            () => this._update()
+            () => this._fileManager.sendCollaborationUpdate(),  // 发送协作同步数据到前端
+            this._panel  // 传递 panel 用于增量更新
         );
 
         // 如果有文档，设置文件路径
@@ -135,6 +136,16 @@ export class DesignerPanel {
 
         // 监听协同消息
         this._collaborationController.start();
+
+        // 监听对等方数量变化
+        this._collaborationService.on('peerCountChanged', (count: number) => {
+            this._panel.webview.postMessage({
+                command: 'collaborationStateChanged',
+                state: {
+                    peerCount: count
+                }
+            });
+        });
 
         // 设置Webview内容
         this._update();
