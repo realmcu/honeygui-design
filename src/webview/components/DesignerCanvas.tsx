@@ -32,6 +32,18 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
   const [alignmentLines, setAlignmentLines] = useState<AlignmentLine[]>([]); // 对齐辅助线
   const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 }); // 最后鼠标位置（画布坐标）
   const [multiDragOffsets, setMultiDragOffsets] = useState<Map<string, { x: number; y: number }>>(new Map()); // 多选拖拽偏移量
+  
+  // 框选功能状态
+  const [isBoxSelecting, setIsBoxSelecting] = useState(false); // 是否正在框选
+  const [boxSelectStart, setBoxSelectStart] = useState({ x: 0, y: 0 }); // 框选起始位置（画布坐标）
+  const [boxSelectEnd, setBoxSelectEnd] = useState({ x: 0, y: 0 }); // 框选结束位置（画布坐标）
+  const [boxSelectTimer, setBoxSelectTimer] = useState<NodeJS.Timeout | null>(null); // 长按定时器
+  
+  // 撤销/重做：记录操作开始前是否已保存状态
+  const [hasRecordedUndoState, setHasRecordedUndoState] = useState(false);
+  
+  // 标记是否是框选后的移动（框选移动不触发跨容器拖拽）
+  const [isBoxSelectMove, setIsBoxSelectMove] = useState(false);
 
   const {
     components,
@@ -159,6 +171,34 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
     let component = components.find(c => c.id === componentId);
     if (!component) return;
     
+    // 如果点击的是容器组件，启动框选定时器
+    if (isContainerType(component.type)) {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (rect) {
+        const effectiveZoom = zoom / (window.devicePixelRatio || 1);
+        const mouseX = (e.clientX - rect.left - canvasOffset.x) / effectiveZoom;
+        const mouseY = (e.clientY - rect.top - canvasOffset.y) / effectiveZoom;
+        
+        const timer = setTimeout(() => {
+          setIsBoxSelecting(true);
+          setBoxSelectStart({ x: mouseX, y: mouseY });
+          setBoxSelectEnd({ x: mouseX, y: mouseY });
+          setSelectedComponents([]); // 清空之前的选择
+        }, 300);
+        
+        setBoxSelectTimer(timer);
+      }
+    } else {
+      // 如果点击的是非容器组件，清除框选定时器
+      if (boxSelectTimer) {
+        clearTimeout(boxSelectTimer);
+        setBoxSelectTimer(null);
+      }
+    }
+    
+    // 重置撤销状态记录标志
+    setHasRecordedUndoState(false);
+    
     // Ctrl + 点击：穿透选中内层控件（只在同级组件之间循环，不包括父容器）
     if (e.ctrlKey && !e.shiftKey && !e.metaKey) {
       // 获取鼠标在画布中的位置
@@ -282,6 +322,51 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
     // 如果正在拖动画布，不处理组件拖动
     if (isDragging) return;
     
+    // 如果正在框选，更新框选区域
+    if (isBoxSelecting) {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      
+      const effectiveZoom = zoom / (window.devicePixelRatio || 1);
+      const mouseX = (e.clientX - rect.left - canvasOffset.x) / effectiveZoom;
+      const mouseY = (e.clientY - rect.top - canvasOffset.y) / effectiveZoom;
+      
+      setBoxSelectEnd({ x: mouseX, y: mouseY });
+      
+      // 计算框选区域
+      const minX = Math.min(boxSelectStart.x, mouseX);
+      const maxX = Math.max(boxSelectStart.x, mouseX);
+      const minY = Math.min(boxSelectStart.y, mouseY);
+      const maxY = Math.max(boxSelectStart.y, mouseY);
+      
+      // 查找完全在框选区域内的组件（排除容器组件）
+      const selectedIds: string[] = [];
+      components.forEach(comp => {
+        // 排除容器组件（view、window）
+        if (isContainerType(comp.type)) {
+          return;
+        }
+        
+        const absPos = getAbsolutePosition(comp, components);
+        const compLeft = absPos.x;
+        const compTop = absPos.y;
+        const compRight = compLeft + comp.position.width;
+        const compBottom = compTop + comp.position.height;
+        
+        // 检查组件是否完全在框选区域内
+        if (compLeft >= minX && compRight <= maxX && compTop >= minY && compBottom <= maxY) {
+          selectedIds.push(comp.id);
+        }
+      });
+      
+      // 更新选中的组件
+      setSelectedComponents(selectedIds);
+      
+      // 标记为框选移动
+      setIsBoxSelectMove(true);
+      return;
+    }
+    
     // 如果正在调整大小，处理 resize
     if (isResizing) {
       handleResizeMove(e.nativeEvent, e.shiftKey);
@@ -295,6 +380,20 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
       const threshold = 3; // 移动超过3px才开始拖动
       
       if (deltaX > threshold || deltaY > threshold) {
+        // 开始拖拽前，保存当前状态（仅一次）
+        if (!hasRecordedUndoState) {
+          const saveToFile = useDesignerStore.getState().saveToFile;
+          saveToFile();
+          setHasRecordedUndoState(true);
+        }
+        
+        // 开始拖拽，取消框选
+        if (boxSelectTimer) {
+          clearTimeout(boxSelectTimer);
+          setBoxSelectTimer(null);
+        }
+        setIsBoxSelecting(false);
+        
         setDraggedComponent(pendingDragComponent);
         setPendingDragComponent(null);
       }
@@ -401,14 +500,29 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
   };
 
   const handleComponentMouseUp = () => {
+    // 清除框选定时器
+    if (boxSelectTimer) {
+      clearTimeout(boxSelectTimer);
+      setBoxSelectTimer(null);
+    }
+    
+    // 结束框选
+    if (isBoxSelecting) {
+      setIsBoxSelecting(false);
+      return;
+    }
+    
     // 如果正在调整大小，结束 resize
     if (isResizing) {
       handleResizeEnd();
       return;
     }
     
-    // 处理跨容器拖拽
-    if (draggedComponent) {
+    // 记录是否有拖拽操作
+    const hadDragOperation = !!draggedComponent;
+    
+    // 处理跨容器拖拽（框选移动不触发跨容器拖拽）
+    if (draggedComponent && !isBoxSelectMove) {
       // 多选跨容器拖拽
       if (multiDragOffsets.size > 1) {
         const targetContainer = findComponentAtPosition(lastMousePos.x, lastMousePos.y, components);
@@ -459,9 +573,17 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
     setDraggedComponent(null);
     setAlignmentLines([]);
     setMultiDragOffsets(new Map());
+    setIsBoxSelectMove(false); // 重置框选移动标志
+    
+    // 如果有拖拽操作且已记录初始状态，再保存最终状态
+    if (hadDragOperation && hasRecordedUndoState) {
+      const saveToFile = useDesignerStore.getState().saveToFile;
+      saveToFile();
+      setHasRecordedUndoState(false);
+    }
   };
 
-  // 处理键盘事件，特别是delete键删除选中组件
+  // 处理键盘事件，特别是delete键删除选中组件和方向键移动组件
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // 如果焦点在输入框、文本域或可编辑元素中，不处理快捷键
@@ -471,6 +593,57 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
         target.tagName === 'TEXTAREA' ||
         target.isContentEditable
       ) {
+        return;
+      }
+
+      // 方向键移动组件
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        const ids = selectedComponents && selectedComponents.length > 0 
+          ? selectedComponents 
+          : (selectedComponent ? [selectedComponent] : []);
+        
+        if (ids.length === 0) return;
+        
+        e.preventDefault();
+        
+        // 第一次按方向键时，保存当前状态
+        const saveToFile = useDesignerStore.getState().saveToFile;
+        saveToFile();
+        
+        // 计算移动距离（按住 Shift 键时移动 10px，否则移动 1px）
+        const step = e.shiftKey ? 10 : 1;
+        let deltaX = 0;
+        let deltaY = 0;
+        
+        switch (e.key) {
+          case 'ArrowUp':
+            deltaY = -step;
+            break;
+          case 'ArrowDown':
+            deltaY = step;
+            break;
+          case 'ArrowLeft':
+            deltaX = -step;
+            break;
+          case 'ArrowRight':
+            deltaX = step;
+            break;
+        }
+        
+        // 移动所有选中的组件
+        ids.forEach(id => {
+          const comp = components.find(c => c.id === id);
+          if (comp && !comp.locked) {
+            updateComponent(id, {
+              position: {
+                ...comp.position,
+                x: comp.position.x + deltaX,
+                y: comp.position.y + deltaY,
+              },
+            });
+          }
+        });
+        
         return;
       }
 
@@ -501,7 +674,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [selectedComponent, selectedComponents, removeComponent, removeComponents, onComponentSelect, setSelectedComponents]);
+  }, [selectedComponent, selectedComponents, removeComponent, removeComponents, onComponentSelect, setSelectedComponents, components, updateComponent]);
 
   const renderComponent = (component: Component, componentList: Component[] = components) => {
     const isSelected = selectedComponent === component.id;
@@ -652,7 +825,36 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
             msUserSelect: 'none',
             userSelect: 'none',
           }}
-        onMouseDown={handleCanvasMouseDown}
+        onMouseDown={(e) => {
+          // 先处理画布拖拽
+          handleCanvasMouseDown(e);
+          
+          // 如果不是画布拖拽（Ctrl+左键或中键），则检测框选
+          // 允许在任何地方（包括容器内部）触发框选
+          if (e.button === 0 && !e.ctrlKey && !e.metaKey) {
+            const rect = canvasRef.current?.getBoundingClientRect();
+            if (!rect) return;
+            
+            const effectiveZoom = zoom / (window.devicePixelRatio || 1);
+            const mouseX = (e.clientX - rect.left - canvasOffset.x) / effectiveZoom;
+            const mouseY = (e.clientY - rect.top - canvasOffset.y) / effectiveZoom;
+            
+            // 检查是否点击在某个组件上
+            const clickedComponent = findComponentAtPosition(mouseX, mouseY, components);
+            
+            // 如果点击在容器组件上（或空白区域），设置长按定时器
+            if (!clickedComponent || isContainerType(clickedComponent.type)) {
+              const timer = setTimeout(() => {
+                setIsBoxSelecting(true);
+                setBoxSelectStart({ x: mouseX, y: mouseY });
+                setBoxSelectEnd({ x: mouseX, y: mouseY });
+                setSelectedComponents([]); // 清空之前的选择
+              }, 300);
+              
+              setBoxSelectTimer(timer);
+            }
+          }
+        }}
         onMouseMove={handleComponentMouseMove}
         onMouseUp={handleComponentMouseUp}
         onDrop={onDrop}
@@ -725,6 +927,23 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
             lines={alignmentLines}
             zoom={zoom / (window.devicePixelRatio || 1)}
             offset={canvasOffset}
+          />
+        )}
+
+        {/* 框选区域 */}
+        {isBoxSelecting && (
+          <div
+            style={{
+              position: 'absolute',
+              left: canvasOffset.x + Math.min(boxSelectStart.x, boxSelectEnd.x) * (zoom / (window.devicePixelRatio || 1)),
+              top: canvasOffset.y + Math.min(boxSelectStart.y, boxSelectEnd.y) * (zoom / (window.devicePixelRatio || 1)),
+              width: Math.abs(boxSelectEnd.x - boxSelectStart.x) * (zoom / (window.devicePixelRatio || 1)),
+              height: Math.abs(boxSelectEnd.y - boxSelectStart.y) * (zoom / (window.devicePixelRatio || 1)),
+              border: '2px dashed var(--vscode-focusBorder)',
+              backgroundColor: 'rgba(0, 122, 204, 0.1)',
+              pointerEvents: 'none',
+              zIndex: 9999,
+            }}
           />
         )}
 
