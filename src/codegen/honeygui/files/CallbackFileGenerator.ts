@@ -964,6 +964,7 @@ void ${callback}(void *obj)\n{\n`;
       if (!targetTimer.runImmediately) {
         code += `    gui_obj_start_timer(target);\n`;
       }
+      code += `    cnt = 0; // 重置计数器\n`;
       code += `    return; // 切换定时动画后立即返回\n`;
       code += `    \n`;
     } else if (action.type === 'position') {
