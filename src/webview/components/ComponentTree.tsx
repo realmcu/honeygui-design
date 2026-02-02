@@ -312,10 +312,7 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
 
   // 获取组件显示名称
   const getComponentDisplayName = () => {
-    // 对于 list_item，显示索引编号
-    if (component.type === 'hg_list_item' && component.data?.index !== undefined) {
-      return `List Item ${component.data.index}`;
-    }
+    // 直接使用 component.name，不做特殊处理
     return component.name;
   };
 

@@ -5,6 +5,8 @@
  */
 import { Component } from '../../../hml/types';
 import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';
+import * as path from 'path';
+import * as fs from 'fs';
 
 export class ButtonGenerator implements ComponentCodeGenerator {
 
@@ -32,8 +34,120 @@ export class ButtonGenerator implements ComponentCodeGenerator {
     return `${indentStr}// 普通按钮暂不支持，请使用双态模式\n${indentStr}// ${component.id} = gui_img_create_from_fs(${parentRef}, "${component.name}", "", ${x}, ${y}, ${width}, ${height});\n`;
   }
 
-  generatePropertySetters(component: Component, indent: number, _context: GeneratorContext): string {
-    return '';
+  generatePropertySetters(component: Component, indent: number, context: GeneratorContext): string {
+    const indentStr = '    '.repeat(indent);
+    let code = '';
+
+    // 检查是否是双态模式
+    const toggleMode = component.data?.toggleMode === true || component.data?.toggleMode === 'true';
+    if (!toggleMode) {
+      return code;
+    }
+
+    // 自动缩放：如果按钮尺寸与图片原始尺寸不同，添加缩放代码
+    const { width, height } = component.position;
+    const imageSize = this.getImageSize(component, context);
+    
+    if (imageSize && (width !== imageSize.width || height !== imageSize.height)) {
+      const scaleX = width / imageSize.width;
+      const scaleY = height / imageSize.height;
+      code += `${indentStr}gui_img_scale((gui_img_t *)${component.id}, ${scaleX.toFixed(6)}f, ${scaleY.toFixed(6)}f);\n`;
+    }
+
+    return code;
+  }
+
+  /**
+   * 获取图片的原始尺寸
+   * 从资源配置中读取图片尺寸信息
+   */
+  private getImageSize(component: Component, context: GeneratorContext): { width: number; height: number } | null {
+    const toggleMode = component.data?.toggleMode === true || component.data?.toggleMode === 'true';
+    if (!toggleMode) {
+      return null;
+    }
+
+    // 获取初始状态对应的图片路径
+    const initialState = component.data?.initialState === 'on';
+    const imageOn = component.data?.imageOn || '';
+    const imageOff = component.data?.imageOff || '';
+    const imagePath = initialState ? imageOn : imageOff;
+
+    if (!imagePath) {
+      return null;
+    }
+
+    // 从 context 中获取项目根目录
+    let projectRoot = context.projectRoot;
+    if (!projectRoot) {
+      return null;
+    }
+
+    // 如果 projectRoot 是 .preview 目录，需要向上一级找到真正的项目根目录
+    if (projectRoot.endsWith('.preview')) {
+      projectRoot = path.dirname(projectRoot);
+    }
+
+    // 构建图片的完整路径
+    const fullImagePath = path.join(projectRoot, imagePath);
+    
+    // 检查文件是否存在
+    if (!fs.existsSync(fullImagePath)) {
+      return null;
+    }
+
+    try {
+      // 读取图片文件的头部信息来获取尺寸
+      const buffer = fs.readFileSync(fullImagePath);
+      return this.parseImageSize(buffer, imagePath);
+    } catch (err) {
+      console.error(`Failed to read image size for ${imagePath}:`, err);
+      return null;
+    }
+  }
+
+  /**
+   * 解析图片尺寸（支持 PNG, JPEG, BMP）
+   */
+  private parseImageSize(buffer: Buffer, filename: string): { width: number; height: number } | null {
+    const ext = path.extname(filename).toLowerCase();
+
+    if (ext === '.png') {
+      // PNG: 读取 IHDR chunk
+      if (buffer.length >= 24 && buffer.toString('ascii', 1, 4) === 'PNG') {
+        const width = buffer.readUInt32BE(16);
+        const height = buffer.readUInt32BE(20);
+        return { width, height };
+      }
+    } else if (ext === '.jpg' || ext === '.jpeg') {
+      // JPEG: 查找 SOF0 marker
+      let offset = 2;
+      while (offset < buffer.length - 9) {
+        if (buffer[offset] === 0xFF) {
+          const marker = buffer[offset + 1];
+          // SOF0, SOF1, SOF2
+          if (marker === 0xC0 || marker === 0xC1 || marker === 0xC2) {
+            const height = buffer.readUInt16BE(offset + 5);
+            const width = buffer.readUInt16BE(offset + 7);
+            return { width, height };
+          }
+          // 跳过这个 segment
+          const segmentLength = buffer.readUInt16BE(offset + 2);
+          offset += 2 + segmentLength;
+        } else {
+          offset++;
+        }
+      }
+    } else if (ext === '.bmp') {
+      // BMP: 读取 DIB header
+      if (buffer.length >= 26) {
+        const width = buffer.readInt32LE(18);
+        const height = Math.abs(buffer.readInt32LE(22));
+        return { width, height };
+      }
+    }
+
+    return null;
   }
 
   /**
