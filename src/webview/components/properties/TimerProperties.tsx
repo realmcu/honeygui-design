@@ -65,9 +65,15 @@ export const TimerProperties: React.FC<TimerPropertiesProps> = ({
   // 删除定时动画
   const handleDeleteTimer = (timerId: string) => {
     const newTimers = timers.filter(t => t.id !== timerId);
-    onUpdate(newTimers);
-    if (expandedTimerId === timerId && newTimers.length > 0) {
-      setExpandedTimerId(newTimers[0].id);
+    // 重新索引所有定时动画的 ID，确保 ID 连续且不重复
+    const reindexedTimers = newTimers.map((timer, index) => ({
+      ...timer,
+      id: `timer_${index}`,
+      callback: timer.mode === 'custom' ? `${componentId}_timer_${index}_cb` : timer.callback,
+    }));
+    onUpdate(reindexedTimers);
+    if (expandedTimerId === timerId && reindexedTimers.length > 0) {
+      setExpandedTimerId(reindexedTimers[0].id);
     }
   };
 
