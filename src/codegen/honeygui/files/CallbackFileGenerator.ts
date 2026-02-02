@@ -182,14 +182,14 @@ export class CallbackFileGenerator {
       code += impl + '\n\n';
     });
 
-    // 收集 onMessage 回调实现
-    const messageImpls = this.collectMessageCallbackImpls();
+    // 收集 onMessage 回调实现（跳过已存在的）
+    const messageImpls = this.collectMessageCallbackImpls(existingFunctions);
     messageImpls.forEach(impl => {
       code += impl + '\n\n';
     });
 
-    // 收集 controlTimer 回调实现
-    const controlTimerImpls = this.collectControlTimerCallbackImpls();
+    // 收集 controlTimer 回调实现（跳过已存在的）
+    const controlTimerImpls = this.collectControlTimerCallbackImpls(existingFunctions);
     controlTimerImpls.forEach(impl => {
       code += impl + '\n\n';
     });
@@ -227,10 +227,14 @@ export class CallbackFileGenerator {
     const controlTimerCallbackNames = new Set(this.collectControlTimerCallbackNames());
     
     callbackFunctions.forEach(funcName => {
+      // 跳过特殊类型的回调（它们有专门的生成逻辑）
       if (switchViewFuncNames.has(funcName) || timeUpdateFuncNames.has(funcName) || timerCallbackNames.has(funcName) || msgCallbackNames.has(funcName) || controlTimerCallbackNames.has(funcName)) return;
       
       // 跳过已存在于 custom_functions 保护区的函数
-      if (existingFunctions.has(funcName)) return;
+      if (existingFunctions.has(funcName)) {
+        // 函数已存在，不生成模板
+        return;
+      }
       
       code += `void ${funcName}(void *obj, gui_event_t event, void *param)\n`;
       code += `{\n`;
@@ -368,8 +372,9 @@ export class CallbackFileGenerator {
 
   /**
    * 收集所有 onMessage 回调实现
+   * @param existingFunctions 已存在的函数名集合（从 custom_functions 保护区提取）
    */
-  private collectMessageCallbackImpls(): string[] {
+  private collectMessageCallbackImpls(existingFunctions: Set<string> = new Set()): string[] {
     const impls = new Map<string, string>(); // 使用 Map 去重，key 为函数名
 
     this.allComponents.forEach(component => {
@@ -380,7 +385,10 @@ export class CallbackFileGenerator {
           const match = impl.match(/void\s+(\w+)\s*\(/);
           if (match) {
             const funcName = match[1];
-            impls.set(funcName, impl);
+            // 跳过已存在于 custom_functions 保护区的函数
+            if (!existingFunctions.has(funcName)) {
+              impls.set(funcName, impl);
+            }
           }
         });
       }
@@ -391,8 +399,9 @@ export class CallbackFileGenerator {
 
   /**
    * 收集所有 controlTimer 回调实现
+   * @param existingFunctions 已存在的函数名集合（从 custom_functions 保护区提取）
    */
-  private collectControlTimerCallbackImpls(): string[] {
+  private collectControlTimerCallbackImpls(existingFunctions: Set<string> = new Set()): string[] {
     const impls = new Map<string, string>(); // 使用 Map 去重，key 为函数名
 
     this.allComponents.forEach(component => {
@@ -403,7 +412,10 @@ export class CallbackFileGenerator {
           const match = impl.match(/void\s+(\w+)\s*\(/);
           if (match) {
             const funcName = match[1];
-            impls.set(funcName, impl);
+            // 跳过已存在于 custom_functions 保护区的函数
+            if (!existingFunctions.has(funcName)) {
+              impls.set(funcName, impl);
+            }
           }
         });
       }
