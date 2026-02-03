@@ -34,7 +34,8 @@ export class CollaborationService extends EventEmitter {
     private _ws: WebSocket | null = null;
     private _peers: Map<string, WebSocket> = new Map();
     private _port: number = 3000;
-    
+    private _hostAddress: string | undefined; // 存储 Host 地址
+
     private constructor() {
         super();
     }
@@ -48,6 +49,10 @@ export class CollaborationService extends EventEmitter {
 
     public get role(): CollaborationRole {
         return this._role;
+    }
+    
+    public get hostAddress(): string | undefined {
+        return this._hostAddress;
     }
 
     public get isHost(): boolean {
@@ -80,16 +85,19 @@ export class CollaborationService extends EventEmitter {
                     this._role = CollaborationRole.Host;
                     const ips = this.getLocalIPs();
                     const address = ips.length > 0 ? ips[0] : 'localhost';
-                    logger.info(`[Collaboration] Host started on ${address}:${port}`);
+                    const fullAddress = `${address}:${port}`;
+                    this._hostAddress = fullAddress; // 保存 Host 地址
+                    
+                    logger.info(`[Collaboration] Host started on ${fullAddress}`);
                     
                     this.emit('statusChanged', {
                         role: this._role,
                         status: 'hosting',
-                        hostAddress: `${address}:${port}`,
+                        hostAddress: fullAddress,
                         peerCount: 0
                     });
                     
-                    resolve(`${address}:${port}`);
+                    resolve(fullAddress);
                 });
 
                 this._wss.on('connection', (ws) => {
@@ -172,6 +180,7 @@ export class CollaborationService extends EventEmitter {
                 this._ws.on('open', () => {
                     clearTimeout(timeout);
                     this._role = CollaborationRole.Guest;
+                    this._hostAddress = address; // 保存 Host 地址
                     logger.info(`[Collaboration] Connected to host: ${address}`);
                     
                     this.emit('statusChanged', {
@@ -229,6 +238,7 @@ export class CollaborationService extends EventEmitter {
         }
         this._peers.clear();
         this._role = CollaborationRole.None;
+        this._hostAddress = undefined; // 清除 Host 地址
         logger.info('[Collaboration] Session stopped');
         this.emit('stopped');
         this.emit('statusChanged', {
