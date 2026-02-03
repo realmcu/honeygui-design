@@ -19,7 +19,7 @@ export interface CollaborationState {
 }
 
 export interface CollaborationMessage {
-    type: 'WELCOME' | 'SYNC_INIT' | 'REMOTE_UPDATE' | 'OP_DELTA';
+    type: 'WELCOME' | 'SYNC_INIT' | 'REMOTE_UPDATE' | 'OP_DELTA' | 'GET_ASSET' | 'ASSET_DATA' | 'ASSETS_LIST';
     peerId?: string;
     content?: string;
     payload?: any;

@@ -43,6 +43,13 @@ export class DesignerPanel {
     private readonly _collaborationController: CollaborationController;
 
     /**
+     * 设置访客工作区路径
+     */
+    public setGuestWorkspacePath(path: string): void {
+        this._collaborationController.setGuestWorkspacePath(path);
+    }
+
+    /**
      * 获取当前的保存事务ID
      * @returns 当前事务ID（0表示没有正在进行的保存操作）
      */
@@ -123,6 +130,9 @@ export class DesignerPanel {
             () => this._fileManager.sendCollaborationUpdate(),  // 发送协作同步数据到前端
             this._panel  // 传递 panel 用于增量更新
         );
+        
+        // 设置 MessageHandler 的 CollaborationController 引用
+        this._messageHandler.setCollaborationController(this._collaborationController);
 
         // 如果有文档，设置文件路径
         if (document) {

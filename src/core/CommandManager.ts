@@ -440,6 +440,50 @@ export class CommandManager {
                     return;
                 }
 
+                // 1. 选择临时工作区
+                const options: vscode.OpenDialogOptions = {
+                    canSelectFiles: false,
+                    canSelectFolders: true,
+                    canSelectMany: false,
+                    openLabel: vscode.l10n.t('Select Workspace Folder'),
+                    title: vscode.l10n.t('Select a folder for collaboration workspace')
+                };
+
+                const folderUri = await vscode.window.showOpenDialog(options);
+                if (!folderUri || folderUri.length === 0) {
+                    return;
+                }
+                const workspacePath = folderUri[0].fsPath;
+
+                // 验证目录是否为空
+                if (fs.existsSync(workspacePath) && fs.readdirSync(workspacePath).length > 0) {
+                    const proceed = await vscode.window.showWarningMessage(
+                        vscode.l10n.t('The selected folder is not empty. Continue?'),
+                        vscode.l10n.t('Yes'),
+                        vscode.l10n.t('No')
+                    );
+                    if (proceed !== vscode.l10n.t('Yes')) {
+                        return;
+                    }
+
+                    // 清空文件夹
+                    try {
+                        const files = fs.readdirSync(workspacePath);
+                        for (const file of files) {
+                            const curPath = path.join(workspacePath, file);
+                            if (fs.lstatSync(curPath).isDirectory()) {
+                                fs.rmSync(curPath, { recursive: true, force: true });
+                            } else {
+                                fs.unlinkSync(curPath);
+                            }
+                        }
+                    } catch (e) {
+                        vscode.window.showErrorMessage(vscode.l10n.t('Failed to clear folder: {0}', String(e)));
+                        return;
+                    }
+                }
+
+                // 2. 输入地址
                 const addressInput = await vscode.window.showInputBox({
                     prompt: vscode.l10n.t('Enter host address (IP:Port)'),
                     placeHolder: '192.168.1.x:3000',
@@ -454,12 +498,50 @@ export class CommandManager {
 
                 if (!addressInput) return;
 
+                // 检查是否需要切换工作区
+                const currentWorkspaceFolders = vscode.workspace.workspaceFolders;
+                const isCurrentWorkspace = currentWorkspaceFolders && currentWorkspaceFolders.some(f => f.uri.fsPath === workspacePath);
+
+                if (!isCurrentWorkspace) {
+                    // 需要切换工作区，保存状态
+                    await this.context.globalState.update('pendingJoinSession', {
+                        workspacePath: workspacePath,
+                        address: addressInput,
+                        timestamp: Date.now()
+                    });
+
+                    // 切换工作区
+                    await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(workspacePath));
+                    return;
+                }
+
+                // 3. 预先创建 project.json 以便 DesignerPanelFactory 正确识别根目录权限
+                const projectJsonPath = path.join(workspacePath, 'project.json');
+                try {
+                    if (!fs.existsSync(projectJsonPath)) {
+                        fs.writeFileSync(projectJsonPath, JSON.stringify({
+                            name: "Guest Project",
+                            version: "1.0.0",
+                            assetsDir: "assets"
+                        }, null, 2));
+                    }
+                } catch (e) {
+                    logger.error(`创建临时项目配置失败: ${e}`);
+                }
+
+                // 4. 打开设计器面板，传入 guest.hml 路径以便设置正确的 Resource Roots
+                const guestHmlPath = path.join(workspacePath, 'guest.hml');
+                const panel = DesignerPanelFactory.createOrShow(this.context, guestHmlPath);
+                
+                // 5. 设置工作区路径
+                panel.setGuestWorkspacePath(workspacePath);
+
+                // 5. 加入会话
                 await service.joinSession(addressInput);
+                
                 vscode.window.showInformationMessage(vscode.l10n.t('Successfully joined collaboration: {0}', addressInput));
                 this.statusBarManager.updateCollaborationStatus('Guest', addressInput);
 
-                // 自动打开设计器
-                DesignerPanelFactory.createOrShow(this.context);
             } catch (error) {
                 logger.error(`加入协同失败: ${error}`);
                 vscode.window.showErrorMessage(vscode.l10n.t('Failed to join collaboration: {0}', String(error)));

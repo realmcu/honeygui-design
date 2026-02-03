@@ -12,6 +12,7 @@ import { ProjectUtils } from '../utils/ProjectUtils';
 import { CodeGenerationService } from '../services/CodeGenerationService';
 import { ConversionConfigService, ConversionConfig } from '../services/ConversionConfigService';
 import { ProjectConfigLoader } from '../utils/ProjectConfigLoader';
+import { CollaborationController } from './CollaborationController';
 
 /**
  * 消息处理器 - 负责分发来自Webview的消息
@@ -24,6 +25,7 @@ export class MessageHandler {
     private readonly _fileManager: FileManager;
     private readonly _hmlController: HmlController;
     private readonly _collaborationService: CollaborationService;
+    private _collaborationController?: CollaborationController; // Add reference
     private _autoCodeGenTimer: NodeJS.Timeout | null = null;
 
     constructor(
@@ -41,6 +43,30 @@ export class MessageHandler {
         this._fileManager = fileManager;
         this._hmlController = hmlController;
         this._collaborationService = CollaborationService.getInstance();
+
+        // 监听资源添加事件，用于协同同步
+        this._assetManager.on('assetAdded', (relativePath: string, content: Buffer) => {
+            if (this._collaborationService.isGuest) {
+                try {
+                    const base64 = content.toString('base64');
+                    this._collaborationService.broadcast({
+                        type: 'ASSET_DATA',
+                        content: relativePath,
+                        payload: base64
+                    });
+                    logger.info(`[MessageHandler] Synced added asset to host: ${relativePath}`);
+                } catch (e) {
+                    logger.error(`[MessageHandler] Failed to sync added asset: ${e}`);
+                }
+            }
+        });
+    }
+
+    /**
+     * 设置 CollaborationController 引用
+     */
+    public setCollaborationController(controller: CollaborationController) {
+        this._collaborationController = controller;
     }
 
     /**
@@ -97,6 +123,21 @@ export class MessageHandler {
 
             case 'save':
                 logger.debug(`[MessageHandler] 收到保存请求，组件数量: ${message?.content?.components?.length || 0}`);
+                
+                // Collaboration: Guest sends update to Host instead of saving locally
+                if (this._collaborationService.isGuest) {
+                    if (message?.content?.components && Array.isArray(message.content.components)) {
+                        this._hmlController.updateFromFrontendComponents(message.content.components);
+                    }
+                    const serializedContent = this._hmlController.serializeDocument();
+                    this._collaborationService.broadcast({
+                        type: 'REMOTE_UPDATE',
+                        content: serializedContent
+                    });
+                    // Guest 不执行本地保存，直接返回
+                    break; 
+                }
+
                 try {
                     // 保存前记录当前状态到撤销栈
                     const currentFilePath = this._fileManager.currentFilePath;
@@ -860,35 +901,63 @@ export class MessageHandler {
      */
     private async _handleJoinSession(address: string): Promise<void> {
         try {
+            // 在加入前询问用户选择临时工作区目录
+            const options: vscode.OpenDialogOptions = {
+                canSelectFiles: false,
+                canSelectFolders: true,
+                canSelectMany: false,
+                openLabel: vscode.l10n.t('Select Workspace Folder'),
+                title: vscode.l10n.t('Select a folder for collaboration workspace')
+            };
+
+            const folderUri = await vscode.window.showOpenDialog(options);
+            if (!folderUri || folderUri.length === 0) {
+                logger.info('[MessageHandler] 用户取消了工作区选择');
+                // 通知前端取消连接状态
+                this._panel.webview.postMessage({
+                    command: 'collaborationStateChanged',
+                    state: {
+                        status: 'disconnected',
+                        error: null
+                    }
+                });
+                return;
+            }
+
+            const workspacePath = folderUri[0].fsPath;
+            logger.info(`[MessageHandler] 选定的工作区路径: ${workspacePath}`);
+
+            // 验证目录是否为空（可选，这里只打印日志）
+            if (fs.existsSync(workspacePath) && fs.readdirSync(workspacePath).length > 0) {
+                logger.warn(`[MessageHandler] Warning: Selected workspace is not empty: ${workspacePath}`);
+                const proceed = await vscode.window.showWarningMessage(
+                    vscode.l10n.t('The selected folder is not empty. Continue?'),
+                    vscode.l10n.t('Yes'),
+                    vscode.l10n.t('No')
+                );
+                if (proceed !== vscode.l10n.t('Yes')) {
+                    this._panel.webview.postMessage({
+                        command: 'collaborationStateChanged',
+                        state: {
+                            status: 'disconnected',
+                            error: null
+                        }
+                    });
+                    return;
+                }
+            }
+
+            // 设置 CollaborationController 的工作区路径
+            if (this._collaborationController) {
+                this._collaborationController.setGuestWorkspacePath(workspacePath);
+            } else {
+                logger.warn('[MessageHandler] CollaborationController not set');
+            }
+
             logger.info(`[MessageHandler] 加入协作会话: ${address}`);
             await this._collaborationService.joinSession(address);
-            
-            // 通知前端更新状态
-            this._panel.webview.postMessage({
-                command: 'collaborationStateChanged',
-                state: {
-                    role: 'guest',
-                    status: 'connected',
-                    hostAddress: address,
-                    error: null
-                }
-            });
-
-            vscode.window.showInformationMessage(
-                vscode.l10n.t('Successfully joined collaboration: {0}', address)
-            );
         } catch (error) {
             logger.error(`[MessageHandler] 加入协作会话失败: ${error}`);
-            
-            // 通知前端更新错误状态
-            this._panel.webview.postMessage({
-                command: 'collaborationStateChanged',
-                state: {
-                    role: 'none',
-                    status: 'disconnected',
-                    error: error instanceof Error ? error.message : String(error)
-                }
-            });
         }
     }
 

@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 // @ts-ignore - mp4box@0.5.2 没有类型定义
 import * as MP4Box from 'mp4box';
+import { EventEmitter } from 'events';
 import { logger } from '../utils/Logger';
 import { ProjectUtils } from '../utils/ProjectUtils';
 import { FontMetricsAnalyzer } from './FontMetricsAnalyzer';
@@ -11,10 +12,11 @@ import { ConversionConfigService } from '../services/ConversionConfigService';
 /**
  * 资源管理器 - 处理资源文件的扫描、添加、删除等操作
  */
-export class AssetManager {
+export class AssetManager extends EventEmitter {
     private readonly _panel: vscode.WebviewPanel;
 
     constructor(panel: vscode.WebviewPanel) {
+        super();
         this._panel = panel;
     }
 
@@ -557,6 +559,9 @@ export class AssetManager {
             const buffer = Buffer.from(fileData);
             fs.writeFileSync(filePath, buffer);
 
+            // 触发资源添加事件
+            this.emit('assetAdded', assetRelativePath, buffer);
+
             // 计算相对路径（保存到 HML 文件）
             const hmlRelativePath = `assets/${assetRelativePath}`;
 
@@ -666,6 +671,14 @@ export class AssetManager {
                     await fs.promises.copyFile(filePath, targetPath);
                     relativePath = `assets/${fileName}`;
                     logger.info(`[AssetManager] 图片已复制到: ${relativePath}`);
+
+                    // 触发资源添加事件
+                    try {
+                        const content = await fs.promises.readFile(targetPath);
+                        this.emit('assetAdded', fileName, content);
+                    } catch (e) {
+                        logger.error(`[AssetManager] 读取复制文件失败: ${e}`);
+                    }
                 }
                 
                 // 获取图片尺寸

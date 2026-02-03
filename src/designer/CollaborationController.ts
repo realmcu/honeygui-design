@@ -1,8 +1,13 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
 import { CollaborationService, CollaborationMessage } from '../core/CollaborationService';
 import { HmlController } from '../hml/HmlController';
 import { FileManager } from './FileManager';
 import { MessageHandler } from './MessageHandler';
+import { ProjectUtils } from '../utils/ProjectUtils';
+import { logger } from '../utils/Logger';
 
 /**
  * 协同消息控制器
@@ -16,6 +21,8 @@ export class CollaborationController {
     private readonly onUpdate: () => void;
     private readonly panel: vscode.WebviewPanel;
     private messageListener?: (message: CollaborationMessage) => void;
+    private guestWorkspacePath: string | undefined;
+    private isUserSpecifiedWorkspace: boolean = false;
 
     constructor(
         service: CollaborationService,
@@ -31,6 +38,14 @@ export class CollaborationController {
         this.messageHandler = messageHandler;
         this.onUpdate = onUpdate;
         this.panel = panel;
+    }
+
+    /**
+     * 设置访客工作区路径
+     */
+    public setGuestWorkspacePath(path: string): void {
+        this.guestWorkspacePath = path;
+        this.isUserSpecifiedWorkspace = true;
     }
 
     /**
@@ -51,6 +66,17 @@ export class CollaborationController {
             this.service.off('message', this.messageListener);
             this.messageListener = undefined;
         }
+        // 清理临时工作区 (如果是系统生成的)
+        if (this.guestWorkspacePath && !this.isUserSpecifiedWorkspace && fs.existsSync(this.guestWorkspacePath)) {
+            try {
+                fs.rmSync(this.guestWorkspacePath, { recursive: true, force: true });
+            } catch (e) {
+                logger.error(`[Collaboration] Failed to clean up guest workspace: ${e}`);
+            }
+        }
+        if (!this.isUserSpecifiedWorkspace) {
+            this.guestWorkspacePath = undefined;
+        }
     }
 
     /**
@@ -69,6 +95,15 @@ export class CollaborationController {
                 break;
             case 'OP_DELTA':
                 this.handleOpDelta(message);
+                break;
+            case 'ASSETS_LIST':
+                this.handleAssetsList(message);
+                break;
+            case 'GET_ASSET':
+                this.handleGetAsset(message);
+                break;
+            case 'ASSET_DATA':
+                this.handleAssetData(message);
                 break;
         }
     }
@@ -116,8 +151,173 @@ export class CollaborationController {
         
         // 访客收到主机发送的文档
         if (this.service.isGuest && message.content && message.content !== 'REQUEST') {
+            // 设置临时工作区
+            this.setupGuestWorkspace(message.content);
+
+            // 请求资源列表
+            this.service.broadcast({
+                type: 'ASSETS_LIST',
+                content: 'REQUEST'
+            });
+
             this.hmlController.applyRemoteUpdate(message.content);
             this.onUpdate();
+        }
+    }
+
+    /**
+     * 设置访客临时工作区
+     */
+    private setupGuestWorkspace(hmlContent: string) {
+        try {
+            // 如果已经有工作区，先复用或清理? 这里选择复用或者新建唯一的
+            if (!this.guestWorkspacePath) {
+                const workspaceId = Math.random().toString(36).substring(7);
+                this.guestWorkspacePath = path.join(os.tmpdir(), 'honeygui-guest', workspaceId);
+            }
+            
+            if (!fs.existsSync(this.guestWorkspacePath)) {
+                fs.mkdirSync(this.guestWorkspacePath, { recursive: true });
+            }
+            
+            // 创建 assets 目录
+            const assetsDir = path.join(this.guestWorkspacePath, 'assets');
+            if (!fs.existsSync(assetsDir)) {
+                fs.mkdirSync(assetsDir, { recursive: true });
+            }
+            
+            // 创建 mock project.json
+            const projectJsonPath = path.join(this.guestWorkspacePath, 'project.json');
+            fs.writeFileSync(projectJsonPath, JSON.stringify({
+                name: "Guest Project",
+                version: "1.0.0",
+                assetsDir: "assets"
+            }, null, 2));
+            
+            // 保存 HML
+            const hmlPath = path.join(this.guestWorkspacePath, 'guest.hml');
+            fs.writeFileSync(hmlPath, hmlContent);
+            
+            // 更新 FileManager 的路径，这样 AssetManager 就能找到正确的根目录
+            this.fileManager.currentFilePath = hmlPath;
+            
+            // 更新面板标题
+            this.panel.title = 'HoneyGUI Designer: guest.hml';
+
+            // 触发一次资源加载，初始化 AssetManager 上下文
+            this.messageHandler.handleMessage({ command: 'loadAssets' }, true);
+
+            logger.info(`[Collaboration] Guest workspace setup at: ${this.guestWorkspacePath}`);
+        } catch (error) {
+            logger.error(`[Collaboration] Failed to setup guest workspace: ${error}`);
+        }
+    }
+
+    /**
+     * 处理资源列表请求
+     */
+    private handleAssetsList(message: CollaborationMessage) {
+        // Host 收到请求
+        if (this.service.isHost && message.content === 'REQUEST') {
+            const projectRoot = ProjectUtils.findProjectRoot(this.fileManager.currentFilePath || '');
+            if (!projectRoot) return;
+            
+            const assetsDir = ProjectUtils.getAssetsDir(projectRoot);
+            if (fs.existsSync(assetsDir)) {
+                const files = fs.readdirSync(assetsDir).filter(f => !f.startsWith('.'));
+                this.service.broadcast({
+                    type: 'ASSETS_LIST',
+                    payload: files
+                });
+            }
+            return;
+        }
+        
+        // Guest 收到列表
+        if (this.service.isGuest && Array.isArray(message.payload)) {
+            const files = message.payload as string[];
+            files.forEach(file => {
+                 // 检查本地是否存在
+                 const localPath = path.join(this.guestWorkspacePath!, 'assets', file);
+                 if (!fs.existsSync(localPath)) {
+                     // 请求下载
+                     this.service.broadcast({
+                         type: 'GET_ASSET',
+                         content: file
+                     });
+                 }
+            });
+        }
+    }
+
+    /**
+     * 处理获取单个资源请求
+     */
+    private handleGetAsset(message: CollaborationMessage) {
+        // Host 收到请求
+        if (this.service.isHost && message.content) {
+            const fileName = message.content;
+            const projectRoot = ProjectUtils.findProjectRoot(this.fileManager.currentFilePath || '');
+            if (!projectRoot) return;
+            
+            const assetPath = path.join(ProjectUtils.getAssetsDir(projectRoot), fileName);
+            if (fs.existsSync(assetPath)) {
+                try {
+                    const content = fs.readFileSync(assetPath, 'base64');
+                    this.service.broadcast({
+                        type: 'ASSET_DATA',
+                        content: fileName, // 文件名
+                        payload: content   // Base64 内容
+                    });
+                } catch (e) {
+                    logger.error(`[Collaboration] Failed to read asset ${fileName}: ${e}`);
+                }
+            }
+        }
+    }
+
+    /**
+     * 处理资源数据接收
+     */
+    private handleAssetData(message: CollaborationMessage) {
+        // Guest 收到数据
+        if (this.service.isGuest && message.content && message.payload && this.guestWorkspacePath) {
+            const fileName = message.content;
+            const base64Data = message.payload;
+            const filePath = path.join(this.guestWorkspacePath, 'assets', fileName);
+            
+            try {
+                fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'));
+                logger.info(`[Collaboration] Asset synced: ${fileName}`);
+                
+                // 通知 AssetManager 刷新
+                this.messageHandler.handleMessage({ command: 'loadAssets' }, true);
+                
+                // 刷新 Webview 以显示新资源
+                this.onUpdate();
+                
+            } catch (e) {
+                logger.error(`[Collaboration] Failed to save asset ${fileName}: ${e}`);
+            }
+        }
+
+        // Host 收到数据 (来自 Guest 上传)
+        if (this.service.isHost && message.content && message.payload) {
+            const fileName = message.content;
+            const base64Data = message.payload;
+            const projectRoot = ProjectUtils.findProjectRoot(this.fileManager.currentFilePath || '');
+            
+            if (projectRoot) {
+                const assetPath = path.join(ProjectUtils.getAssetsDir(projectRoot), fileName);
+                try {
+                    fs.writeFileSync(assetPath, Buffer.from(base64Data, 'base64'));
+                    logger.info(`[Collaboration] Host received uploaded asset: ${fileName}`);
+                    // 可选：广播给其他 Guest? 
+                    // 目前依赖 Guest 请求或 OP_DELTA 触发
+                } catch (e) {
+                    logger.error(`[Collaboration] Host failed to save uploaded asset ${fileName}: ${e}`);
+                }
+            }
         }
     }
 

@@ -541,6 +541,14 @@ export class FileManager {
             // 获取当前 VSCode 语言设置
             const locale = vscode.env.language;
             
+            // 尝试加载项目配置（如果是访客模式，会有 mock project.json）
+            let projectConfig = null;
+            let projectRoot = null;
+            if (this._filePath) {
+                projectConfig = ProjectConfigLoader.loadConfig(this._filePath);
+                projectRoot = ProjectUtils.findProjectRoot(this._filePath);
+            }
+
             this._panel.webview.postMessage({
                 command: 'loadHml',
                 content: hmlContent,
@@ -552,9 +560,9 @@ export class FileManager {
                     }
                 },
                 components: frontendComponents,
-                projectConfig: null,  // 协作模式下可能没有项目配置
+                projectConfig: projectConfig,
                 designerConfig: { canvasBackgroundColor: '#3c3c3c' },
-                projectRoot: null,
+                projectRoot: projectRoot,
                 allViews: [],
                 allHmlFiles: [],
                 currentFilePath: this._filePath || 'collaboration',
