@@ -185,15 +185,83 @@ export class CollaborationController {
                     break;
                     
                 case 'save':
-                    // 保存操作：需要完整同步
-                    this.messageHandler.handleMessage(payload, true);
-                    this.onUpdate();
+                    // 保存操作：只同步 HmlController 数据，不刷新前端界面
+                    // 因为组件的增量更新已经通过 addComponent/updateComponent/deleteComponent 同步了
+                    if (payload?.content?.components && Array.isArray(payload.content.components)) {
+                        this.hmlController.updateFromFrontendComponents(payload.content.components);
+                    }
+                    // 主机负责保存文件
+                    if (this.service.isHost) {
+                        const serializedContent = this.hmlController.serializeDocument();
+                        this.fileManager.saveHml(payload.content?.raw ?? serializedContent);
+                    }
+                    break;
+                    
+                case 'saveImageToAssets':
+                    // 保存图片资源：只在主机端执行，不刷新界面
+                    if (this.service.isHost) {
+                        this.messageHandler.handleMessage(payload, true);
+                    }
+                    break;
+                    
+                case 'createImageComponent':
+                    // 创建图片组件：转发消息到前端，不刷新界面
+                    this.panel.webview.postMessage({
+                        command: 'createImageComponent',
+                        imagePath: payload.imagePath,
+                        dropPosition: payload.dropPosition,
+                        targetContainerId: payload.targetContainerId,
+                        imageSize: payload.imageSize
+                    });
+                    break;
+                    
+                case 'create3DComponent':
+                    // 创建3D组件：转发消息到前端，不刷新界面
+                    this.panel.webview.postMessage({
+                        command: 'create3DComponent',
+                        modelPath: payload.modelPath,
+                        dropPosition: payload.dropPosition,
+                        targetContainerId: payload.targetContainerId
+                    });
+                    break;
+                    
+                case 'createVideoComponent':
+                    // 创建视频组件：转发消息到前端，不刷新界面
+                    this.panel.webview.postMessage({
+                        command: 'createVideoComponent',
+                        videoPath: payload.videoPath,
+                        dropPosition: payload.dropPosition,
+                        targetContainerId: payload.targetContainerId,
+                        videoSize: payload.videoSize
+                    });
+                    break;
+                    
+                case 'createSvgComponent':
+                    // 创建SVG组件：转发消息到前端，不刷新界面
+                    this.panel.webview.postMessage({
+                        command: 'createSvgComponent',
+                        svgPath: payload.svgPath,
+                        dropPosition: payload.dropPosition,
+                        targetContainerId: payload.targetContainerId,
+                        size: payload.size
+                    });
+                    break;
+                    
+                case 'createGlassComponent':
+                    // 创建Glass组件：转发消息到前端，不刷新界面
+                    this.panel.webview.postMessage({
+                        command: 'createGlassComponent',
+                        glassPath: payload.glassPath,
+                        dropPosition: payload.dropPosition,
+                        targetContainerId: payload.targetContainerId,
+                        size: payload.size
+                    });
                     break;
                     
                 default:
-                    // 其他操作：使用原有逻辑
+                    // 其他操作：只执行消息处理，不刷新界面
+                    // 避免不必要的 loadHml 导致闪烁
                     this.messageHandler.handleMessage(payload, true);
-                    this.onUpdate();
             }
         }
     }

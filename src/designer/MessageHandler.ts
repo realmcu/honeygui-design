@@ -56,6 +56,11 @@ export class MessageHandler {
             'updateComponent',
             'deleteComponent',
             'saveImageToAssets',
+            'createImageComponent',
+            'create3DComponent',
+            'createVideoComponent',
+            'createSvgComponent',
+            'createGlassComponent',
             'save'  // 保存时也广播完整文档
         ];
 
