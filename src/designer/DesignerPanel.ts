@@ -41,6 +41,8 @@ export class DesignerPanel {
     private readonly _webviewContentProvider: WebviewContentProvider;
     private readonly _collaborationService: CollaborationService;
     private readonly _collaborationController: CollaborationController;
+    private _peerCountListener?: (count: number) => void;
+    private _statusListener?: (status: any) => void;
 
     /**
      * 设置访客工作区路径
@@ -148,14 +150,36 @@ export class DesignerPanel {
         this._collaborationController.start();
 
         // 监听对等方数量变化
-        this._collaborationService.on('peerCountChanged', (count: number) => {
+        this._peerCountListener = (count: number) => {
             this._panel.webview.postMessage({
                 command: 'collaborationStateChanged',
                 state: {
                     peerCount: count
                 }
             });
-        });
+        };
+        this._collaborationService.on('peerCountChanged', this._peerCountListener);
+
+        // 监听状态变更
+        this._statusListener = (status: any) => {
+            this._panel.webview.postMessage({
+                command: 'collaborationStateChanged',
+                state: status
+            });
+        };
+        this._collaborationService.on('statusChanged', this._statusListener);
+
+        // 如果当前已经连接，立即发送状态
+        if (this._collaborationService.isConnected) {
+            this._panel.webview.postMessage({
+                command: 'collaborationStateChanged',
+                state: {
+                    role: this._collaborationService.role,
+                    status: this._collaborationService.isHost ? 'hosting' : 'connected',
+                    peerCount: 0 // 这个值可能不准确，但在初始化时可以接受
+                }
+            });
+        }
 
         // 设置Webview内容
         this._update();
@@ -260,6 +284,14 @@ export class DesignerPanel {
 
         // 停止协同监听
         this._collaborationController.stop();
+
+        // 移除 CollaborationService 监听器
+        if (this._peerCountListener) {
+            this._collaborationService.off('peerCountChanged', this._peerCountListener);
+        }
+        if (this._statusListener) {
+            this._collaborationService.off('statusChanged', this._statusListener);
+        }
 
         // 清理所有监听器
         this._disposables.forEach(d => d.dispose());

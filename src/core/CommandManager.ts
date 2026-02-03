@@ -552,9 +552,17 @@ export class CommandManager {
         this.registerCommand('honeygui.collaboration.stop', async () => {
             const service = CollaborationService.getInstance();
             if (service.isConnected) {
-                service.stop();
-                vscode.window.showInformationMessage(vscode.l10n.t('Collaboration session stopped'));
-                this.statusBarManager.updateCollaborationStatus('None');
+                const result = await vscode.window.showWarningMessage(
+                    vscode.l10n.t('Are you sure you want to stop collaboration session?'),
+                    vscode.l10n.t('Yes'),
+                    vscode.l10n.t('No')
+                );
+
+                if (result === vscode.l10n.t('Yes')) {
+                    service.stop();
+                    vscode.window.showInformationMessage(vscode.l10n.t('Collaboration session stopped'));
+                    this.statusBarManager.updateCollaborationStatus('None');
+                }
             }
         });
     }

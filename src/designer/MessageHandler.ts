@@ -24,7 +24,7 @@ export class MessageHandler {
     private readonly _componentManager: ComponentManager;
     private readonly _fileManager: FileManager;
     private readonly _hmlController: HmlController;
-    private readonly _collaborationService: CollaborationService;
+    private readonly _collaborationService: any; // 引用 CollaborationService
     private _collaborationController?: CollaborationController; // Add reference
     private _autoCodeGenTimer: NodeJS.Timeout | null = null;
 
@@ -42,7 +42,7 @@ export class MessageHandler {
         this._componentManager = componentManager;
         this._fileManager = fileManager;
         this._hmlController = hmlController;
-        this._collaborationService = CollaborationService.getInstance();
+        this._collaborationService = require('../core/CollaborationService').CollaborationService.getInstance();
 
         // 监听资源添加事件，用于协同同步
         this._assetManager.on('assetAdded', (relativePath: string, content: Buffer) => {
@@ -118,6 +118,20 @@ export class MessageHandler {
                     await this._fileManager.reloadCurrentDocument();
                 } catch (error) {
                     logger.error(`[MessageHandler] reloadCurrentDocument失败: ${error}`);
+                }
+
+                // 如果是协作模式，重新发送协作状态
+                if (this._collaborationController && this._collaborationService.isConnected) {
+                    const service = this._collaborationService;
+                    this._panel.webview.postMessage({
+                        command: 'collaborationStateChanged',
+                        state: {
+                            role: service.role,
+                            status: service.isHost ? 'hosting' : 'connected',
+                            hostAddress: service.hostAddress || (service.peers ? Array.from(service.peers)[0] : ''),
+                            peerCount: service.peers?.size || 1
+                        }
+                    });
                 }
                 break;
 

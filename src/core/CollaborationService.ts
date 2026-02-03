@@ -81,6 +81,14 @@ export class CollaborationService extends EventEmitter {
                     const ips = this.getLocalIPs();
                     const address = ips.length > 0 ? ips[0] : 'localhost';
                     logger.info(`[Collaboration] Host started on ${address}:${port}`);
+                    
+                    this.emit('statusChanged', {
+                        role: this._role,
+                        status: 'hosting',
+                        hostAddress: `${address}:${port}`,
+                        peerCount: 0
+                    });
+                    
                     resolve(`${address}:${port}`);
                 });
 
@@ -97,6 +105,12 @@ export class CollaborationService extends EventEmitter {
 
                     // 通知对等方数量变化
                     this.emit('peerCountChanged', this._peers.size);
+                    this.emit('statusChanged', {
+                        role: this._role,
+                        status: 'hosting',
+                        hostAddress: this._wss?.address(),
+                        peerCount: this._peers.size
+                    });
 
                     ws.on('message', (data) => {
                         this.handleMessage(peerId, data.toString());
@@ -107,6 +121,11 @@ export class CollaborationService extends EventEmitter {
                         logger.info(`[Collaboration] Client disconnected: ${peerId}`);
                         // 通知对等方数量变化
                         this.emit('peerCountChanged', this._peers.size);
+                        this.emit('statusChanged', {
+                            role: this._role,
+                            status: 'hosting',
+                            peerCount: this._peers.size
+                        });
                     });
                 });
 
@@ -154,6 +173,14 @@ export class CollaborationService extends EventEmitter {
                     clearTimeout(timeout);
                     this._role = CollaborationRole.Guest;
                     logger.info(`[Collaboration] Connected to host: ${address}`);
+                    
+                    this.emit('statusChanged', {
+                        role: this._role,
+                        status: 'connected',
+                        hostAddress: address,
+                        peerCount: 1
+                    });
+                    
                     resolve();
                 });
 
@@ -185,6 +212,14 @@ export class CollaborationService extends EventEmitter {
      */
     public stop() {
         if (this._wss) {
+            // 必须手动关闭所有活跃的客户端连接
+            this._peers.forEach((ws) => {
+                try {
+                    ws.terminate();
+                } catch (e) {
+                    // 忽略关闭错误
+                }
+            });
             this._wss.close();
             this._wss = null;
         }
@@ -196,6 +231,11 @@ export class CollaborationService extends EventEmitter {
         this._role = CollaborationRole.None;
         logger.info('[Collaboration] Session stopped');
         this.emit('stopped');
+        this.emit('statusChanged', {
+            role: 'none',
+            status: 'disconnected',
+            peerCount: 0
+        });
     }
 
     /**
