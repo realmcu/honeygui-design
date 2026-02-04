@@ -79,18 +79,26 @@ export class Model3DGenerator implements ComponentCodeGenerator {
     code += `static void ${callbackName}(l3_model_base_t *this) {\n`;
     code += `    l3_camera_UVN_initialize(&this->camera, l3_4d_point(${cameraPosX}, ${cameraPosY}, ${cameraPosZ}), l3_4d_point(${cameraLookX}, ${cameraLookY}, ${cameraLookZ}), 1, 32767, 90, this->viewPortWidth, this->viewPortHeight);\n`;
     
+    // 获取静态旋转角度
+    const staticRotationX = (component.data?.rotationX as number) ?? 0;
+    const staticRotationY = (component.data?.rotationY as number) ?? 0;
+    const staticRotationZ = (component.data?.rotationZ as number) ?? 0;
+    
     // 根据动画轴向生成不同的世界坐标初始化
     if (touchRotationEnabled || autoRotationEnabled) {
       const axisMap = { x: 0, y: 1, z: 2 };
       const axis = touchRotationEnabled ? touchRotationAxis : autoRotationAxis;
       const axisIndex = axisMap[axis as keyof typeof axisMap] ?? 1;
       
-      const rotations = ['0', '0', '0'];
-      rotations[axisIndex] = `${component.id}_rot_angle`;
+      // 初始化旋转数组（使用静态旋转角度作为基础）
+      const rotations = [staticRotationX.toString(), staticRotationY.toString(), staticRotationZ.toString()];
+      // 在动画轴向上叠加动态旋转
+      rotations[axisIndex] = `${staticRotationX !== 0 || staticRotationY !== 0 || staticRotationZ !== 0 ? rotations[axisIndex] + ' + ' : ''}${component.id}_rot_angle`;
       
       code += `    l3_world_initialize(&this->world, ${worldX}, ${worldY}, ${worldZ}, ${rotations[0]}, ${rotations[1]}, ${rotations[2]}, 5);\n`;
     } else {
-      code += `    l3_world_initialize(&this->world, ${worldX}, ${worldY}, ${worldZ}, 0, 0, 0, 5);\n`;
+      // 没有动画时，直接使用静态旋转角度
+      code += `    l3_world_initialize(&this->world, ${worldX}, ${worldY}, ${worldZ}, ${staticRotationX}, ${staticRotationY}, ${staticRotationZ}, 5);\n`;
     }
     
     code += `}\n\n`;
