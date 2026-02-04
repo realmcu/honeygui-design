@@ -142,9 +142,58 @@ export class HmlParser {
     // 解析 view 中的组件（保持顺序）
     this._parseChildrenOrdered(viewElement.view, componentMap, undefined);
 
+    // 按层级排序组件（同级组件按 zIndex 排序）
+    const sortedComponents = this._sortComponentsByZIndex(Array.from(componentMap.values()));
+
     return {
-      components: Array.from(componentMap.values())
+      components: sortedComponents
     };
+  }
+
+  /**
+   * 按层级排序组件（同级组件按 zIndex 排序）
+   */
+  private _sortComponentsByZIndex(components: Component[]): Component[] {
+    // 按父组件分组
+    const grouped = new Map<string | null | undefined, Component[]>();
+    for (const comp of components) {
+      const key = comp.parent || null;
+      if (!grouped.has(key)) {
+        grouped.set(key, []);
+      }
+      grouped.get(key)!.push(comp);
+    }
+
+    // 对每组同级组件按 zIndex 排序
+    for (const [_, siblings] of grouped) {
+      siblings.sort((a, b) => {
+        const zIndexA = typeof a.zIndex === 'number' ? a.zIndex : 0;
+        const zIndexB = typeof b.zIndex === 'number' ? b.zIndex : 0;
+        return zIndexA - zIndexB;
+      });
+    }
+
+    // 重新构建数组（保持层级结构）
+    const result: Component[] = [];
+    const addComponentAndChildren = (comp: Component) => {
+      result.push(comp);
+      if (comp.children) {
+        for (const childId of comp.children) {
+          const child = components.find(c => c.id === childId);
+          if (child) {
+            addComponentAndChildren(child);
+          }
+        }
+      }
+    };
+
+    // 从根组件开始
+    const roots = grouped.get(null) || [];
+    for (const root of roots) {
+      addComponentAndChildren(root);
+    }
+
+    return result;
   }
 
   /**
@@ -447,8 +496,11 @@ export class HmlParser {
       });
     }
 
+    // 按层级排序组件（同级组件按 zIndex 排序）
+    const sortedComponents = this._sortComponentsByZIndex(Array.from(componentMap.values()));
+
     return {
-      components: Array.from(componentMap.values())
+      components: sortedComponents
     };
   }
 

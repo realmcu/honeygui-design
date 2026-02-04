@@ -32,7 +32,14 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
   const component = components.find(c => c.id === componentId);
   if (!component) return null;
 
-  const children = components.filter(c => c.parent === componentId);
+  // 获取子组件并按 zIndex 排序（确保组件树显示顺序和层级一致）
+  const children = components
+    .filter(c => c.parent === componentId)
+    .sort((a, b) => {
+      const zIndexA = typeof a.zIndex === 'number' ? a.zIndex : 0;
+      const zIndexB = typeof b.zIndex === 'number' ? b.zIndex : 0;
+      return zIndexA - zIndexB;
+    });
   const hasChildren = children.length > 0;
 
   const clickTimerRef = React.useRef<number | null>(null);
@@ -380,7 +387,14 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
 const ComponentTree: React.FC<{ onContextMenu?: (e: React.MouseEvent, componentId: string) => void }> = ({ onContextMenu }) => {
   const { components, allHmlFiles, currentFilePath, vscodeAPI } = useDesignerStore();
 
-  const rootComponents = components.filter(c => c.parent === null);
+  // 获取根组件并按 zIndex 排序（确保组件树显示顺序和层级一致）
+  const rootComponents = components
+    .filter(c => c.parent === null)
+    .sort((a, b) => {
+      const zIndexA = typeof a.zIndex === 'number' ? a.zIndex : 0;
+      const zIndexB = typeof b.zIndex === 'number' ? b.zIndex : 0;
+      return zIndexA - zIndexB;
+    });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedPath = e.target.value;

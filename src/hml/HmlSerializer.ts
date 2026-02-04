@@ -197,7 +197,15 @@ export class HmlSerializer {
         // 序列化组件树（从顶层组件开始）
         if (view && view.components && view.components.length > 0) {
             // 找到顶层组件（没有parent的组件）
-            const topLevelComponents = view.components.filter(comp => !comp.parent);
+            let topLevelComponents = view.components.filter(comp => !comp.parent);
+            
+            // 按 zIndex 排序（确保序列化顺序和显示层级一致）
+            topLevelComponents.sort((a, b) => {
+                const zIndexA = typeof a.zIndex === 'number' ? a.zIndex : 0;
+                const zIndexB = typeof b.zIndex === 'number' ? b.zIndex : 0;
+                return zIndexA - zIndexB;
+            });
+            
             topLevelComponents.forEach((component, index) => {
                 viewContent += this._serializeComponent(component, 2, index);
             });
@@ -284,8 +292,9 @@ export class HmlSerializer {
         if (component.locked === true) {
             attributesStr += ' locked="true"';
         }
-        // 自动根据同级顺序设置 zIndex（索引即为 zIndex，始终输出以确保层级正确）
-        attributesStr += ' zIndex="' + siblingIndex + '"';
+        // 使用组件自身的 zIndex（如果没有则使用 siblingIndex）
+        const zIndex = typeof component.zIndex === 'number' ? component.zIndex : siblingIndex;
+        attributesStr += ' zIndex="' + zIndex + '"';
         if (component.showOverflow === true) {
             attributesStr += ' showOverflow="true"';
         }

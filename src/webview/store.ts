@@ -50,14 +50,21 @@ function rebuildComponentsArray(
 ): Component[] {
   const siblingIds = new Set(reorderedSiblings.map(s => s.id));
   const newChildrenOrder = reorderedSiblings.map(s => s.id);
+  
+  // 更新重排后的同级组件的 zIndex（按新顺序分配 zIndex）
+  const reorderedSiblingsWithZIndex = reorderedSiblings.map((sibling, index) => ({
+    ...sibling,
+    zIndex: index
+  }));
+  
   const result: Component[] = [];
   let siblingsInserted = false;
 
   for (const comp of components) {
     if (siblingIds.has(comp.id)) {
-      // 遇到第一个同级组件时，插入所有重排后的同级组件
+      // 遇到第一个同级组件时，插入所有重排后的同级组件（已更新 zIndex）
       if (!siblingsInserted) {
-        result.push(...reorderedSiblings);
+        result.push(...reorderedSiblingsWithZIndex);
         siblingsInserted = true;
       }
       // 跳过原来的同级组件（已在上面插入）
@@ -1835,11 +1842,11 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       const reorderedSiblings = reorderArray(siblings, currentIndex, newIndex);
       const newComponents = rebuildComponentsArray(state.components, reorderedSiblings, comp.parent);
 
-      // 保存到后端
-      state.vscodeAPI?.postMessage({ command: 'save', components: newComponents });
-
       return { components: newComponents };
     });
+    
+    // 在 set 完成后立即保存到文件
+    get().saveToFile();
   },
 
   // Project configuration
