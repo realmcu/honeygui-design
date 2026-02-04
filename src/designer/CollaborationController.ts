@@ -105,6 +105,15 @@ export class CollaborationController {
             case 'ASSET_DATA':
                 this.handleAssetData(message);
                 break;
+            case 'SOURCES_LIST':
+                this.handleSourcesList(message);
+                break;
+            case 'GET_SOURCE':
+                this.handleGetSource(message);
+                break;
+            case 'SOURCE_DATA':
+                this.handleSourceData(message);
+                break;
         }
     }
 
@@ -160,6 +169,12 @@ export class CollaborationController {
                 content: 'REQUEST'
             });
 
+            // 请求源码列表
+            this.service.broadcast({
+                type: 'SOURCES_LIST',
+                content: 'REQUEST'
+            });
+
             this.hmlController.applyRemoteUpdate(message.content);
             this.onUpdate();
         }
@@ -184,6 +199,12 @@ export class CollaborationController {
             const assetsDir = path.join(this.guestWorkspacePath, 'assets');
             if (!fs.existsSync(assetsDir)) {
                 fs.mkdirSync(assetsDir, { recursive: true });
+            }
+
+            // 创建 src 目录
+            const srcDir = path.join(this.guestWorkspacePath, 'src');
+            if (!fs.existsSync(srcDir)) {
+                fs.mkdirSync(srcDir, { recursive: true });
             }
             
             // 创建 mock project.json
@@ -317,6 +338,128 @@ export class CollaborationController {
                 } catch (e) {
                     logger.error(`[Collaboration] Host failed to save uploaded asset ${fileName}: ${e}`);
                 }
+            }
+        }
+    }
+
+    /**
+     * 递归获取所有文件
+     */
+    private getAllFiles(dir: string, fileList: string[] = [], relativePath: string = ''): string[] {
+        if (!fs.existsSync(dir)) return [];
+        const files = fs.readdirSync(dir);
+        files.forEach(file => {
+            const filePath = path.join(dir, file);
+            // 使用 path.join 生成相对路径，然后统一转换为 POSIX 风格 (/)
+            // 这样在跨平台传输时更安全
+            const fileRelativePath = relativePath ? `${relativePath}/${file}` : file;
+            
+            if (fs.statSync(filePath).isDirectory()) {
+                this.getAllFiles(filePath, fileList, fileRelativePath);
+            } else {
+                fileList.push(fileRelativePath);
+            }
+        });
+        return fileList;
+    }
+
+    /**
+     * 处理源码列表请求
+     */
+    private handleSourcesList(message: CollaborationMessage) {
+        // Host 收到请求
+        if (this.service.isHost && message.content === 'REQUEST') {
+            const projectRoot = ProjectUtils.findProjectRoot(this.fileManager.currentFilePath || '');
+            if (!projectRoot) return;
+            
+            const srcDir = ProjectUtils.getSrcDir(projectRoot);
+            if (fs.existsSync(srcDir)) {
+                try {
+                    const files = this.getAllFiles(srcDir);
+                    // 过滤掉不需要的文件，只保留 .c, .h, .cpp, .hpp
+                    const sourceFiles = files.filter(f => {
+                        const ext = path.extname(f).toLowerCase();
+                        return ['.c', '.h', '.cpp', '.hpp'].includes(ext);
+                    });
+                    
+                    this.service.broadcast({
+                        type: 'SOURCES_LIST',
+                        payload: sourceFiles
+                    });
+                } catch (e) {
+                    logger.error(`[Collaboration] Failed to list source files: ${e}`);
+                }
+            }
+            return;
+        }
+        
+        // Guest 收到列表
+        if (this.service.isGuest && Array.isArray(message.payload)) {
+            const files = message.payload as string[];
+            files.forEach(file => {
+                 // 检查本地是否存在
+                 const localPath = path.join(this.guestWorkspacePath!, 'src', file);
+                 if (!fs.existsSync(localPath)) {
+                     // 请求下载
+                     this.service.broadcast({
+                         type: 'GET_SOURCE',
+                         content: file
+                     });
+                 }
+            });
+        }
+    }
+
+    /**
+     * 处理获取单个源码请求
+     */
+    private handleGetSource(message: CollaborationMessage) {
+        // Host 收到请求
+        if (this.service.isHost && message.content) {
+            const fileName = message.content;
+            const projectRoot = ProjectUtils.findProjectRoot(this.fileManager.currentFilePath || '');
+            if (!projectRoot) return;
+            
+            const srcDir = ProjectUtils.getSrcDir(projectRoot);
+            const sourcePath = path.join(srcDir, fileName);
+            
+            if (fs.existsSync(sourcePath)) {
+                try {
+                    const content = fs.readFileSync(sourcePath, 'utf-8'); // 源码用文本格式传输
+                    this.service.broadcast({
+                        type: 'SOURCE_DATA',
+                        content: fileName, // 相对路径
+                        payload: content   // 文本内容
+                    });
+                } catch (e) {
+                    logger.error(`[Collaboration] Failed to read source file ${fileName}: ${e}`);
+                }
+            }
+        }
+    }
+
+    /**
+     * 处理源码数据接收
+     */
+    private handleSourceData(message: CollaborationMessage) {
+        // Guest 收到数据
+        if (this.service.isGuest && message.content && message.payload !== undefined && this.guestWorkspacePath) {
+            const fileName = message.content;
+            const content = message.payload;
+            const filePath = path.join(this.guestWorkspacePath, 'src', fileName);
+            
+            try {
+                // 确保目录存在
+                const dir = path.dirname(filePath);
+                if (!fs.existsSync(dir)) {
+                    fs.mkdirSync(dir, { recursive: true });
+                }
+                
+                fs.writeFileSync(filePath, content);
+                logger.info(`[Collaboration] Source synced: ${fileName}`);
+                
+            } catch (e) {
+                logger.error(`[Collaboration] Failed to save source file ${fileName}: ${e}`);
             }
         }
     }

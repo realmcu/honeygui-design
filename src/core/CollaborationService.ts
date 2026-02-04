@@ -19,7 +19,7 @@ export interface CollaborationState {
 }
 
 export interface CollaborationMessage {
-    type: 'WELCOME' | 'SYNC_INIT' | 'REMOTE_UPDATE' | 'OP_DELTA' | 'GET_ASSET' | 'ASSET_DATA' | 'ASSETS_LIST';
+    type: 'WELCOME' | 'SYNC_INIT' | 'REMOTE_UPDATE' | 'OP_DELTA' | 'GET_ASSET' | 'ASSET_DATA' | 'ASSETS_LIST' | 'SOURCES_LIST' | 'GET_SOURCE' | 'SOURCE_DATA';
     peerId?: string;
     content?: string;
     payload?: any;
@@ -116,7 +116,7 @@ export class CollaborationService extends EventEmitter {
                     this.emit('statusChanged', {
                         role: this._role,
                         status: 'hosting',
-                        hostAddress: this._wss?.address(),
+                        hostAddress: this._hostAddress,
                         peerCount: this._peers.size
                     });
 
