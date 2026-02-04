@@ -851,6 +851,8 @@ function renderProperties() {
                 '<option value="RGB888"'+(currentFormat==='RGB888'?' selected':'')+'>RGB888</option>' +
                 '<option value="ARGB8565"'+(currentFormat==='ARGB8565'?' selected':'')+'>ARGB8565</option>' +
                 '<option value="ARGB8888"'+(currentFormat==='ARGB8888'?' selected':'')+'>ARGB8888</option>' +
+                '<option value="I8"'+(currentFormat==='I8'?' selected':'')+'>I8</option>' +
+                '<option value="A8"'+(currentFormat==='A8'?' selected':'')+'>A8</option>' +
                 '</select></div>' +
                 '<div class="prop-row"><label>'+T.compression+':</label><select onchange="updateFolderImageConfig(\\'compression\\',this.value)">' +
                 '<option value="none"'+(currentCompression==='none'?' selected':'')+'>'+T.noCompression+'</option>' +
@@ -990,6 +992,7 @@ function renderProperties() {
             '<option value="ARGB8565"'+(currentFormat==='ARGB8565'?' selected':'')+'>ARGB8565</option>' +
             '<option value="ARGB8888"'+(currentFormat==='ARGB8888'?' selected':'')+'>ARGB8888</option>' +
             '<option value="I8"'+(currentFormat==='I8'?' selected':'')+'>I8</option>' +
+            '<option value="A8"'+(currentFormat==='A8'?' selected':'')+'>A8</option>' +
             '</select></div>' +
             '<div class="prop-row"><label>'+T.compression+':</label><select onchange="updateImageConfig(\\'compression\\',this.value)">' +
             '<option value="none"'+(currentCompression==='none'?' selected':'')+'>'+T.noCompression+'</option>' +

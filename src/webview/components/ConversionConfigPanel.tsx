@@ -31,7 +31,7 @@ const FOLDER_FORMAT_OPTIONS: { value: TargetFormat; label: string }[] = [
   { value: 'adaptive24', label: 'formatAdaptive24' },
 ];
 
-// 图片可用的格式选项（包含继承选项和 I8）
+// 图片可用的格式选项（包含继承选项和 I8、A8）
 const IMAGE_FORMAT_OPTIONS: { value: TargetFormat; label: string }[] = [
   { value: 'inherit', label: 'formatInherit' },
   { value: 'RGB565', label: 'RGB565' },
@@ -39,6 +39,7 @@ const IMAGE_FORMAT_OPTIONS: { value: TargetFormat; label: string }[] = [
   { value: 'ARGB8565', label: 'ARGB8565' },
   { value: 'ARGB8888', label: 'ARGB8888' },
   { value: 'I8', label: 'I8' },
+  { value: 'A8', label: 'A8' },
 ];
 
 // 文件夹可用的视频格式选项（不含继承）

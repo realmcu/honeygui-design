@@ -10,6 +10,7 @@ export type TargetFormat =
   | 'ARGB8565'
   | 'ARGB8888'
   | 'I8'
+  | 'A8'
   | 'adaptive16'
   | 'adaptive24'
   | 'inherit';

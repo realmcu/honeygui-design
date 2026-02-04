@@ -131,6 +131,7 @@ export interface AssetFile {
  * 目标格式枚举
  * - RGB565, RGB888, ARGB8565, ARGB8888: 固定格式
  * - I8: 8位索引格式（仅用于图片）
+ * - A8: 8位Alpha格式（仅用于图片）
  * - adaptive16: 自适应16bit（有透明度→ARGB8565，无透明度→RGB565）
  * - adaptive24: 自适应24bit（有透明度→ARGB8888，无透明度→RGB888）
  * - inherit: 继承父文件夹设置（仅用于图片）
@@ -141,6 +142,7 @@ export type TargetFormat =
   | 'ARGB8565'
   | 'ARGB8888'
   | 'I8'
+  | 'A8'
   | 'adaptive16'
   | 'adaptive24'
   | 'inherit';
