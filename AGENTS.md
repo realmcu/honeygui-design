@@ -145,6 +145,7 @@ HmlEditorProvider.resolveCustomTextEditor()
    - 默认情况下，只修改代码，不执行 git 操作
    - 只有当用户明确说"提交"、"commit"、"push"、"提交到 gitee"等关键词时，才执行 git 操作
    - 如果不确定是否需要提交，先询问用户
+   - 拉取代码后必须执行 `git submodule update --init --recursive`，提交前确保 submodule 指向正确版本
 8. **打包安装包**：
    - 当用户说"打包"、"生成安装包"或"package"时，执行以下流程：
      1. 执行 `npm install` 安装依赖（干净仓库必需）
@@ -179,6 +180,7 @@ HmlEditorProvider.resolveCustomTextEditor()
 - ❌ 不要添加网络依赖功能
 - ❌ 不要随意创建文档
 - ❌ **不要发布到插件市场**（必须用户明确允许才可以执行 `vsce publish`）
+
 
 
 
