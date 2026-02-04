@@ -309,5 +309,7 @@
   "Collaboration service started, invite others to connect: {0}": "Collaboration service started, invite others to connect: {0}",
   "Collaboration service stopped": "Collaboration service stopped",
   "Successfully joined collaboration: {0}": "Successfully joined collaboration: {0}",
-  "Disconnected from collaboration": "Disconnected from collaboration"
+  "Disconnected from collaboration": "Disconnected from collaboration",
+  "Enable Dither": "Enable Dither",
+  "ditherHint": "Enable dithering to reduce color banding in low color depths"
 }

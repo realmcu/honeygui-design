@@ -80,6 +80,8 @@ export interface ToolsPanelTranslations {
     failed: string;
     generatingPreview: string;
     previewFailed: string;
+    enableDither: string;
+    ditherHint: string;
 }
 
 /** 获取资源转换工具翻译 */
@@ -163,6 +165,8 @@ export function getToolsPanelTranslations(): ToolsPanelTranslations {
         failed: vscode.l10n.t('failed'),
         generatingPreview: vscode.l10n.t('Generating preview...'),
         previewFailed: vscode.l10n.t('Preview failed'),
+        enableDither: vscode.l10n.t('Enable Dither'),
+        ditherHint: vscode.l10n.t('ditherHint'),
     };
 }
 
@@ -859,7 +863,8 @@ function renderProperties() {
                 '<option value="rle"'+(currentCompression==='rle'?' selected':'')+'>RLE</option>' +
                 '<option value="fastlz"'+(currentCompression==='fastlz'?' selected':'')+'>FastLZ</option>' +
                 '<option value="yuv"'+(currentCompression==='yuv'?' selected':'')+'>YUV</option>' +
-                '</select></div>';
+                '</select></div>' +
+                '<div class="prop-row"><label></label><label style="width:auto;display:flex;align-items:center;gap:4px" title="'+T.ditherHint+'"><input type="checkbox" '+(folderConfig.dither!==false?'checked':'')+' onchange="updateFolderImageConfig(\\'dither\\',this.checked)">'+T.enableDither+'</label></div>';
             
             // YUV 参数
             if (currentCompression === 'yuv') {
@@ -999,7 +1004,8 @@ function renderProperties() {
             '<option value="rle"'+(currentCompression==='rle'?' selected':'')+'>RLE</option>' +
             '<option value="fastlz"'+(currentCompression==='fastlz'?' selected':'')+'>FastLZ</option>' +
             '<option value="yuv"'+(currentCompression==='yuv'?' selected':'')+'>YUV</option>' +
-            '</select></div>';
+            '</select></div>' +
+            '<div class="prop-row"><label></label><label style="width:auto;display:flex;align-items:center;gap:4px" title="'+T.ditherHint+'"><input type="checkbox" '+(imageConfig.dither===true||(imageConfig.dither===undefined && effectiveConfig.dither!==false)?'checked':'')+' onchange="updateImageConfig(\\'dither\\',this.checked)">'+T.enableDither+'</label></div>';
         
         // YUV 参数
         if (currentCompression === 'yuv') {

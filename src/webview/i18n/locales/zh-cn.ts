@@ -48,6 +48,7 @@ const zhCN = {
   'Off Image': '关闭图片',
   'Initial State': '初始状态',
   'Enabled': '启用',
+  'Disabled': '禁用',
   'Time Format': '时间格式',
   'Enable Scroll': '启用滚动',
   'Scroll Direction': '滚动方向',
@@ -571,6 +572,8 @@ const zhCN = {
   'Blur': '模糊程度',
   'blurNone': '不模糊',
   'FastLZ Secondary Compression': 'FastLZ 二次压缩',
+  'Enable Dither': '启用抖动 (Dither)',
+  'ditherHint': '使用误差扩散减少色彩损失带来的色带（推荐用于 RGB565）',
 
   // Collaboration
   'Collaboration': '多人协作',

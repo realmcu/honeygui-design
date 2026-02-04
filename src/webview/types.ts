@@ -209,6 +209,8 @@ export interface ItemSettings {
   compression?: CompressionMethod;
   /** YUV 压缩参数（仅当 compression 为 'yuv' 时有效） */
   yuvParams?: YuvParams;
+  /** 是否启用抖动（减少色彩损失） */
+  dither?: boolean;
 }
 
 /**
@@ -233,6 +235,8 @@ export interface ResolvedConfig {
   compression: CompressionMethod;
   /** YUV 压缩参数 */
   yuvParams?: YuvParams;
+  /** 是否启用抖动 */
+  dither?: boolean;
   /** 是否继承自父级 */
   isInherited: boolean;
   /** 继承来源路径 */

@@ -315,7 +315,8 @@ export class CommandManager {
                         timestamp: Date.now()
                     });
                     
-                    await vscode.commands.executeCommand('vscode.openFolder', folderUri[0]);
+                    // Force open in current window using boolean flag (false = reuse window)
+                    await vscode.commands.executeCommand('vscode.openFolder', folderUri[0], false);
                 }
             } catch (error) {
                 logger.error(`打开项目失败: ${error instanceof Error ? error.message : String(error)}`);

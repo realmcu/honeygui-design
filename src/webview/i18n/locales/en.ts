@@ -48,6 +48,7 @@ const en = {
   'Off Image': 'Off Image',
   'Initial State': 'Initial State',
   'Enabled': 'Enabled',
+  'Disabled': 'Disabled',
   'Time Format': 'Time Format',
   'Enable Scroll': 'Enable Scroll',
   'Scroll Direction': 'Scroll Direction',
@@ -571,6 +572,8 @@ const en = {
   'Blur': 'Blur',
   'blurNone': 'No blur',
   'FastLZ Secondary Compression': 'FastLZ secondary compression',
+  'Enable Dither': 'Enable Dither',
+  'ditherHint': 'Reduces color banding using error diffusion (Recommended for RGB565)',
 
   // Collaboration
   'Collaboration': 'Collaboration',

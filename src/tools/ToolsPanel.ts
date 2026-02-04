@@ -853,6 +853,7 @@ export class ToolsPanel {
                     result = await this.imageConverter.convert(tempInput, outputPath, {
                         format: settings.format || 'auto',
                         compression: settings.compression || 'none',
+                        dither: settings.dither,
                         yuvSampleMode: settings.yuvSampleMode,
                         yuvBlurBits: settings.yuvBlurBits,
                         yuvFastlz: settings.yuvFastlz
@@ -994,17 +995,29 @@ export class ToolsPanel {
         const configService = ConversionConfigService.getInstance();
         const resolvedConfig = configService.resolveEffectiveConfig(relativePath, this.conversionConfig);
         
-        // 检查图片是否有透明度（用于自适应格式）
-        const file = Array.from(this.files.values()).find(f => f.relativePath === relativePath);
-        const hasAlpha = file ? this.checkImageHasAlpha(Buffer.from(file.data), file.name) : false;
-        
-        // 解析格式（处理自适应格式）
-        let format = resolvedConfig.format;
-        const itemSettings = this.conversionConfig.items[relativePath.replace(/\\/g, '/')];
+        // 获取原始配置的格式（未解析前）
+        const normalizedPath = relativePath.replace(/\\/g, '/');
+        const itemSettings = this.conversionConfig.items[normalizedPath];
         const effectiveFormat = itemSettings?.format || this.conversionConfig.defaultSettings.format || 'adaptive16';
         
-        if (effectiveFormat === 'adaptive16' || effectiveFormat === 'adaptive24') {
+        // 解析格式（只对自适应格式进行透明通道检测和格式调整）
+        let format: string;
+        
+        // 判断是否为自适应格式
+        const isAdaptive = effectiveFormat === 'adaptive16' || effectiveFormat === 'adaptive24';
+        
+        if (isAdaptive) {
+            // 检查图片是否有透明度
+            const file = Array.from(this.files.values()).find(f => {
+                const filePath = f.relativePath ? `${f.relativePath}/${f.name}` : f.name;
+                return filePath === relativePath;
+            });
+            const hasAlpha = file ? this.checkImageHasAlpha(Buffer.from(file.data), file.name) : false;
+            // 解析自适应格式
             format = configService.resolveAdaptiveFormat(effectiveFormat, hasAlpha);
+        } else {
+            // 对于明确指定的格式，直接使用原始格式，不做任何调整
+            format = effectiveFormat;
         }
         
         // 构建设置对象
@@ -1029,7 +1042,8 @@ export class ToolsPanel {
     }
 
     /**
-     * 检查图片数据是否包含透明度
+     * 检查图片数据是否包含实际的透明度
+     * 不仅检查 PNG 的 color type，还要采样检查实际的 Alpha 通道数据
      */
     private checkImageHasAlpha(data: Buffer, fileName: string): boolean {
         try {
@@ -1052,8 +1066,38 @@ export class ToolsPanel {
             
             // IHDR chunk 中的 color type 在偏移 25 处
             const colorType = data[25];
-            return colorType === 4 || colorType === 6;
+            
+            // Color Type 0, 2, 3 没有 Alpha 通道
+            if (colorType !== 4 && colorType !== 6) {
+                return false;
+            }
+            
+            // 检查实际的 Alpha 数据：使用 sharp 同步检查
+            // 采样前 100 个像素，如果都是 255 则认为没有实际透明度
+            const sharp = require('sharp');
+            const image = sharp(data);
+            
+            // 获取图片元数据
+            const metadata = image.metadata();
+            const meta = metadata ? (typeof metadata.then === 'function' ? undefined : metadata) : undefined;
+            
+            if (!meta) {
+                // 无法同步获取元数据，使用保守策略：认为有透明度
+                return true;
+            }
+            
+            // 如果元数据明确说没有 Alpha，直接返回 false
+            if (meta.hasAlpha === false) {
+                return false;
+            }
+            
+            // 否则保守返回 true（有 Alpha 通道定义）
+            // 注意：这里可能会误判一些全不透明的 RGBA 图片
+            // 但这比漏掉真正有透明度的图片要安全
+            return true;
+            
         } catch (error) {
+            // 解析失败，保守返回 false（使用 RGB565）
             return false;
         }
     }

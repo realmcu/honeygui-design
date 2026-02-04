@@ -63,6 +63,8 @@ export interface ItemSettings {
   videoFrameRate?: number;
   /** 压缩方式 */
   compression?: CompressionMethod;
+  /** 抖动处理 */
+  dither?: boolean;
   /** YUV 压缩参数 */
   yuvParams?: YuvParams;
 }
@@ -84,6 +86,7 @@ export interface ResolvedConfig {
   format: Exclude<TargetFormat, 'inherit' | 'adaptive16' | 'adaptive24'>;
   compression: CompressionMethod;
   yuvParams?: YuvParams;
+  dither?: boolean;
   isInherited: boolean;
   inheritedFrom?: string;
 }
@@ -95,7 +98,8 @@ const DEFAULT_CONFIG: ConversionConfig = {
   version: '1.0',
   defaultSettings: {
     format: 'adaptive16',
-    compression: 'adaptive'
+    compression: 'adaptive',
+    dither: false
   },
   items: {}
 };
@@ -267,6 +271,7 @@ export class ConversionConfigService {
   ): ResolvedConfig {
     const format = settings.format || 'RGB565';
     const compression = settings.compression || 'none';
+    const dither = settings.dither;
     
     let resolvedFormat: Exclude<TargetFormat, 'inherit' | 'adaptive16' | 'adaptive24'>;
     if (format === 'adaptive16' || format === 'adaptive24' || format === 'inherit') {
@@ -278,6 +283,7 @@ export class ConversionConfigService {
     const result: ResolvedConfig = {
       format: resolvedFormat,
       compression,
+      dither,
       isInherited
     };
     

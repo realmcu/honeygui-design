@@ -302,6 +302,43 @@ const ConversionConfigPanel: React.FC<ConversionConfigPanelProps> = () => {
     };
   }, [selectedAsset, conversionConfig]);
 
+  // 获取有效 Dither 配置（处理继承）
+  const effectiveDither = useMemo((): { dither: boolean; isInherited: boolean; inheritedFrom?: string } => {
+    if (!selectedAsset || !conversionConfig) {
+      return { dither: false, isInherited: false };
+    }
+
+    const assetPath = (selectedAsset.relativePath || selectedAsset.name).replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+    const itemSettings = conversionConfig.items[assetPath];
+
+    // 如果有明确配置，直接使用
+    if (itemSettings && itemSettings.dither !== undefined) {
+      return { dither: itemSettings.dither, isInherited: false };
+    }
+
+    // 需要继承：查找父级配置
+    const pathParts = assetPath.split('/');
+    for (let i = pathParts.length - 1; i >= 0; i--) {
+      const parentPath = pathParts.slice(0, i).join('/');
+      const parentSettings = parentPath ? conversionConfig.items[parentPath] : undefined;
+
+      if (parentSettings && parentSettings.dither !== undefined) {
+        return {
+          dither: parentSettings.dither,
+          isInherited: true,
+          inheritedFrom: parentPath || t('Root'),
+        };
+      }
+    }
+
+    // 使用默认配置
+    return {
+      dither: conversionConfig.defaultSettings.dither ?? false,
+      isInherited: true,
+      inheritedFrom: t('defaultSettings'),
+    };
+  }, [selectedAsset, conversionConfig]);
+
   // 处理格式变更
   const handleFormatChange = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -357,6 +394,20 @@ const ConversionConfigPanel: React.FC<ConversionConfigPanelProps> = () => {
       updateAssetConfig(assetPath, {
         ...currentSettings,
         videoFrameRate: frameRate,
+      });
+    },
+    [selectedAsset, currentSettings, updateAssetConfig]
+  );
+
+  // 处理 Dither 变更
+  const handleDitherChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!selectedAsset) return;
+      const newValue = e.target.checked;
+      const assetPath = selectedAsset.relativePath || selectedAsset.name;
+      updateAssetConfig(assetPath, {
+        ...currentSettings,
+        dither: newValue,
       });
     },
     [selectedAsset, currentSettings, updateAssetConfig]
@@ -498,6 +549,28 @@ const ConversionConfigPanel: React.FC<ConversionConfigPanelProps> = () => {
         </select>
         {currentCompression === 'adaptive' && (
           <div className="config-hint">{t('adaptiveCompressionHint')}</div>
+        )}
+      </div>
+
+      <div className="config-item checkbox-item">
+        <div className="checkbox-wrapper">
+          <input
+            type="checkbox"
+            id="dither"
+            checked={currentSettings.dither ?? effectiveDither.dither}
+            onChange={handleDitherChange}
+          />
+          <label htmlFor="dither">{t('Enable Dither')}</label>
+        </div>
+        <div className="config-hint">{t('ditherHint')}</div>
+        {/* Dither 继承状态指示器 */}
+        {effectiveDither.isInherited && currentSettings.dither === undefined && (
+          <div className="inherited-indicator">
+            <span className="icon">↩️</span>
+            <span>
+              {t('inheritedFrom')}: {effectiveDither.inheritedFrom} ({effectiveDither.dither ? t('Enabled') : t('Disabled')})
+            </span>
+          </div>
         )}
       </div>
 

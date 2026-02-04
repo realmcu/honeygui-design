@@ -15,6 +15,7 @@ export interface ImageConvertOptions {
     yuvSampleMode?: YuvSampleMode;
     yuvBlurBits?: YuvBlurBits;
     yuvFastlz?: boolean;
+    dither?: boolean;
 }
 
 export interface ConvertResult {
@@ -30,6 +31,25 @@ export class ImageConverterService {
     constructor(sdkPath?: string) {
         // SDK path 不再需要，但保留参数以兼容现有代码
         this.converter = new ImageConverter();
+    }
+
+    /**
+     * 判断格式是否为自适应格式
+     * @param format 目标格式
+     * @returns 如果是 adaptive16 或 adaptive24 返回 true，否则返回 false
+     */
+    private static isAdaptiveFormat(format: TargetFormat): boolean {
+        return format === 'adaptive16' || format === 'adaptive24';
+    }
+
+    /**
+     * 判断格式是否为明确指定的格式
+     * @param format 目标格式
+     * @returns 如果是明确格式（RGB565、ARGB8565、RGB888、ARGB8888、I8）返回 true，否则返回 false
+     */
+    private static isExplicitFormat(format: TargetFormat): boolean {
+        const explicitFormats: TargetFormat[] = ['RGB565', 'ARGB8565', 'RGB888', 'ARGB8888', 'I8'];
+        return explicitFormats.includes(format);
     }
 
     /**
@@ -59,7 +79,9 @@ export class ImageConverterService {
                     'a8': PixelFormat.A8,
                     'i8': PixelFormat.I8,
                 };
-                pixelFormat = formatMap[opts.format.toLowerCase()] || 'auto';
+                const mappedFormat = formatMap[opts.format.toLowerCase()];
+                // 使用 !== undefined 而不是 || 来避免 0 值被当作 falsy
+                pixelFormat = mappedFormat !== undefined ? mappedFormat : 'auto';
             }
 
             // 设置压缩算法
@@ -83,7 +105,7 @@ export class ImageConverterService {
                 this.converter.setCompressor(undefined);
             }
 
-            await this.converter.convert(inputPath, outputPath, pixelFormat);
+            await this.converter.convert(inputPath, outputPath, pixelFormat, { dither: opts.dither });
             return { success: true, inputPath, outputPath };
         } catch (error: any) {
             return { success: false, inputPath, outputPath, error: error.message };
@@ -161,22 +183,30 @@ export class ImageConverterService {
         const configService = ConversionConfigService.getInstance();
         const resolvedConfig = configService.resolveEffectiveConfig(relativePath, config);
         
-        // 检查图片是否有透明度（用于自适应格式）
-        const hasAlpha = this.checkImageHasAlpha(fullPath);
-        
-        // 解析格式（处理自适应格式）
-        let format = resolvedConfig.format;
-        const itemSettings = config.items[relativePath.replace(/\\/g, '/')];
+        // 获取原始配置的格式（未解析前）
+        const normalizedPath = relativePath.replace(/\\/g, '/');
+        const itemSettings = config.items[normalizedPath];
         const effectiveFormat = itemSettings?.format || config.defaultSettings.format || 'adaptive16';
         
-        if (effectiveFormat === 'adaptive16' || effectiveFormat === 'adaptive24') {
+        // 解析格式（只对自适应格式进行透明通道检测和格式调整）
+        let format: string;
+        
+        // 只对自适应格式进行透明通道检测和格式调整
+        if (ImageConverterService.isAdaptiveFormat(effectiveFormat)) {
+            // 检查图片是否有透明度
+            const hasAlpha = this.checkImageHasAlpha(fullPath);
+            // 解析自适应格式
             format = configService.resolveAdaptiveFormat(effectiveFormat, hasAlpha);
+        } else {
+            // 对于明确指定的格式，直接使用原始格式，不做任何调整
+            format = effectiveFormat;
         }
         
         // 构建选项
         const options: ImageConvertOptions = {
             format: format.toLowerCase(),
-            compression: resolvedConfig.compression as CompressionType
+            compression: resolvedConfig.compression as CompressionType,
+            dither: resolvedConfig.dither
         };
         
         // 如果是 YUV 压缩，添加 YUV 参数
@@ -195,6 +225,7 @@ export class ImageConverterService {
                 options.yuvSampleMode = fallbackOptions.yuvSampleMode;
                 options.yuvBlurBits = fallbackOptions.yuvBlurBits;
                 options.yuvFastlz = fallbackOptions.yuvFastlz;
+                options.dither = resolvedConfig.dither !== undefined ? resolvedConfig.dither : fallbackOptions.dither;
             } else {
                 options.compression = 'none';
             }

@@ -850,6 +850,25 @@ Return('objs')
     }
 
     /**
+     * 判断格式是否为自适应格式
+     * @param format 目标格式
+     * @returns 如果是 adaptive16 或 adaptive24 返回 true，否则返回 false
+     */
+    private static isAdaptiveFormat(format: string): boolean {
+        return format === 'adaptive16' || format === 'adaptive24';
+    }
+
+    /**
+     * 判断格式是否为明确指定的格式
+     * @param format 目标格式
+     * @returns 如果是明确格式（RGB565、ARGB8565、RGB888、ARGB8888、I8）返回 true，否则返回 false
+     */
+    private static isExplicitFormat(format: string): boolean {
+        const explicitFormats = ['RGB565', 'ARGB8565', 'RGB888', 'ARGB8888', 'I8'];
+        return explicitFormats.includes(format);
+    }
+
+    /**
      * 解析单个图片的转换选项
      * @param relativePath 相对于 assets 目录的路径
      * @param fullPath 图片完整路径
@@ -865,22 +884,38 @@ Return('objs')
         const configService = ConversionConfigService.getInstance();
         const resolvedConfig = configService.resolveEffectiveConfig(relativePath, config);
         
-        // 检查图片是否有透明度（用于自适应格式）
-        const hasAlpha = this.checkImageHasAlpha(fullPath);
-        
-        // 解析格式（处理自适应格式）
-        let format = resolvedConfig.format;
-        const itemSettings = config.items[relativePath.replace(/\\/g, '/')];
+        // 获取原始配置的格式（未解析前）
+        const normalizedPath = relativePath.replace(/\\/g, '/');
+        const itemSettings = config.items[normalizedPath];
         const effectiveFormat = itemSettings?.format || config.defaultSettings.format || 'adaptive16';
         
-        if (effectiveFormat === 'adaptive16' || effectiveFormat === 'adaptive24') {
+        // 调试日志
+        console.log(`[DEBUG] resolveImageOptions for: ${relativePath}`);
+        console.log(`[DEBUG] normalizedPath: ${normalizedPath}`);
+        console.log(`[DEBUG] effectiveFormat: ${effectiveFormat}`);
+        console.log(`[DEBUG] isAdaptiveFormat: ${BuildCore.isAdaptiveFormat(effectiveFormat)}`);
+        
+        // 解析格式（只对自适应格式进行透明通道检测和格式调整）
+        let format: string;
+        
+        // 只对自适应格式进行透明通道检测和格式调整
+        if (BuildCore.isAdaptiveFormat(effectiveFormat)) {
+            // 检查图片是否有透明度
+            const hasAlpha = this.checkImageHasAlpha(fullPath);
+            // 解析自适应格式
             format = configService.resolveAdaptiveFormat(effectiveFormat, hasAlpha);
+            console.log(`[DEBUG] Adaptive format - hasAlpha: ${hasAlpha}, resolved to: ${format}`);
+        } else {
+            // 对于明确指定的格式，直接使用原始格式，不做任何调整
+            format = effectiveFormat;
+            console.log(`[DEBUG] Explicit format - using: ${format}`);
         }
         
         // 构建选项
         const options: ImageConvertOptions = {
             format: format.toLowerCase(),
-            compression: resolvedConfig.compression as CompressionType
+            compression: resolvedConfig.compression as CompressionType,
+            dither: resolvedConfig.dither
         };
         
         // 如果是 YUV 压缩，添加 YUV 参数

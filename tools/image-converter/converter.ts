@@ -49,7 +49,8 @@ export class ImageConverter {
     async convert(
         inputPath: string,
         outputPath: string,
-        format: PixelFormat | 'auto' = 'auto'
+        format: PixelFormat | 'auto' = 'auto',
+        options?: { dither?: boolean }
     ): Promise<void> {
         // 读取文件头部判断实际格式
         const buffer = fs.readFileSync(inputPath);
@@ -93,6 +94,7 @@ export class ImageConverter {
             pixelFormat = format;
         }
 
+
         // I8 格式需要索引色图片
         if (pixelFormat === PixelFormat.I8) {
             if (!indexed) {
@@ -103,7 +105,7 @@ export class ImageConverter {
         }
 
         // Convert pixels
-        const pixelData = convertPixels(pixels, pixelFormat);
+        const pixelData = convertPixels(pixels, width, pixelFormat, options);
 
         // Build header
         const useCompress = this.compressor !== undefined;
