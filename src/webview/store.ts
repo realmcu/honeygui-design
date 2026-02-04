@@ -349,7 +349,22 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
 
   // Actions
   setComponents: (components) => {
-    set({ components });
+    // 确保至少有一个 entry view
+    let newComponents = components;
+    const hasEntry = components.some(c => c.type === 'hg_view' && (c.data?.entry === true || c.data?.entry === 'true'));
+    
+    if (!hasEntry && components.some(c => c.type === 'hg_view')) {
+      const firstViewIndex = components.findIndex(c => c.type === 'hg_view');
+      if (firstViewIndex !== -1) {
+        newComponents = [...components];
+        newComponents[firstViewIndex] = {
+          ...newComponents[firstViewIndex],
+          data: { ...newComponents[firstViewIndex].data, entry: true }
+        };
+      }
+    }
+
+    set({ components: newComponents });
   },
 
   addComponent: (component, options?: { save?: boolean }) => {
@@ -424,6 +439,23 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     
     // 对于 list 控件，验证属性值
     let finalUpdates = { ...updates };
+    
+    // 防止取消唯一的 entry
+    if (before.type === 'hg_view' && (before.data?.entry === true || before.data?.entry === 'true')) {
+      if (finalUpdates.data) {
+        const newEntry = finalUpdates.data.entry;
+        if (newEntry === false || newEntry === 'false') {
+          const hasOtherEntry = state.components.some(c => c.id !== id && c.type === 'hg_view' && (c.data?.entry === true || c.data?.entry === 'true'));
+          if (!hasOtherEntry) {
+            if (vscodeAPI) {
+              vscodeAPI.postMessage({ command: 'showError', text: '必须至少保留一个入口视图(Entry View)' });
+            }
+            // 必须创建一个新对象，避免修改原始引用
+            finalUpdates.data = { ...finalUpdates.data, entry: true };
+          }
+        }
+      }
+    }
     
     if (before.type === 'hg_list') {
       // 验证 data 属性
@@ -678,10 +710,11 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     const component = state.components.find((c) => c.id === id);
     if (!component) return;
 
-    // 禁止删除默认主视图 mainView
-    if (id === 'mainView') {
+    // 禁止删除默认主视图 mainView 或入口视图
+    const isEntryView = component.type === 'hg_view' && (component.data?.entry === true || component.data?.entry === 'true');
+    if (id === 'mainView' || isEntryView) {
       if (vscodeAPI) {
-        vscodeAPI.postMessage({ command: 'notify', text: '主视图 mainView 不可删除' });
+        vscodeAPI.postMessage({ command: 'notify', text: '主视图(Entry View)不可删除' });
       }
       return;
     }
@@ -752,13 +785,17 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   removeComponents: (ids) => {
     if (!ids || ids.length === 0) return;
     
-    // 过滤掉 mainView，不允许删除
+    // 过滤掉 mainView 和入口视图，不允许删除
     const state = get();
-    const filteredIds = ids.filter(id => id !== 'mainView');
+    const filteredIds = ids.filter(id => {
+      const comp = state.components.find(c => c.id === id);
+      const isEntry = comp?.type === 'hg_view' && (comp.data?.entry === true || comp.data?.entry === 'true');
+      return id !== 'mainView' && !isEntry;
+    });
     
     if (filteredIds.length === 0) {
       if (vscodeAPI) {
-        vscodeAPI.postMessage({ command: 'notify', text: '主视图 mainView 不可删除' });
+        vscodeAPI.postMessage({ command: 'notify', text: '主视图(Entry View)不可删除' });
       }
       return;
     }
