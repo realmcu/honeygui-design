@@ -537,6 +537,9 @@ export class CollaborationController {
                     if (this.service.isHost) {
                         const serializedContent = this.hmlController.serializeDocument();
                         this.fileManager.saveHml(payload.content?.raw ?? serializedContent);
+
+                        // 触发自动代码生成
+                        this.messageHandler.triggerAutoCodeGeneration();
                     }
                     break;
                     

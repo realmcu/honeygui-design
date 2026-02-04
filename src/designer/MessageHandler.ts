@@ -27,6 +27,7 @@ export class MessageHandler {
     private readonly _collaborationService: any; // 引用 CollaborationService
     private _collaborationController?: CollaborationController; // Add reference
     private _autoCodeGenTimer: NodeJS.Timeout | null = null;
+    private _updateThrottles: Map<string, { timer: NodeJS.Timeout | null, pendingMessage: any, hasNew: boolean }> = new Map();
 
     constructor(
         panel: vscode.WebviewPanel,
@@ -94,10 +95,7 @@ export class MessageHandler {
         if (this._collaborationService.isConnected && broadcastCommands.includes(message.command) && !fromRemote) {
             // 无论 Host 还是 Guest，都先广播给对方
             // Guest 发给 Host，Host 广播给所有 Guest
-            this._collaborationService.broadcast({
-                type: 'OP_DELTA',
-                payload: message
-            });
+            this.throttleBroadcast(message);
             // 乐观更新：本地继续执行，不阻塞用户操作
         }
 
@@ -143,11 +141,22 @@ export class MessageHandler {
                     if (message?.content?.components && Array.isArray(message.content.components)) {
                         this._hmlController.updateFromFrontendComponents(message.content.components);
                     }
+                    
+                    // 注意：这里不再发送 REMOTE_UPDATE 消息
+                    // 之前的实现中发送了 REMOTE_UPDATE，导致 Host 收到后触发全量刷新 (onUpdate)，
+                    // 进而导致 Host Webview 闪烁。
+                    // 现在改为依赖 OP_DELTA (save) 消息（已在 handleMessage 入口处广播），
+                    // Host 收到 OP_DELTA (save) 后会同步内存并保存文件，但不会刷新 Webview。
+                    // 这样既实现了保存，又避免了 Host 端闪烁。
+                    
+                    /* 
                     const serializedContent = this._hmlController.serializeDocument();
                     this._collaborationService.broadcast({
                         type: 'REMOTE_UPDATE',
                         content: serializedContent
                     });
+                    */
+                   
                     // Guest 不执行本地保存，直接返回
                     break; 
                 }
@@ -566,6 +575,13 @@ export class MessageHandler {
      */
     private async handleGenerateCode(): Promise<void> {
         await CodeGenerationService.generateFromFile(this._fileManager.currentFilePath, this._codeGenerator);
+    }
+
+    /**
+     * 触发自动代码生成（供外部调用）
+     */
+    public triggerAutoCodeGeneration(): void {
+        this._scheduleAutoCodeGeneration();
     }
 
     /**
@@ -1021,5 +1037,67 @@ export class MessageHandler {
                 error: null
             }
         });
+    }
+
+    /**
+     * 对广播消息进行节流处理
+     * 特别是针对高频的 updateComponent 消息
+     */
+    private throttleBroadcast(message: any) {
+        const id = message.componentId;
+        const command = message.command;
+        
+        // 如果是 updateComponent，使用组件 ID 作为节流 Key
+        // 如果是 save，使用 'global_save' 作为 Key
+        let throttleKey: string | null = null;
+        
+        if (command === 'updateComponent' && id) {
+            throttleKey = id;
+        } else if (command === 'save') {
+            throttleKey = 'global_save';
+        }
+
+        // 如果不需要节流，直接广播
+        if (!throttleKey) {
+            this._collaborationService.broadcast({
+                type: 'OP_DELTA',
+                payload: message
+            });
+            return;
+        }
+
+        let record = this._updateThrottles.get(throttleKey);
+
+        if (!record) {
+            record = { timer: null, pendingMessage: null, hasNew: false };
+            this._updateThrottles.set(throttleKey, record);
+        }
+
+        // 更新待发送的消息为最新的一条
+        record.pendingMessage = message;
+        record.hasNew = true;
+
+        if (!record.timer) {
+            // 立即发送（前沿触发）
+            this._collaborationService.broadcast({
+                type: 'OP_DELTA',
+                payload: record.pendingMessage
+            });
+            record.hasNew = false;
+            
+            // 启动冷却计时器 (30ms = ~33fps)
+            record.timer = setTimeout(() => {
+                if (record) {
+                    record.timer = null;
+                    if (record.hasNew && record.pendingMessage) {
+                        this._collaborationService.broadcast({
+                            type: 'OP_DELTA',
+                            payload: record.pendingMessage
+                        });
+                        record.hasNew = false;
+                    }
+                }
+            }, 30);
+        }
     }
 }
