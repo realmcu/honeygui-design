@@ -14,8 +14,13 @@ class VSCodeLogger implements Logger {
         this.outputChannel = outputChannel;
     }
 
-    log(message: string, isError: boolean = false): void {
-        const prefix = isError ? '[错误]' : '[信息]';
+    log(message: string, isError: boolean = false, isWarning: boolean = false): void {
+        let prefix = '[信息]';
+        if (isWarning) {
+            prefix = '[警告]';
+        } else if (isError) {
+            prefix = '[错误]';
+        }
         this.outputChannel.appendLine(`${prefix} ${message}`);
     }
 }

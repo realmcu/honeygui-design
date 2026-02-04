@@ -16,7 +16,7 @@ import { buildSConstruct } from './SConstructTemplate';
  * 日志接口
  */
 export interface Logger {
-    log(message: string, isError?: boolean): void;
+    log(message: string, isError?: boolean, isWarning?: boolean): void;
 }
 
 /**
@@ -363,10 +363,8 @@ Return('objs')
                         // 显示所有错误信息，包括链接错误
                         this.logger.log(trimmed, true);
                     } else if (trimmed.includes('warning:') && !trimmed.includes('Command is too long')) {
-                        // 只显示重要警告，跳过常见无害警告
-                        if (!trimmed.includes('unused') && !trimmed.includes('deprecated')) {
-                            this.logger.log(trimmed);
-                        }
+                        // 显示警告信息
+                        this.logger.log(trimmed, false, true);
                     } else if (trimmed.startsWith('scons:')) {
                         this.logger.log(trimmed);
                     } else {
@@ -380,13 +378,39 @@ Return('objs')
                 const output = data.toString();
                 const lines = output.split('\n');
                 
+                let isInWarningContext = false;
+                
                 for (const line of lines) {
                     const trimmed = line.trim();
                     if (!trimmed) continue;
                     if (trimmed.includes('Warning: Command is too long')) continue;
                     
-                    // stderr 输出全部显示，便于排查编译错误
-                    this.logger.log(trimmed, true);
+                    // 检测是否是警告相关的行
+                    if (trimmed.includes('warning:')) {
+                        isInWarningContext = true;
+                        this.logger.log(trimmed, false, true);  // 警告
+                    } else if (trimmed.includes('note:') && isInWarningContext) {
+                        // note 通常是警告的补充说明
+                        this.logger.log(trimmed, false, true);  // 警告
+                    } else if (trimmed.match(/^[\s^~]+$/) || trimmed === '^') {
+                        // 代码指示符（如 ^、~~~）
+                        this.logger.log(trimmed, false, isInWarningContext);
+                    } else if (trimmed.includes(': In function ') || 
+                               trimmed.includes('In file included from') ||
+                               trimmed.includes('from ')) {
+                        // 上下文信息
+                        this.logger.log(trimmed, false, isInWarningContext);
+                    } else if (trimmed.includes('error:') || 
+                               trimmed.includes('Error:') ||
+                               trimmed.includes('undefined reference') ||
+                               trimmed.includes('multiple definition')) {
+                        // 真正的错误
+                        isInWarningContext = false;
+                        this.logger.log(trimmed, true);
+                    } else {
+                        // 其他行：如果在警告上下文中，显示为警告；否则显示为错误
+                        this.logger.log(trimmed, !isInWarningContext, isInWarningContext);
+                    }
                 }
             });
 
