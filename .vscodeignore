@@ -69,6 +69,8 @@ node_modules/**
 !node_modules/string.prototype.codepointat/**
 !node_modules/tiny-inflate/**
 !node_modules/ws/**
+!node_modules/minimatch/**
+!node_modules/@isaacs/**
 
 # 图片转换工具依赖
 !node_modules/pngjs/**
