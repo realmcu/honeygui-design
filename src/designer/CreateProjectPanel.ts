@@ -263,12 +263,18 @@ export class CreateProjectPanel {
     }
 
     /**
-     * 发送模板列表到 Webview
+     * 发送模板列表到 Webview（带国际化）
      */
     private _sendTemplates(): void {
+        // 翻译模板描述
+        const templatesWithI18n = AVAILABLE_TEMPLATES.map(template => ({
+            ...template,
+            description: vscode.l10n.t(template.descriptionKey)
+        }));
+
         this._panel.webview.postMessage({
             command: 'templatesLoaded',
-            templates: AVAILABLE_TEMPLATES
+            templates: templatesWithI18n
         });
     }
 

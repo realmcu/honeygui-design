@@ -313,5 +313,11 @@
   "Successfully joined collaboration: {0}": "已成功加入协作: {0}",
   "Disconnected from collaboration": "已断开协作连接",
   "Enable Dither": "启用抖动",
-  "ditherHint": "启用抖动以减少低色深下的色带效应"
+  "ditherHint": "启用抖动以减少低色深下的色带效应",
+
+  "template.smartwatch.description": "智能手表界面，包含完整资源（字体、图片、3D模型、视频）",
+  "template.dashboard.description": "汽车仪表盘界面，包含仪表盘UI资源",
+  "template.chatbot.description": "聊天机器人界面（轻量级）",
+  "template.rotary.description": "旋钮控制界面（轻量级）",
+  "template.settings.description": "设置界面（轻量级）"
 }

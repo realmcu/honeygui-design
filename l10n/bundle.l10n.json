@@ -313,5 +313,11 @@
   "Successfully joined collaboration: {0}": "Successfully joined collaboration: {0}",
   "Disconnected from collaboration": "Disconnected from collaboration",
   "Enable Dither": "Enable Dither",
-  "ditherHint": "Enable dithering to reduce color banding in low color depths"
+  "ditherHint": "Enable dithering to reduce color banding in low color depths",
+
+  "template.smartwatch.description": "Smart watch interface with complete resources (fonts, images, 3D models, videos)",
+  "template.dashboard.description": "Car dashboard interface with UI resources",
+  "template.chatbot.description": "Chat bot interface (lightweight)",
+  "template.rotary.description": "Rotary knob control interface (lightweight)",
+  "template.settings.description": "Settings interface (lightweight)"
 }
