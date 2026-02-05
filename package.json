@@ -108,6 +108,10 @@
           "command": "honeygui.openInDesigner",
           "when": "resourceExtname == .hml",
           "group": "1_open@2"
+        },
+        {
+          "command": "honeygui.createNewHmlInWorkspace",
+          "group": "navigation@1"
         }
       ],
       "view/title": [

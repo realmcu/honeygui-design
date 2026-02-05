@@ -230,8 +230,22 @@ export class CommandManager {
                     return;
                 }
                 
-                // 使用第一个工作区的ui目录
                 const workspaceRoot = workspaceFolders[0].uri.fsPath;
+                
+                // 检查是否为 HoneyGUI 项目
+                const projectJsonPath = path.join(workspaceRoot, 'project.json');
+                if (!fs.existsSync(projectJsonPath)) {
+                    const action = await vscode.window.showWarningMessage(
+                        vscode.l10n.t('Not a HoneyGUI project. Please create a project first.'),
+                        vscode.l10n.t('Create Project')
+                    );
+                    if (action === vscode.l10n.t('Create Project')) {
+                        await vscode.commands.executeCommand('honeygui.newProject');
+                    }
+                    return;
+                }
+                
+                // 使用第一个工作区的ui目录
                 const uiDir = path.join(workspaceRoot, 'ui');
                 
                 // 确保ui目录存在

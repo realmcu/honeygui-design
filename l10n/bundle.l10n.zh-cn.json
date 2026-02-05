@@ -319,5 +319,8 @@
   "template.dashboard.description": "汽车仪表盘界面，包含仪表盘UI资源",
   "template.chatbot.description": "聊天机器人界面（轻量级）",
   "template.rotary.description": "旋钮控制界面（轻量级）",
-  "template.settings.description": "设置界面（轻量级）"
+  "template.settings.description": "设置界面（轻量级）",
+
+  "Not a HoneyGUI project. Please create a project first.": "这不是 HoneyGUI 项目，请先创建项目。",
+  "Create Project": "创建项目"
 }
