@@ -1,13 +1,9 @@
-/**
- * @file def_event.h
- * @author wenjing_jiang(wenjing_jiang@realsil.com.cn)
- * @brief
- * @version 0.1
- * @date 2024-06-14
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
  *
- * @copyright Copyright (c) 2024
- *
+ * SPDX-License-Identifier: MIT
  */
+
 #ifndef __DEF_EVENT_H__
 #define __DEF_EVENT_H__
 
@@ -63,12 +59,8 @@ typedef enum
 
 
     /** keyboard device events*/
-    GUI_EVENT_KB_UP_PRESSED          = 0x0200,
-    GUI_EVENT_KB_UP_RELEASED,
-    GUI_EVENT_KB_DOWN_PRESSED,
-    GUI_EVENT_KB_DOWN_RELEASED,
-    GUI_EVENT_KB_SHORT_CLICKED,
-    GUI_EVENT_KB_LONG_CLICKED,
+    GUI_EVENT_KB_SHORT_PRESSED          = 0x0200,
+    GUI_EVENT_KB_LONG_PRESSED,
 
     GUI_EVENT_VIEW_SWITCH_DIRECT
     /** wheel device events*/

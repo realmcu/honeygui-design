@@ -1,13 +1,9 @@
-/**
- * @file gui_listener.h
- * @author howie_wang (howie_wang@realtek.com.cn)
- * @brief Message listener for pub/sub pattern
- * @version 0.1
- * @date 2025-12-25
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
  *
- * @copyright Copyright (c) 2025
- *
+ * SPDX-License-Identifier: MIT
  */
+
 #ifndef __GUI_LISTENER_H__
 #define __GUI_LISTENER_H__
 
@@ -38,7 +34,7 @@ void gui_msg_subscribe(gui_obj_t *obj, const char *topic, gui_listener_cb_t call
 /**
  * @brief Unsubscribe from a message topic
  * @param obj The widget object
- * @param topic Message topic string
+ * @param topic Message topic string, set NULL to unsubscribe all topics
  */
 void gui_msg_unsubscribe(gui_obj_t *obj, const char *topic);
 

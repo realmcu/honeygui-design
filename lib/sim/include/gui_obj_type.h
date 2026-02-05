@@ -1,20 +1,8 @@
-/**
- \internal
-*****************************************************************************************
-*     Copyright(c) 2025, Realtek Semiconductor Corporation. All rights reserved.
-*****************************************************************************************
-  * @file gui_obj.h
-  * @brief  object widget
-  * @details create a object
-  * @author howie_wang@realsil.com.cn
-  * @date 2025/03/07
-  * @version 1.0
-  ***************************************************************************************
-    * @attention
-  * <h2><center>&copy; COPYRIGHT 2025 Realtek Semiconductor Corporation</center></h2>
-  ***************************************************************************************
- \endinternal
-  */
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
+ *
+ * SPDX-License-Identifier: MIT
+ */
 
 /*============================================================================*
  *               Define to prevent recursive inclusion
@@ -162,6 +150,7 @@ typedef struct _gui_obj_t
     uint32_t has_end_cb                 : 1;
     uint32_t has_destroy_cb             : 1;
     uint32_t need_preprocess            : 1;
+    uint32_t has_subscribe              : 1;
     uint32_t magic                      : 4;
     gui_event_dsc_t   *event_dsc;
     struct _gui_obj_t **suppress_conflict_obj_list; //chrild obj list that has the same event

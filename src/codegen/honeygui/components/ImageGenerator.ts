@@ -231,9 +231,9 @@ void ${component.id}_button_cb(void *obj, gui_event_t event, void *param)
     ${component.id}_state = !${component.id}_state;
     
     if (${component.id}_state) {
-        gui_img_set_image_data((gui_img_t *)${component.id}, "${binOn}");
+        gui_img_set_src((gui_img_t *)${component.id}, "${binOn}", IMG_SRC_FILESYS);
     } else {
-        gui_img_set_image_data((gui_img_t *)${component.id}, "${binOff}");
+        gui_img_set_src((gui_img_t *)${component.id}, "${binOff}", IMG_SRC_FILESYS);
     }
 }
 
@@ -241,7 +241,7 @@ bool ${component.id}_get_state(void) { return ${component.id}_state; }
 void ${component.id}_set_state(bool state) {
     if (${component.id}_state != state) {
         ${component.id}_state = state;
-        gui_img_set_image_data((gui_img_t *)${component.id}, state ? "${binOn}" : "${binOff}");
+        gui_img_set_src((gui_img_t *)${component.id}, state ? "${binOn}" : "${binOff}", IMG_SRC_FILESYS);
     }
 }
 `;

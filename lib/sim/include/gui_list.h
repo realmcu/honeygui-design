@@ -1,19 +1,8 @@
-/**
- \internal
-*****************************************************************************************
-*     Copyright(c) 2025, Realtek Semiconductor Corporation. All rights reserved.
-*****************************************************************************************
-  * @file gui_list.h
-  * @brief The list widget is a container for any number of list note, and each note can have other widgets added to it.
-  * @author shel_deng@realsil.com.cn
-  * @date 2025/04/23
-  * @version 1.0
-  ***************************************************************************************
-    * @attention
-  * <h2><center>&copy; COPYRIGHT 2025 Realtek Semiconductor Corporation</center></h2>
-  ***************************************************************************************
- \endinternal
-  */
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
+ *
+ * SPDX-License-Identifier: MIT
+ */
 
 /*============================================================================*
  *               Define to prevent recursive inclusion
@@ -70,6 +59,7 @@ typedef struct gui_list
     uint32_t need_update_bar : 1;
     uint32_t note_num        : 8; // number of whole notes.
     uint32_t space           : 8;
+    uint32_t area_display    : 1; // 0:disable area display, 1:enable area display.
 
     uint16_t note_length;        // List note length.
     int16_t speed;
@@ -227,6 +217,13 @@ void gui_list_set_inertia(gui_list_t *list, bool inertia);
  * @param loop Default is false. True: enable loop, false: disable loop.
  */
 void gui_list_enable_loop(gui_list_t *list, bool loop);
+
+/**
+ * @brief Enable area display of list, which is used to decide note auto-creation range.
+ * @param list Pointer to the list widget.
+ * @param enable True: enable area display, false: disable area display. Default is false.
+ */
+void gui_list_enable_area_display(gui_list_t *list, bool enable);
 
 #ifdef __cplusplus
 }

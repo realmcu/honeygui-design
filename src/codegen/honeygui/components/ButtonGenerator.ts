@@ -1,7 +1,7 @@
 /**
  * hg_button 组件代码生成器
  * 使用 gui_img 控件实现双态图片按钮
- * 通过 gui_img_set_image_data 切换图片实现状态转换
+ * 通过 gui_img_set_src 切换图片实现状态转换
  */
 import { Component } from '../../../hml/types';
 import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';
@@ -152,7 +152,7 @@ export class ButtonGenerator implements ComponentCodeGenerator {
 
   /**
    * 生成双态按钮的回调函数
-   * 使用 gui_img_set_image_data 切换图片
+   * 使用 gui_img_set_src 切换图片
    */
   generateToggleCallback(component: Component): string {
     // 检查是否是双态模式（兼容 boolean 和字符串 "true"）
@@ -181,10 +181,10 @@ void ${component.id}_toggle_cb(void *obj, gui_event_t event, void *param)
     
     // 根据状态切换图片并调用对应回调
     if (${component.id}_state) {
-        gui_img_set_image_data((gui_img_t *)${component.id}, "${binOn}");
+        gui_img_set_src((gui_img_t *)${component.id}, "${binOn}", IMG_SRC_FILESYS);
         ${component.id}_on_callback();
     } else {
-        gui_img_set_image_data((gui_img_t *)${component.id}, "${binOff}");
+        gui_img_set_src((gui_img_t *)${component.id}, "${binOff}", IMG_SRC_FILESYS);
         ${component.id}_off_callback();
     }
 }
@@ -202,10 +202,10 @@ void ${component.id}_set_state(bool state)
         ${component.id}_state = state;
         
         if (state) {
-            gui_img_set_image_data((gui_img_t *)${component.id}, "${binOn}");
+            gui_img_set_src((gui_img_t *)${component.id}, "${binOn}", IMG_SRC_FILESYS);
             ${component.id}_on_callback();
         } else {
-            gui_img_set_image_data((gui_img_t *)${component.id}, "${binOff}");
+            gui_img_set_src((gui_img_t *)${component.id}, "${binOff}", IMG_SRC_FILESYS);
             ${component.id}_off_callback();
         }
     }

@@ -1,24 +1,34 @@
 /*
- * Copyright (c) 2015-2020, RealTek Wristband Development Team
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
  *
- * SPDX-License-Identifier: Apache-2.0
- *
- * Change Logs:
- * Date           Author        Notes
- * 2020-11-18     howie  first version
+ * SPDX-License-Identifier: MIT
  */
+
 #ifndef __KB_ALGO_H__
 #define __KB_ALGO_H__
 #include <string.h>
 #include "guidef.h"
+#include "gui_obj.h"
 
+/** @brief  input device key board structure */
+typedef struct gui_indev_kb
+{
+    gui_obj_t base;
+
+    bool *state;                         /* Current state of the KeyBoard , true means key is being pressed */
+    uint32_t *timestamp_ms_press;            /* The timestamp when pressed, update once */
+    uint32_t *timestamp_ms_release;          /* The timestamp when when release, update once*/
+    // uint32_t *timestamp_ms_pressing;         /* The timestamp when pressing, update periodically*/
+
+    uint32_t last_processed_release;     /* Last processed release timestamp to avoid duplicate event handling */
+
+} gui_indev_kb_t;
 
 /* KB event */
-#define GUI_KB_EVENT_NONE     0                /* KB none */
-#define GUI_KB_EVENT_UP       1                /* KB up event */
-#define GUI_KB_EVENT_DOWN     2                /* KB down event */
-kb_info_t *kb_get_info(void);
-struct kb_info *kb_algo_process(gui_kb_port_data_t *kb_raw);
+kb_info_t *kb_algo_process(gui_obj_t *object);
+
+gui_indev_kb_t *gui_kb_create(char *name, bool *state, uint32_t *timestamp_ms_press,
+                              uint32_t *timestamp_ms_release);
 
 
 #endif

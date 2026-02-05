@@ -1,20 +1,8 @@
-/**
- \internal
-*****************************************************************************************
-*     Copyright(c) 2023, Realtek Semiconductor Corporation. All rights reserved.
-*****************************************************************************************
-  * @file gui_scroll_text.c
-  * @brief Scroll text widget.
-  * @details Scroll text widget.
-  * @author luke_sun@realsil.com.cn
-  * @date 2023/11/08
-  * @version v1.0
-  ***************************************************************************************
-    * @attention
-  * <h2><center>&copy; COPYRIGHT 2023 Realtek Semiconductor Corporation</center></h2>
-  ***************************************************************************************
- \endinternal
-  */
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
+ *
+ * SPDX-License-Identifier: MIT
+ */
 
 /*============================================================================*
  *               Define to prevent recursive inclusion
@@ -48,6 +36,7 @@ typedef struct gui_scroll_text
     uint32_t cur_time_ms;
     uint32_t duration_time_ms;
     uint32_t interval_time_ms;
+    TEXT_MODE fallback_mode;
     bool scrolling;
 } gui_scroll_text_t;
 
@@ -197,6 +186,14 @@ void gui_scroll_text_resume(gui_scroll_text_t *_this);
  * @param _this the scroll text widget pointer
  */
 void gui_scroll_text_start(gui_scroll_text_t *_this);
+
+/**
+ * @brief Set non-scroll alignment mode when text width is less than textbox width
+ *
+ * @param _this the scroll text widget pointer
+ * @param mode the alignment mode to use when not scrolling (LEFT, CENTER, RIGHT, etc.)
+ */
+void gui_scroll_text_non_scroll_align_set(gui_scroll_text_t *_this, TEXT_MODE mode);
 
 #ifdef __cplusplus
 }

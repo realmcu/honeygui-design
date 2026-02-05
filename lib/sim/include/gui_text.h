@@ -1,20 +1,8 @@
-/**
- \internal
-*****************************************************************************************
-*     Copyright(c) 2023, Realtek Semiconductor Corporation. All rights reserved.
-*****************************************************************************************
-  * @file gui_text.h
-  * @brief Text widget header file.
-  * @details Text widget header file.
-  * @author luke_sun@realsil.com.cn
-  * @date 2023/10/25
-  * @version v1.0
-  ***************************************************************************************
-    * @attention
-  * <h2><center>&copy; COPYRIGHT 2023 Realtek Semiconductor Corporation</center></h2>
-  ***************************************************************************************
- \endinternal
-  */
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
+ *
+ * SPDX-License-Identifier: MIT
+ */
 
 /*============================================================================*
  *               Define to prevent recursive inclusion
@@ -192,21 +180,6 @@ void gui_text_set(gui_text_t    *this_widget,
                   gui_color_t    color,
                   uint16_t       length,
                   uint16_t       font_size);
-
-/**
- * @brief Set animate.
- *
- * @param o Text widget.
- * @param dur Duration. Time length of the animate.
- * @param repeat_count 0: One shoot, -1: Endless.
- * @param callback Happens at every frame.
- * @param p Callback's parameter.
- */
-void gui_text_set_animate(void     *o,
-                          uint32_t  dur,
-                          int       repeat_count,
-                          void     *callback,
-                          void     *p);
 
 /**
  * @brief Set text mode of this_widget text widget.

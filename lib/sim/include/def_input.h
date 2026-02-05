@@ -1,12 +1,7 @@
-/**
- * @file def_input.h
- * @author wenjing_jiang(wenjing_jiang@realsil.com.cn)
- * @brief
- * @version 0.1
- * @date 2024-06-14
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
  *
- * @copyright Copyright (c) 2024
- *
+ * SPDX-License-Identifier: MIT
  */
 
 #ifndef __DEF_INPUT_H__
@@ -113,15 +108,6 @@ typedef struct gui_touch_port_data
     void *data;
 } gui_touch_port_data_t;
 
-typedef struct gui_kb_port_data
-{
-    uint8_t  event;
-    uint8_t  name[10];
-    uint32_t timestamp_ms_press;            /* The timestamp when pressed, update once */
-    uint32_t timestamp_ms_release;          /* The timestamp when when release, update once*/
-    uint32_t timestamp_ms_pressing;         /* The timestamp when pressing, update periodically*/
-} gui_kb_port_data_t;
-
 typedef struct gui_wheel_port_data
 {
     uint8_t  event;//0:no event//1:button down//2:button up//3:scroll
@@ -144,8 +130,6 @@ typedef struct gui_indev
     void (*ext_button_indicate)(void (*callback)(void));
 
     gui_touch_port_data_t *(*tp_get_data)(void);
-
-    gui_kb_port_data_t *(*kb_get_port_data)(void);
 
     gui_wheel_port_data_t *(*wheel_get_port_data)(void);
 } gui_indev_t;

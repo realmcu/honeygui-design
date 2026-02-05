@@ -1,20 +1,8 @@
-/**
- \internal
-*****************************************************************************************
-*     Copyright(c) 2023, Realtek Semiconductor Corporation. All rights reserved.
-*****************************************************************************************
-  * @file gui_obj.h
-  * @brief  The object widget.
-  * @details Create a object.
-  * @author luke_sun@realsil.com.cn
-  * @date 2023/10/25
-  * @version 1.0
-  ***************************************************************************************
-    * @attention
-  * <h2><center>&copy; COPYRIGHT 2023 Realtek Semiconductor Corporation</center></h2>
-  ***************************************************************************************
- \endinternal
-  */
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
+ *
+ * SPDX-License-Identifier: MIT
+ */
 
 /*============================================================================*
  *               Define to prevent recursive inclusion
@@ -79,6 +67,11 @@ gui_obj_t *gui_obj_get_root(void);
  * @return Pointer to the fake_root GUI object.
  */
 gui_obj_t *gui_obj_get_fake_root(void);
+
+/**
+ *
+ */
+gui_obj_t *gui_obj_get_kb_root(void);
 
 #ifndef DOXYGEN
 /**

@@ -1,18 +1,8 @@
-/**
-*****************************************************************************************
-*     Copyright(c) 2025, Realtek Semiconductor Corporation. All rights reserved.
-*****************************************************************************************
-  * @file gui_api.h
-  * @brief Application Programming Interface for UI
-  * @details API
-  * @author sienna_shen@realsil.com.cn
-  * @date 2025/3/5
-  * @version 1.0
-  ***************************************************************************************
-    * @attention
-  * <h2><center>&copy; COPYRIGHT 2025 Realtek Semiconductor Corporation</center></h2>
-  ***************************************************************************************
-  */
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
+ *
+ * SPDX-License-Identifier: MIT
+ */
 
 /*============================================================================*
  *               Define to prevent recursive inclusion
@@ -38,6 +28,7 @@ extern "C" {
 #include "gui_api_indev.h"
 #include "gui_api_os.h"
 #include "gui_listener.h"
+#include "gui_api_audio.h"
 
 
 /*============================================================================*

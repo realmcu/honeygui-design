@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
 #ifndef LITE_GEOMETRY_H
 #define LITE_GEOMETRY_H
 #include <string.h>
@@ -29,8 +35,6 @@
 
 #define LG_UNUSED(x) ((void)x)
 
-#define CANVAS_WIDTH   410
-#define CANVAS_HEIGHT  502
 
 typedef uint32_t PixelColor;
 
