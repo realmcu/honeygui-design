@@ -12,6 +12,9 @@ export class ButtonEventGenerator implements EventCodeGenerator {
 
     if (!component.eventConfigs) return code;
 
+    // 检查是否是双态按钮
+    const toggleMode = component.data?.toggleMode === true || component.data?.toggleMode === 'true';
+
     let msgIndex = 0;
     let controlTimerIndex = 0;
     component.eventConfigs.forEach(eventConfig => {
@@ -31,6 +34,10 @@ export class ButtonEventGenerator implements EventCodeGenerator {
           const callbackName = `${component.id}_switch_view_cb`;
           code += `${indentStr}gui_obj_add_event_cb(${component.id}, (gui_event_cb_t)${callbackName}, ${guiEvent}, NULL);\n`;
         } else if (action.type === 'controlTimer' && action.timerTargets && action.timerTargets.length > 0) {
+          // 双态按钮：跳过 controlTimer 事件，因为应该使用 on/off 回调来控制
+          if (toggleMode) {
+            return;
+          }
           const callbackName = `${component.id}_animation_set_${controlTimerIndex}_cb`;
           controlTimerIndex++;
           code += `${indentStr}gui_obj_add_event_cb(${component.id}, (gui_event_cb_t)${callbackName}, ${guiEvent}, NULL);\n`;
@@ -48,6 +55,9 @@ export class ButtonEventGenerator implements EventCodeGenerator {
 
     if (!component.eventConfigs) return callbacks;
 
+    // 检查是否是双态按钮
+    const toggleMode = component.data?.toggleMode === true || component.data?.toggleMode === 'true';
+
     let msgIndex = 0;
     let controlTimerIndex = 0;
     component.eventConfigs.forEach(eventConfig => {
@@ -61,6 +71,10 @@ export class ButtonEventGenerator implements EventCodeGenerator {
         if (action.type === 'switchView') {
           callbacks.push(`${component.id}_switch_view_cb`);
         } else if (action.type === 'controlTimer' && action.timerTargets && action.timerTargets.length > 0) {
+          // 双态按钮：跳过 controlTimer 回调
+          if (toggleMode) {
+            return;
+          }
           callbacks.push(`${component.id}_animation_set_${controlTimerIndex}_cb`);
           controlTimerIndex++;
         } else if (action.type === 'callFunction' && action.functionName) {
@@ -124,6 +138,14 @@ ${callbackBody}
   }
 
   getControlTimerCallbackImpl(component: Component, componentMap: Map<string, Component>): string[] {
+    // 检查是否是双态按钮
+    const toggleMode = component.data?.toggleMode === true || component.data?.toggleMode === 'true';
+    
+    // 双态按钮：不生成 controlTimer 回调，因为应该使用 on/off 回调
+    if (toggleMode) {
+      return [];
+    }
+    
     return generateControlTimerCallbackImpl(component, componentMap);
   }
 }

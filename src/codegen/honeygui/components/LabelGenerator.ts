@@ -31,16 +31,30 @@ export class LabelGenerator implements ComponentCodeGenerator {
     const scrollDirection = component.data?.scrollDirection || 'horizontal';
     const scrollReverse = component.data?.scrollReverse === true || component.data?.scrollReverse === 'true';
 
+    // 检查是否启用计时器模式
+    const isTimerLabel = component.data?.isTimerLabel === true;
+
     // 获取属性值
     const fontSize = component.data?.fontSize || 16;
     const color = component.style?.color || '#ffffff';
     const rgb = this.colorToRgb(color);
     
-    // 普通标签：使用静态文本（需要进行 C 字符串转义）
-    const staticText = String(component.data?.text ?? '');
-    const escapedText = this.escapeCString(staticText);
-    const text = `"${escapedText}"`;
-    const textLengthExpr = String(this.getUtf8ByteLength(staticText));
+    // 计时器模式：使用全局变量
+    let text: string;
+    let textLengthExpr: string;
+    
+    if (isTimerLabel) {
+      // 计时器模式：使用全局变量
+      const varName = `${component.id}_timer_str`;
+      text = varName;
+      textLengthExpr = `strlen(${varName})`;
+    } else {
+      // 普通标签：使用静态文本（需要进行 C 字符串转义）
+      const staticText = String(component.data?.text ?? '');
+      const escapedText = this.escapeCString(staticText);
+      text = `"${escapedText}"`;
+      textLengthExpr = String(this.getUtf8ByteLength(staticText));
+    }
 
     // 确定字体类型
     const fontType = this.getFontType(component);
@@ -112,6 +126,17 @@ export class LabelGenerator implements ComponentCodeGenerator {
     // 可见性
     if (component.visible === false) {
       code += `${indentStr}gui_obj_show(${component.id}, false);\n`;
+    }
+
+    // 计时器模式：创建定时器（根据配置决定是否自动启动）
+    if (isTimerLabel) {
+      const autoStart = component.data?.timerAutoStart !== false; // 默认自动启动
+      code += `${indentStr}// 创建计时器定时器（间隔 10ms，无限循环）\n`;
+      code += `${indentStr}gui_obj_create_timer((void *)${component.id}, 10, -1, ${component.id}_timer_update_cb);\n`;
+      if (!autoStart) {
+        // 如果不自动启动，创建后立即停止
+        code += `${indentStr}gui_obj_stop_timer((void *)${component.id});\n`;
+      }
     }
 
     return code;

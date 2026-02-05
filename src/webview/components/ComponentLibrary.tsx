@@ -22,6 +22,18 @@ interface AdvancedVariant {
 const advancedVariants: Record<string, AdvancedVariant[]> = {
   'hg_label': [
     { type: 'hg_time_label', label: 'Time Label', icon: '🕐' },
+    { 
+      type: 'hg_label', 
+      label: '计时标签', 
+      icon: '⏱️',
+      preset: {
+        text: '00:00:00',
+        isTimerLabel: true,  // 标识为计时标签
+        timerType: 'stopwatch', // stopwatch 或 countdown
+        timerInitialValue: 0, // 初始值（毫秒）
+        timerFormat: 'HH:MM:SS' // 显示格式
+      }
+    },
   ],
   'hg_rect': [
     { 
@@ -92,6 +104,7 @@ const componentDefinitions: ComponentDefinition[] = [
       { name: 'imageOff', label: 'Off Image', type: 'string', group: 'data' },
       { name: 'initialState', label: 'Initial State', type: 'select', defaultValue: 'off', 
         options: ['on', 'off'], group: 'data' },
+      { name: 'controlTarget', label: 'Control Target', type: 'string', defaultValue: '', group: 'data' },
       { name: 'enabled', label: 'Enabled', type: 'boolean', defaultValue: true, group: 'general' },
     ],
   },
@@ -102,6 +115,13 @@ const componentDefinitions: ComponentDefinition[] = [
     defaultSize: { width: 100, height: 24 },
     properties: [
       { name: 'text', label: 'Display Text', type: 'string', defaultValue: 'Label', group: 'data' },
+      { name: 'isTimerLabel', label: 'Timer Mode', type: 'boolean', defaultValue: false, group: 'timer' },
+      { name: 'timerType', label: 'Timer Type', type: 'select', defaultValue: 'stopwatch', 
+        options: ['stopwatch', 'countdown'], group: 'timer' },
+      { name: 'timerInitialValue', label: 'Initial Value (ms)', type: 'number', defaultValue: 0, group: 'timer' },
+      { name: 'timerFormat', label: 'Display Format', type: 'select', defaultValue: 'HH:MM:SS', 
+        options: ['HH:MM:SS', 'MM:SS', 'MM:SS:MS', 'SS'], group: 'timer' },
+      { name: 'timerAutoStart', label: 'Auto Start', type: 'boolean', defaultValue: true, group: 'timer' },
       { name: 'hAlign', label: 'Horizontal Align', type: 'select', defaultValue: 'LEFT', 
         options: ['LEFT', 'CENTER', 'RIGHT'], group: 'style' },
       { name: 'vAlign', label: 'Vertical Align', type: 'select', defaultValue: 'TOP', 

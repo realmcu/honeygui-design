@@ -88,24 +88,42 @@ export function generateControlTimerCallbackImpl(component: Component, component
         const targetComp = componentMap.get(target.componentId);
         if (!targetComp) return;
 
-        const timers = targetComp.data?.timers;
-        if (!timers || !Array.isArray(timers)) return;
+        // 检查是否是计时标签
+        const isTimerLabel = targetComp.type === 'hg_label' && targetComp.data?.isTimerLabel === true;
 
-        const timer = timers[target.timerIndex || 0];
-        if (!timer) return;
+        if (isTimerLabel) {
+          // 计时标签的启停控制
+          if (target.action === 'start') {
+            // 启动计时标签的定时器
+            callbackBody += `    gui_obj_create_timer((void *)${target.componentId}, 10, -1, ${target.componentId}_timer_update_cb);\n`;
+            callbackBody += `    gui_obj_start_timer((void *)${target.componentId});\n`;
+          } else if (target.action === 'stop') {
+            // 停止计时标签的定时器
+            callbackBody += `    if (GUI_BASE(${target.componentId})->timer) {\n`;
+            callbackBody += `        gui_obj_stop_timer((void *)${target.componentId});\n`;
+            callbackBody += `    }\n`;
+          }
+        } else {
+          // 普通定时器的启停控制
+          const timers = targetComp.data?.timers;
+          if (!timers || !Array.isArray(timers)) return;
 
-        if (target.action === 'start') {
-          // 开启定时器
-          const callback = timer.mode === 'preset' 
-            ? `${target.componentId}_${timer.id}_cb`
-            : (timer.callback || `${target.componentId}_timer_cb`);
-          callbackBody += `    gui_obj_create_timer(GUI_BASE(${target.componentId}), ${timer.interval}, ${timer.reload ? 'true' : 'false'}, ${callback});\n`;
-          callbackBody += `    gui_obj_start_timer(GUI_BASE(${target.componentId}));\n`;
-        } else if (target.action === 'stop') {
-          // 关闭定时器
-          callbackBody += `    if (GUI_BASE(${target.componentId})->timer) {\n`;
-          callbackBody += `        gui_obj_stop_timer(GUI_BASE(${target.componentId}));\n`;
-          callbackBody += `    }\n`;
+          const timer = timers[target.timerIndex || 0];
+          if (!timer) return;
+
+          if (target.action === 'start') {
+            // 开启定时器
+            const callback = timer.mode === 'preset' 
+              ? `${target.componentId}_${timer.id}_cb`
+              : (timer.callback || `${target.componentId}_timer_cb`);
+            callbackBody += `    gui_obj_create_timer(GUI_BASE(${target.componentId}), ${timer.interval}, ${timer.reload ? 'true' : 'false'}, ${callback});\n`;
+            callbackBody += `    gui_obj_start_timer(GUI_BASE(${target.componentId}));\n`;
+          } else if (target.action === 'stop') {
+            // 关闭定时器
+            callbackBody += `    if (GUI_BASE(${target.componentId})->timer) {\n`;
+            callbackBody += `        gui_obj_stop_timer(GUI_BASE(${target.componentId}));\n`;
+            callbackBody += `    }\n`;
+          }
         }
       });
 

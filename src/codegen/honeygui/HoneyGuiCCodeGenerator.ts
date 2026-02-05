@@ -242,8 +242,9 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
    * 生成UI实现文件（每次覆盖）
    */
   private generateUiImplementation(baseName: string): string {
-    // 收集所有时间标签
+    // 收集所有时间标签和计时器标签
     const timeLabels = this.components.filter(c => c.type === 'hg_time_label');
+    const timerLabels = this.components.filter(c => c.type === 'hg_label' && c.data?.isTimerLabel === true);
     
     let code = `/**
  * ${baseName} UI实现（自动生成，请勿手动修改）
@@ -254,9 +255,13 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
 #include <stddef.h>
 `;
 
-    // 如果有时间标签，添加 time.h
+    // 如果有时间标签或计时器标签，添加必要的头文件
     if (timeLabels.length > 0) {
       code += `#include <time.h>\n`;
+    }
+    if (timerLabels.length > 0) {
+      code += `#include <stdio.h>\n`;
+      code += `#include <string.h>\n`;
     }
 
     code += `\n// 组件句柄定义\n`;
@@ -283,6 +288,16 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       timeLabels.forEach(label => {
         const bufferSize = this.getTimeBufferSize(label.data?.timeFormat);
         code += `char ${label.id}_time_str[${bufferSize}] = {0};\n`;
+      });
+    }
+
+    // 为计时器标签生成全局计时器字符串变量和计时器值变量
+    if (timerLabels.length > 0) {
+      code += `\n// 计时器字符串全局变量\n`;
+      timerLabels.forEach(label => {
+        const bufferSize = this.getTimerBufferSize(label.data?.timerFormat);
+        code += `char ${label.id}_timer_str[${bufferSize}] = {0};\n`;
+        code += `int ${label.id}_timer_value = ${label.data?.timerInitialValue || 0}; // 计时器值（毫秒）\n`;
       });
     }
 
@@ -831,6 +846,19 @@ static void ${component.id}_breath_anim_cb(void *p)
       case 'YYYY-MM-DD': return 12;
       case 'YYYY-MM-DD HH:mm:ss': return 22;
       case 'MM-DD HH:mm': return 16;
+      default: return 10;
+    }
+  }
+
+  /**
+   * 获取计时器格式对应的缓冲区大小
+   */
+  private getTimerBufferSize(timerFormat?: string): number {
+    switch (timerFormat) {
+      case 'HH:MM:SS': return 10;  // "HH:MM:SS\0" = 9 + 1
+      case 'MM:SS': return 6;      // "MM:SS\0" = 5 + 1
+      case 'MM:SS:MS': return 10;  // "MM:SS:MS\0" = 9 + 1
+      case 'SS': return 4;         // "SS\0" = 2 + 1
       default: return 10;
     }
   }

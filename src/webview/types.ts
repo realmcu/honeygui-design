@@ -55,7 +55,7 @@ export interface PropertyDefinition {
   type: 'string' | 'number' | 'boolean' | 'color' | 'select' | 'options';
   defaultValue?: any;
   options?: string[] | any[];
-  group: 'general' | 'style' | 'data' | 'events' | 'font' | 'interaction' | 'scroll';
+  group: 'general' | 'style' | 'data' | 'events' | 'font' | 'interaction' | 'scroll' | 'timer';
   min?: number;  // 数字类型的最小值
   max?: number;  // 数字类型的最大值
 }

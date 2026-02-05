@@ -1179,6 +1179,60 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                 )}
               </div>
             )}
+
+            {/* Timer Properties - 仅对启用了计时器的 hg_label 显示 */}
+            {definition && component.type === 'hg_label' && (component.data as any)?.isTimerLabel && definition.properties.filter(p => p.group === 'timer').length > 0 && (
+              <div className="property-group">
+                <div className="property-group-title">{t('Timer Settings')}</div>
+                {/* 计时器类型 */}
+                <div className="property-item">
+                  <label>{t('Timer Type')}</label>
+                  <PropertyEditor
+                    type="select"
+                    value={(component.data as any)?.timerType || 'stopwatch'}
+                    onChange={(value) => handleDataChange('timerType', value)}
+                    options={[
+                      { value: 'stopwatch', label: t('Stopwatch') },
+                      { value: 'countdown', label: t('Countdown') },
+                    ]}
+                  />
+                </div>
+                {/* 显示格式 */}
+                <div className="property-item">
+                  <label>{t('Display Format')}</label>
+                  <PropertyEditor
+                    type="select"
+                    value={(component.data as any)?.timerFormat || 'HH:MM:SS'}
+                    onChange={(value) => handleDataChange('timerFormat', value)}
+                    options={['HH:MM:SS', 'MM:SS', 'MM:SS:MS', 'SS']}
+                  />
+                </div>
+                {/* 初始值 */}
+                <div className="property-item">
+                  <label>{t('Initial Value (ms)')}</label>
+                  <PropertyEditor
+                    type="number"
+                    value={(component.data as any)?.timerInitialValue || 0}
+                    onChange={(value) => handleDataChange('timerInitialValue', value)}
+                  />
+                  <span style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '2px' }}>
+                    {t('Timer value in milliseconds')}
+                  </span>
+                </div>
+                {/* 自动启动 */}
+                <div className="property-item">
+                  <label>{t('Auto Start')}</label>
+                  <PropertyEditor
+                    type="boolean"
+                    value={(component.data as any)?.timerAutoStart !== false}
+                    onChange={(value) => handleDataChange('timerAutoStart', value)}
+                  />
+                  <span style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '2px' }}>
+                    {t('Start timer automatically on load')}
+                  </span>
+                </div>
+              </div>
+            )}
           </>
         )}
 

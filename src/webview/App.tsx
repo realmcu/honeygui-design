@@ -913,6 +913,13 @@ const App: React.FC = () => {
       ];
     }
 
+    // 计时器标签：自动添加计时器字符集
+    if (componentType === 'hg_label' && preset?.isTimerLabel === true) {
+      defaultData.characterSets = [
+        { type: 'string', value: '0123456789:- ' }
+      ];
+    }
+
     // 应用默认通用属性
     componentDef.properties
       .filter(prop => prop.group === 'general' && prop.defaultValue !== undefined)

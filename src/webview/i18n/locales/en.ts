@@ -47,6 +47,7 @@ const en = {
   'On Image': 'On Image',
   'Off Image': 'Off Image',
   'Initial State': 'Initial State',
+  'Control Target': 'Control Target',
   'Enabled': 'Enabled',
   'Disabled': 'Disabled',
   'Time Format': 'Time Format',
@@ -339,6 +340,18 @@ const en = {
   // DefaultProperties - Font section
   'Font': 'Font',
   'Preview mode (does not change actual rendering)': 'Preview mode (does not change actual rendering)',
+
+  // DefaultProperties - Timer section
+  'Timer Settings': 'Timer Settings',
+  'Timer Type': 'Timer Type',
+  'Timer Label': 'Timer Label',
+  'Stopwatch': 'Stopwatch',
+  'Countdown': 'Countdown',
+  'Display Format': 'Display Format',
+  'Initial Value (ms)': 'Initial Value (ms)',
+  'Timer value in milliseconds': 'Timer value in milliseconds',
+  'Auto Start': 'Auto Start',
+  'Start timer automatically on load': 'Start timer automatically on load',
 
   // EventsPanel
   'Exit Animation': 'Exit Animation',

@@ -215,7 +215,7 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
     }> = [];
 
     const collectTimerComponents = (comp: Component) => {
-      // 检查组件是否有定时器
+      // 检查组件是否有定时器配置
       const timers = comp.data?.timers;
       if (timers && Array.isArray(timers) && timers.length > 0) {
         timerComponents.push({
@@ -226,6 +226,19 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
             name: timer.name || `${t('Animation')} ${index + 1}`,
             index,
           })),
+        });
+      }
+
+      // 检查是否是计时标签（isTimerLabel）
+      if (comp.type === 'hg_label' && comp.data?.isTimerLabel === true) {
+        timerComponents.push({
+          id: comp.id,
+          name: comp.name || comp.id,
+          timers: [{
+            id: 'timer_label',
+            name: t('Timer Label'),
+            index: 0,
+          }],
         });
       }
 

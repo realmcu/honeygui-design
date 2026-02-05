@@ -141,8 +141,9 @@ export class CallbackFileGenerator {
    * @param existingContent 现有文件内容（可选），用于检查已存在的函数
    */
   generateImplementation(baseName: string, existingContent?: string): string {
-    // 收集所有时间标签（使用 allComponents）
+    // 收集所有时间标签和计时器标签（使用 allComponents）
     const timeLabels = this.allComponents.filter(c => c.type === 'hg_time_label');
+    const timerLabels = this.allComponents.filter(c => c.type === 'hg_label' && c.data?.isTimerLabel === true);
     
     // 提取现有文件中 custom_functions 保护区的函数名
     const existingFunctions = existingContent ? this.extractFunctionNamesFromProtectedArea(existingContent) : new Set<string>();
@@ -170,6 +171,17 @@ export class CallbackFileGenerator {
       timeLabels.forEach(label => {
         const bufferSize = this.getTimeBufferSize(label.data?.timeFormat);
         code += `extern char ${label.id}_time_str[${bufferSize}];\n`;
+      });
+      code += `\n`;
+    }
+
+    // 为每个计时器标签声明外部全局变量（在 UI 文件中定义）
+    if (timerLabels.length > 0) {
+      code += `// 计时器字符串全局变量（在 UI 文件中定义）\n`;
+      timerLabels.forEach(label => {
+        const bufferSize = this.getTimerBufferSize(label.data?.timerFormat);
+        code += `extern char ${label.id}_timer_str[${bufferSize}];\n`;
+        code += `extern int ${label.id}_timer_value;\n`;
       });
       code += `\n`;
     }
@@ -473,11 +485,23 @@ export class CallbackFileGenerator {
   private collectTimeUpdateCallbackImpls(): string[] {
     const impls = new Map<string, string>(); // 使用 Map 去重，key 为函数名
 
+    // 时间标签的更新回调
     this.allComponents.forEach(component => {
       if (component.type === 'hg_time_label') {
         const timeFormat = component.data?.timeFormat || 'HH:mm:ss';
         const funcName = `${component.id}_time_update_cb`;
         const impl = this.generateTimeUpdateCallback(component.id, timeFormat);
+        impls.set(funcName, impl);
+      }
+    });
+
+    // 计时器标签的更新回调
+    this.allComponents.forEach(component => {
+      if (component.type === 'hg_label' && component.data?.isTimerLabel === true) {
+        const timerFormat = component.data?.timerFormat || 'HH:MM:SS';
+        const timerType = component.data?.timerType || 'stopwatch';
+        const funcName = `${component.id}_timer_update_cb`;
+        const impl = this.generateTimerUpdateCallback(component.id, timerFormat, timerType);
         impls.set(funcName, impl);
       }
     });
@@ -494,6 +518,10 @@ export class CallbackFileGenerator {
     this.allComponents.forEach(component => {
       if (component.type === 'hg_time_label') {
         names.push(`${component.id}_time_update_cb`);
+      }
+      // 计时器标签的更新回调
+      if (component.type === 'hg_label' && component.data?.isTimerLabel === true) {
+        names.push(`${component.id}_timer_update_cb`);
       }
     });
 
@@ -1067,6 +1095,19 @@ void ${callback}(void *obj)\n{\n`;
   }
 
   /**
+   * 获取计时器格式对应的缓冲区大小
+   */
+  private getTimerBufferSize(timerFormat?: string): number {
+    switch (timerFormat) {
+      case 'HH:MM:SS': return 10;  // "HH:MM:SS\0" = 9 + 1
+      case 'MM:SS': return 6;      // "MM:SS\0" = 5 + 1
+      case 'MM:SS:MS': return 10;  // "MM:SS:MS\0" = 9 + 1
+      case 'SS': return 4;         // "SS\0" = 2 + 1
+      default: return 10;
+    }
+  }
+
+  /**
    * 生成时间更新回调函数
    * 使用全局变量存储时间字符串（与 SDK 保持一致）
    */
@@ -1155,6 +1196,88 @@ void ${callback}(void *obj)\n{\n`;
   }
 
   /**
+   * 生成计时器更新回调函数
+   * 用于正计时/倒计时功能
+   * 参考秒表实现，使用毫秒级计数
+   */
+  private generateTimerUpdateCallback(componentId: string, timerFormat: string, timerType: string): string {
+    let formatStr = '';
+    let formatLogic = '';
+
+    // 根据格式生成格式化逻辑（使用毫秒级计数）
+    switch (timerFormat) {
+      case 'HH:MM:SS':
+        formatStr = '%02u:%02u:%02u';
+        formatLogic = `sprintf(${componentId}_timer_str, "${formatStr}", 
+           (${componentId}_timer_value / 3600000),
+           (${componentId}_timer_value % 3600000) / 60000,
+           (${componentId}_timer_value % 60000) / 1000);`;
+        break;
+      case 'MM:SS':
+        formatStr = '%02u:%02u';
+        formatLogic = `sprintf(${componentId}_timer_str, "${formatStr}", 
+           (${componentId}_timer_value / 60000),
+           (${componentId}_timer_value % 60000) / 1000);`;
+        break;
+      case 'MM:SS:MS':
+        formatStr = '%02u:%02u:%02u';
+        formatLogic = `sprintf(${componentId}_timer_str, "${formatStr}", 
+           (${componentId}_timer_value / 60000),
+           (${componentId}_timer_value % 60000) / 1000,
+           (${componentId}_timer_value % 1000) / 10);`;
+        break;
+      case 'SS':
+        formatStr = '%02u';
+        formatLogic = `sprintf(${componentId}_timer_str, "${formatStr}", 
+           (${componentId}_timer_value / 1000));`;
+        break;
+      default:
+        formatStr = '%02u:%02u:%02u';
+        formatLogic = `sprintf(${componentId}_timer_str, "${formatStr}", 
+           (${componentId}_timer_value / 3600000),
+           (${componentId}_timer_value % 3600000) / 60000,
+           (${componentId}_timer_value % 60000) / 1000);`;
+    }
+
+    let code = `/**\n`;
+    code += ` * 计时器更新回调函数\n`;
+    code += ` * 类型: ${timerType === 'stopwatch' ? '正计时（Stopwatch）' : '倒计时（Countdown）'}\n`;
+    code += ` * 格式: ${timerFormat}\n`;
+    code += ` * 注意: timer_value 以毫秒为单位，定时器间隔建议设置为 10-100ms\n`;
+    code += ` */\n`;
+    code += `void ${componentId}_timer_update_cb(void *p)\n`;
+    code += `{\n`;
+    code += `    GUI_UNUSED(p);\n`;
+    code += `    \n`;
+    
+    if (timerType === 'stopwatch') {
+      // 正计时：参考秒表实现
+      code += `    // 正计时：每次调用增加时间（假设定时器间隔为 10ms）\n`;
+      code += `    ${componentId}_timer_value += 10;\n`;
+    } else {
+      // 倒计时：每次调用减少时间
+      code += `    // 倒计时：每次调用减少时间（假设定时器间隔为 10ms）\n`;
+      code += `    if (${componentId}_timer_value > 10) {\n`;
+      code += `        ${componentId}_timer_value -= 10;\n`;
+      code += `    } else {\n`;
+      code += `        ${componentId}_timer_value = 0;\n`;
+      code += `        // 倒计时结束，可以在此处停止定时器\n`;
+      code += `        // gui_obj_stop_timer((gui_obj_t *)${componentId});\n`;
+      code += `    }\n`;
+    }
+    
+    code += `    \n`;
+    code += `    // 格式化计时器字符串\n`;
+    code += `    ${formatLogic}\n`;
+    code += `    \n`;
+    code += `    // 更新显示\n`;
+    code += `    gui_text_content_set((gui_text_t *)${componentId}, ${componentId}_timer_str, strlen(${componentId}_timer_str));\n`;
+    code += `}`;
+
+    return code;
+  }
+
+  /**
    * 收集所有双态按钮回调函数名
    */
   private collectToggleButtonCallbackNames(): Array<{ onCallback: string; offCallback: string }> {
@@ -1185,6 +1308,56 @@ void ${callback}(void *obj)\n{\n`;
       if (component.type === 'hg_button') {
         const toggleMode = component.data?.toggleMode === true || component.data?.toggleMode === 'true';
         if (toggleMode) {
+          // 检查是否指定了控制目标
+          const controlTarget = component.data?.controlTarget;
+          
+          let onCallbackBody = '';
+          let offCallbackBody = '';
+          
+          if (controlTarget) {
+            // 如果指定了控制目标，根据目标类型生成相应的回调
+            const targetComp = this.componentMap.get(controlTarget);
+            
+            if (targetComp) {
+              // 判断目标类型并生成相应的控制代码
+              if (targetComp.type === 'hg_label' && targetComp.data?.isTimerLabel === true) {
+                // 计时器标签：启动/停止计时器
+                onCallbackBody = `    // 启动计时器\n    gui_obj_start_timer((void *)${targetComp.id});`;
+                offCallbackBody = `    // 停止计时器\n    if (GUI_BASE(${targetComp.id})->timer) {\n        gui_obj_stop_timer((void *)${targetComp.id});\n    }`;
+              } else if (targetComp.type === 'hg_video') {
+                // 视频播放器：播放/暂停
+                onCallbackBody = `    // 播放视频\n    // TODO: 实现视频播放逻辑\n    // gui_video_play(${targetComp.id});`;
+                offCallbackBody = `    // 暂停视频\n    // TODO: 实现视频暂停逻辑\n    // gui_video_pause(${targetComp.id});`;
+              } else {
+                // 其他组件：显示/隐藏控制
+                onCallbackBody = `    // 显示目标组件\n    gui_obj_show(${targetComp.id}, true);`;
+                offCallbackBody = `    // 隐藏目标组件\n    gui_obj_show(${targetComp.id}, false);`;
+              }
+            } else {
+              // 目标组件不存在
+              onCallbackBody = `    // 警告：控制目标 "${controlTarget}" 不存在\n    // TODO: 请检查 controlTarget 属性是否正确`;
+              offCallbackBody = `    // 警告：控制目标 "${controlTarget}" 不存在\n    // TODO: 请检查 controlTarget 属性是否正确`;
+            }
+          } else {
+            // 如果没有指定控制目标，查找同一个 view 中所有 timerAutoStart=false 的计时标签
+            const parentView = this.findParentView(component);
+            const timerLabels = parentView ? this.findTimerLabelsInView(parentView) : [];
+            
+            if (timerLabels.length > 0) {
+              // 找到了计时标签，生成计时器控制代码
+              onCallbackBody = timerLabels.map(label => 
+                `    // 启动计时器\n    gui_obj_start_timer((void *)${label.id});`
+              ).join('\n');
+              offCallbackBody = timerLabels.map(label => 
+                `    // 停止计时器\n    if (GUI_BASE(${label.id})->timer) {\n        gui_obj_stop_timer((void *)${label.id});\n    }`
+              ).join('\n');
+            } else {
+              // 没有找到任何控制目标，生成通用模板
+              onCallbackBody = `    // TODO: 实现开启状态的业务逻辑\n    // 提示：可以在按钮属性中设置 "Control Target" 来指定控制目标\n    // 例如：music_player_play();`;
+              offCallbackBody = `    // TODO: 实现关闭状态的业务逻辑\n    // 提示：可以在按钮属性中设置 "Control Target" 来指定控制目标\n    // 例如：music_player_pause();`;
+            }
+          }
+          
           const impl = `/* USER CODE BEGIN ${component.id}_on_callback */
 /**
  * ${component.id} 开启状态回调
@@ -1192,8 +1365,7 @@ void ${callback}(void *obj)\n{\n`;
  */
 void ${component.id}_on_callback(void)
 {
-    // TODO: 实现开启状态的业务逻辑
-    // 例如：music_player_play();
+${onCallbackBody}
 }
 /* USER CODE END ${component.id}_on_callback */
 
@@ -1204,8 +1376,7 @@ void ${component.id}_on_callback(void)
  */
 void ${component.id}_off_callback(void)
 {
-    // TODO: 实现关闭状态的业务逻辑
-    // 例如：music_player_pause();
+${offCallbackBody}
 }
 /* USER CODE END ${component.id}_off_callback */
 `;
@@ -1215,5 +1386,41 @@ void ${component.id}_off_callback(void)
     });
 
     return impls;
+  }
+
+  /**
+   * 查找组件所在的父 view
+   */
+  private findParentView(component: Component): Component | null {
+    // 遍历所有组件，找到包含该组件的 view
+    for (const comp of this.allComponents) {
+      if ((comp.type === 'hg_view' || comp.type === 'hg_window') && 
+          comp.children && comp.children.includes(component.id)) {
+        return comp;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * 查找 view 中所有设置了 timerAutoStart=false 的计时标签
+   */
+  private findTimerLabelsInView(view: Component): Component[] {
+    const timerLabels: Component[] = [];
+    
+    if (!view.children) return timerLabels;
+    
+    // 遍历 view 的所有子组件
+    view.children.forEach(childId => {
+      const child = this.componentMap.get(childId);
+      if (child && 
+          child.type === 'hg_label' && 
+          child.data?.isTimerLabel === true &&
+          child.data?.timerAutoStart === false) {
+        timerLabels.push(child);
+      }
+    });
+    
+    return timerLabels;
   }
 }

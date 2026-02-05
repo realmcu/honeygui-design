@@ -47,6 +47,7 @@ const zhCN = {
   'On Image': '开启图片',
   'Off Image': '关闭图片',
   'Initial State': '初始状态',
+  'Control Target': '控制目标',
   'Enabled': '启用',
   'Disabled': '禁用',
   'Time Format': '时间格式',
@@ -339,6 +340,18 @@ const zhCN = {
   // DefaultProperties - Font section
   'Font': '字体',
   'Preview mode (does not change actual rendering)': '预览模式（不改变实际渲染效果）',
+
+  // DefaultProperties - Timer section
+  'Timer Settings': '计时器设置',
+  'Timer Type': '计时器类型',
+  'Timer Label': '计时标签',
+  'Stopwatch': '正计时',
+  'Countdown': '倒计时',
+  'Display Format': '显示格式',
+  'Initial Value (ms)': '初始值（毫秒）',
+  'Timer value in milliseconds': '计时器值，单位为毫秒',
+  'Auto Start': '自动启动',
+  'Start timer automatically on load': '界面加载时自动启动计时器',
 
   // EventsPanel
   'Exit Animation': '退出动画',

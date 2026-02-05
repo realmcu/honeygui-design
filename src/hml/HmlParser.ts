@@ -656,6 +656,8 @@ export class HmlParser {
       'svgFile',
       // hg_image 图片属性
       'blendMode', 'fgColor', 'bgColor', 'highQuality', 'needClip',
+      // 计时标签属性
+      'isTimerLabel', 'timerType', 'timerFormat', 'timerInitialValue', 'timerAutoStart',
       // 定时器属性（新版）
       'timers',
       // 定时器属性（旧版，保留兼容）
@@ -702,12 +704,12 @@ export class HmlParser {
         style[key] = value;
       } else if (dataProps.has(key)) {
         let value = attributes[key];
-        // 布尔值转换（loop, createBar, autoAlign, inertia, toggleMode, movable, click, timerEnabled, timerReload, timerStopOnComplete, enableScroll, scrollReverse, highQuality, needClip 等）
-        if (['loop', 'createBar', 'autoAlign', 'inertia', 'toggleMode', 'movable', 'click', 'timerEnabled', 'timerReload', 'timerStopOnComplete', 'enableScroll', 'scrollReverse', 'highQuality', 'needClip'].includes(key)) {
+        // 布尔值转换（loop, createBar, autoAlign, inertia, toggleMode, movable, click, timerEnabled, timerReload, timerStopOnComplete, enableScroll, scrollReverse, highQuality, needClip, isTimerLabel, timerAutoStart 等）
+        if (['loop', 'createBar', 'autoAlign', 'inertia', 'toggleMode', 'movable', 'click', 'timerEnabled', 'timerReload', 'timerStopOnComplete', 'enableScroll', 'scrollReverse', 'highQuality', 'needClip', 'isTimerLabel', 'timerAutoStart'].includes(key)) {
           value = value === 'true' || value === true;
         }
-        // 数字类型属性转换（包括 opacity, timerInterval, timerDuration）
-        if (['noteNum', 'offset', 'outScope', 'opacity', 'animateStep', 'timerInterval', 'timerDuration', 'scrollStartOffset', 'scrollEndOffset', 'scrollInterval', 'scrollDuration'].includes(key) && typeof value === 'string') {
+        // 数字类型属性转换（包括 opacity, timerInterval, timerDuration, timerInitialValue）
+        if (['noteNum', 'offset', 'outScope', 'opacity', 'animateStep', 'timerInterval', 'timerDuration', 'timerInitialValue', 'scrollStartOffset', 'scrollEndOffset', 'scrollInterval', 'scrollDuration'].includes(key) && typeof value === 'string') {
           const num = parseFloat(value);
           value = isNaN(num) ? value : num;
         }

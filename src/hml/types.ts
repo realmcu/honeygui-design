@@ -149,6 +149,13 @@ export interface ComponentData {
   animateStep?: number;  // 动画步长（用于 hg_view 组件）
   opacity?: number;  // 透明度 0-255（用于 hg_view 组件）
   
+  // 计时标签配置（用于 label 组件的计时器功能）
+  isTimerLabel?: boolean;  // 是否为计时标签
+  timerType?: 'stopwatch' | 'countdown';  // 计时器类型：正计时或倒计时
+  timerFormat?: 'HH:MM:SS' | 'MM:SS' | 'MM:SS:MS' | 'SS';  // 计时器显示格式
+  timerInitialValue?: number;  // 计时器初始值（毫秒）
+  timerAutoStart?: boolean;  // 是否自动启动（默认 true）
+  
   // 定时器配置（新版：支持多个定时器）
   timers?: TimerConfig[];  // 定时器列表
   
