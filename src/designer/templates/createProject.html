@@ -390,7 +390,7 @@
                 <div class="template-card" data-template-id="${t.id}">
                     <h3>${t.name}</h3>
                     <p>${t.description}</p>
-                    <span class="badge">${t.category}</span>
+                    <span class="badge">${t.size}</span>
                 </div>
             `).join('');
             
@@ -463,15 +463,7 @@
                 }
             });
             
-            document.getElementById('templateProjectName')?.addEventListener('input', function() {
-                const appIdInput = document.getElementById('templateAppId');
-                const name = this.value.trim();
-                if (appIdInput.value.startsWith('com.example.')) {
-                    appIdInput.value = 'com.example.' + name;
-                }
-            });
-            
-            // Request templates from extension
+            // 请求后端发送模板列表
             vscode.postMessage({ command: 'getTemplates' });
             
             validateForm();

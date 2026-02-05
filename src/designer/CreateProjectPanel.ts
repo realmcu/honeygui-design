@@ -8,7 +8,6 @@ import { ProjectTemplate } from '../template/ProjectTemplate';
 import { HmlTemplateManager } from '../hml/HmlTemplateManager';
 import { WebviewUtils } from '../common/WebviewUtils';
 import { logger } from '../utils/Logger';
-import { getAllTemplateInfo, getTemplateById } from '../template/templates';
 import { AVAILABLE_TEMPLATES } from '../template/TemplateConfig';
 import { ProjectUtils } from '../utils/ProjectUtils';
 
@@ -269,7 +268,7 @@ export class CreateProjectPanel {
     private _sendTemplates(): void {
         this._panel.webview.postMessage({
             command: 'templatesLoaded',
-            templates: getAllTemplateInfo()
+            templates: AVAILABLE_TEMPLATES
         });
     }
 
@@ -679,92 +678,6 @@ export class CreateProjectPanel {
         }
     }
 
-    /**
-     * 创建模板项目结构
-     */
-    private async _createTemplateProjectStructure(
-        projectPath: string,
-        projectName: string,
-        appId: string,
-        resolution: string,
-        targetEngine: string,
-        minSdk: string,
-        pixelMode: string,
-        templateId: string
-    ): Promise<void> {
-        // 创建目录结构
-        fs.mkdirSync(projectPath, { recursive: true });
-        fs.mkdirSync(path.join(projectPath, 'ui'), { recursive: true });
-        fs.mkdirSync(path.join(projectPath, 'ui', 'main'), { recursive: true });
-        fs.mkdirSync(path.join(projectPath, 'src'), { recursive: true });
-        fs.mkdirSync(path.join(projectPath, 'assets'), { recursive: true });
-
-        // 获取模板实例
-        const template = getTemplateById(templateId);
-        if (!template) {
-            throw new Error(`Template not found: ${templateId}`);
-        }
-
-        // 使用模板生成 HML 文件（直接放在 ui/ 下）
-        const hmlFileName = `${projectName}Main.hml`;
-        const mainHmlContent = template.generateHml({
-            projectName,
-            resolution,
-            appId,
-            minSdk,
-            pixelMode
-        });
-        fs.writeFileSync(path.join(projectPath, 'ui', hmlFileName), mainHmlContent, 'utf8');
-
-        // 拷贝模板资源
-        await template.copyAssets(projectPath);
-
-        // 创建README文件
-        const readmeContent = `# ${projectName}
-
-Created from template: **${template.name}**
-
-${template.description}
-
-## Project Info
-- APP ID: ${appId}
-- Resolution: ${resolution}
-- Target Engine: ${targetEngine}
-- Min SDK: ${minSdk}
-- Pixel Mode: ${pixelMode}
-
-## Getting Started
-
-1. Open the HML file in \`ui/${hmlFileName}\`
-2. Design your UI in the visual designer
-3. Generate code and compile
-
-Created: ${new Date().toLocaleString()}
-`;
-        fs.writeFileSync(path.join(projectPath, 'README.md'), readmeContent, 'utf8');
-
-        // 创建 project.json 项目配置文件
-        const projectConfig = {
-            name: projectName,
-            appId: appId,
-            version: '1.0.0',
-            resolution: resolution,
-            targetEngine: targetEngine,
-            minSdk: minSdk,
-            pixelMode: pixelMode,
-            mainHmlFile: `ui/${hmlFileName}`,
-            template: templateId,
-            created: new Date().toISOString()
-        };
-
-        fs.writeFileSync(
-            path.join(projectPath, 'project.json'),
-            JSON.stringify(projectConfig, null, 2),
-            'utf8'
-        );
-
-        logger.info(`[CreateProjectPanel] Template project created: ${templateId}`);
-    }
 
     /**
      * 清理资源

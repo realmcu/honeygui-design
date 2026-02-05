@@ -111,6 +111,22 @@ HmlEditorProvider.resolveCustomTextEditor()
 2. 在 `HoneyGuiCCodeGenerator.ts` 添加代码生成逻辑
 3. 更新 `ComponentType` 类型定义
 
+### 添加新项目模板
+项目模板通过 Git 仓库管理，添加新模板：
+1. 创建完整的项目模板仓库（包含 ui/, assets/, src/, project.json 等）
+2. 推送到 Gitee
+3. 在 `src/template/TemplateConfig.ts` 的 `AVAILABLE_TEMPLATES` 中添加配置：
+   ```typescript
+   {
+       id: 'my-template',
+       name: 'My Template',
+       description: '模板描述',
+       repo: 'https://gitee.com/realmcu/honeygui-template-my-template.git',
+       size: '5 MB'
+   }
+   ```
+4. 用户创建项目时会自动从 Gitee 下载并缓存到 `~/.honeygui/templates/`
+
 ### 添加新资源类型（如字体、音频等）
 资源显示涉及前后端两处，必须同时修改：
 1. **后端** `src/designer/AssetManager.ts`：在 `scanAssetsDirectory` 中添加扩展名识别
