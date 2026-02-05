@@ -19,6 +19,8 @@ export interface AlwaysConvertConfig {
 }
 
 export interface ProjectConfig {
+    $schema?: string;         // 项目 schema 标识，固定为 "HoneyGUI"
+    type?: string;            // 项目类型，固定为 "Designer"
     name?: string;
     version?: string;
     description?: string;

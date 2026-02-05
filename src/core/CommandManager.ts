@@ -245,6 +245,26 @@ export class CommandManager {
                     return;
                 }
                 
+                // 验证项目类型
+                try {
+                    const projectConfigContent = fs.readFileSync(projectJsonPath, 'utf8');
+                    const projectConfig = JSON.parse(projectConfigContent);
+                    
+                    if (projectConfig.type !== 'Designer' && projectConfig.$schema !== 'HoneyGUI') {
+                        const action = await vscode.window.showWarningMessage(
+                            vscode.l10n.t('Not a HoneyGUI project. Please create a project first.'),
+                            vscode.l10n.t('Create Project')
+                        );
+                        if (action === vscode.l10n.t('Create Project')) {
+                            await vscode.commands.executeCommand('honeygui.newProject');
+                        }
+                        return;
+                    }
+                } catch (error) {
+                    logger.warn(`无法验证项目类型: ${error}`);
+                    // 如果解析失败，继续执行（向后兼容旧项目）
+                }
+                
                 // 使用第一个工作区的ui目录
                 const uiDir = path.join(workspaceRoot, 'ui');
                 

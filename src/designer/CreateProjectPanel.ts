@@ -491,9 +491,11 @@ export class CreateProjectPanel {
 
         // 创建 project.json 项目配置文件
         const projectConfig = {
+            $schema: 'HoneyGUI',
+            type: 'Designer',
+            version: '1.0.0',
             name: projectName,
             appId: appId,
-            version: '1.0.0',
             resolution: resolution,
             cornerRadius: cornerRadius ?? 0,  // 屏幕形状：0=矩形, -1=圆形, >0=圆角半径
             targetEngine: targetEngine,  // 添加目标引擎配置
