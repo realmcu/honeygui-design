@@ -47,6 +47,8 @@ export interface ToolsPanelTranslations {
     bitmapFont: string;
     vectorFont: string;
     vectorFontHint: string;
+    vectorFontPrecisionHint: string;
+    bitmapFontSizeHint: string;
     fontSize: string;
     fixed: string;
     renderMode: string;
@@ -132,6 +134,8 @@ export function getToolsPanelTranslations(): ToolsPanelTranslations {
         bitmapFont: vscode.l10n.t('Bitmap Font'),
         vectorFont: vscode.l10n.t('Vector Font'),
         vectorFontHint: vscode.l10n.t('Vector font supports runtime size adjustment'),
+        vectorFontPrecisionHint: vscode.l10n.t('Vector font precision hint'),
+        bitmapFontSizeHint: vscode.l10n.t('Bitmap font size hint'),
         fontSize: vscode.l10n.t('Font Size'),
         fixed: vscode.l10n.t('Fixed'),
         renderMode: vscode.l10n.t('Render Mode'),
@@ -916,9 +920,7 @@ function renderProperties() {
                 '<option value="bitmap"'+(!settings.font?.outputFormat||settings.font?.outputFormat==='bitmap'?' selected':'')+'>'+T.bitmapFont+'</option>' +
                 '<option value="vector"'+(settings.font?.outputFormat==='vector'?' selected':'')+'>'+T.vectorFont+'</option>' +
                 '</select></div>' +
-                (isVector ? '<div style="font-size:10px;color:var(--vscode-descriptionForeground);margin:-4px 0 6px 65px;">'+T.vectorFontHint+'</div>' : '') +
-                '<div class="prop-row"><label>'+T.fontSize+':</label><input type="number" min="8" max="200" value="'+displayFontSize+'" onchange="updateFolderSetting(\\'font\\',\\'fontSize\\',+this.value)"'+(isVector?' disabled style="opacity:0.5"':'')+'>'+
-                (isVector ? '<span style="font-size:10px;color:var(--vscode-descriptionForeground);margin-left:4px">('+T.fixed+')</span>' : '') + '</div>' +
+                '<div class="prop-row"><label>'+T.fontSize+':<span title="'+(isVector?T.vectorFontPrecisionHint:T.bitmapFontSizeHint)+'" style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--vscode-badge-background);color:var(--vscode-badge-foreground);font-size:10px;margin-left:4px;cursor:help;">?</span></label><input type="number" min="8" max="200" value="'+displayFontSize+'" onchange="updateFolderSetting(\\'font\\',\\'fontSize\\',+this.value)"></div>' +
                 '<div class="prop-row"><label>'+T.renderMode+':</label><select onchange="updateFolderSetting(\\'font\\',\\'renderMode\\',+this.value)"'+(isVector?' disabled style="opacity:0.5"':'')+'>'+
                 '<option value="1"'+(displayRenderMode===1?' selected':'')+'>'+T.bit1Mono+'</option>' +
                 '<option value="2"'+(displayRenderMode===2?' selected':'')+'>'+T.bit2Gray4+'</option>' +
@@ -1058,9 +1060,7 @@ function renderProperties() {
             '<option value="bitmap"'+(settings.outputFormat==='bitmap'?' selected':'')+'>'+T.bitmapFont+'</option>' +
             '<option value="vector"'+(settings.outputFormat==='vector'?' selected':'')+'>'+T.vectorFont+'</option>' +
             '</select></div>' +
-            (isVector ? '<div style="font-size:10px;color:var(--vscode-descriptionForeground);margin:-4px 0 6px 65px;">'+T.vectorFontHint+'</div>' : '') +
-            '<div class="prop-row"><label>'+T.fontSize+':</label><input type="number" min="8" max="200" value="'+(isVector?'':settings.fontSize||'')+'" placeholder="'+(isVector?'32 ('+T.fixed+')':T.inherit+' ('+(ifnt.fontSize||32)+')')+'" onchange="updateSetting(\\'fontSize\\',this.value?+this.value:null)"'+(isVector?' disabled style="opacity:0.5"':'')+'>'+
-            (isVector ? '<span style="font-size:10px;color:var(--vscode-descriptionForeground);margin-left:4px">('+T.fixed+')</span>' : '') + '</div>' +
+            '<div class="prop-row"><label>'+T.fontSize+':<span title="'+(isVector?T.vectorFontPrecisionHint:T.bitmapFontSizeHint)+'" style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--vscode-badge-background);color:var(--vscode-badge-foreground);font-size:10px;margin-left:4px;cursor:help;">?</span></label><input type="number" min="8" max="200" value="'+(settings.fontSize||'')+'" placeholder="'+T.inherit+' ('+(ifnt.fontSize||32)+')" onchange="updateSetting(\\'fontSize\\',this.value?+this.value:null)"></div>' +
             '<div class="prop-row"><label>'+T.renderMode+':</label><select onchange="updateSetting(\\'renderMode\\',this.value?+this.value:null)"'+(isVector?' disabled style="opacity:0.5"':'')+'>'+
             '<option value=""'+(!settings.renderMode&&!isVector?' selected':'')+'>'+T.inherit+' ('+(ifnt.renderMode||4)+'bit)</option>' +
             '<option value="1"'+(!isVector&&settings.renderMode===1?' selected':'')+'>'+T.bit1Mono+'</option>' +

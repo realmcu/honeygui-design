@@ -31,19 +31,24 @@ export interface FontConvertOptions {
 }
 
 export class FontConverterService {
-    // 字符数阈值：超过此值使用 crop + index 0，否则使用 index 1
-    private static readonly CROP_THRESHOLD = 2048;
+    // 字符数阈值：超过此值使用 ADDRESS 模式（直接查表），否则使用 OFFSET 模式（紧凑索引）
+    private static readonly INDEX_METHOD_THRESHOLD = 2048;
 
     constructor() {}
 
     /**
      * 根据字符数量自动选择最优的 index 和 crop 配置
+     * 
+     * 策略：
+     * - crop 始终开启（节省像素数据空间）
+     * - 字符数 > 2048：使用 ADDRESS 模式（65536 × 4B 索引，O(1) 查找）
+     * - 字符数 ≤ 2048：使用 OFFSET 模式（N × 6B 索引，节省索引空间）
      */
     private getOptimalIndexConfig(charCount: number): { crop: boolean; indexMethod: IndexMethod } {
-        if (charCount > FontConverterService.CROP_THRESHOLD) {
+        if (charCount > FontConverterService.INDEX_METHOD_THRESHOLD) {
             return { crop: true, indexMethod: IndexMethod.ADDRESS };
         } else {
-            return { crop: false, indexMethod: IndexMethod.OFFSET };
+            return { crop: true, indexMethod: IndexMethod.OFFSET };
         }
     }
 
