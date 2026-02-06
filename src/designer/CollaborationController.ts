@@ -114,6 +114,15 @@ export class CollaborationController {
             case 'SOURCE_DATA':
                 this.handleSourceData(message);
                 break;
+            case 'UI_LIST':
+                this.handleUiList(message);
+                break;
+            case 'GET_UI':
+                this.handleGetUi(message);
+                break;
+            case 'UI_DATA':
+                this.handleUiData(message);
+                break;
         }
     }
 
@@ -137,9 +146,25 @@ export class CollaborationController {
     public sendDocumentToNewPeer(): void {
         if (this.service.isHost) {
             const doc = this.hmlController.serializeDocument();
+            
+            // 获取当前文件相对路径
+            let relativePath = 'guest.hml';
+            let projectConfig = null;
+            const currentPath = this.fileManager.currentFilePath;
+            if (currentPath) {
+                const projectRoot = ProjectUtils.findProjectRoot(currentPath);
+                if (projectRoot) {
+                    relativePath = path.relative(projectRoot, currentPath);
+                    projectConfig = ProjectUtils.loadProjectConfig(projectRoot);
+                } else {
+                    relativePath = path.basename(currentPath);
+                }
+            }
+
             this.service.broadcast({
                 type: 'SYNC_INIT',
-                content: doc
+                content: doc,
+                payload: { relativePath, projectConfig }
             });
         }
     }
@@ -151,17 +176,36 @@ export class CollaborationController {
         // 主机收到访客的同步请求
         if (this.service.isHost && message.content === 'REQUEST') {
             const doc = this.hmlController.serializeDocument();
+            
+            // 获取当前文件相对路径
+            let relativePath = 'guest.hml';
+            let projectConfig = null;
+            const currentPath = this.fileManager.currentFilePath;
+            if (currentPath) {
+                const projectRoot = ProjectUtils.findProjectRoot(currentPath);
+                if (projectRoot) {
+                    relativePath = path.relative(projectRoot, currentPath);
+                    projectConfig = ProjectUtils.loadProjectConfig(projectRoot);
+                } else {
+                    relativePath = path.basename(currentPath);
+                }
+            }
+
             this.service.broadcast({
                 type: 'SYNC_INIT',
-                content: doc
+                content: doc,
+                payload: { relativePath, projectConfig }
             });
             return;
         }
         
         // 访客收到主机发送的文档
         if (this.service.isGuest && message.content && message.content !== 'REQUEST') {
+            const relativePath = message.payload?.relativePath || 'guest.hml';
+            const projectConfig = message.payload?.projectConfig;
+
             // 设置临时工作区
-            this.setupGuestWorkspace(message.content);
+            this.setupGuestWorkspace(message.content, relativePath, projectConfig);
 
             // 请求资源列表
             this.service.broadcast({
@@ -175,6 +219,12 @@ export class CollaborationController {
                 content: 'REQUEST'
             });
 
+            // 请求 UI 列表
+            this.service.broadcast({
+                type: 'UI_LIST',
+                content: 'REQUEST'
+            });
+
             this.hmlController.applyRemoteUpdate(message.content);
             this.onUpdate();
         }
@@ -183,7 +233,7 @@ export class CollaborationController {
     /**
      * 设置访客临时工作区
      */
-    private setupGuestWorkspace(hmlContent: string) {
+    private setupGuestWorkspace(hmlContent: string, relativePath: string = 'guest.hml', projectConfig?: any) {
         try {
             // 如果已经有工作区，先复用或清理? 这里选择复用或者新建唯一的
             if (!this.guestWorkspacePath) {
@@ -206,24 +256,45 @@ export class CollaborationController {
             if (!fs.existsSync(srcDir)) {
                 fs.mkdirSync(srcDir, { recursive: true });
             }
+
+            // 创建 ui 目录
+            const uiDir = path.join(this.guestWorkspacePath, 'ui');
+            if (!fs.existsSync(uiDir)) {
+                fs.mkdirSync(uiDir, { recursive: true });
+            }
             
-            // 创建 mock project.json
+            // 创建/写入 project.json
             const projectJsonPath = path.join(this.guestWorkspacePath, 'project.json');
-            fs.writeFileSync(projectJsonPath, JSON.stringify({
-                name: "Guest Project",
-                version: "1.0.0",
-                assetsDir: "assets"
-            }, null, 2));
+            
+            let configContent;
+            if (projectConfig) {
+                configContent = JSON.stringify(projectConfig, null, 2);
+            } else {
+                configContent = JSON.stringify({
+                    name: "Guest Project",
+                    version: "1.0.0",
+                    assetsDir: "assets"
+                }, null, 2);
+            }
+            
+            fs.writeFileSync(projectJsonPath, configContent);
             
             // 保存 HML
-            const hmlPath = path.join(this.guestWorkspacePath, 'guest.hml');
+            const hmlPath = path.join(this.guestWorkspacePath, relativePath);
+            
+            // 确保目录存在
+            const hmlDir = path.dirname(hmlPath);
+            if (!fs.existsSync(hmlDir)) {
+                fs.mkdirSync(hmlDir, { recursive: true });
+            }
+            
             fs.writeFileSync(hmlPath, hmlContent);
             
             // 更新 FileManager 的路径，这样 AssetManager 就能找到正确的根目录
             this.fileManager.currentFilePath = hmlPath;
             
             // 更新面板标题
-            this.panel.title = 'HoneyGUI Designer: guest.hml';
+            this.panel.title = `HoneyGUI Designer: ${path.basename(relativePath)}`;
 
             // 触发一次资源加载，初始化 AssetManager 上下文
             this.messageHandler.handleMessage({ command: 'loadAssets' }, true);
@@ -460,6 +531,102 @@ export class CollaborationController {
                 
             } catch (e) {
                 logger.error(`[Collaboration] Failed to save source file ${fileName}: ${e}`);
+            }
+        }
+    }
+
+    /**
+     * 处理 UI 文件列表请求
+     */
+    private handleUiList(message: CollaborationMessage) {
+        // Host 收到请求
+        if (this.service.isHost && message.content === 'REQUEST') {
+            const projectRoot = ProjectUtils.findProjectRoot(this.fileManager.currentFilePath || '');
+            if (!projectRoot) return;
+            
+            const uiDir = ProjectUtils.getUiDir(projectRoot);
+            if (fs.existsSync(uiDir)) {
+                try {
+                    const files = this.getAllFiles(uiDir);
+                    const uiFiles = files.filter(f => f.endsWith('.hml'));
+                    
+                    this.service.broadcast({
+                        type: 'UI_LIST',
+                        payload: uiFiles
+                    });
+                } catch (e) {
+                    logger.error(`[Collaboration] Failed to list UI files: ${e}`);
+                }
+            }
+            return;
+        }
+        
+        // Guest 收到列表
+        if (this.service.isGuest && Array.isArray(message.payload)) {
+            const files = message.payload as string[];
+            files.forEach(file => {
+                 // 检查本地是否存在
+                 const localPath = path.join(this.guestWorkspacePath!, 'ui', file);
+                 if (!fs.existsSync(localPath)) {
+                     // 请求下载
+                     this.service.broadcast({
+                         type: 'GET_UI',
+                         content: file
+                     });
+                 }
+            });
+        }
+    }
+
+    /**
+     * 处理获取单个 UI 文件请求
+     */
+    private handleGetUi(message: CollaborationMessage) {
+        // Host 收到请求
+        if (this.service.isHost && message.content) {
+            const fileName = message.content;
+            const projectRoot = ProjectUtils.findProjectRoot(this.fileManager.currentFilePath || '');
+            if (!projectRoot) return;
+            
+            const uiDir = ProjectUtils.getUiDir(projectRoot);
+            const filePath = path.join(uiDir, fileName);
+            
+            if (fs.existsSync(filePath)) {
+                try {
+                    const content = fs.readFileSync(filePath, 'utf-8');
+                    this.service.broadcast({
+                        type: 'UI_DATA',
+                        content: fileName,
+                        payload: content
+                    });
+                } catch (e) {
+                    logger.error(`[Collaboration] Failed to read UI file ${fileName}: ${e}`);
+                }
+            }
+        }
+    }
+
+    /**
+     * 处理 UI 文件数据接收
+     */
+    private handleUiData(message: CollaborationMessage) {
+        // Guest 收到数据
+        if (this.service.isGuest && message.content && message.payload !== undefined && this.guestWorkspacePath) {
+            const fileName = message.content;
+            const content = message.payload;
+            const filePath = path.join(this.guestWorkspacePath, 'ui', fileName);
+            
+            try {
+                const dir = path.dirname(filePath);
+                if (!fs.existsSync(dir)) {
+                    fs.mkdirSync(dir, { recursive: true });
+                }
+                
+                fs.writeFileSync(filePath, content);
+                logger.info(`[Collaboration] UI file synced: ${fileName}`);
+                
+            } catch (e) {
+                logger.error(`[Collaboration] Failed to save UI file ${fileName}: ${e}`);
             }
         }
     }
