@@ -579,6 +579,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                             value={(component.style as any)?.[property.name]}
                             onChange={(value) => handleStyleChange(property.name, value)}
                             options={property.options as string[]}
+                            hint={(property as any).hint ? t((property as any).hint) : undefined}
                           />
                         </div>
                       ))}
@@ -632,6 +633,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                             value={(component.style as any)?.[property.name]}
                             onChange={(value) => handleStyleChange(property.name, value)}
                             options={property.options as string[]}
+                            hint={(property as any).hint ? t((property as any).hint) : undefined}
                           />
                         </div>
                       ))}
@@ -727,6 +729,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                           value={(component.style as any)?.[property.name]}
                           onChange={(value) => handleStyleChange(property.name, value)}
                           options={property.options as string[]}
+                          hint={(property as any).hint ? t((property as any).hint) : undefined}
                         />
                       </div>
                     ))

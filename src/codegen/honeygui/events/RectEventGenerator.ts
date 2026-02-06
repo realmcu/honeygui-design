@@ -18,7 +18,8 @@ export class RectEventGenerator implements EventCodeGenerator {
 
     component.eventConfigs.forEach((eventConfig) => {
       if (eventConfig.type === 'onMessage' && eventConfig.message) {
-        const callbackName = getMessageCallbackName(component, eventConfig, msgIndex);
+        // 优先使用 handler 属性
+        const callbackName = eventConfig.handler || getMessageCallbackName(component, eventConfig, msgIndex);
         msgIndex++;
         code += `${indentStr}gui_msg_subscribe(${component.id}, "${eventConfig.message}", ${callbackName});\n`;
         return;
@@ -52,7 +53,12 @@ export class RectEventGenerator implements EventCodeGenerator {
     let controlTimerIndex = 0;
     component.eventConfigs.forEach(eventConfig => {
       if (eventConfig.type === 'onMessage' && eventConfig.message) {
-        functions.push(getMessageCallbackName(component, eventConfig, msgIndex));
+        // 优先使用 handler 属性
+        if (eventConfig.handler) {
+          functions.push(eventConfig.handler);
+        } else {
+          functions.push(getMessageCallbackName(component, eventConfig, msgIndex));
+        }
         msgIndex++;
         return;
       }

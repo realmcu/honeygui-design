@@ -17,7 +17,8 @@ export const PropertyEditor: React.FC<PropertyEditorProps> = ({
   onChange,
   options,
   disabled,
-  title
+  title,
+  hint
 }) => {
   const disabledStyle = disabled ? { opacity: 0.6, cursor: 'not-allowed' } : {};
 
@@ -67,21 +68,33 @@ export const PropertyEditor: React.FC<PropertyEditorProps> = ({
 
     case 'color':
       return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <input
-            type="color"
-            value={value || '#000000'}
-            onChange={(e) => onChange(e.target.value)}
-            disabled={disabled}
-            style={{ width: '30px', height: '30px', padding: 0, border: 'none' }}
-          />
-          <input
-            type="text"
-            value={value || ''}
-            onChange={(e) => onChange(e.target.value)}
-            disabled={disabled}
-            style={{ ...inputStyle, flex: 1, ...disabledStyle }}
-          />
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <input
+              type="color"
+              value={value || '#000000'}
+              onChange={(e) => onChange(e.target.value)}
+              disabled={disabled}
+              style={{ width: '30px', height: '30px', padding: 0, border: 'none' }}
+            />
+            <input
+              type="text"
+              value={value || ''}
+              onChange={(e) => onChange(e.target.value)}
+              disabled={disabled}
+              style={{ ...inputStyle, flex: 1, ...disabledStyle }}
+            />
+          </div>
+          {hint && (
+            <div style={{
+              fontSize: '10px',
+              color: 'var(--vscode-descriptionForeground)',
+              marginTop: '4px',
+              lineHeight: '1.4'
+            }}>
+              💡 {hint}
+            </div>
+          )}
         </div>
       );
 

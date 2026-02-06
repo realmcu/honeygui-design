@@ -67,6 +67,9 @@ export class WindowGenerator implements ComponentCodeGenerator {
     // 子组件创建代码由主生成器处理（通过 childrenCode 回调）
     code += `__CHILDREN_PLACEHOLDER__`;
     
+    // 事件绑定代码占位符（由主生成器填充）
+    code += `__EVENT_BINDINGS_PLACEHOLDER__`;
+    
     // 为所有带时间格式的 label 创建定时器
     if (timeLabels.length > 0) {
       code += `\n${indentStr}// 创建时间更新定时器\n`;

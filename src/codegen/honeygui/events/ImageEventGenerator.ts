@@ -19,7 +19,8 @@ export class ImageEventGenerator implements EventCodeGenerator {
     component.eventConfigs.forEach((eventConfig) => {
       // 处理 onMessage 事件
       if (eventConfig.type === 'onMessage' && eventConfig.message) {
-        const callbackName = getMessageCallbackName(component, eventConfig, msgIndex);
+        // 优先使用 handler 属性
+        const callbackName = eventConfig.handler || getMessageCallbackName(component, eventConfig, msgIndex);
         msgIndex++;
         code += `${indentStr}gui_msg_subscribe(${component.id}, "${eventConfig.message}", ${callbackName});\n`;
         return;
@@ -54,7 +55,12 @@ export class ImageEventGenerator implements EventCodeGenerator {
     component.eventConfigs.forEach(eventConfig => {
       // onMessage 生成统一回调名
       if (eventConfig.type === 'onMessage' && eventConfig.message) {
-        functions.push(getMessageCallbackName(component, eventConfig, msgIndex));
+        // 优先使用 handler 属性
+        if (eventConfig.handler) {
+          functions.push(eventConfig.handler);
+        } else {
+          functions.push(getMessageCallbackName(component, eventConfig, msgIndex));
+        }
         msgIndex++;
         return;
       }

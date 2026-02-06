@@ -221,6 +221,17 @@ export const TimerProperties: React.FC<TimerPropertiesProps> = ({
                   </div>
                 </div>
 
+                <div style={{ marginBottom: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <PropertyEditor
+                      type="boolean"
+                      value={timer.enableLog || false}
+                      onChange={(value) => handleUpdateTimer(timer.id, { enableLog: value })}
+                    />
+                    <span style={{ fontSize: '12px' }}>{t('Enable Debug Log')}</span>
+                  </div>
+                </div>
+
                 {/* 模式选择 */}
                 <div style={{ marginBottom: '12px' }}>
                   <div

@@ -13,4 +13,5 @@ export interface PropertyEditorProps {
   options?: (string | { value: string; label: string })[];
   disabled?: boolean;
   title?: string;
+  hint?: string;  // 提示信息，显示在输入框下方
 }

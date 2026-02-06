@@ -46,11 +46,18 @@ export class ViewEventGenerator implements EventCodeGenerator {
     component.eventConfigs.forEach(eventConfig => {
       // 处理 onMessage 事件
       if (eventConfig.type === 'onMessage' && eventConfig.message) {
-        eventConfig.actions.forEach(action => {
-          if (action.type === 'callFunction' && action.functionName) {
-            code += `${indentStr}gui_msg_subscribe(${component.id}, "${eventConfig.message}", ${action.functionName});\n`;
-          }
-        });
+        // 如果有 handler 属性，直接使用
+        if (eventConfig.handler) {
+          code += `${indentStr}gui_msg_subscribe(${component.id}, "${eventConfig.message}", ${eventConfig.handler});\n`;
+        }
+        // 否则检查 actions 中的 callFunction
+        else {
+          eventConfig.actions.forEach(action => {
+            if (action.type === 'callFunction' && action.functionName) {
+              code += `${indentStr}gui_msg_subscribe(${component.id}, "${eventConfig.message}", ${action.functionName});\n`;
+            }
+          });
+        }
       }
 
       // 处理 controlTimer 事件
@@ -78,7 +85,13 @@ export class ViewEventGenerator implements EventCodeGenerator {
       let controlTimerIndex = 0;
       component.eventConfigs.forEach(eventConfig => {
         if (eventConfig.type === 'onMessage' && eventConfig.message) {
-          functions.push(getMessageCallbackName(component, eventConfig, msgIndex));
+          // 如果有 handler 属性，使用它
+          if (eventConfig.handler) {
+            functions.push(eventConfig.handler);
+          } else {
+            // 否则使用自动生成的名称
+            functions.push(getMessageCallbackName(component, eventConfig, msgIndex));
+          }
           msgIndex++;
         }
 

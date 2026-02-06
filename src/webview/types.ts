@@ -58,6 +58,7 @@ export interface PropertyDefinition {
   group: 'general' | 'style' | 'data' | 'events' | 'font' | 'interaction' | 'scroll' | 'timer';
   min?: number;  // 数字类型的最小值
   max?: number;  // 数字类型的最大值
+  hint?: string;  // 提示信息，显示在输入框下方
 }
 
 // 视图跳转边信息

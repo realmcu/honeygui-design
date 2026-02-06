@@ -512,8 +512,18 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       });
     }
     
+    // 生成事件绑定代码（用于 hg_window 的 onMessage 等事件）
+    let eventBindingsCode = '';
+    if (component.type === 'hg_window') {
+      eventBindingsCode = this.generateEventConfigBindings(component, indent);
+      if (eventBindingsCode) {
+        eventBindingsCode = '\n' + eventBindingsCode;
+      }
+    }
+    
     // 替换占位符
     code = code.replace('__CHILDREN_PLACEHOLDER__', childrenCode);
+    code = code.replace('__EVENT_BINDINGS_PLACEHOLDER__', eventBindingsCode);
     
     return code;
   }

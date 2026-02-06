@@ -23,11 +23,18 @@ export class WindowEventGenerator implements EventCodeGenerator {
       
       // 处理 onMessage 事件
       if (eventConfig.type === 'onMessage' && eventConfig.message) {
-        eventConfig.actions.forEach(action => {
-          if (action.type === 'callFunction' && action.functionName) {
-            code += `${indentStr}gui_msg_subscribe(GUI_BASE(${component.id}), "${eventConfig.message}", ${action.functionName});\n`;
-          }
-        });
+        // 如果有 handler 属性，直接使用
+        if (eventConfig.handler) {
+          code += `${indentStr}gui_msg_subscribe(GUI_BASE(${component.id}), "${eventConfig.message}", ${eventConfig.handler});\n`;
+        }
+        // 否则检查 actions 中的 callFunction
+        else {
+          eventConfig.actions.forEach(action => {
+            if (action.type === 'callFunction' && action.functionName) {
+              code += `${indentStr}gui_msg_subscribe(GUI_BASE(${component.id}), "${eventConfig.message}", ${action.functionName});\n`;
+            }
+          });
+        }
       }
       // 处理其他事件（onClick, onLongPress 等）
       else if (guiEvent) {
@@ -60,7 +67,13 @@ export class WindowEventGenerator implements EventCodeGenerator {
     component.eventConfigs.forEach(eventConfig => {
       // 收集 onMessage 的回调函数名
       if (eventConfig.type === 'onMessage' && eventConfig.message) {
-        functions.push(getMessageCallbackName(component, eventConfig, msgIndex));
+        // 如果有 handler 属性，使用它
+        if (eventConfig.handler) {
+          functions.push(eventConfig.handler);
+        } else {
+          // 否则使用自动生成的名称
+          functions.push(getMessageCallbackName(component, eventConfig, msgIndex));
+        }
         msgIndex++;
       }
       // 收集其他事件的回调函数名

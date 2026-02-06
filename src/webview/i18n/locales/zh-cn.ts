@@ -560,6 +560,10 @@ const zhCN = {
   'Run immediately': '立即运行',
   'Bind on component creation': '创建组件时绑定',
   'Timer Animations': '定时动画',
+  'Enable Debug Log': '启用调试日志',
+
+  // 容器背景色提示
+  'Designer only - helps identify container boundaries': '仅在设计器中生效，用于判断容器区域',
 
   // 转换配置面板
   'selectAssetToConfig': '选择文件夹或图片以配置转换设置',

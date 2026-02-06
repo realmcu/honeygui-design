@@ -19,7 +19,8 @@ export class DefaultEventGenerator implements EventCodeGenerator {
     component.eventConfigs.forEach((eventConfig) => {
       // 处理 onMessage 事件（消息订阅）
       if (eventConfig.type === 'onMessage' && eventConfig.message) {
-        const callbackName = getMessageCallbackName(component, eventConfig, msgIndex);
+        // 优先使用 handler 属性
+        const callbackName = eventConfig.handler || getMessageCallbackName(component, eventConfig, msgIndex);
         msgIndex++;
         code += `${indentStr}gui_msg_subscribe(${component.id}, "${eventConfig.message}", ${callbackName});\n`;
         return;
@@ -56,8 +57,12 @@ export class DefaultEventGenerator implements EventCodeGenerator {
     let controlTimerIndex = 0;
     component.eventConfigs.forEach(eventConfig => {
       if (eventConfig.type === 'onMessage' && eventConfig.message) {
-        // onMessage 生成统一回调名
-        functions.push(getMessageCallbackName(component, eventConfig, msgIndex));
+        // 优先使用 handler 属性
+        if (eventConfig.handler) {
+          functions.push(eventConfig.handler);
+        } else {
+          functions.push(getMessageCallbackName(component, eventConfig, msgIndex));
+        }
         msgIndex++;
       } else {
         eventConfig.actions.forEach(action => {

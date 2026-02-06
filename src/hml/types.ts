@@ -133,6 +133,7 @@ export interface TimerConfig {
   duration?: number;  // 总时间（毫秒）（旧版兼容）
   stopOnComplete?: boolean;  // 到达总时间后是否停止动画
   delayStart?: number;  // 延时启动时间（毫秒），默认 0（已废弃，用 segments 的第一段空动作替代）
+  enableLog?: boolean;  // 是否启用调试日志（打印函数名和 cnt 值）
 }
 
 /**

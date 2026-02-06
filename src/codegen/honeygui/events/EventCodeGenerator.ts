@@ -146,52 +146,56 @@ export function generateMessageCallbackImpl(component: Component, componentMap: 
   component.eventConfigs.forEach(eventConfig => {
     if (eventConfig.type !== 'onMessage' || !eventConfig.message) return;
 
-    const callbackName = getMessageCallbackName(component, eventConfig, msgIndex);
+    // 如果有 handler 属性，使用它作为回调函数名
+    const callbackName = eventConfig.handler || getMessageCallbackName(component, eventConfig, msgIndex);
     msgIndex++;
     
     let body = '';
 
-    eventConfig.actions.forEach(action => {
-      if (action.type === 'callFunction' && action.functionName) {
-        body += `    ${action.functionName}(obj, topic, data, len);\n`;
-      } else if (action.type === 'switchView' && action.target) {
-        const targetComponent = componentMap.get(action.target);
-        const targetName = targetComponent?.name || action.target;
-        const switchOutStyle = action.switchOutStyle || 'SWITCH_OUT_TO_LEFT_USE_TRANSLATION';
-        const switchInStyle = action.switchInStyle || 'SWITCH_IN_FROM_RIGHT_USE_TRANSLATION';
-        body += `    gui_view_switch_direct(gui_view_get_current(), "${targetName}", ${switchOutStyle}, ${switchInStyle});\n`;
-      } else if (action.type === 'sendMessage' && action.message) {
-        body += `    gui_msg_publish("${action.message}", data, len);\n`;
-      } else if (action.type === 'controlTimer' && action.timerTargets && action.timerTargets.length > 0) {
-        // 控制动画定时器
-        action.timerTargets.forEach(target => {
-          const targetComp = componentMap.get(target.componentId);
-          if (!targetComp) return;
-          
-          const timers = targetComp.data?.timers;
-          if (!timers || !Array.isArray(timers)) return;
-          
-          const timer = timers[target.timerIndex || 0];
-          if (!timer) return;
-          
-          if (target.action === 'start') {
-            // 开启定时器
-            const callback = timer.mode === 'preset' 
-              ? `${target.componentId}_${timer.id}_cb`
-              : (timer.callback || `${target.componentId}_timer_cb`);
-            body += `    gui_obj_create_timer(GUI_BASE(${target.componentId}), ${timer.interval}, ${timer.reload ? 'true' : 'false'}, ${callback});\n`;
-            body += `    gui_obj_start_timer(GUI_BASE(${target.componentId}));\n`;
-          } else if (target.action === 'stop') {
-            // 关闭定时器
-            body += `    if (GUI_BASE(${target.componentId})->timer) {\n`;
-            body += `        gui_obj_stop_timer(GUI_BASE(${target.componentId}));\n`;
-            body += `    }\n`;
-          }
-        });
-      }
-    });
+    // 如果有 actions，生成对应的代码
+    if (eventConfig.actions && eventConfig.actions.length > 0) {
+      eventConfig.actions.forEach(action => {
+        if (action.type === 'callFunction' && action.functionName) {
+          body += `    ${action.functionName}(obj, topic, data, len);\n`;
+        } else if (action.type === 'switchView' && action.target) {
+          const targetComponent = componentMap.get(action.target);
+          const targetName = targetComponent?.name || action.target;
+          const switchOutStyle = action.switchOutStyle || 'SWITCH_OUT_TO_LEFT_USE_TRANSLATION';
+          const switchInStyle = action.switchInStyle || 'SWITCH_IN_FROM_RIGHT_USE_TRANSLATION';
+          body += `    gui_view_switch_direct(gui_view_get_current(), "${targetName}", ${switchOutStyle}, ${switchInStyle});\n`;
+        } else if (action.type === 'sendMessage' && action.message) {
+          body += `    gui_msg_publish("${action.message}", data, len);\n`;
+        } else if (action.type === 'controlTimer' && action.timerTargets && action.timerTargets.length > 0) {
+          // 控制动画定时器
+          action.timerTargets.forEach(target => {
+            const targetComp = componentMap.get(target.componentId);
+            if (!targetComp) return;
+            
+            const timers = targetComp.data?.timers;
+            if (!timers || !Array.isArray(timers)) return;
+            
+            const timer = timers[target.timerIndex || 0];
+            if (!timer) return;
+            
+            if (target.action === 'start') {
+              // 开启定时器
+              const callback = timer.mode === 'preset' 
+                ? `${target.componentId}_${timer.id}_cb`
+                : (timer.callback || `${target.componentId}_timer_cb`);
+              body += `    gui_obj_create_timer(GUI_BASE(${target.componentId}), ${timer.interval}, ${timer.reload ? 'true' : 'false'}, ${callback});\n`;
+              body += `    gui_obj_start_timer(GUI_BASE(${target.componentId}));\n`;
+            } else if (target.action === 'stop') {
+              // 关闭定时器
+              body += `    if (GUI_BASE(${target.componentId})->timer) {\n`;
+              body += `        gui_obj_stop_timer(GUI_BASE(${target.componentId}));\n`;
+              body += `    }\n`;
+            }
+          });
+        }
+      });
+    }
 
-    // 始终生成回调函数，即使 body 为空（避免链接错误）
+    // 如果没有 actions 或 body 为空，生成 TODO 注释
     if (!body) {
       body = `    // TODO: 实现消息处理逻辑\n`;
     }

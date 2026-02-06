@@ -218,7 +218,7 @@ const componentDefinitions: ComponentDefinition[] = [
     defaultSize: { width: 350, height: 250 },
     properties: [
       { name: 'entry', label: 'Entry View', type: 'boolean', defaultValue: false, group: 'general' },
-      { name: 'backgroundColor', label: 'Background Color', type: 'color', defaultValue: '#000000', group: 'style' },
+      { name: 'backgroundColor', label: 'Background Color', type: 'color', defaultValue: '#000000', group: 'style', hint: 'Designer only - helps identify container boundaries' },
       { name: 'borderRadius', label: 'Border Radius', type: 'number', defaultValue: 0, group: 'style' },
       { name: 'padding', label: 'Padding', type: 'number', defaultValue: 12, group: 'style' },
       { name: 'overflow', label: 'Overflow', type: 'select', defaultValue: 'auto', options: ['auto', 'hidden', 'scroll'], group: 'style' },
@@ -231,7 +231,7 @@ const componentDefinitions: ComponentDefinition[] = [
     defaultSize: { width: 450, height: 350 },
     properties: [
       { name: 'showBackground', label: 'Show Background', type: 'boolean', defaultValue: false, group: 'style' },
-      { name: 'backgroundColor', label: 'Background Color', type: 'color', defaultValue: '#808080', group: 'style' },
+      { name: 'backgroundColor', label: 'Background Color', type: 'color', defaultValue: '#808080', group: 'style', hint: 'Designer only - helps identify container boundaries' },
       { name: 'enableBlur', label: 'Enable Blur', type: 'boolean', defaultValue: false, group: 'general' },
       { name: 'blurDegree', label: 'Blur Degree', type: 'number', defaultValue: 225, group: 'general' },
     ],
@@ -242,7 +242,7 @@ const componentDefinitions: ComponentDefinition[] = [
     icon: '🎨',
     defaultSize: { width: 300, height: 200 },
     properties: [
-      { name: 'backgroundColor', label: 'Background Color', type: 'color', defaultValue: '#ffffff', group: 'style' },
+      { name: 'backgroundColor', label: 'Background Color', type: 'color', defaultValue: '#ffffff', group: 'style', hint: 'Designer only - helps identify container boundaries' },
       { name: 'border', label: 'Border', type: 'string', defaultValue: '1px solid #cccccc', group: 'style' },
       { name: 'borderRadius', label: 'Border Radius', type: 'number', defaultValue: 4, group: 'style' },
       { name: 'overflow', label: 'Overflow', type: 'select', defaultValue: 'hidden', options: ['hidden', 'auto', 'scroll', 'visible'], group: 'style' },

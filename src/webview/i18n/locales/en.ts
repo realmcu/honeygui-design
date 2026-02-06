@@ -560,6 +560,10 @@ const en = {
   'Run immediately': 'Run immediately',
   'Bind on component creation': 'Bind on component creation',
   'Timer Animations': 'Timer Animations',
+  'Enable Debug Log': 'Enable Debug Log',
+
+  // Container background color hint
+  'Designer only - helps identify container boundaries': 'Designer only - helps identify container boundaries',
 
   // Conversion Config Panel
   'selectAssetToConfig': 'Select a folder or image to configure conversion settings',

@@ -789,6 +789,11 @@ void ${callback}(void *obj)\n{\n`;
     // 增加计数器
     code += `    cnt++;\n`;
     
+    // 如果启用了日志，添加 gui_log 打印
+    if (timer.enableLog) {
+      code += `    gui_log("${callback}: cnt=%d\\n", cnt);\n`;
+    }
+    
     // 到达总时间后的处理
     const totalCnt = delayStart > 0 ? `cnt_wait + cnt_max` : `cnt_max`;
     if (stopOnComplete) {
@@ -847,6 +852,12 @@ void ${callback}(void *obj)\n{\n`;
     
     // cnt++ 在判断前执行
     code += `    cnt++;\n`;
+    
+    // 如果启用了日志，添加 gui_log 打印
+    if (timer.enableLog) {
+      code += `    gui_log("${callback}: cnt=%d\\n", cnt);\n`;
+    }
+    
     code += `    \n`;
     
     // 为每段生成条件分支（使用 if-else 提高效率）
