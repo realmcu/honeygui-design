@@ -15,9 +15,6 @@
   },
   "publisher": "honeygui-visual-designer",
   "icon": "resources/HoneyGUI-LOGO.png",
-  "workspaces": [
-    "tools/font-converter"
-  ],
   "engines": {
     "vscode": "^1.80.0"
   },

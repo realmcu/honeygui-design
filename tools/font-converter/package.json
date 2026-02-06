@@ -1,0 +1,11 @@
+{
+  "name": "@font-tools/converter-ts",
+  "version": "2.0.0",
+  "description": "TypeScript font converter for embedded systems - converts TrueType fonts to optimized binary formats",
+  "main": "src/index.ts",
+  "dependencies": {
+    "opentype.js": "^1.3.4",
+    "commander": "^11.0.0",
+    "ini": "^4.1.0"
+  }
+}
