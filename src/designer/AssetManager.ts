@@ -250,11 +250,11 @@ export class AssetManager extends EventEmitter {
     }
 
     /**
-     * 删除资源文件
+     * 删除资源文件或文件夹
      */
-    public async handleDeleteAsset(fileName: string, currentFilePath: string | undefined): Promise<void> {
+    public async handleDeleteAsset(assetPath: string, currentFilePath: string | undefined): Promise<void> {
         try {
-            logger.info(`[删除资源] 收到删除请求: ${fileName}`);
+            logger.info(`[删除资源] 收到删除请求: ${assetPath}`);
             
             if (!currentFilePath) {
                 logger.error('[删除资源] 文件路径未初始化');
@@ -269,33 +269,42 @@ export class AssetManager extends EventEmitter {
             }
             
             const assetsDir = path.join(projectRoot, 'assets');
-            const filePath = path.join(assetsDir, fileName);
+            const filePath = path.join(assetsDir, assetPath);
             
             logger.info(`[删除资源] 完整路径: ${filePath}`);
             
             if (fs.existsSync(filePath)) {
-                const relativePath = `assets/${fileName}`;
-                const ext = path.extname(fileName).toLowerCase();
+                const stats = fs.statSync(filePath);
                 
-                // 检查是否是 3D 模型文件
-                const is3DModel = ['.obj', '.gltf', '.glb'].includes(ext);
-                
-                if (is3DModel) {
-                    // 删除 3D 模型及其配套文件
-                    await this.delete3DModelWithDependencies(filePath, fileName, assetsDir);
+                if (stats.isDirectory()) {
+                    // 删除文件夹
+                    logger.info(`[删除资源] 删除文件夹: ${filePath}`);
+                    fs.rmSync(filePath, { recursive: true, force: true });
+                    vscode.window.showInformationMessage(vscode.l10n.t('Folder deleted'));
                 } else {
-                    // 普通文件直接删除
-                    logger.info(`[删除资源] 删除文件: ${filePath}, 相对路径: ${relativePath}`);
-                    fs.unlinkSync(filePath);
+                    const relativePath = `assets/${assetPath}`;
+                    const ext = path.extname(filePath).toLowerCase();
                     
-                    // 通知前端删除引用此资源的组件
-                    this._panel.webview.postMessage({
-                        command: 'deleteComponentsByImagePath',
-                        imagePath: relativePath
-                    });
+                    // 检查是否是 3D 模型文件
+                    const is3DModel = ['.obj', '.gltf', '.glb'].includes(ext);
+                    
+                    if (is3DModel) {
+                        // 删除 3D 模型及其配套文件
+                        await this.delete3DModelWithDependencies(filePath, path.basename(filePath), assetsDir);
+                    } else {
+                        // 普通文件直接删除
+                        logger.info(`[删除资源] 删除文件: ${filePath}, 相对路径: ${relativePath}`);
+                        fs.unlinkSync(filePath);
+                        
+                        // 通知前端删除引用此资源的组件
+                        this._panel.webview.postMessage({
+                            command: 'deleteComponentsByImagePath',
+                            imagePath: relativePath
+                        });
+                    }
+                    vscode.window.showInformationMessage(vscode.l10n.t('Asset file deleted'));
                 }
                 
-                vscode.window.showInformationMessage(vscode.l10n.t('Asset file deleted'));
                 // 重新加载资源列表
                 this.handleLoadAssets(currentFilePath);
             } else {
@@ -455,20 +464,31 @@ export class AssetManager extends EventEmitter {
     }
 
     /**
-     * 重命名资源文件
+     * 重命名资源文件或文件夹
      */
     public async handleRenameAsset(oldPath: string, newName: string, currentFilePath: string | undefined): Promise<void> {
         try {
-            const dir = path.dirname(oldPath);
-            const newPath = path.join(dir, newName);
+            if (!currentFilePath) {
+                return;
+            }
+
+            const projectRoot = ProjectUtils.findProjectRoot(currentFilePath);
+            if (!projectRoot) {
+                return;
+            }
+
+            const assetsDir = path.join(projectRoot, 'assets');
+            const fullOldPath = path.join(assetsDir, oldPath);
+            const dir = path.dirname(fullOldPath);
+            const fullNewPath = path.join(dir, newName);
             
-            if (fs.existsSync(newPath)) {
+            if (fs.existsSync(fullNewPath)) {
                 vscode.window.showErrorMessage(vscode.l10n.t('File name already exists'));
                 return;
             }
             
-            fs.renameSync(oldPath, newPath);
-            vscode.window.showInformationMessage(vscode.l10n.t('Asset file renamed'));
+            fs.renameSync(fullOldPath, fullNewPath);
+            vscode.window.showInformationMessage(vscode.l10n.t('Renamed successfully'));
             // 重新加载资源列表
             this.handleLoadAssets(currentFilePath);
         } catch (error) {

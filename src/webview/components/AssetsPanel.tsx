@@ -495,24 +495,24 @@ const AssetsPanel: React.FC = () => {
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
-  const handleDelete = (assetPath: string) => {
-    const fileName = assetPath.split('/').pop() || assetPath;
+  const handleDelete = (asset: AssetFile) => {
+    const fileName = asset.relativePath || asset.name;
     window.vscodeAPI?.postMessage({
       command: 'deleteAsset',
       fileName: fileName,
     });
   };
 
-  const handleRename = (oldPath: string) => {
-    setEditingAsset(oldPath);
-    setNewName(oldPath.split('/').pop() || '');
+  const handleRename = (asset: AssetFile) => {
+    setEditingAsset(asset.path);
+    setNewName(asset.name);
   };
 
-  const handleRenameConfirm = (oldPath: string) => {
-    if (newName && newName !== oldPath.split('/').pop()) {
+  const handleRenameConfirm = (asset: AssetFile) => {
+    if (newName && newName !== asset.name) {
       window.vscodeAPI?.postMessage({
         command: 'renameAsset',
-        oldPath,
+        oldPath: asset.relativePath || asset.name,
         newName,
       });
     }
@@ -637,9 +637,9 @@ const AssetsPanel: React.FC = () => {
               type="text"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              onBlur={() => handleRenameConfirm(asset.path)}
+              onBlur={() => handleRenameConfirm(asset)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') handleRenameConfirm(asset.path);
+                if (e.key === 'Enter') handleRenameConfirm(asset);
                 if (e.key === 'Escape') setEditingAsset(null);
               }}
               autoFocus
@@ -662,10 +662,10 @@ const AssetsPanel: React.FC = () => {
             >
               <Zap size={12} />
             </button>
-            <button onClick={() => handleRename(asset.path)} title={t('Rename')} className="action-btn">
+            <button onClick={() => handleRename(asset)} title={t('Rename')} className="action-btn">
               <Edit2 size={12} />
             </button>
-            <button onClick={() => handleDelete(asset.path)} title={t('Delete')} className="action-btn delete">
+            <button onClick={() => handleDelete(asset)} title={t('Delete')} className="action-btn delete">
               <Trash2 size={12} />
             </button>
           </div>
@@ -688,7 +688,45 @@ const AssetsPanel: React.FC = () => {
           <div className="file-icon" style={{ fontSize: '48px' }}>📁</div>
         </div>
         <div className="asset-info">
-          <span className="asset-name" title={folder.name}>{folder.name}</span>
+          {editingAsset === folder.path ? (
+            <input
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onBlur={() => handleRenameConfirm(folder)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleRenameConfirm(folder);
+                if (e.key === 'Escape') setEditingAsset(null);
+              }}
+              autoFocus
+              className="rename-input"
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <span className="asset-name" title={folder.name}>{folder.name}</span>
+          )}
+          <div className="asset-actions">
+            <button 
+              onClick={(e) => { 
+                e.stopPropagation(); 
+                handleRename(folder); 
+              }} 
+              title={t('Rename')} 
+              className="action-btn"
+            >
+              <Edit2 size={12} />
+            </button>
+            <button 
+              onClick={(e) => { 
+                e.stopPropagation(); 
+                handleDelete(folder); 
+              }} 
+              title={t('Delete')} 
+              className="action-btn delete"
+            >
+              <Trash2 size={12} />
+            </button>
+          </div>
         </div>
       </div>
     );
