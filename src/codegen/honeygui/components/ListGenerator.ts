@@ -399,8 +399,9 @@ export class ListGenerator implements ComponentCodeGenerator {
             }
           });
         }
-        // 替换占位符
+        // 替换占位符（包括子组件和事件绑定）
         creationCode = creationCode.replace(/__CHILDREN_PLACEHOLDER__/g, childrenCode);
+        creationCode = creationCode.replace(/__EVENT_BINDINGS_PLACEHOLDER__/g, ''); // window 在 list 中不需要事件绑定
         code += creationCode;
       } else {
         // 普通组件：直接添加创建代码

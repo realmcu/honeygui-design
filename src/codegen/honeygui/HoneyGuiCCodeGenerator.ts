@@ -521,9 +521,9 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       }
     }
     
-    // 替换占位符
-    code = code.replace('__CHILDREN_PLACEHOLDER__', childrenCode);
-    code = code.replace('__EVENT_BINDINGS_PLACEHOLDER__', eventBindingsCode);
+    // 替换占位符（使用全局替换以支持多个 window）
+    code = code.replace(/__CHILDREN_PLACEHOLDER__/g, childrenCode);
+    code = code.replace(/__EVENT_BINDINGS_PLACEHOLDER__/g, eventBindingsCode);
     
     return code;
   }
