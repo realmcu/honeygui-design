@@ -88,7 +88,7 @@ export class CallbackFileGenerator {
         // onMessage 回调签名不同
         code += `void ${funcName}(gui_obj_t *obj, const char *topic, void *data, uint16_t len);\n`;
       } else {
-        code += `void ${funcName}(void *obj, gui_event_t event, void *param);\n`;
+        code += `void ${funcName}(void *obj, gui_event_t *e);\n`;
       }
     });
 
@@ -248,11 +248,10 @@ export class CallbackFileGenerator {
         return;
       }
       
-      code += `void ${funcName}(void *obj, gui_event_t event, void *param)\n`;
+      code += `void ${funcName}(void *obj, gui_event_t *e)\n`;
       code += `{\n`;
       code += `    GUI_UNUSED(obj);\n`;
-      code += `    GUI_UNUSED(event);\n`;
-      code += `    GUI_UNUSED(param);\n`;
+      code += `    GUI_UNUSED(e);\n`;
       code += `    // TODO: 实现事件处理逻辑\n`;
       code += `    printf("${funcName} triggered\\n");\n`;
       code += `}\n\n`;

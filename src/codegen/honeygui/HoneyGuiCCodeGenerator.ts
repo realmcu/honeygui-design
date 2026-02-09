@@ -691,11 +691,10 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
     callbackFunctions.forEach(funcName => {
       if (switchViewFuncNames.has(funcName)) return; // 跳过已生成的
       
-      code += `void ${funcName}(void *obj, gui_event_t event, void *param)\n`;
+      code += `void ${funcName}(void *obj, gui_event_t *e)\n`;
       code += `{\n`;
       code += `    GUI_UNUSED(obj);\n`;
-      code += `    GUI_UNUSED(event);\n`;
-      code += `    GUI_UNUSED(param);\n`;
+      code += `    GUI_UNUSED(e);\n`;
       code += `    // TODO: 实现事件处理逻辑\n`;
       code += `    printf("${funcName} triggered\\n");\n`;
       code += `}\n\n`;
@@ -885,6 +884,10 @@ static void ${component.id}_breath_anim_cb(void *p)
         return enableScroll ? 'gui_scroll_text_t' : 'gui_text_t';
       case 'hg_time_label':
         return enableScroll ? 'gui_scroll_text_t' : 'gui_text_t';
+      case 'hg_image':
+        return 'gui_img_t';
+      case 'hg_window':
+        return 'gui_win_t';
       case 'hg_list':
         return 'gui_list_t';
       case 'hg_arc':
@@ -893,7 +896,10 @@ static void ${component.id}_breath_anim_cb(void *p)
         return 'gui_rounded_rect_t';
       case 'hg_circle':
         return 'gui_circle_t';
+      case 'hg_canvas':
+        return 'gui_canvas_t';
       default:
+        // 其他未实现的组件使用 gui_obj_t
         return 'gui_obj_t';
     }
   }

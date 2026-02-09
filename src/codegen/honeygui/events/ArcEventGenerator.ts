@@ -22,7 +22,7 @@ export class ArcEventGenerator implements EventCodeGenerator {
         // 优先使用 handler 属性
         const callbackName = eventConfig.handler || getMessageCallbackName(component, eventConfig, msgIndex);
         msgIndex++;
-        code += `${indentStr}gui_msg_subscribe(${component.id}, "${eventConfig.message}", ${callbackName});\n`;
+        code += `${indentStr}gui_msg_subscribe((gui_obj_t *)${component.id}, "${eventConfig.message}", ${callbackName});\n`;
         return;
       }
 
@@ -99,11 +99,10 @@ export class ArcEventGenerator implements EventCodeGenerator {
           const switchOutStyle = action.switchOutStyle || 'SWITCH_OUT_TO_LEFT_USE_TRANSLATION';
           const switchInStyle = action.switchInStyle || 'SWITCH_IN_FROM_RIGHT_USE_TRANSLATION';
 
-          const impl = `void ${callbackName}(void *obj, gui_event_t event, void *param)
+          const impl = `void ${callbackName}(void *obj, gui_event_t *e)
 {
     GUI_UNUSED(obj);
-    GUI_UNUSED(param);
-    GUI_UNUSED(event);
+    GUI_UNUSED(e);
     gui_view_switch_direct(gui_view_get_current(), "${targetName}", ${switchOutStyle}, ${switchInStyle});
 }`;
           callbacks.push(impl);

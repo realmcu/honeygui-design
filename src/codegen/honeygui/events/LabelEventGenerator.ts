@@ -20,7 +20,7 @@ export class LabelEventGenerator implements EventCodeGenerator {
         // 优先使用 handler 属性
         const callbackName = eventConfig.handler || getMessageCallbackName(component, eventConfig, msgIndex);
         msgIndex++;
-        code += `${indentStr}gui_msg_subscribe(${component.id}, "${eventConfig.message}", ${callbackName});\n`;
+        code += `${indentStr}gui_msg_subscribe((gui_obj_t *)${component.id}, "${eventConfig.message}", ${callbackName});\n`;
         return;
       }
 
@@ -91,10 +91,7 @@ export class LabelEventGenerator implements EventCodeGenerator {
           const switchInStyle = action.switchInStyle || 'SWITCH_IN_FROM_RIGHT_USE_TRANSLATION';
 
           // 生成回调函数体
-          let callbackBody = `    GUI_UNUSED(obj);
-    GUI_UNUSED(event);
-    GUI_UNUSED(param);
-`;
+          let callbackBody = ``;
 
           // 如果是 onTouchUp 事件且开启了抬起区域检测
           if (eventConfig.type === 'onTouchUp' && eventConfig.checkReleaseArea) {
@@ -110,8 +107,10 @@ export class LabelEventGenerator implements EventCodeGenerator {
 
           callbackBody += `    gui_view_switch_direct(gui_view_get_current(), "${targetName}", ${switchOutStyle}, ${switchInStyle});`;
 
-          impls.push(`void ${component.id}_switch_view_cb(void *obj, gui_event_t event, void *param)
+          impls.push(`void ${component.id}_switch_view_cb(void *obj, gui_event_t *e)
 {
+    GUI_UNUSED(obj);
+    GUI_UNUSED(e);
 ${callbackBody}
 }`);
         }

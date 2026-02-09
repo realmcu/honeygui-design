@@ -24,7 +24,7 @@ export class ListItemEventGenerator implements EventCodeGenerator {
         if (eventConfig.message) {
           const callbackName = eventConfig.handler || `${component.id}_msg_cb_${msgIndex}`;
           msgIndex++;
-          code += `${indentStr}gui_msg_subscribe(${component.id}, "${eventConfig.message}", ${callbackName});\n`;
+          code += `${indentStr}gui_msg_subscribe((gui_obj_t *)${component.id}, "${eventConfig.message}", ${callbackName});\n`;
         }
       } else {
         // 普通触摸/滑动事件
@@ -128,11 +128,10 @@ export class ListItemEventGenerator implements EventCodeGenerator {
     });
 
     if (body) {
-      impls.push(`void ${callbackName}(void *obj, gui_event_t event, void *param)
+      impls.push(`void ${callbackName}(void *obj, gui_event_t *e)
 {
     GUI_UNUSED(obj);
-    GUI_UNUSED(event);
-    GUI_UNUSED(param);
+    GUI_UNUSED(e);
 ${body}}`);
     }
 

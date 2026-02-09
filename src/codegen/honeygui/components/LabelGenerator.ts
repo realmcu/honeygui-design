@@ -125,19 +125,20 @@ export class LabelGenerator implements ComponentCodeGenerator {
 
     // 可见性
     if (component.visible === false) {
-      code += `${indentStr}gui_obj_show(${component.id}, false);\n`;
+      code += `${indentStr}gui_obj_show((gui_obj_t *)${component.id}, false);\n`;
     }
 
     // 计时器模式：创建定时器（根据配置决定是否自动启动）
     if (isTimerLabel) {
       const autoStart = component.data?.timerAutoStart !== false; // 默认自动启动
       code += `${indentStr}// 创建计时器定时器（间隔 10ms，无限循环）\n`;
-      code += `${indentStr}gui_obj_create_timer((void *)${component.id}, 10, -1, ${component.id}_timer_update_cb);\n`;
+      code += `${indentStr}gui_obj_create_timer((gui_obj_t *)${component.id}, 10, -1, ${component.id}_timer_update_cb);\n`;
       if (!autoStart) {
         // 如果不自动启动，创建后立即停止
-        code += `${indentStr}gui_obj_stop_timer((void *)${component.id});\n`;
+        code += `${indentStr}gui_obj_stop_timer((gui_obj_t *)${component.id});\n`;
       }
     }
+
 
     return code;
   }

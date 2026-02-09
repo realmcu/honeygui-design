@@ -155,7 +155,7 @@ export const SWITCH_OUT_STYLES = [
   { value: 'SWITCH_OUT_STILL_USE_BLUR', label: '高斯模糊（静止）' },
   
   // Animation (动画)
-  { value: 'SWITCH_OUT_NONE_ANIMATION', label: '无动画' },
+  { value: 'SWITCH_OUT_NONE_ANIMATION', label: '无动画（立即消失）' },
   { value: 'SWITCH_OUT_ANIMATION_ZOOM', label: '缩放' },
   { value: 'SWITCH_OUT_ANIMATION_FADE', label: '淡出' },
   { value: 'SWITCH_OUT_ANIMATION_MOVE_TO_RIGHT', label: '向右移动' },
@@ -197,7 +197,7 @@ export const SWITCH_IN_STYLES = [
   { value: 'SWITCH_IN_STILL_USE_BLUR', label: '高斯模糊（静止）' },
   
   // Animation (动画)
-  { value: 'SWITCH_IN_NONE_ANIMATION', label: '无动画' },
+  { value: 'SWITCH_IN_NONE_ANIMATION', label: '无动画（立即出现）' },
   { value: 'SWITCH_IN_ANIMATION_ZOOM', label: '缩放' },
   { value: 'SWITCH_IN_ANIMATION_FADE', label: '淡入' },
   { value: 'SWITCH_IN_ANIMATION_MOVE_FADE', label: '移动淡入' },

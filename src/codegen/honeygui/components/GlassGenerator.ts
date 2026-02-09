@@ -23,7 +23,7 @@ export class GlassGenerator implements ComponentCodeGenerator {
     }
 
     // gui_glass_create_from_fs(父控件指针, "组件名", "文件路径", x, y, 0, 0)
-    return `${indentStr}${component.id} = (gui_obj_t *)gui_glass_create_from_fs(${parentRef}, "${component.name}", "${binSrc}", ${x}, ${y}, 0, 0);\n`;
+    return `${indentStr}${component.id} = gui_glass_create_from_fs(${parentRef}, "${component.name}", "${binSrc}", ${x}, ${y}, 0, 0);\n`;
   }
 
   generatePropertySetters(component: Component, indent: number, context: GeneratorContext): string {
@@ -42,7 +42,7 @@ export class GlassGenerator implements ComponentCodeGenerator {
 
     // 可见性
     if (component.visible !== undefined && !component.visible) {
-      code += `${indentStr}gui_obj_show(${component.id}, false);\n`;
+      code += `${indentStr}gui_obj_show((gui_obj_t *)${component.id}, false);\n`;
     }
 
     return code;

@@ -22,7 +22,7 @@ export class DefaultEventGenerator implements EventCodeGenerator {
         // 优先使用 handler 属性
         const callbackName = eventConfig.handler || getMessageCallbackName(component, eventConfig, msgIndex);
         msgIndex++;
-        code += `${indentStr}gui_msg_subscribe(${component.id}, "${eventConfig.message}", ${callbackName});\n`;
+        code += `${indentStr}gui_msg_subscribe((gui_obj_t *)${component.id}, "${eventConfig.message}", ${callbackName});\n`;
         return;
       }
 

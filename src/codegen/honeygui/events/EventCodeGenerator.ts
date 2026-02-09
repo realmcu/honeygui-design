@@ -82,7 +82,7 @@ export function generateControlTimerCallbackImpl(component: Component, component
       const callbackName = `${component.id}_animation_set_${controlTimerIndex}_cb`;
       controlTimerIndex++;
 
-      let callbackBody = `    GUI_UNUSED(obj);\n    GUI_UNUSED(event);\n    GUI_UNUSED(param);\n`;
+      let callbackBody = ``;
 
       action.timerTargets!.forEach(target => {
         const targetComp = componentMap.get(target.componentId);
@@ -127,7 +127,7 @@ export function generateControlTimerCallbackImpl(component: Component, component
         }
       });
 
-      impls.push(`void ${callbackName}(void *obj, gui_event_t event, void *param)\n{\n${callbackBody}}`);
+      impls.push(`void ${callbackName}(void *obj, gui_event_t *e)\n{\n    GUI_UNUSED(obj);\n    GUI_UNUSED(e);\n${callbackBody}}`);
     });
   });
 

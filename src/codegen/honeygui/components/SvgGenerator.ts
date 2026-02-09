@@ -19,7 +19,7 @@ export class SvgGenerator implements ComponentCodeGenerator {
     }
 
     // 使用 gui_svg_create_from_file 创建 SVG
-    return `${indentStr}${component.id} = (gui_obj_t *)gui_svg_create_from_file(${parentRef}, "${component.name}", "${src}", ${x}, ${y});\n`;
+    return `${indentStr}${component.id} = gui_svg_create_from_file(${parentRef}, "${component.name}", "${src}", ${x}, ${y});\n`;
   }
 
   generatePropertySetters(component: Component, indent: number, _context: GeneratorContext): string {

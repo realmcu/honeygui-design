@@ -83,7 +83,7 @@ export class RectGenerator implements ComponentCodeGenerator {
 
     // 可见性
     if (component.visible === false) {
-      code += `${indentStr}gui_obj_show(${component.id}, false);\n`;
+      code += `${indentStr}gui_obj_show((gui_obj_t *)${component.id}, false);\n`;
     }
 
     return code;
@@ -102,12 +102,12 @@ export class RectGenerator implements ComponentCodeGenerator {
     
     if (buttonMode === 'dual-state') {
       // 双态按键：使用点击事件
-      return `${indentStr}gui_obj_add_event_cb(${component.id}, ${component.id}_button_cb, GUI_EVENT_TOUCH_CLICKED, NULL);\n`;
+      return `${indentStr}gui_obj_add_event_cb((gui_obj_t *)${component.id}, ${component.id}_button_cb, GUI_EVENT_TOUCH_CLICKED, NULL);\n`;
     } else if (buttonMode === 'opacity') {
       // 透明度按键：使用按下和松开事件
       let code = '';
-      code += `${indentStr}gui_obj_add_event_cb(${component.id}, ${component.id}_button_press_cb, GUI_EVENT_TOUCH_PRESSED, NULL);\n`;
-      code += `${indentStr}gui_obj_add_event_cb(${component.id}, ${component.id}_button_release_cb, GUI_EVENT_TOUCH_RELEASED, NULL);\n`;
+      code += `${indentStr}gui_obj_add_event_cb((gui_obj_t *)${component.id}, ${component.id}_button_press_cb, GUI_EVENT_TOUCH_PRESSED, NULL);\n`;
+      code += `${indentStr}gui_obj_add_event_cb((gui_obj_t *)${component.id}, ${component.id}_button_release_cb, GUI_EVENT_TOUCH_RELEASED, NULL);\n`;
       return code;
     }
 
@@ -147,11 +147,10 @@ export class RectGenerator implements ComponentCodeGenerator {
 // ${component.id} 双态按键回调
 static bool ${component.id}_state = ${initialState ? 'true' : 'false'};
 
-void ${component.id}_button_cb(void *obj, gui_event_t event, void *param)
+void ${component.id}_button_cb(void *obj, gui_event_t *e)
 {
     GUI_UNUSED(obj);
-    GUI_UNUSED(event);
-    GUI_UNUSED(param);
+    GUI_UNUSED(e);
     
     // 切换状态
     ${component.id}_state = !${component.id}_state;
@@ -197,21 +196,19 @@ void ${component.id}_set_state(bool state)
 // ${component.id} 透明度按键回调
 
 // 按下时改变透明度
-void ${component.id}_button_press_cb(void *obj, gui_event_t event, void *param)
+void ${component.id}_button_press_cb(void *obj, gui_event_t *e)
 {
     GUI_UNUSED(obj);
-    GUI_UNUSED(event);
-    GUI_UNUSED(param);
+    GUI_UNUSED(e);
     
     gui_rect_set_opacity((gui_rounded_rect_t *)${component.id}, ${pressedOpacity});
 }
 
 // 松开时恢复透明度
-void ${component.id}_button_release_cb(void *obj, gui_event_t event, void *param)
+void ${component.id}_button_release_cb(void *obj, gui_event_t *e)
 {
     GUI_UNUSED(obj);
-    GUI_UNUSED(event);
-    GUI_UNUSED(param);
+    GUI_UNUSED(e);
     
     gui_rect_set_opacity((gui_rounded_rect_t *)${component.id}, ${releasedOpacity});
 }

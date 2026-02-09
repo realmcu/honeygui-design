@@ -146,7 +146,7 @@ export interface ComponentData {
   placeholder?: string;
   options?: string[];
   timeFormat?: string;  // 时间格式（用于 label 组件自动更新时间）
-  residentMemory?: boolean;  // 常驻内存属性（用于 hg_view 组件）
+  residentMemory?: boolean | string;  // 常驻内存属性（用于 hg_view 组件），支持 boolean 或 string "true"/"false"
   animateStep?: number;  // 动画步长（用于 hg_view 组件）
   opacity?: number;  // 透明度 0-255（用于 hg_view 组件）
   

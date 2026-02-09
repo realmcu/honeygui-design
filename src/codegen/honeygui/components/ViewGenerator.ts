@@ -25,7 +25,9 @@ export class ViewGenerator implements ComponentCodeGenerator {
   generateCreation(component: Component, indent: number, context: GeneratorContext): string {
     const indentStr = '    '.repeat(indent);
     const name = component.name;
-    const residentMemory = component.data?.residentMemory || false;
+    // 正确处理 residentMemory：支持 boolean 和 string 类型
+    const residentMemoryValue = component.data?.residentMemory;
+    const residentMemory = residentMemoryValue === true || residentMemoryValue === 'true';
     // 动画步长默认值为屏幕高度的 1/10
     const defaultAnimateStep = Math.round(component.position.height / 10);
     const animateStep = component.data?.animateStep ?? defaultAnimateStep;

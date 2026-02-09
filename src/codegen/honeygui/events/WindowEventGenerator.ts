@@ -25,13 +25,13 @@ export class WindowEventGenerator implements EventCodeGenerator {
       if (eventConfig.type === 'onMessage' && eventConfig.message) {
         // 如果有 handler 属性，直接使用
         if (eventConfig.handler) {
-          code += `${indentStr}gui_msg_subscribe(GUI_BASE(${component.id}), "${eventConfig.message}", ${eventConfig.handler});\n`;
+          code += `${indentStr}gui_msg_subscribe((gui_obj_t *)GUI_BASE(${component.id}), "${eventConfig.message}", ${eventConfig.handler});\n`;
         }
         // 否则检查 actions 中的 callFunction
         else {
           eventConfig.actions.forEach(action => {
             if (action.type === 'callFunction' && action.functionName) {
-              code += `${indentStr}gui_msg_subscribe(GUI_BASE(${component.id}), "${eventConfig.message}", ${action.functionName});\n`;
+              code += `${indentStr}gui_msg_subscribe((gui_obj_t *)GUI_BASE(${component.id}), "${eventConfig.message}", ${action.functionName});\n`;
             }
           });
         }

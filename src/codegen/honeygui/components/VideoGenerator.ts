@@ -86,7 +86,7 @@ export class VideoGenerator implements ComponentCodeGenerator {
       videoSrc = '/' + videoSrc;
     }
 
-    let code = `${indentStr}${component.id} = (gui_obj_t *)gui_video_create_from_fs(${parentRef}, "${component.name}", "${videoSrc}", ${x}, ${y}, ${width}, ${height});\n`;
+    let code = `${indentStr}${component.id} = gui_video_create_from_fs(${parentRef}, "${component.name}", "${videoSrc}", ${x}, ${y}, ${width}, ${height});\n`;
     code += `${indentStr}gui_video_set_frame_rate((gui_video_t *)${component.id}, ${frameRate}.f);\n`;
 
     if (loop) {
@@ -105,7 +105,7 @@ export class VideoGenerator implements ComponentCodeGenerator {
     const indentStr = '    '.repeat(indent);
 
     if (component.visible !== undefined) {
-      code += `${indentStr}gui_obj_show(${component.id}, ${component.visible ? 'true' : 'false'});\n`;
+      code += `${indentStr}gui_obj_show((gui_obj_t *)${component.id}, ${component.visible ? 'true' : 'false'});\n`;
     }
 
     return code;

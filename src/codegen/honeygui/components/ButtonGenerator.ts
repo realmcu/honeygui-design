@@ -26,7 +26,7 @@ export class ButtonGenerator implements ComponentCodeGenerator {
       const initialImage = initialState ? imageOn : imageOff;
       const binSrc = this.convertToBinPath(initialImage);
       
-      return `${indentStr}${component.id} = (gui_obj_t *)gui_img_create_from_fs(${parentRef}, "${component.name}", "${binSrc}", ${x}, ${y}, ${width}, ${height});\n`;
+      return `${indentStr}${component.id} = gui_img_create_from_fs(${parentRef}, "${component.name}", "${binSrc}", ${x}, ${y}, ${width}, ${height});\n`;
     }
 
     // 普通模式：也使用 gui_img（SDK 没有 gui_button）
@@ -170,11 +170,10 @@ export class ButtonGenerator implements ComponentCodeGenerator {
 // ${component.id} 双态按钮回调
 static bool ${component.id}_state = ${component.data?.initialState === 'on' ? 'true' : 'false'};
 
-void ${component.id}_toggle_cb(void *obj, gui_event_t event, void *param)
+void ${component.id}_toggle_cb(void *obj, gui_event_t *e)
 {
     GUI_UNUSED(obj);
-    GUI_UNUSED(event);
-    GUI_UNUSED(param);
+    GUI_UNUSED(e);
     
     // 切换状态
     ${component.id}_state = !${component.id}_state;
@@ -275,7 +274,7 @@ void ${component.id}_off_callback(void)
     }
     
     const indentStr = '    '.repeat(indent);
-    return `${indentStr}gui_obj_add_event_cb(${component.id}, ${component.id}_toggle_cb, GUI_EVENT_TOUCH_CLICKED, NULL);\n`;
+    return `${indentStr}gui_obj_add_event_cb((gui_obj_t *)${component.id}, ${component.id}_toggle_cb, GUI_EVENT_TOUCH_CLICKED, NULL);\n`;
   }
 
   /**

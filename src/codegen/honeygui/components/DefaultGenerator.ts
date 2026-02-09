@@ -48,7 +48,7 @@ export class DefaultGenerator implements ComponentCodeGenerator {
 
     // 可见性
     if (component.visible !== undefined) {
-      code += `${indentStr}gui_obj_show(${component.id}, ${component.visible ? 'true' : 'false'});\n`;
+      code += `${indentStr}gui_obj_show((gui_obj_t *)${component.id}, ${component.visible ? 'true' : 'false'});\n`;
     }
 
     return code;

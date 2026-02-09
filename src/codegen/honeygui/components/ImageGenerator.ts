@@ -23,7 +23,7 @@ export class ImageGenerator implements ComponentCodeGenerator {
       binSrc = '/' + binSrc;
     }
 
-    return `${indentStr}${component.id} = (gui_obj_t *)gui_img_create_from_fs(${parentRef}, "${component.name}", "${binSrc}", ${x}, ${y}, ${width}, ${height});\n`;
+    return `${indentStr}${component.id} = gui_img_create_from_fs(${parentRef}, "${component.name}", "${binSrc}", ${x}, ${y}, ${width}, ${height});\n`;
   }
 
   generatePropertySetters(component: Component, indent: number, context: GeneratorContext): string {
@@ -163,7 +163,7 @@ export class ImageGenerator implements ComponentCodeGenerator {
 
     // 可见性
     if (component.visible !== undefined) {
-      code += `${indentStr}gui_obj_show(${component.id}, ${component.visible ? 'true' : 'false'});\n`;
+      code += `${indentStr}gui_obj_show((gui_obj_t *)${component.id}, ${component.visible ? 'true' : 'false'});\n`;
     }
 
     return code;
@@ -181,11 +181,11 @@ export class ImageGenerator implements ComponentCodeGenerator {
     const indentStr = '    '.repeat(indent);
     
     if (buttonMode === 'dual-state') {
-      return `${indentStr}gui_obj_add_event_cb(${component.id}, ${component.id}_button_cb, GUI_EVENT_TOUCH_CLICKED, NULL);\n`;
+      return `${indentStr}gui_obj_add_event_cb((gui_obj_t *)${component.id}, ${component.id}_button_cb, GUI_EVENT_TOUCH_CLICKED, NULL);\n`;
     } else if (buttonMode === 'blink') {
       let code = '';
-      code += `${indentStr}gui_obj_add_event_cb(${component.id}, ${component.id}_button_press_cb, GUI_EVENT_TOUCH_PRESSED, NULL);\n`;
-      code += `${indentStr}gui_obj_add_event_cb(${component.id}, ${component.id}_button_release_cb, GUI_EVENT_TOUCH_RELEASED, NULL);\n`;
+      code += `${indentStr}gui_obj_add_event_cb((gui_obj_t *)${component.id}, ${component.id}_button_press_cb, GUI_EVENT_TOUCH_PRESSED, NULL);\n`;
+      code += `${indentStr}gui_obj_add_event_cb((gui_obj_t *)${component.id}, ${component.id}_button_release_cb, GUI_EVENT_TOUCH_RELEASED, NULL);\n`;
       return code;
     }
 
@@ -222,11 +222,10 @@ export class ImageGenerator implements ComponentCodeGenerator {
 // ${component.id} 双态按键回调
 static bool ${component.id}_state = ${initialState ? 'true' : 'false'};
 
-void ${component.id}_button_cb(void *obj, gui_event_t event, void *param)
+void ${component.id}_button_cb(void *obj, gui_event_t *e)
 {
     GUI_UNUSED(obj);
-    GUI_UNUSED(event);
-    GUI_UNUSED(param);
+    GUI_UNUSED(e);
     
     ${component.id}_state = !${component.id}_state;
     
@@ -254,20 +253,18 @@ void ${component.id}_set_state(bool state) {
     return `
 // ${component.id} 闪烁按键回调
 
-void ${component.id}_button_press_cb(void *obj, gui_event_t event, void *param)
+void ${component.id}_button_press_cb(void *obj, gui_event_t *e)
 {
     GUI_UNUSED(obj);
-    GUI_UNUSED(event);
-    GUI_UNUSED(param);
+    GUI_UNUSED(e);
     
     gui_img_set_opacity((gui_img_t *)${component.id}, ${minOpacity});
 }
 
-void ${component.id}_button_release_cb(void *obj, gui_event_t event, void *param)
+void ${component.id}_button_release_cb(void *obj, gui_event_t *e)
 {
     GUI_UNUSED(obj);
-    GUI_UNUSED(event);
-    GUI_UNUSED(param);
+    GUI_UNUSED(e);
     
     gui_img_set_opacity((gui_img_t *)${component.id}, ${maxOpacity});
 }
