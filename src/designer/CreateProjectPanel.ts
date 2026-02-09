@@ -674,6 +674,13 @@ export class CreateProjectPanel {
                     const projectConfig = JSON.parse(fs.readFileSync(projectJsonPath, 'utf8'));
                     projectConfig.appId = appId;
                     projectConfig.romfsBaseAddr = romfsBaseAddr || DEFAULT_ROMFS_BASE_ADDR;
+                    // 确保必要的字段存在
+                    if (!projectConfig.$schema) {
+                        projectConfig.$schema = 'HoneyGUI';
+                    }
+                    if (!projectConfig.type) {
+                        projectConfig.type = 'Designer';
+                    }
                     fs.writeFileSync(projectJsonPath, JSON.stringify(projectConfig, null, 2), 'utf8');
                     logger.info(`[CreateProjectPanel] Updated project.json: appId=${appId}, romfsBaseAddr=${projectConfig.romfsBaseAddr}`);
                 }
