@@ -73,17 +73,17 @@
       "honeygui-explorer": [
         {
           "id": "honeygui.welcome",
-          "name": "WELCOME",
+          "name": "%view.welcome%",
           "icon": "$(home)"
         },
         {
           "id": "honeygui.environment",
-          "name": "ENVIRONMENT",
+          "name": "%view.environment%",
           "icon": "$(checklist)"
         },
         {
           "id": "honeygui.quick",
-          "name": "QUICK",
+          "name": "%view.quick%",
           "icon": "$(play)"
         }
       ]
@@ -91,7 +91,7 @@
     "viewsWelcome": [
       {
         "view": "honeygui.welcome",
-        "contents": "[$(add) New Project](command:honeygui.newProject)\n[$(file-add) New Design](command:honeygui.createNewHmlInWorkspace)\n[$(folder-opened) Open Project](command:honeygui.openProject)\n[$(tools) Resource Conversion Tools](command:honeygui.tools)\n\nCollaboration:\n[$(broadcast) Start Host](command:honeygui.collaboration.startHost)\n[$(plug) Join Session](command:honeygui.collaboration.joinSession)"
+        "contents": "%viewsWelcome.honeygui.welcome%"
       }
     ],
     "menus": {

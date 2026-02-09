@@ -20,6 +20,8 @@
   "view.environment": "ENVIRONMENT",
   "view.quick": "QUICK",
 
+  "viewsWelcome.honeygui.welcome": "[$(add) New Project](command:honeygui.newProject)\n[$(file-add) New Design](command:honeygui.createNewHmlInWorkspace)\n[$(folder-opened) Open Project](command:honeygui.openProject)\n[$(tools) Resource Conversion Tools](command:honeygui.tools)\n\nCollaboration:\n[$(broadcast) Start Host](command:honeygui.collaboration.startHost)\n[$(plug) Join Session](command:honeygui.collaboration.joinSession)",
+
   "welcome.newProject": "New Project",
   "welcome.newDesign": "New Design",
   "welcome.openProject": "Open Project",

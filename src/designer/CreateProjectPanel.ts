@@ -41,7 +41,7 @@ export class CreateProjectPanel {
         // 创建新面板
         const panel = vscode.window.createWebviewPanel(
             CreateProjectPanel.viewType,
-            'Create application',
+            vscode.l10n.t('Create Project'),
             column || vscode.ViewColumn.One,
             {
                 enableScripts: true,
@@ -129,11 +129,49 @@ export class CreateProjectPanel {
         const templatePath = path.join(this._extensionUri.fsPath, 'src', 'designer', 'templates', 'createProject.html');
         let html = fs.readFileSync(templatePath, 'utf8');
         
+        // 准备国际化文本
+        const i18n = {
+            title: vscode.l10n.t('Create Project'),
+            createProject: vscode.l10n.t('Create Project'),
+            createEmptyProject: vscode.l10n.t('Create empty project'),
+            createTemplateProject: vscode.l10n.t('Create template project'),
+            projectName: vscode.l10n.t('Project name'),
+            saveLocation: vscode.l10n.t('Save location'),
+            appId: vscode.l10n.t('APP ID'),
+            resolution: vscode.l10n.t('Resolution'),
+            custom: vscode.l10n.t('Custom...'),
+            width: vscode.l10n.t('Width'),
+            height: vscode.l10n.t('Height'),
+            screenShape: vscode.l10n.t('Screen Shape'),
+            rectangle: vscode.l10n.t('Rectangle (0)'),
+            circle: vscode.l10n.t('Circle (-1)'),
+            rounded20: vscode.l10n.t('Rounded 20px'),
+            rounded40: vscode.l10n.t('Rounded 40px'),
+            rounded60: vscode.l10n.t('Rounded 60px'),
+            targetEngine: vscode.l10n.t('Target Engine'),
+            comingSoon: vscode.l10n.t('Coming Soon'),
+            minimumSdk: vscode.l10n.t('Minimum SDK'),
+            pixelMode: vscode.l10n.t('Pixel Mode'),
+            romfsBaseAddr: vscode.l10n.t('Romfs Base Address (for embedded flash)'),
+            create: vscode.l10n.t('Create'),
+            selectTemplate: vscode.l10n.t('Select Template'),
+            createFromTemplate: vscode.l10n.t('Create from Template'),
+            invalidRomfsAddr: vscode.l10n.t('Invalid romfs base address. Please use hexadecimal format (e.g., {0})', DEFAULT_ROMFS_BASE_ADDR),
+            invalidCustomResolution: vscode.l10n.t('Please enter valid width and height for custom resolution'),
+            pleaseSelectTemplate: vscode.l10n.t('Please select a template')
+        };
+        
         // 替换模板变量
         html = html.replace(/\{\{nonce\}\}/g, nonce);
         html = html.replace(/\{\{cspSource\}\}/g, webview.cspSource);
         html = html.replace(/\{\{homeDir\}\}/g, homeDir);
         html = html.replace(/\{\{defaultRomfsAddr\}\}/g, DEFAULT_ROMFS_BASE_ADDR);
+        
+        // 替换国际化文本
+        Object.entries(i18n).forEach(([key, value]) => {
+            const placeholder = `{{i18n_${key}}}`;
+            html = html.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value);
+        });
         
         return html;
     }
@@ -156,7 +194,7 @@ export class CreateProjectPanel {
                 canSelectFolders: true,
                 canSelectFiles: false,
                 canSelectMany: false,
-                openLabel: 'Select project location'
+                openLabel: vscode.l10n.t('Select project location')
             };
             
             const result = await vscode.window.showOpenDialog(options);
@@ -181,7 +219,7 @@ export class CreateProjectPanel {
                 canSelectFolders: true,
                 canSelectFiles: false,
                 canSelectMany: false,
-                openLabel: 'Select project location'
+                openLabel: vscode.l10n.t('Select project location')
             };
             
             const result = await vscode.window.showOpenDialog(options);
@@ -343,7 +381,7 @@ export class CreateProjectPanel {
             // 使用 withProgress 显示创建进度（完成后自动消失）
             await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
-                title: `Creating project: ${projectName}...`,
+                title: vscode.l10n.t('Creating project: {0}...', projectName),
                 cancellable: false
             }, async () => {
                 // 创建项目结构
@@ -353,7 +391,7 @@ export class CreateProjectPanel {
             // 显示成功消息
             this._panel.webview.postMessage({
                 command: 'notify',
-                text: `Project created successfully: ${projectPath}`
+                text: vscode.l10n.t('Project created successfully: {0}', projectPath)
             });
             
             // 在打开文件夹前，将项目信息保存到全局存储
@@ -587,10 +625,10 @@ export class CreateProjectPanel {
             // 直接从 Git 仓库克隆到项目目录
             await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
-                title: `Cloning template: ${templateConfig.name}...`,
+                title: vscode.l10n.t('Cloning template: {0}...', templateConfig.name),
                 cancellable: false
             }, async (progress) => {
-                progress.report({ message: 'Cloning repository...' });
+                progress.report({ message: vscode.l10n.t('Cloning repository...') });
                 
                 const { spawn } = await import('child_process');
                 
@@ -603,7 +641,7 @@ export class CreateProjectPanel {
                         if (match) {
                             const percent = parseInt(match[1], 10);
                             progress.report({ 
-                                message: `Cloning... ${percent}%`,
+                                message: vscode.l10n.t('Cloning... {0}%', percent),
                                 increment: 1
                             });
                         }
@@ -623,14 +661,14 @@ export class CreateProjectPanel {
                 });
                 
                 // 删除 .git 目录
-                progress.report({ message: 'Cleaning up...' });
+                progress.report({ message: vscode.l10n.t('Cleaning up...') });
                 const gitDir = path.join(projectPath, '.git');
                 if (fs.existsSync(gitDir)) {
                     fs.rmSync(gitDir, { recursive: true, force: true });
                 }
                 
                 // 更新 project.json（只更新 appId 和 romfsBaseAddr，保持模板原有的 name）
-                progress.report({ message: 'Updating configuration...' });
+                progress.report({ message: vscode.l10n.t('Updating configuration...') });
                 const projectJsonPath = path.join(projectPath, 'project.json');
                 if (fs.existsSync(projectJsonPath)) {
                     const projectConfig = JSON.parse(fs.readFileSync(projectJsonPath, 'utf8'));
@@ -660,7 +698,7 @@ export class CreateProjectPanel {
             // 显示成功消息
             this._panel.webview.postMessage({
                 command: 'notify',
-                text: `Template project created successfully: ${projectPath}`
+                text: vscode.l10n.t('Template project created successfully: {0}', projectPath)
             });
 
             // 保存待激活项目信息

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create application</title>
+    <title>{{i18n_title}}</title>
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src {{cspSource}} 'unsafe-inline'; script-src 'nonce-{{nonce}}'; worker-src 'none';">
     <style>
         body {
@@ -84,23 +84,23 @@
     </style>
 </head>
 <body>
-    <h1>Create project</h1>
+    <h1>{{i18n_createProject}}</h1>
     <div id="errorMessage" class="error-message hidden"></div>
     
     <div class="tabs">
-        <button id="tab-empty" class="tab active">Create empty project</button>
-        <button id="tab-template" class="tab">Create template project</button>
+        <button id="tab-empty" class="tab active">{{i18n_createEmptyProject}}</button>
+        <button id="tab-template" class="tab">{{i18n_createTemplateProject}}</button>
     </div>
     
     <div id="empty-tab" class="tab-content" style="display: block;">
         <div class="form-container">
             <div class="form-group">
-                <label for="projectName">Project name</label>
+                <label for="projectName">{{i18n_projectName}}</label>
                 <input type="text" id="projectName" class="form-control" value="NewProject" />
             </div>
             
             <div class="form-group">
-                <label for="saveLocation">Save location</label>
+                <label for="saveLocation">{{i18n_saveLocation}}</label>
                 <div class="input-group">
                     <input type="text" id="saveLocation" class="form-control" value="{{homeDir}}" />
                     <button class="btn-icon" id="selectFolderButton">📁</button>
@@ -109,24 +109,24 @@
             
             <div class="form-row">
                 <div class="form-group">
-                    <label for="appId">APP ID</label>
+                    <label for="appId">{{i18n_appId}}</label>
                     <input type="text" id="appId" class="form-control" value="com.example.NewProject" />
                 </div>
                 <div class="form-group">
-                    <label for="resolution">Resolution</label>
+                    <label for="resolution">{{i18n_resolution}}</label>
                     <select id="resolution" class="form-control">
                         <option value="410X502">410X502</option>
                         <option value="480X272">480X272</option>
                         <option value="800X480">800X480</option>
                         <option value="1024X600">1024X600</option>
                         <option value="1280X720">1280X720</option>
-                        <option value="custom">Custom...</option>
+                        <option value="custom">{{i18n_custom}}</option>
                     </select>
                     <div id="customResolution" style="display: none; margin-top: 8px;">
                         <div style="display: flex; gap: 8px; align-items: center;">
-                            <input type="number" id="customWidth" class="form-control" placeholder="Width" min="1" style="flex: 1;" />
+                            <input type="number" id="customWidth" class="form-control" placeholder="{{i18n_width}}" min="1" style="flex: 1;" />
                             <span style="color: #969696;">×</span>
-                            <input type="number" id="customHeight" class="form-control" placeholder="Height" min="1" style="flex: 1;" />
+                            <input type="number" id="customHeight" class="form-control" placeholder="{{i18n_height}}" min="1" style="flex: 1;" />
                         </div>
                     </div>
                 </div>
@@ -134,27 +134,27 @@
 
             <div class="form-row">
                 <div class="form-group">
-                    <label for="cornerRadius">Screen Shape</label>
+                    <label for="cornerRadius">{{i18n_screenShape}}</label>
                     <select id="cornerRadius" class="form-control">
-                        <option value="0">Rectangle (0)</option>
-                        <option value="-1">Circle (-1)</option>
-                        <option value="20" selected>Rounded 20px</option>
-                        <option value="40">Rounded 40px</option>
-                        <option value="60">Rounded 60px</option>
+                        <option value="0">{{i18n_rectangle}}</option>
+                        <option value="-1">{{i18n_circle}}</option>
+                        <option value="20" selected>{{i18n_rounded20}}</option>
+                        <option value="40">{{i18n_rounded40}}</option>
+                        <option value="60">{{i18n_rounded60}}</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="targetEngine">Target Engine</label>
+                    <label for="targetEngine">{{i18n_targetEngine}}</label>
                     <select id="targetEngine" class="form-control">
                         <option value="honeygui">HoneyGUI</option>
-                        <option value="lvgl" disabled>LVGL (Coming Soon)</option>
+                        <option value="lvgl" disabled>LVGL ({{i18n_comingSoon}})</option>
                     </select>
                 </div>
             </div>
 
             <div class="form-row">
                 <div class="form-group">
-                    <label for="minSdk">Minimum SDK</label>
+                    <label for="minSdk">{{i18n_minimumSdk}}</label>
                     <select id="minSdk" class="form-control">
                         <option value="API 2: HoneyGUI V1.1.0">API 2: HoneyGUI V1.1.0</option>
                         <option value="API 3: HoneyGUI V1.2.0">API 3: HoneyGUI V1.2.0</option>
@@ -162,7 +162,7 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="pixelMode">Pixel Mode</label>
+                    <label for="pixelMode">{{i18n_pixelMode}}</label>
                     <select id="pixelMode" class="form-control">
                         <option value="ARGB8888">ARGB8888</option>
                         <option value="RGB565">RGB565</option>
@@ -173,28 +173,28 @@
             </div>
             
             <div class="form-group">
-                <label for="romfsBaseAddr">Romfs Base Address (for embedded flash)</label>
+                <label for="romfsBaseAddr">{{i18n_romfsBaseAddr}}</label>
                 <input type="text" id="romfsBaseAddr" class="form-control" value="{{defaultRomfsAddr}}" placeholder="{{defaultRomfsAddr}}" />
             </div>
             
-            <button id="createButton" class="btn-create" disabled>Create</button>
+            <button id="createButton" class="btn-create" disabled>{{i18n_create}}</button>
         </div>
     </div>
     
     <div id="template-tab" class="tab-content" style="display: none;">
         <div class="form-container">
             <div class="form-group">
-                <label>Select Template</label>
+                <label>{{i18n_selectTemplate}}</label>
                 <div id="templateList" class="template-list"></div>
             </div>
             
             <div class="form-group">
-                <label for="templateProjectName">Project name</label>
+                <label for="templateProjectName">{{i18n_projectName}}</label>
                 <input type="text" id="templateProjectName" class="form-control" value="NewProject" />
             </div>
             
             <div class="form-group">
-                <label for="templateSaveLocation">Save location</label>
+                <label for="templateSaveLocation">{{i18n_saveLocation}}</label>
                 <div class="input-group">
                     <input type="text" id="templateSaveLocation" class="form-control" value="{{homeDir}}" />
                     <button class="btn-icon" id="selectTemplateFolderButton">📁</button>
@@ -203,24 +203,24 @@
             
             <div class="form-row">
                 <div class="form-group">
-                    <label for="templateAppId">APP ID</label>
+                    <label for="templateAppId">{{i18n_appId}}</label>
                     <input type="text" id="templateAppId" class="form-control" value="com.example.NewProject" />
                 </div>
                 <div class="form-group">
-                    <label for="templateResolution">Resolution</label>
+                    <label for="templateResolution">{{i18n_resolution}}</label>
                     <select id="templateResolution" class="form-control">
                         <option value="410X502">410X502</option>
                         <option value="480X272">480X272</option>
                         <option value="800X480">800X480</option>
                         <option value="1024X600">1024X600</option>
                         <option value="1280X720">1280X720</option>
-                        <option value="custom">Custom...</option>
+                        <option value="custom">{{i18n_custom}}</option>
                     </select>
                     <div id="templateCustomResolution" style="display: none; margin-top: 8px;">
                         <div style="display: flex; gap: 8px; align-items: center;">
-                            <input type="number" id="templateCustomWidth" class="form-control" placeholder="Width" min="1" style="flex: 1;" />
+                            <input type="number" id="templateCustomWidth" class="form-control" placeholder="{{i18n_width}}" min="1" style="flex: 1;" />
                             <span style="color: #969696;">×</span>
-                            <input type="number" id="templateCustomHeight" class="form-control" placeholder="Height" min="1" style="flex: 1;" />
+                            <input type="number" id="templateCustomHeight" class="form-control" placeholder="{{i18n_height}}" min="1" style="flex: 1;" />
                         </div>
                     </div>
                 </div>
@@ -228,7 +228,7 @@
 
             <div class="form-row">
                 <div class="form-group">
-                    <label for="templateMinSdk">Minimum SDK</label>
+                    <label for="templateMinSdk">{{i18n_minimumSdk}}</label>
                     <select id="templateMinSdk" class="form-control">
                         <option value="API 2: HoneyGUI V1.1.0">API 2: HoneyGUI V1.1.0</option>
                         <option value="API 3: HoneyGUI V1.2.0">API 3: HoneyGUI V1.2.0</option>
@@ -236,7 +236,7 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="templatePixelMode">Pixel Mode</label>
+                    <label for="templatePixelMode">{{i18n_pixelMode}}</label>
                     <select id="templatePixelMode" class="form-control">
                         <option value="ARGB8888">ARGB8888</option>
                         <option value="RGB565">RGB565</option>
@@ -247,11 +247,11 @@
             </div>
             
             <div class="form-group">
-                <label for="templateRomfsBaseAddr">Romfs Base Address (for embedded flash)</label>
+                <label for="templateRomfsBaseAddr">{{i18n_romfsBaseAddr}}</label>
                 <input type="text" id="templateRomfsBaseAddr" class="form-control" value="{{defaultRomfsAddr}}" placeholder="{{defaultRomfsAddr}}" />
             </div>
             
-            <button id="createTemplateButton" class="btn-create" disabled>Create from Template</button>
+            <button id="createTemplateButton" class="btn-create" disabled>{{i18n_createFromTemplate}}</button>
         </div>
     </div>
     
@@ -294,7 +294,7 @@
             
             // 验证地址格式
             if (romfsAddr && !/^0x[0-9A-Fa-f]+$/.test(romfsAddr)) {
-                showError('Invalid romfs base address. Please use hexadecimal format (e.g., {{defaultRomfsAddr}})');
+                showError('{{i18n_invalidRomfsAddr}}');
                 return;
             }
             
@@ -304,7 +304,7 @@
                 const width = document.getElementById('customWidth').value.trim();
                 const height = document.getElementById('customHeight').value.trim();
                 if (!width || !height || width <= 0 || height <= 0) {
-                    showError('Please enter valid width and height for custom resolution');
+                    showError('{{i18n_invalidCustomResolution}}');
                     return;
                 }
                 resolution = `${width}X${height}`;
@@ -328,7 +328,7 @@
         
         function createTemplateProject() {
             if (!selectedTemplate) {
-                showError('Please select a template');
+                showError('{{i18n_pleaseSelectTemplate}}');
                 return;
             }
             
@@ -336,7 +336,7 @@
             
             // 验证地址格式
             if (romfsAddr && !/^0x[0-9A-Fa-f]+$/.test(romfsAddr)) {
-                showError('Invalid romfs base address. Please use hexadecimal format (e.g., {{defaultRomfsAddr}})');
+                showError('{{i18n_invalidRomfsAddr}}');
                 return;
             }
             
@@ -346,7 +346,7 @@
                 const width = document.getElementById('templateCustomWidth').value.trim();
                 const height = document.getElementById('templateCustomHeight').value.trim();
                 if (!width || !height || width <= 0 || height <= 0) {
-                    showError('Please enter valid width and height for custom resolution');
+                    showError('{{i18n_invalidCustomResolution}}');
                     return;
                 }
                 resolution = `${width}X${height}`;

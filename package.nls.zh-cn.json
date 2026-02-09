@@ -20,6 +20,8 @@
   "view.environment": "环境",
   "view.quick": "快捷操作",
 
+  "viewsWelcome.honeygui.welcome": "[$(add) 新建项目](command:honeygui.newProject)\n[$(file-add) 新建设计](command:honeygui.createNewHmlInWorkspace)\n[$(folder-opened) 打开项目](command:honeygui.openProject)\n[$(tools) 资源转换工具](command:honeygui.tools)\n\n协同开发:\n[$(broadcast) 开启协同 (主机)](command:honeygui.collaboration.startHost)\n[$(plug) 加入协同 (访客)](command:honeygui.collaboration.joinSession)",
+
   "welcome.newProject": "新建项目",
   "welcome.newDesign": "新建设计",
   "welcome.openProject": "打开项目",
