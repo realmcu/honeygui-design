@@ -362,6 +362,7 @@ const ConversionConfigPanel: React.FC<ConversionConfigPanelProps> = () => {
       updateAssetConfig(assetPath, {
         ...currentSettings,
         videoFormat: newFormat,
+        videoQuality: undefined, // Switch format, reset quality to default
       }, 'videoFormat'); // 传递变更字段，触发代码生成
     },
     [selectedAsset, currentSettings, updateAssetConfig]
@@ -635,9 +636,9 @@ const ConversionConfigPanel: React.FC<ConversionConfigPanelProps> = () => {
     const isH264 = effectiveFormat === 'H264';
     const qualityMin = isH264 ? 0 : 1;
     const qualityMax = isH264 ? 51 : 31;
-    const qualityDefault = isH264 ? 23 : 1;
+    const qualityDefault = isH264 ? 23 : 5;
     const qualityLabel = isH264 ? t('CRF Quality (0-51)') : t('Quality (1-31)');
-    const qualityHint = isH264 ? t('H.264 CRF value, 0=lossless, 23=default, 51=lowest') : t('JPEG compression quality, 1=highest, 31=lowest');
+    const qualityHint = isH264 ? t('H.264 CRF value, 0=lossless, 23=default, 51=lowest') : t('JPEG compression quality, 1=highest, 5=default, 31=lowest');
     
     // 当前质量值和帧率值
     const currentQuality = currentSettings.videoQuality;

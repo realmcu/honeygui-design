@@ -84,7 +84,7 @@ export class VideoConverter {
       const targetFps = options.frameRate ?? videoInfo.frameRate;
       
       // Default quality
-      const quality = options.quality ?? (outputFormat === OutputFormat.H264 ? 23 : 1);
+      const quality = options.quality ?? (outputFormat === OutputFormat.H264 ? 23 : 5);
       
       // Convert based on format
       switch (outputFormat) {
