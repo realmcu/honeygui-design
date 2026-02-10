@@ -7,7 +7,7 @@ import PropertiesPanel from './components/PropertiesPanel';
 import ConversionConfigPanel from './components/ConversionConfigPanel';
 import ComponentTree from './components/ComponentTree';
 import AssetsPanel from './components/AssetsPanel';
-import CollaborationPanel from './components/CollaborationPanel';
+import { CollaborationModal } from './components/CollaborationModal';
 import Toolbar from './components/Toolbar';
 import { ViewRelationModal } from './components/ViewRelationModal';
 import { CanvasEditorModal } from './components/CanvasEditorModal';
@@ -1536,25 +1536,11 @@ const App: React.FC = () => {
         onClose={() => setCanvasEditorOpen(false)}
       />
 
-      {/* Collaboration Floating Panel */}
-      {showCollaborationPanel && (
-        <div className="collaboration-floating-panel">
-          <div className="collaboration-floating-header">
-            <Users size={16} />
-            <span>{t('Collaboration')}</span>
-            <button 
-              className="close-button"
-              onClick={() => setShowCollaborationPanel(false)}
-              title={t('Close')}
-            >
-              ✕
-            </button>
-          </div>
-          <div className="collaboration-floating-content">
-            <CollaborationPanel />
-          </div>
-        </div>
-      )}
+      {/* Collaboration Modal */}
+      <CollaborationModal
+        visible={showCollaborationPanel}
+        onClose={() => setShowCollaborationPanel(false)}
+      />
     </div>
   );
 };

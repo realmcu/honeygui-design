@@ -4,7 +4,11 @@ import { Users, Wifi, WifiOff, Play, Square, UserPlus, LogOut } from 'lucide-rea
 import { t } from '../i18n';
 import './CollaborationPanel.css';
 
-const CollaborationPanel: React.FC = () => {
+interface CollaborationPanelProps {
+  showHeader?: boolean;
+}
+
+const CollaborationPanel: React.FC<CollaborationPanelProps> = ({ showHeader = true }) => {
   const {
     collaborationRole,
     collaborationStatus,
@@ -76,10 +80,12 @@ const CollaborationPanel: React.FC = () => {
 
   return (
     <div className="collaboration-panel">
-      <div className="collaboration-header">
-        <Users size={16} />
-        <span>{t('Collaboration')}</span>
-      </div>
+      {showHeader && (
+        <div className="collaboration-header">
+          <Users size={16} />
+          <span>{t('Collaboration')}</span>
+        </div>
+      )}
 
       {/* 状态显示 */}
       <div className="collaboration-status">

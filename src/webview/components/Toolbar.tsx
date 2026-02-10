@@ -329,12 +329,11 @@ const Toolbar: React.FC<{
 
       <div className="toolbar-section">
         <button
-          className={`toolbar-button ${showCollaborationPanel ? 'active' : ''}`}
+          className={`toolbar-icon-button ${showCollaborationPanel ? 'active' : ''}`}
           onClick={onToggleCollaboration}
           title={t('Collaboration')}
         >
           <Users size={16} strokeWidth={1.4} />
-          <span>{t('Collaboration')}</span>
         </button>
       </div>
 
