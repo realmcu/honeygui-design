@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js';
+import Lottie from 'lottie-react';
 
 // 文件类型分类
 const IMAGE_EXTS = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'];
@@ -16,9 +17,10 @@ const VIDEO_EXTS = ['mp4', 'avi', 'mov', 'mkv', 'webm'];
 const MODEL_EXTS = ['gltf', 'glb', 'obj'];  // 3D 模型主文件
 const FONT_EXTS = ['ttf', 'otf', 'woff', 'woff2'];  // 字体文件
 const GLASS_EXTS = ['glass'];  // 玻璃效果文件
+const LOTTIE_EXTS = ['json', 'lottie']; // Lottie 动画文件
 const MODEL_DEP_EXTS = ['mtl', 'bin'];  // 3D 模型依赖文件（材质文件、二进制数据）
 
-type AssetCategory = 'all' | 'images' | 'svgs' | 'videos' | 'models' | 'fonts' | 'glass';
+type AssetCategory = 'all' | 'images' | 'svgs' | 'videos' | 'models' | 'fonts' | 'glass' | 'lottie';
 
 // 视频预览组件
 const VideoPreview: React.FC<{ videoPath: string }> = ({ videoPath }) => {
@@ -351,6 +353,41 @@ const GlassPreview: React.FC<{ glassPath: string }> = ({ glassPath }) => {
   );
 };
 
+// Lottie 动画预览组件
+const LottiePreview: React.FC<{ lottiePath: string }> = ({ lottiePath }) => {
+  const [animationData, setAnimationData] = useState<any>(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    fetch(lottiePath)
+      .then(res => res.json())
+      .then(data => {
+        // 验证是否为有效的 Lottie 数据
+        // Lottie 文件通常包含 layers 数组
+        if (data && Array.isArray(data.layers)) {
+          setAnimationData(data);
+        } else {
+          // 如果不是有效的 Lottie 文件（可能是普通 json），显示错误/警告图标
+          console.warn(`File ${lottiePath} is not a valid Lottie animation.`);
+          setError(true);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load Lottie:", err);
+        setError(true);
+      });
+  }, [lottiePath]);
+
+  if (error) return <div className="file-icon" style={{ fontSize: '48px' }}>📄</div>;
+  if (!animationData) return <div className="loading">...</div>;
+
+  return (
+    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Lottie animationData={animationData} loop={true} style={{ width: '100%', height: '100%' }} />
+    </div>
+  );
+};
+
 // 获取文件扩展名
 const getFileExt = (name: string): string => {
   return name.split('.').pop()?.toLowerCase() || '';
@@ -365,6 +402,7 @@ const getAssetCategory = (name: string): AssetCategory | null => {
   if (MODEL_EXTS.includes(ext)) return 'models';
   if (FONT_EXTS.includes(ext)) return 'fonts';
   if (GLASS_EXTS.includes(ext)) return 'glass';
+  if (LOTTIE_EXTS.includes(ext)) return 'lottie';
   return null;
 };
 
@@ -420,7 +458,8 @@ const AssetsPanel: React.FC = () => {
       videos: [],
       models: [],
       fonts: [],
-      glass: []
+      glass: [],
+      lottie: []
     };
     
     // 递归扁平化所有文件，用于统计各分类数量
@@ -469,7 +508,8 @@ const AssetsPanel: React.FC = () => {
     videos: categorizedAssets.videos.length,
     models: categorizedAssets.models.length,
     fonts: categorizedAssets.fonts.length,
-    glass: categorizedAssets.glass.length
+    glass: categorizedAssets.glass.length,
+    lottie: categorizedAssets.lottie.length
   }), [categorizedAssets]);
 
   useEffect(() => {
@@ -585,6 +625,7 @@ const AssetsPanel: React.FC = () => {
     const isModel = MODEL_EXTS.includes(ext);
     const isFont = FONT_EXTS.includes(ext);
     const isGlass = GLASS_EXTS.includes(ext);  // 玻璃效果文件
+    const isLottie = LOTTIE_EXTS.includes(ext); // Lottie 动画文件
     const isModelDep = MODEL_DEP_EXTS.includes(ext);  // 模型依赖文件（.mtl, .bin）
     const isSelected = selectedAsset?.path === asset.path;
     const isMarkedAlwaysConvert = asset.relativePath ? isAlwaysConvert(asset.relativePath) : false;
@@ -628,6 +669,7 @@ const AssetsPanel: React.FC = () => {
           {isGlass && <GlassPreview glassPath={asset.path} />}
           {isModel && <Model3DPreview modelPath={asset.path} />}
           {isVideo && <VideoPreview videoPath={asset.path} />}
+          {isLottie && <LottiePreview lottiePath={asset.path} />}
           {isFont && <div className="file-icon" style={{ fontSize: '48px' }}>🔤</div>}
           {isModelDep && <div className="file-icon" style={{ fontSize: '48px' }}>📄</div>}
         </div>
@@ -781,18 +823,72 @@ const AssetsPanel: React.FC = () => {
     // 拷贝所有文件，不做过滤
     const reader = new FileReader();
     reader.onload = (event) => {
-      const arrayBuffer = event.target?.result as ArrayBuffer;
-      const uint8Array = new Uint8Array(arrayBuffer);
-      window.vscodeAPI?.postMessage({
-        command: 'saveImageToAssets',
-        fileName: file.name,
-        fileData: Array.from(uint8Array),
-        relativePath: relativePath,
-        dropPosition: undefined,
-        targetContainerId: undefined
-      });
+      const text = event.target?.result as string;
+      try {
+        const json = JSON.parse(text);
+        // 如果是有效的 Lottie 文件，且扩展名为 .json，则自动修改扩展名为 .lottie
+        if (json && Array.isArray(json.layers) && file.name.toLowerCase().endsWith('.json')) {
+            const newName = file.name.replace(/\.json$/i, '.lottie');
+            
+            // 重新读取为 ArrayBuffer 以便发送二进制数据
+            const binaryReader = new FileReader();
+            binaryReader.onload = (e) => {
+                const arrayBuffer = e.target?.result as ArrayBuffer;
+                const uint8Array = new Uint8Array(arrayBuffer);
+                window.vscodeAPI?.postMessage({
+                    command: 'saveImageToAssets',
+                    fileName: newName,
+                    fileData: Array.from(uint8Array),
+                    relativePath: relativePath,
+                    dropPosition: undefined,
+                    targetContainerId: undefined
+                });
+            };
+            binaryReader.readAsArrayBuffer(file);
+            return;
+        }
+      } catch (e) {
+        // 解析 JSON 失败，说明不是 JSON 文件，按普通文件处理
+      }
+
+      // 非 Lottie 的 JSON 文件，或者其他类型文件，正常上传
+      // 注意：这里需要重新读取为 ArrayBuffer，因为第一次是为了检查内容读取为 Text
+      const binaryReader = new FileReader();
+      binaryReader.onload = (e) => {
+        const arrayBuffer = e.target?.result as ArrayBuffer;
+        const uint8Array = new Uint8Array(arrayBuffer);
+        window.vscodeAPI?.postMessage({
+            command: 'saveImageToAssets',
+            fileName: file.name,
+            fileData: Array.from(uint8Array),
+            relativePath: relativePath,
+            dropPosition: undefined,
+            targetContainerId: undefined
+        });
+      };
+      binaryReader.readAsArrayBuffer(file);
     };
-    reader.readAsArrayBuffer(file);
+
+    // 先作为文本读取以检查内容
+    if (file.name.toLowerCase().endsWith('.json')) {
+        reader.readAsText(file);
+    } else {
+        // 非 json 文件直接作为二进制读取上传
+        const binaryReader = new FileReader();
+        binaryReader.onload = (e) => {
+            const arrayBuffer = e.target?.result as ArrayBuffer;
+            const uint8Array = new Uint8Array(arrayBuffer);
+            window.vscodeAPI?.postMessage({
+                command: 'saveImageToAssets',
+                fileName: file.name,
+                fileData: Array.from(uint8Array),
+                relativePath: relativePath,
+                dropPosition: undefined,
+                targetContainerId: undefined
+            });
+        };
+        binaryReader.readAsArrayBuffer(file);
+    }
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -820,7 +916,8 @@ const AssetsPanel: React.FC = () => {
     activeCategory === 'svgs' ? t('No SVGs') :
     activeCategory === 'videos' ? t('No videos') : 
     activeCategory === 'models' ? t('No 3D models') :
-    activeCategory === 'fonts' ? t('No fonts') : t('No glass assets');
+    activeCategory === 'fonts' ? t('No fonts') :
+    activeCategory === 'lottie' ? t('No Lottie files') : t('No glass assets');
 
   // 切换分类时重置路径
   const handleCategoryChange = (category: AssetCategory) => {
@@ -845,6 +942,7 @@ const AssetsPanel: React.FC = () => {
           <option value="models">3D ({counts.models})</option>
           <option value="fonts">{t('Fonts')} ({counts.fonts})</option>
           <option value="glass">{t('Glass')} ({counts.glass})</option>
+          <option value="lottie">Lottie ({counts.lottie})</option>
         </select>
         <button 
           className="upload-btn" 
@@ -865,7 +963,7 @@ const AssetsPanel: React.FC = () => {
           ref={fileInputRef}
           type="file"
           multiple
-          accept=".png,.jpg,.jpeg,.gif,.bmp,.svg,.webp,.mp4,.avi,.mov,.mkv,.webm,.gltf,.glb,.obj,.mtl,.bin,.ttf,.otf,.woff,.woff2,.glass"
+          accept=".png,.jpg,.jpeg,.gif,.bmp,.svg,.webp,.mp4,.avi,.mov,.mkv,.webm,.gltf,.glb,.obj,.mtl,.bin,.ttf,.otf,.woff,.woff2,.glass,.json,.lottie"
           style={{ display: 'none' }}
           onChange={handleFileSelect}
         />

@@ -95,7 +95,7 @@ export interface DesignerState {
   undoStack: any[];
   redoStack: any[];
   projectConfig?: any; // Project configuration (resolution, etc.)
-  assetCategory: 'all' | 'images' | 'svgs' | 'videos' | 'models' | 'fonts' | 'glass'; // 资源面板分类
+  assetCategory: 'all' | 'images' | 'svgs' | 'videos' | 'models' | 'fonts' | 'glass' | 'lottie'; // 资源面板分类
   isSimulationRunning: boolean; // 仿真运行状态
 }
 
@@ -119,7 +119,7 @@ export interface AssetFile {
   name: string;
   path: string;
   relativePath?: string; // 相对于 assets 目录的路径
-  type: 'image' | 'font' | 'model3d' | 'folder';
+  type: 'image' | 'font' | 'model3d' | 'folder' | 'svg' | 'video' | 'glass' | 'lottie';
   size: number;
   children?: AssetFile[]; // 文件夹的子项
 }

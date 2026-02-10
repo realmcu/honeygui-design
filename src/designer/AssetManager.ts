@@ -120,6 +120,7 @@ export class AssetManager extends EventEmitter {
                 const modelDepExts = ['.mtl', '.bin'];  // 3D 模型依赖文件（不显示在资源栏）
                 const fontExts = ['.ttf', '.otf', '.woff', '.woff2'];
                 const glassExts = ['.glass'];  // 玻璃效果文件
+                const lottieExts = ['.json', '.lottie']; // Lottie 动画文件
                 
                 // 跳过 3D 模型依赖文件，不显示在资源栏
                 if (modelDepExts.includes(ext)) {
@@ -139,6 +140,17 @@ export class AssetManager extends EventEmitter {
                     assetType = 'font';
                 } else if (glassExts.includes(ext)) {
                     assetType = 'glass';
+                } else if (lottieExts.includes(ext)) {
+                    // 简单的区分：如果是 .json，我们假设它是 lottie 动画
+                    // 但要排除 project.json 等非资源文件
+                    // 如果扩展名已经是 .lottie，直接通过
+                    if (ext === '.lottie') {
+                        assetType = 'lottie';
+                    } else if (file !== 'project.json' && file !== 'package.json' && file !== 'tsconfig.json' && file !== 'conversion.json') {
+                        // 对于 .json 文件，虽然前端做了重命名，但如果是手动复制进来的，仍然需要支持
+                        // 但为了避免混淆，建议前端上传时已经改名为 .lottie
+                        assetType = 'lottie';
+                    }
                 }
                 
                 if (assetType) {
@@ -1140,6 +1152,34 @@ export class AssetManager extends EventEmitter {
             });
         } catch (error) {
             logger.error(`[AssetManager] 创建 Glass 组件失败: ${error}`);
+        }
+    }
+
+    /**
+     * 处理创建 Lottie 组件请求
+     */
+    public handleCreateLottieComponent(
+        lottiePath: string,
+        dropPosition: { x: number; y: number },
+        targetContainerId: string,
+        currentFilePath: string | undefined
+    ): void {
+        try {
+            if (!currentFilePath) {
+                return;
+            }
+
+            // 获取 Lottie 文件尺寸（目前默认为 150x150，或者可以尝试读取 json）
+            // 这里简单处理，前端默认值
+            
+            this._panel.webview.postMessage({
+                command: 'createLottieComponent',
+                lottiePath,
+                dropPosition,
+                targetContainerId
+            });
+        } catch (error) {
+            logger.error(`[AssetManager] 创建 Lottie 组件失败: ${error}`);
         }
     }
 

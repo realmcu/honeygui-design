@@ -14,7 +14,7 @@ import { CanvasEditorModal } from './components/CanvasEditorModal';
 import { Component, ComponentType } from './types';
 import useKeyboardShortcuts from './utils/keyboardShortcuts';
 import { getAbsolutePosition, findComponentAtPosition, isDropTargetType, isContainerType } from './utils/componentUtils';
-import { createImageComponentAtPosition, create3DComponentAtPosition, createVideoComponentAtPosition, createSvgComponentAtPosition, createGlassComponentAtPosition } from './services/messageHandler';
+import { createImageComponentAtPosition, create3DComponentAtPosition, createVideoComponentAtPosition, createSvgComponentAtPosition, createGlassComponentAtPosition, createLottieComponentAtPosition } from './services/messageHandler';
 import { processImageFiles } from './utils/fileUtils';
 import { parseObjDependencies, parseMtlDependencies, findDependencyFiles } from './utils/objDependencyParser';
 import { setLocale, t } from './i18n';
@@ -490,6 +490,20 @@ const App: React.FC = () => {
             const store = useDesignerStore.getState();
             createGlassComponentAtPosition(
               message.glassPath,
+              message.dropPosition,
+              message.targetContainerId,
+              store.components,
+              store.addComponent,
+              message.size
+            );
+          }
+          break;
+
+        case 'createLottieComponent':
+          if (message.lottiePath && message.targetContainerId && message.dropPosition) {
+            const store = useDesignerStore.getState();
+            createLottieComponentAtPosition(
+              message.lottiePath,
               message.dropPosition,
               message.targetContainerId,
               store.components,
@@ -1024,6 +1038,7 @@ const App: React.FC = () => {
         const isVideo = ext && ['mp4', 'avi', 'mov', 'mkv', 'webm'].includes(ext);
         const isSvg = ext === 'svg';
         const isGlass = ext === 'glass';  // .glass 文件作为 SVG 处理
+        const isLottie = ext && ['json', 'lottie'].includes(ext);
         
         if (is3DModel) {
           // 3D 模型：直接创建组件
@@ -1033,6 +1048,14 @@ const App: React.FC = () => {
             dropPosition: { x, y },
             targetContainerId: targetContainer.id
           });
+        } else if (isLottie) {
+            // Lottie 动画
+            api.postMessage({
+                command: 'createLottieComponent',
+                lottiePath: `assets/${assetPath}`,
+                dropPosition: { x, y },
+                targetContainerId: targetContainer.id
+            });
         } else if (isVideo) {
           // 视频：获取尺寸后创建组件
           api.postMessage({

@@ -205,6 +205,7 @@ const zhCN = {
   'No 3D models': '暂无3D模型资源',
   'No fonts': '暂无字体资源',
   'No glass assets': '暂无玻璃资源',
+  'No Lottie files': '暂无 Lottie 动画文件',
   'Drag files here or click to add': '拖拽文件到此处或点击添加',
   'Open Assets Folder': '打开资源文件夹',
   'Refresh': '刷新',

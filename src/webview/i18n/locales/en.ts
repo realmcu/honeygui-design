@@ -205,6 +205,7 @@ const en = {
   'No 3D models': 'No 3D models',
   'No fonts': 'No fonts',
   'No glass assets': 'No glass assets',
+  'No Lottie files': 'No Lottie files',
   'Drag files here or click to add': 'Drag files here or click to add',
   'Open Assets Folder': 'Open Assets Folder',
   'Refresh': 'Refresh',

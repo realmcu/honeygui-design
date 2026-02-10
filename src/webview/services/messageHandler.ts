@@ -216,6 +216,51 @@ export const createGlassComponentAtPosition = (
 };
 
 /**
+ * 创建 Lottie 组件的统一函数
+ */
+export const createLottieComponentAtPosition = (
+  lottiePath: string,
+  dropPosition: { x: number; y: number },
+  targetContainerId: string,
+  components: Component[],
+  addComponent: (component: Component) => void,
+  size?: { width: number; height: number }
+): void => {
+  const targetContainer = components.find(c => c.id === targetContainerId);
+  if (!targetContainer) return;
+
+  const targetAbsPos = getAbsolutePosition(targetContainer, components);
+  const relativeX = Math.max(0, dropPosition.x - targetAbsPos.x);
+  const relativeY = Math.max(0, dropPosition.y - targetAbsPos.y);
+
+  const lottieComponent: Component = {
+    id: `hg_lottie_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+    type: 'hg_lottie',
+    name: `lottie_${Date.now().toString().substr(-4)}`,
+    position: { 
+      x: relativeX, 
+      y: relativeY, 
+      width: size?.width || 150, 
+      height: size?.height || 150 
+    },
+    visible: true,
+    enabled: true,
+    locked: false,
+    zIndex: 1,
+    children: [],
+    parent: targetContainerId,
+    style: {},
+    data: { 
+      src: lottiePath,
+      autoplay: true,
+      loop: true
+    },
+  };
+
+  addComponent(lottieComponent);
+};
+
+/**
  * 处理从后端接收的消息
  */
 export const handleBackendMessage = (
@@ -267,6 +312,19 @@ export const handleBackendMessage = (
       if (message.svgPath && message.targetContainerId && message.dropPosition) {
         createSvgComponentAtPosition(
           message.svgPath,
+          message.dropPosition,
+          message.targetContainerId,
+          components,
+          addComponent,
+          message.size
+        );
+      }
+      break;
+
+    case 'createLottieComponent':
+      if (message.lottiePath && message.targetContainerId && message.dropPosition) {
+        createLottieComponentAtPosition(
+          message.lottiePath,
           message.dropPosition,
           message.targetContainerId,
           components,
