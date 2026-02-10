@@ -11,8 +11,8 @@ const VIEW_SWITCH_EVENT_MAP: Record<string, string> = {
   'onClick': 'GUI_EVENT_TOUCH_CLICKED',
   'onLongPress': 'GUI_EVENT_TOUCH_LONG',
   // 键盘事件
-  'onKeyShortClick': 'GUI_EVENT_KB_SHORT_CLICKED',
-  'onKeyLongClick': 'GUI_EVENT_KB_LONG_CLICKED',
+  'onKeyShortClick': 'GUI_EVENT_KB_SHORT_PRESSED',
+  'onKeyLongClick': 'GUI_EVENT_KB_LONG_PRESSED',
   // 滑动事件
   'onSwipeLeft': 'GUI_EVENT_TOUCH_MOVE_LEFT',
   'onSwipeRight': 'GUI_EVENT_TOUCH_MOVE_RIGHT',
