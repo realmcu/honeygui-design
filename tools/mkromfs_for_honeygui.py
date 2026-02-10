@@ -440,7 +440,8 @@ if __name__ == '__main__':
             f.write(data)
     
     if header_content:
-        header_path = os.path.join(os.path.dirname(os.getcwd()), 'ui_resource.h')
+        # Save ui_resource.h in the same directory as the output file
+        header_path = os.path.join(os.path.dirname(output_file), 'ui_resource.h')
         try:
             with open(header_path, 'w') as f:
                 f.write(header_content)

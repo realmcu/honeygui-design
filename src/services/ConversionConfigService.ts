@@ -99,7 +99,10 @@ const DEFAULT_CONFIG: ConversionConfig = {
   defaultSettings: {
     format: 'adaptive16',
     compression: 'adaptive',
-    dither: false
+    dither: false,
+    videoFormat: 'MJPEG',
+    videoQuality: 5,
+    videoFrameRate: undefined
   },
   items: {}
 };

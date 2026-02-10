@@ -259,6 +259,15 @@ const ConversionConfigPanel: React.FC<ConversionConfigPanelProps> = () => {
       }
     }
 
+    // 没有配置，检查 defaultSettings
+    if (conversionConfig.defaultSettings.videoQuality !== undefined) {
+      return {
+        quality: conversionConfig.defaultSettings.videoQuality,
+        isInherited: true,
+        inheritedFrom: t('defaultSettings'),
+      };
+    }
+
     // 没有配置，返回 undefined（使用默认值）
     return {
       quality: undefined,
