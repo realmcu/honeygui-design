@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { Users } from 'lucide-react';
 import { useDesignerStore } from './store';
 import DesignerCanvas from './components/DesignerCanvas';
 import ComponentLibrary, { componentDefinitions } from './components/ComponentLibrary';
@@ -45,7 +46,10 @@ const App: React.FC = () => {
   } = useDesignerStore();
 
   // Tab 切换状态
-  const [activeTab, setActiveTab] = React.useState<'components' | 'assets' | 'tree' | 'collaboration'>('components');
+  const [activeTab, setActiveTab] = React.useState<'components' | 'assets' | 'tree'>('components');
+  
+  // Collaboration 悬浮面板状态
+  const [showCollaborationPanel, setShowCollaborationPanel] = React.useState(false);
   
   // 文件加载状态（用于避免切换时的闪烁）
   const [isLoadingFile, setIsLoadingFile] = React.useState(false);
@@ -1405,7 +1409,10 @@ const App: React.FC = () => {
       )}
       
       {/* Toolbar */}
-      <Toolbar />
+      <Toolbar 
+        showCollaborationPanel={showCollaborationPanel}
+        onToggleCollaboration={() => setShowCollaborationPanel(!showCollaborationPanel)}
+      />
 
       {/* Main Content */}
       <div className="main-content">
@@ -1431,12 +1438,6 @@ const App: React.FC = () => {
             >
               {t('Component Tree')}
             </button>
-            <button 
-              className={`tab-header ${activeTab === 'collaboration' ? 'active' : ''}`}
-              onClick={() => setActiveTab('collaboration')}
-            >
-              {t('Collaboration')}
-            </button>
           </div>
 
           {/* Tab Content */}
@@ -1444,7 +1445,6 @@ const App: React.FC = () => {
             {activeTab === 'components' && <ComponentLibrary onComponentDragStart={() => {}} onCreateComponent={handleCreateComponentFromLibrary} />}
             {activeTab === 'assets' && <AssetsPanel />}
             {activeTab === 'tree' && <ComponentTree onContextMenu={handleComponentContextMenu} />}
-            {activeTab === 'collaboration' && <CollaborationPanel />}
           </div>
         </div>
 
@@ -1535,6 +1535,26 @@ const App: React.FC = () => {
         onSave={handleCanvasSvgSave}
         onClose={() => setCanvasEditorOpen(false)}
       />
+
+      {/* Collaboration Floating Panel */}
+      {showCollaborationPanel && (
+        <div className="collaboration-floating-panel">
+          <div className="collaboration-floating-header">
+            <Users size={16} />
+            <span>{t('Collaboration')}</span>
+            <button 
+              className="close-button"
+              onClick={() => setShowCollaborationPanel(false)}
+              title={t('Close')}
+            >
+              ✕
+            </button>
+          </div>
+          <div className="collaboration-floating-content">
+            <CollaborationPanel />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

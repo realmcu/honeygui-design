@@ -1,11 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useDesignerStore } from '../store';
-import { Save, Code, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, GitBranch, Palette, AlignLeft, Grid, Download, Rocket, Trash2, Square } from 'lucide-react';
+import { Save, Code, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, GitBranch, Palette, AlignLeft, Grid, Download, Rocket, Trash2, Square, Users } from 'lucide-react';
 import { AlignType, DistributeType, ResizeType, getAlignmentConfigsByCategory } from '../utils/alignmentUtils';
 import { t } from '../i18n';
 import './Toolbar.css';
 
-const Toolbar: React.FC = () => {
+const Toolbar: React.FC<{
+  showCollaborationPanel: boolean;
+  onToggleCollaboration: () => void;
+}> = ({ showCollaborationPanel, onToggleCollaboration }) => {
   const {
     setZoom,
     zoom,
@@ -323,6 +326,19 @@ const Toolbar: React.FC = () => {
       </div>
 
       <div style={{ flex: 1 }} />
+
+      <div className="toolbar-section">
+        <button
+          className={`toolbar-button ${showCollaborationPanel ? 'active' : ''}`}
+          onClick={onToggleCollaboration}
+          title={t('Collaboration')}
+        >
+          <Users size={16} strokeWidth={1.4} />
+          <span>{t('Collaboration')}</span>
+        </button>
+      </div>
+
+      <div className="toolbar-divider" />
 
       <div className="toolbar-section">
         <button

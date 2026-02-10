@@ -148,7 +148,7 @@ export interface DesignerStore extends DesignerState {
   setEditingMode: (mode: 'select' | 'move' | 'resize') => void;
   setCanvasBackgroundColor: (color: string) => void;
   centerViewOnCanvas: (componentId: string) => void;
-  saveViewState: (uiState?: { leftPanelTab?: 'components' | 'assets' | 'tree' | 'collaboration'; leftPanelVisible?: boolean; rightPanelVisible?: boolean; leftPanelWidth?: number; rightPanelWidth?: number }) => void;
+  saveViewState: (uiState?: { leftPanelTab?: 'components' | 'assets' | 'tree'; leftPanelVisible?: boolean; rightPanelVisible?: boolean; leftPanelWidth?: number; rightPanelWidth?: number }) => void;
   restoreViewState: (filePath: string) => { restored: boolean; state?: ViewState };
   
   // View connections
@@ -276,7 +276,7 @@ interface ViewState {
   zoom: number;
   canvasOffset: { x: number; y: number };
   selectedComponent: string | null;  // 选中的组件
-  leftPanelTab: 'components' | 'assets' | 'tree' | 'collaboration';  // 左侧面板 Tab
+  leftPanelTab: 'components' | 'assets' | 'tree';  // 左侧面板 Tab
   leftPanelVisible: boolean;  // 左侧面板是否可见
   rightPanelVisible: boolean;  // 右侧面板是否可见
   leftPanelWidth?: number;  // 左侧面板宽度
