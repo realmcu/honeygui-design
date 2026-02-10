@@ -10,8 +10,8 @@ export type EventType =
   | 'onLongPress'
   | 'onTouchDown'
   | 'onTouchUp'
-  | 'onKeyShortClick'
-  | 'onKeyLongClick'
+  | 'onKeyShortPress'
+  | 'onKeyLongPress'
   // 滑动事件
   | 'onSwipeLeft'
   | 'onSwipeRight'
@@ -64,33 +64,34 @@ export interface EventConfig {
   handler?: string;          // 回调函数名（onMessage 用）
   actions: Action[];
   checkReleaseArea?: boolean; // 抬起区域检测（仅 onTouchUp 事件）
+  keyName?: string;          // 按键名（仅 onKeyShortPress 和 onKeyLongPress 事件需要）
 }
 
 // ============ 组件支持的事件映射 ============
 
 export const COMPONENT_SUPPORTED_EVENTS: Record<string, EventType[]> = {
-  hg_view: ['onClick', 'onLongPress', 'onTouchDown', 'onTouchUp', 'onKeyShortClick', 'onKeyLongClick', 'onSwipeLeft', 'onSwipeRight', 'onSwipeUp', 'onSwipeDown', 'onShow', 'onHide', 'onMessage'],
-  hg_window: ['onClick', 'onLongPress', 'onTouchDown', 'onTouchUp', 'onMessage'],
-  hg_button: ['onClick', 'onLongPress', 'onTouchDown', 'onTouchUp', 'onMessage'],
-  hg_image: ['onClick', 'onLongPress', 'onTouchDown', 'onTouchUp', 'onMessage'],
-  hg_label: ['onClick', 'onLongPress', 'onMessage'],
-  hg_switch: ['onClick', 'onCheckedChange', 'onMessage'],
-  hg_checkbox: ['onClick', 'onCheckedChange', 'onMessage'],
-  hg_radio: ['onClick', 'onCheckedChange', 'onMessage'],
-  hg_slider: ['onClick', 'onValueChange', 'onMessage'],
-  hg_progressbar: ['onClick', 'onValueChange', 'onMessage'],
-  hg_input: ['onClick', 'onValueChange', 'onMessage'],
-  hg_canvas: ['onClick', 'onLongPress', 'onMessage'],
-  hg_arc: ['onClick', 'onLongPress', 'onMessage'],
-  hg_rect: ['onClick', 'onLongPress', 'onMessage'],
-  hg_svg: ['onClick', 'onLongPress', 'onMessage'],
-  hg_lottie: ['onClick', 'onLongPress', 'onMessage'],
-  hg_video: ['onClick', 'onLongPress', 'onMessage'],
-  hg_3d: ['onClick', 'onLongPress', 'onMessage'],
+  hg_view: ['onClick', 'onLongPress', 'onTouchDown', 'onTouchUp', 'onKeyShortPress', 'onKeyLongPress', 'onSwipeLeft', 'onSwipeRight', 'onSwipeUp', 'onSwipeDown', 'onShow', 'onHide', 'onMessage'],
+  hg_window: ['onClick', 'onLongPress', 'onTouchDown', 'onTouchUp', 'onKeyShortPress', 'onKeyLongPress', 'onMessage'],
+  hg_button: ['onClick', 'onLongPress', 'onTouchDown', 'onTouchUp', 'onKeyShortPress', 'onKeyLongPress', 'onMessage'],
+  hg_image: ['onClick', 'onLongPress', 'onTouchDown', 'onTouchUp', 'onKeyShortPress', 'onKeyLongPress', 'onMessage'],
+  hg_label: ['onClick', 'onLongPress', 'onKeyShortPress', 'onKeyLongPress', 'onMessage'],
+  hg_switch: ['onClick', 'onCheckedChange', 'onKeyShortPress', 'onKeyLongPress', 'onMessage'],
+  hg_checkbox: ['onClick', 'onCheckedChange', 'onKeyShortPress', 'onKeyLongPress', 'onMessage'],
+  hg_radio: ['onClick', 'onCheckedChange', 'onKeyShortPress', 'onKeyLongPress', 'onMessage'],
+  hg_slider: ['onClick', 'onValueChange', 'onKeyShortPress', 'onKeyLongPress', 'onMessage'],
+  hg_progressbar: ['onClick', 'onValueChange', 'onKeyShortPress', 'onKeyLongPress', 'onMessage'],
+  hg_input: ['onClick', 'onValueChange', 'onKeyShortPress', 'onKeyLongPress', 'onMessage'],
+  hg_canvas: ['onClick', 'onLongPress', 'onKeyShortPress', 'onKeyLongPress', 'onMessage'],
+  hg_arc: ['onClick', 'onLongPress', 'onKeyShortPress', 'onKeyLongPress', 'onMessage'],
+  hg_rect: ['onClick', 'onLongPress', 'onKeyShortPress', 'onKeyLongPress', 'onMessage'],
+  hg_svg: ['onClick', 'onLongPress', 'onKeyShortPress', 'onKeyLongPress', 'onMessage'],
+  hg_lottie: ['onClick', 'onLongPress', 'onKeyShortPress', 'onKeyLongPress', 'onMessage'],
+  hg_video: ['onClick', 'onLongPress', 'onKeyShortPress', 'onKeyLongPress', 'onMessage'],
+  hg_3d: ['onClick', 'onLongPress', 'onKeyShortPress', 'onKeyLongPress', 'onMessage'],
 };
 
 // 默认支持的事件(未在映射中的组件)
-export const DEFAULT_SUPPORTED_EVENTS: EventType[] = ['onClick', 'onLongPress', 'onMessage'];
+export const DEFAULT_SUPPORTED_EVENTS: EventType[] = ['onClick', 'onLongPress', 'onKeyShortPress', 'onKeyLongPress', 'onMessage'];
 
 // ============ 事件显示名称 ============
 
@@ -99,8 +100,8 @@ export const EVENT_LABELS: Record<EventType, string> = {
   onLongPress: '长按',
   onTouchDown: '按下',
   onTouchUp: '抬起',
-  onKeyShortClick: '键盘短按',
-  onKeyLongClick: '键盘长按',
+  onKeyShortPress: '按键短按',
+  onKeyLongPress: '按键长按',
   onSwipeLeft: '左滑',
   onSwipeRight: '右滑',
   onSwipeUp: '上滑',
@@ -122,6 +123,14 @@ export const ACTION_LABELS: Record<ActionType, string> = {
 };
 
 // ============ 视图切换动画选项 ============
+
+// 按键名选项
+export const KEY_NAMES = [
+  { value: 'Home', label: 'Home' },
+  { value: 'Back', label: 'Back' },
+  { value: 'Menu', label: 'Menu' },
+  { value: 'Power', label: 'Power' },
+];
 
 export const SWITCH_OUT_STYLES = [
   // 初始状态（无动画）

@@ -441,6 +441,11 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
     // 生成事件绑定代码
     code += this.generateEventConfigBindings(component, indent);
 
+    // 如果组件设置了按键事件，添加焦点设置
+    if (this.hasKeyEvents(component)) {
+      code += `${indentStr}gui_obj_focus_set((gui_obj_t *)${component.id});\n`;
+    }
+
     // 递归生成子组件
     if (component.children && component.children.length > 0) {
       component.children.forEach(childId => {
@@ -870,6 +875,20 @@ static void ${component.id}_breath_anim_cb(void *p)
       case 'SS': return 4;         // "SS\0" = 2 + 1
       default: return 10;
     }
+  }
+
+  /**
+   * 检查组件是否设置了按键事件
+   */
+  private hasKeyEvents(component: Component): boolean {
+    if (!component.eventConfigs || component.eventConfigs.length === 0) {
+      return false;
+    }
+    
+    return component.eventConfigs.some(eventConfig => 
+      (eventConfig.type === 'onKeyShortPress' || eventConfig.type === 'onKeyLongPress') && 
+      eventConfig.keyName
+    );
   }
 
   /**

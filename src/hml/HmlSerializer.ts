@@ -325,6 +325,10 @@ export class HmlSerializer {
                     if (eventConfig.type === 'onTouchUp' && eventConfig.checkReleaseArea === true) {
                         eventAttrs += ' checkReleaseArea="true"';
                     }
+                    // 保存按键名（按键事件专用）
+                    if ((eventConfig.type === 'onKeyShortPress' || eventConfig.type === 'onKeyLongPress') && eventConfig.keyName) {
+                        eventAttrs += ' keyName="' + this._escapeXmlValue(eventConfig.keyName) + '"';
+                    }
 
                     if (eventConfig.actions && eventConfig.actions.length > 0) {
                         componentContent += eventIndent + '<event ' + eventAttrs + '>\n';

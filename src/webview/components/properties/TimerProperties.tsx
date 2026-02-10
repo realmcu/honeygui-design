@@ -706,7 +706,7 @@ const TimerActionEditor: React.FC<{
         <select
           value={action.type}
           onChange={(e) => {
-            const newType = e.target.value as 'size' | 'position' | 'opacity' | 'rotation' | 'scale' | 'switchView' | 'changeImage' | 'imageSequence' | 'visibility' | 'switchTimer';
+            const newType = e.target.value as 'size' | 'position' | 'opacity' | 'rotation' | 'scale' | 'switchView' | 'changeImage' | 'imageSequence' | 'visibility' | 'switchTimer' | 'setFocus';
             const newAction: TimerAction = { type: newType };
             if (newType === 'size') {
               newAction.fromW = 0;
@@ -742,6 +742,7 @@ const TimerActionEditor: React.FC<{
             } else if (newType === 'switchTimer') {
               newAction.timerId = '';
             }
+            // setFocus 不需要额外参数
             onUpdate(newAction);
           }}
           style={{
@@ -763,6 +764,7 @@ const TimerActionEditor: React.FC<{
           <option value="switchView">{t('Switch View')}</option>
           <option value="switchTimer">{t('Switch Timer')}</option>
           <option value="visibility">{t('Set Visibility')}</option>
+          <option value="setFocus">{t('Set Focus')}</option>
         </select>
         <button
           onClick={onDelete}

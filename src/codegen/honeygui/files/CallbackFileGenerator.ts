@@ -4,7 +4,7 @@
  */
 import { Component } from '../../../hml/types';
 import { EventGeneratorFactory } from '../events';
-import { getMessageCallbackName } from '../events/EventCodeGenerator';
+import { getMessageCallbackName, generateEventCallbackName } from '../events/EventCodeGenerator';
 
 export class CallbackFileGenerator {
   private components: Component[];
@@ -206,6 +206,12 @@ export class CallbackFileGenerator {
       code += impl + '\n\n';
     });
 
+    // 收集按键事件回调实现（跳过已存在的）
+    const keyEventImpls = this.collectKeyEventCallbackImpls(existingFunctions);
+    keyEventImpls.forEach(impl => {
+      code += impl + '\n\n';
+    });
+
     // 生成时间更新回调
     const timeUpdateImpls = this.collectTimeUpdateCallbackImpls();
     timeUpdateImpls.forEach(impl => {
@@ -237,10 +243,11 @@ export class CallbackFileGenerator {
     const timerCallbackNames = new Set(this.collectTimerCallbackNames());
     const msgCallbackNames = new Set(this.collectMessageCallbackNames());
     const controlTimerCallbackNames = new Set(this.collectControlTimerCallbackNames());
+    const keyEventCallbackNames = new Set(this.collectKeyEventCallbackNames());
     
     callbackFunctions.forEach(funcName => {
       // 跳过特殊类型的回调（它们有专门的生成逻辑）
-      if (switchViewFuncNames.has(funcName) || timeUpdateFuncNames.has(funcName) || timerCallbackNames.has(funcName) || msgCallbackNames.has(funcName) || controlTimerCallbackNames.has(funcName)) return;
+      if (switchViewFuncNames.has(funcName) || timeUpdateFuncNames.has(funcName) || timerCallbackNames.has(funcName) || msgCallbackNames.has(funcName) || controlTimerCallbackNames.has(funcName) || keyEventCallbackNames.has(funcName)) return;
       
       // 跳过已存在于 custom_functions 保护区的函数
       if (existingFunctions.has(funcName)) {
@@ -463,15 +470,79 @@ export class CallbackFileGenerator {
 
     this.allComponents.forEach(component => {
       if (!component.eventConfigs) return;
-      let controlTimerIndex = 0;
+      
+      // 为每个事件类型维护独立的索引
+      const eventTypeIndexMap = new Map<string, number>();
+      
       component.eventConfigs.forEach(eventConfig => {
         if (eventConfig.type === 'onMessage') return;
-        eventConfig.actions.forEach(action => {
-          if (action.type === 'controlTimer' && action.timerTargets && action.timerTargets.length > 0) {
-            names.push(`${component.id}_animation_set_${controlTimerIndex}_cb`);
-            controlTimerIndex++;
+        
+        // 跳过按键事件（按键事件的 controlTimer 在按键回调中处理）
+        if ((eventConfig.type === 'onKeyShortPress' || eventConfig.type === 'onKeyLongPress') && eventConfig.keyName) {
+          return;
+        }
+        
+        const controlTimerActions = eventConfig.actions.filter(a => 
+          a.type === 'controlTimer' && a.timerTargets && a.timerTargets.length > 0
+        );
+        
+        if (controlTimerActions.length > 0) {
+          const currentIndex = eventTypeIndexMap.get(eventConfig.type) || 0;
+          
+          controlTimerActions.forEach((_, actionIndex) => {
+            const callbackName = generateEventCallbackName(component.id, eventConfig.type, currentIndex + actionIndex);
+            names.push(callbackName);
+          });
+          
+          eventTypeIndexMap.set(eventConfig.type, currentIndex + controlTimerActions.length);
+        }
+      });
+    });
+
+    return names;
+  }
+
+  /**
+   * 收集所有按键事件回调实现
+   * @param existingFunctions 已存在的函数名集合（从 custom_functions 保护区提取）
+   */
+  private collectKeyEventCallbackImpls(existingFunctions: Set<string> = new Set()): string[] {
+    const impls = new Map<string, string>(); // 使用 Map 去重，key 为函数名
+
+    this.allComponents.forEach(component => {
+      const generator = EventGeneratorFactory.getGenerator(component.type);
+      if (generator.getKeyEventCallbackImpl) {
+        generator.getKeyEventCallbackImpl(component, this.componentMap).forEach(impl => {
+          // 提取函数名作为 key
+          const match = impl.match(/void\s+(\w+)\s*\(/);
+          if (match) {
+            const funcName = match[1];
+            // 跳过已存在于 custom_functions 保护区的函数
+            if (!existingFunctions.has(funcName)) {
+              impls.set(funcName, impl);
+            }
           }
         });
+      }
+    });
+
+    return Array.from(impls.values());
+  }
+
+  /**
+   * 收集所有按键事件回调函数名
+   */
+  private collectKeyEventCallbackNames(): string[] {
+    const names: string[] = [];
+
+    this.allComponents.forEach(component => {
+      if (!component.eventConfigs) return;
+      let keyEventIndex = 0;
+      component.eventConfigs.forEach(eventConfig => {
+        if ((eventConfig.type === 'onKeyShortPress' || eventConfig.type === 'onKeyLongPress') && eventConfig.keyName) {
+          names.push(`${component.id}_key_${keyEventIndex}_cb`);
+          keyEventIndex++;
+        }
       });
     });
 
@@ -709,6 +780,11 @@ void ${callback}(void *obj)
         code += `    float zoom_y_cur = zoom_y_origin + (zoom_y_target - zoom_y_origin) * cnt / cnt_max;\n`;
         code += `    gui_img_scale((gui_img_t *)target, zoom_x_cur, zoom_y_cur);\n`;
         code += `    \n`;
+      } else if (action.type === 'setFocus') {
+        // 设置焦点动作（适配所有组件）
+        code += `    // 设置焦点\n`;
+        code += `    gui_obj_focus_set(target);\n`;
+        code += `    \n`;
       }
     });
     
@@ -871,9 +947,9 @@ void ${callback}(void *obj)\n{\n`;
         code += `        // 无动作，仅等待\n`;
         code += `    }\n`;
       } else {
-        // 检查是否所有动作都不需要段内计数器（跳转界面、更换图片、设置可见性、切换定时动画等）
+        // 检查是否所有动作都不需要段内计数器（跳转界面、更换图片、设置可见性、切换定时动画、设置焦点等）
         const allNoSegCounter = actions.every((action: any) => 
-          action.type === 'switchView' || action.type === 'changeImage' || action.type === 'visibility' || action.type === 'switchTimer'
+          action.type === 'switchView' || action.type === 'changeImage' || action.type === 'visibility' || action.type === 'switchTimer' || action.type === 'setFocus'
         );
         
         // 有动作的段
@@ -1071,6 +1147,11 @@ void ${callback}(void *obj)\n{\n`;
       code += `    float zoom_x_cur = zoom_x_origin + (zoom_x_target - zoom_x_origin) * ${progressExpr};\n`;
       code += `    float zoom_y_cur = zoom_y_origin + (zoom_y_target - zoom_y_origin) * ${progressExpr};\n`;
       code += `    gui_img_scale((gui_img_t *)target, zoom_x_cur, zoom_y_cur);\n`;
+      code += `    \n`;
+    } else if (action.type === 'setFocus') {
+      // 设置焦点动作（适配所有组件）
+      code += `    // 设置焦点\n`;
+      code += `    gui_obj_focus_set(target);\n`;
       code += `    \n`;
     }
     

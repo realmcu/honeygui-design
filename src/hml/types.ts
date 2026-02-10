@@ -71,7 +71,7 @@ export interface ComponentStyle {
  * 定时动画动作类型
  */
 export interface TimerAction {
-  type: 'size' | 'position' | 'opacity' | 'rotation' | 'scale' | 'switchView' | 'changeImage' | 'imageSequence' | 'visibility' | 'switchTimer';
+  type: 'size' | 'position' | 'opacity' | 'rotation' | 'scale' | 'switchView' | 'changeImage' | 'imageSequence' | 'visibility' | 'switchTimer' | 'setFocus';
   // 大小动作
   fromW?: number;
   fromH?: number;

@@ -40,11 +40,7 @@ export class ListGenerator implements ComponentCodeGenerator {
       // itemWidth 和 itemHeight 在 style group 中，但为了兼容性，同时检查 data 和 style
       const itemWidth = component.style?.itemWidth ?? component.data?.itemWidth ?? 100;
       const itemHeight = component.style?.itemHeight ?? component.data?.itemHeight ?? 100;
-      let space = component.style?.space ?? component.data?.space ?? 10;  // 默认间距为 10
-      // 确保 space 至少为 1，避免重叠
-      if (space < 1) {
-        space = 10;
-      }
+      const space = component.style?.space ?? component.data?.space ?? 10;  // 默认间距为 10
       const direction = component.style?.direction ?? component.data?.direction ?? 'VERTICAL';
       const createBar = component.data?.createBar ?? false;
 

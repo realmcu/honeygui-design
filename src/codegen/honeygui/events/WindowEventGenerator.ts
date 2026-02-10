@@ -5,9 +5,10 @@
  * - 不支持视图切换（switchView）
  * - 支持普通事件绑定（onClick, onLongPress 等）
  * - 支持消息订阅（onMessage）
+ * - 支持按键事件（onKeyShortPress, onKeyLongPress）
  */
 import { Component } from '../../../hml/types';
-import { EventCodeGenerator, EVENT_TYPE_TO_GUI_EVENT, generateMessageCallbackImpl, generateControlTimerCallbackImpl, getMessageCallbackName } from './EventCodeGenerator';
+import { EventCodeGenerator, EVENT_TYPE_TO_GUI_EVENT, generateMessageCallbackImpl, generateControlTimerCallbackImpl, generateKeyEventCallbackImpl, getMessageCallbackName, generateEventCallbackName } from './EventCodeGenerator';
 
 export class WindowEventGenerator implements EventCodeGenerator {
 
@@ -16,11 +17,10 @@ export class WindowEventGenerator implements EventCodeGenerator {
 
     let code = '';
     const indentStr = '    '.repeat(indent);
-    let controlTimerIndex = 0;
+    const eventTypeIndexMap = new Map<string, number>();
+    const keyEventTypeMap = new Map<string, boolean>(); // 记录每种按键事件类型是否已绑定
 
     component.eventConfigs.forEach(eventConfig => {
-      const guiEvent = EVENT_TYPE_TO_GUI_EVENT[eventConfig.type];
-      
       // 处理 onMessage 事件
       if (eventConfig.type === 'onMessage' && eventConfig.message) {
         // 如果有 handler 属性，直接使用
@@ -35,9 +35,24 @@ export class WindowEventGenerator implements EventCodeGenerator {
             }
           });
         }
+        return;
       }
+
+      // 处理按键事件（同一类型只绑定一次）
+      if ((eventConfig.type === 'onKeyShortPress' || eventConfig.type === 'onKeyLongPress') && eventConfig.keyName) {
+        const guiEvent = EVENT_TYPE_TO_GUI_EVENT[eventConfig.type];
+        if (guiEvent && !keyEventTypeMap.has(eventConfig.type)) {
+          const keyEventIndex = keyEventTypeMap.size;
+          const callbackName = `${component.id}_key_${keyEventIndex}_cb`;
+          keyEventTypeMap.set(eventConfig.type, true);
+          code += `${indentStr}gui_obj_add_event_cb(GUI_BASE(${component.id}), (gui_event_cb_t)${callbackName}, ${guiEvent}, NULL);\n`;
+        }
+        return;
+      }
+
       // 处理其他事件（onClick, onLongPress 等）
-      else if (guiEvent) {
+      const guiEvent = EVENT_TYPE_TO_GUI_EVENT[eventConfig.type];
+      if (guiEvent) {
         eventConfig.actions.forEach(action => {
           if (action.type === 'callFunction' && action.functionName) {
             code += `${indentStr}gui_obj_add_event_cb(GUI_BASE(${component.id}), ${action.functionName}, ${guiEvent}, NULL);\n`;
@@ -46,8 +61,9 @@ export class WindowEventGenerator implements EventCodeGenerator {
             const callbackName = `${component.id}_${eventConfig.type}_send_msg`;
             code += `${indentStr}gui_obj_add_event_cb(GUI_BASE(${component.id}), ${callbackName}, ${guiEvent}, NULL);\n`;
           } else if (action.type === 'controlTimer' && action.timerTargets && action.timerTargets.length > 0) {
-            const callbackName = `${component.id}_animation_set_${controlTimerIndex}_cb`;
-            controlTimerIndex++;
+            const currentIndex = eventTypeIndexMap.get(eventConfig.type) || 0;
+            const callbackName = generateEventCallbackName(component.id, eventConfig.type, currentIndex);
+            eventTypeIndexMap.set(eventConfig.type, currentIndex + 1);
             code += `${indentStr}gui_obj_add_event_cb(GUI_BASE(${component.id}), (gui_event_cb_t)${callbackName}, ${guiEvent}, NULL);\n`;
           }
         });
@@ -63,7 +79,9 @@ export class WindowEventGenerator implements EventCodeGenerator {
     if (!component.eventConfigs) return functions;
 
     let msgIndex = 0;
-    let controlTimerIndex = 0;
+    const eventTypeIndexMap = new Map<string, number>();
+    const keyEventTypeMap = new Map<string, boolean>(); // 记录每种按键事件类型是否已收集
+    
     component.eventConfigs.forEach(eventConfig => {
       // 收集 onMessage 的回调函数名
       if (eventConfig.type === 'onMessage' && eventConfig.message) {
@@ -75,20 +93,32 @@ export class WindowEventGenerator implements EventCodeGenerator {
           functions.push(getMessageCallbackName(component, eventConfig, msgIndex));
         }
         msgIndex++;
+        return;
       }
+
+      // 收集按键事件回调函数名（同一类型只收集一次）
+      if ((eventConfig.type === 'onKeyShortPress' || eventConfig.type === 'onKeyLongPress') && eventConfig.keyName) {
+        if (!keyEventTypeMap.has(eventConfig.type)) {
+          const keyEventIndex = keyEventTypeMap.size;
+          functions.push(`${component.id}_key_${keyEventIndex}_cb`);
+          keyEventTypeMap.set(eventConfig.type, true);
+        }
+        return;
+      }
+
       // 收集其他事件的回调函数名
-      else {
-        eventConfig.actions.forEach(action => {
-          if (action.type === 'callFunction' && action.functionName) {
-            functions.push(action.functionName);
-          } else if (action.type === 'sendMessage' && action.message) {
-            functions.push(`${component.id}_${eventConfig.type}_send_msg`);
-          } else if (action.type === 'controlTimer' && action.timerTargets && action.timerTargets.length > 0) {
-            functions.push(`${component.id}_animation_set_${controlTimerIndex}_cb`);
-            controlTimerIndex++;
-          }
-        });
-      }
+      eventConfig.actions.forEach(action => {
+        if (action.type === 'callFunction' && action.functionName) {
+          functions.push(action.functionName);
+        } else if (action.type === 'sendMessage' && action.message) {
+          functions.push(`${component.id}_${eventConfig.type}_send_msg`);
+        } else if (action.type === 'controlTimer' && action.timerTargets && action.timerTargets.length > 0) {
+          const currentIndex = eventTypeIndexMap.get(eventConfig.type) || 0;
+          const callbackName = generateEventCallbackName(component.id, eventConfig.type, currentIndex);
+          functions.push(callbackName);
+          eventTypeIndexMap.set(eventConfig.type, currentIndex + 1);
+        }
+      });
     });
     
     return functions;
@@ -105,5 +135,9 @@ export class WindowEventGenerator implements EventCodeGenerator {
 
   getControlTimerCallbackImpl(component: Component, componentMap: Map<string, Component>): string[] {
     return generateControlTimerCallbackImpl(component, componentMap);
+  }
+
+  getKeyEventCallbackImpl(component: Component, componentMap: Map<string, Component>): string[] {
+    return generateKeyEventCallbackImpl(component, componentMap);
   }
 }

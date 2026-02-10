@@ -3,7 +3,7 @@
  * list_item 的事件在 note_design 回调中生成，需要特殊处理
  */
 import { Component } from '../../../hml/types';
-import { EventCodeGenerator, EVENT_TYPE_TO_GUI_EVENT, generateMessageCallbackImpl, generateControlTimerCallbackImpl } from './EventCodeGenerator';
+import { EventCodeGenerator, EVENT_TYPE_TO_GUI_EVENT, generateMessageCallbackImpl, generateControlTimerCallbackImpl, generateEventCallbackName } from './EventCodeGenerator';
 
 export class ListItemEventGenerator implements EventCodeGenerator {
   generateEventBindings(component: Component, indent: number, componentMap: Map<string, Component>): string {
@@ -16,7 +16,7 @@ export class ListItemEventGenerator implements EventCodeGenerator {
 
     // 统计 onMessage 事件的序号
     let msgIndex = 0;
-    let controlTimerIndex = 0;
+    const eventTypeIndexMap = new Map<string, number>();
 
     component.eventConfigs.forEach(eventConfig => {
       if (eventConfig.type === 'onMessage') {
@@ -51,8 +51,9 @@ export class ListItemEventGenerator implements EventCodeGenerator {
           }
         } else if (hasControlTimer) {
           // 使用 controlTimer 回调
-          const callbackName = `${component.id}_animation_set_${controlTimerIndex}_cb`;
-          controlTimerIndex++;
+          const currentIndex = eventTypeIndexMap.get(eventConfig.type) || 0;
+          const callbackName = generateEventCallbackName(component.id, eventConfig.type, currentIndex);
+          eventTypeIndexMap.set(eventConfig.type, currentIndex + 1);
           code += `${indentStr}gui_obj_add_event_cb(${component.id}, (gui_event_cb_t)${callbackName}, ${guiEvent}, NULL);\n`;
         }
       }
@@ -67,7 +68,7 @@ export class ListItemEventGenerator implements EventCodeGenerator {
 
     // 统计 onMessage 事件的序号
     let msgIndex = 0;
-    let controlTimerIndex = 0;
+    const eventTypeIndexMap = new Map<string, number>();
 
     component.eventConfigs.forEach(eventConfig => {
       if (eventConfig.type === 'onMessage') {
@@ -91,8 +92,9 @@ export class ListItemEventGenerator implements EventCodeGenerator {
             functions.push(functionName);
           }
         } else if (hasControlTimer) {
-          functions.push(`${component.id}_animation_set_${controlTimerIndex}_cb`);
-          controlTimerIndex++;
+          const currentIndex = eventTypeIndexMap.get(eventConfig.type) || 0;
+          functions.push(generateEventCallbackName(component.id, eventConfig.type, currentIndex));
+          eventTypeIndexMap.set(eventConfig.type, currentIndex + 1);
         }
       }
     });

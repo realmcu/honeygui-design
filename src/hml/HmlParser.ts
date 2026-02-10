@@ -429,6 +429,11 @@ export class HmlParser {
         eventConfig.checkReleaseArea = true;
       }
 
+      // 解析 keyName 属性（按键事件专用）
+      if ((eventType === 'onKeyShortPress' || eventType === 'onKeyLongPress') && attrs.keyName) {
+        eventConfig.keyName = attrs.keyName;
+      }
+
       // 解析动作
       const actionElements = eventEl.event;
       if (Array.isArray(actionElements)) {
@@ -963,6 +968,11 @@ export class HmlParser {
       // 解析 checkReleaseArea 属性（抬起区域检测）
       if (eventType === 'onTouchUp' && attrs.checkReleaseArea === 'true') {
         eventConfig.checkReleaseArea = true;
+      }
+
+      // 解析 keyName 属性（按键事件专用）
+      if ((eventType === 'onKeyShortPress' || eventType === 'onKeyLongPress') && attrs.keyName) {
+        eventConfig.keyName = attrs.keyName;
       }
 
       // 解析动作

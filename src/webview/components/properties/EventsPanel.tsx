@@ -14,6 +14,7 @@ import {
   ACTION_LABELS,
   SWITCH_OUT_STYLES,
   SWITCH_IN_STYLES,
+  KEY_NAMES,
 } from '../../../hml/eventTypes';
 import { t } from '../../i18n';
 import { TimerProperties } from './TimerProperties';
@@ -90,6 +91,13 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
   const handleMessageChange = (index: number, message: string) => {
     const newConfigs = [...eventConfigs];
     newConfigs[index] = { ...newConfigs[index], message };
+    onUpdate({ eventConfigs: newConfigs });
+  };
+
+  // 更新按键名
+  const handleKeyNameChange = (index: number, keyName: string) => {
+    const newConfigs = [...eventConfigs];
+    newConfigs[index] = { ...newConfigs[index], keyName };
     onUpdate({ eventConfigs: newConfigs });
   };
 
@@ -529,6 +537,38 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
                       {handlerError && <span className="error-hint">{handlerError}</span>}
                     </div>
                   </>
+                )}
+
+                {/* onKeyShortPress 和 onKeyLongPress 需要按键名 */}
+                {(event.type === 'onKeyShortPress' || event.type === 'onKeyLongPress') && (
+                  <div className="key-name-input">
+                    <label>{t('Key Name')}</label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <select
+                        value={KEY_NAMES.some(k => k.value === event.keyName) ? event.keyName : 'custom'}
+                        onChange={(e) => {
+                          if (e.target.value !== 'custom') {
+                            handleKeyNameChange(eventIndex, e.target.value);
+                          }
+                        }}
+                        style={{ flex: '0 0 auto', minWidth: '100px' }}
+                      >
+                        {KEY_NAMES.map(k => (
+                          <option key={k.value} value={k.value}>{k.label}</option>
+                        ))}
+                        <option value="custom">{t('Custom')}</option>
+                      </select>
+                      {(!event.keyName || !KEY_NAMES.some(k => k.value === event.keyName)) && (
+                        <input
+                          type="text"
+                          value={event.keyName || ''}
+                          onChange={(e) => handleKeyNameChange(eventIndex, e.target.value)}
+                          placeholder={t('Enter custom key name')}
+                          style={{ flex: 1 }}
+                        />
+                      )}
+                    </div>
+                  </div>
                 )}
 
                 {/* onTouchUp 抬起区域检测 */}
