@@ -353,6 +353,7 @@ const zhCN = {
   'Timer value in milliseconds': '计时器值，单位为毫秒',
   'Auto Start': '自动启动',
   'Start timer automatically on load': '界面加载时自动启动计时器',
+  'Timer text is auto-generated': '计时器文本自动生成',
 
   // EventsPanel
   'Exit Animation': '退出动画',

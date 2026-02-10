@@ -918,7 +918,7 @@ const App: React.FC = () => {
     }
 
     // 计时器标签：自动添加计时器字符集
-    if (componentType === 'hg_label' && preset?.isTimerLabel === true) {
+    if (componentType === 'hg_timer_label') {
       defaultData.characterSets = [
         { type: 'string', value: '0123456789:- ' }
       ];

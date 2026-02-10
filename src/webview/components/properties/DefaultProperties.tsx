@@ -97,7 +97,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
   // 当字体文件改变时，请求字体度量信息
   React.useEffect(() => {
     const fontFile = (component.data as any)?.fontFile;
-    if (fontFile && (component.type === 'hg_label' || component.type === 'hg_time_label')) {
+    if (fontFile && (component.type === 'hg_label' || component.type === 'hg_time_label' || component.type === 'hg_timer_label')) {
       window.vscodeAPI?.postMessage({
         command: 'getFontMetrics',
         fontPath: fontFile
@@ -584,9 +584,9 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                         </div>
                       ))}
                   </>
-                ) : component.type === 'hg_label' || component.type === 'hg_time_label' ? (
+                ) : component.type === 'hg_label' || component.type === 'hg_time_label' || component.type === 'hg_timer_label' ? (
                   <>
-                    {/* hg_label / hg_time_label 特殊处理：对齐方式在一行 */}
+                    {/* hg_label / hg_time_label / hg_timer_label 特殊处理：对齐方式在一行 */}
                     <div className="property-item">
                       <label>{t('Alignment')}</label>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
@@ -859,6 +859,19 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                           (component.data as any)?.[property.name],
                           (value) => handleDataChange(property.name, value)
                         )
+                      ) : property.name === 'text' && component.type === 'hg_timer_label' ? (
+                        // 计时器标签的文本是自动生成的，不显示输入框
+                        <div style={{
+                          padding: '6px 8px',
+                          backgroundColor: 'var(--vscode-input-background)',
+                          color: 'var(--vscode-descriptionForeground)',
+                          border: '1px solid var(--vscode-input-border)',
+                          borderRadius: '2px',
+                          fontSize: '12px',
+                          fontStyle: 'italic'
+                        }}>
+                          {t('Timer text is auto-generated')}
+                        </div>
                       ) : property.name === 'text' && (component.type === 'hg_label' || component.type === 'hg_time_label') && (component.style as any)?.wordWrap ? (
                         // 自动换行开启时，文本输入框变成多行
                         <textarea
@@ -1018,8 +1031,8 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
               </div>
             )}
 
-            {/* Font Properties - 仅对 hg_label / hg_time_label 显示 */}
-            {definition && (component.type === 'hg_label' || component.type === 'hg_time_label') && definition.properties.filter(p => p.group === 'font').length > 0 && (
+            {/* Font Properties - 对 hg_label / hg_time_label / hg_timer_label 显示 */}
+            {definition && (component.type === 'hg_label' || component.type === 'hg_time_label' || component.type === 'hg_timer_label') && definition.properties.filter(p => p.group === 'font').length > 0 && (
               <div className="property-group">
                 <div className="property-group-title">{t('Font')}</div>
                 {/* 字体文件 */}
@@ -1183,8 +1196,8 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
               </div>
             )}
 
-            {/* Timer Properties - 仅对启用了计时器的 hg_label 显示 */}
-            {definition && component.type === 'hg_label' && (component.data as any)?.isTimerLabel && definition.properties.filter(p => p.group === 'timer').length > 0 && (
+            {/* Timer Properties - 对 hg_timer_label 或启用了计时器的 hg_label 显示 */}
+            {definition && (component.type === 'hg_timer_label' || (component.type === 'hg_label' && (component.data as any)?.isTimerLabel)) && definition.properties.filter(p => p.group === 'timer').length > 0 && (
               <div className="property-group">
                 <div className="property-group-title">{t('Timer Settings')}</div>
                 {/* 计时器类型 */}

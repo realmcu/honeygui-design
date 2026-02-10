@@ -3,6 +3,7 @@ import { WidgetProps } from './types';
 import { ButtonWidget } from './ButtonWidget';
 import { LabelWidget } from './LabelWidget';
 import { TimeLabelWidget } from './TimeLabelWidget';
+import { TimerLabelWidget } from './TimerLabelWidget';
 import { InputWidget } from './InputWidget';
 import { CheckboxWidget } from './CheckboxWidget';
 import { RadioWidget } from './RadioWidget';
@@ -31,6 +32,7 @@ export const widgetRegistry: Record<string, React.FC<WidgetProps>> = {
   hg_button: ButtonWidget,
   hg_label: LabelWidget,
   hg_time_label: TimeLabelWidget,
+  hg_timer_label: TimerLabelWidget,
   hg_input: InputWidget,
   hg_checkbox: CheckboxWidget,
   hg_radio: RadioWidget,

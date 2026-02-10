@@ -20,6 +20,7 @@ export type ComponentType =
   | 'hg_button'
   | 'hg_label'
   | 'hg_time_label'
+  | 'hg_timer_label'
   | 'hg_input'
   | 'hg_textarea'
   | 'hg_checkbox'

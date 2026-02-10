@@ -231,6 +231,18 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       });
     }
 
+    // 计时器标签控制函数声明
+    const timerLabels = this.components.filter(c => c.type === 'hg_timer_label');
+    if (timerLabels.length > 0) {
+      code += `\n`;
+      timerLabels.forEach(comp => {
+        const generator = ComponentGeneratorFactory.getGenerator('hg_timer_label');
+        if ('generateTimerHeaders' in generator) {
+          code += (generator as any).generateTimerHeaders(comp);
+        }
+      });
+    }
+
     code += `
 #endif // ${guardName}
 `;
@@ -244,7 +256,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
   private generateUiImplementation(baseName: string): string {
     // 收集所有时间标签和计时器标签
     const timeLabels = this.components.filter(c => c.type === 'hg_time_label');
-    const timerLabels = this.components.filter(c => c.type === 'hg_label' && c.data?.isTimerLabel === true);
+    const timerLabels = this.components.filter(c => c.type === 'hg_timer_label');
     
     let code = `/**
  * ${baseName} UI实现（自动生成，请勿手动修改）
@@ -291,13 +303,14 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       });
     }
 
-    // 为计时器标签生成全局计时器字符串变量和计时器值变量
+    // 为计时器标签生成全局变量和回调函数
     if (timerLabels.length > 0) {
-      code += `\n// 计时器字符串全局变量\n`;
+      code += `\n`;
       timerLabels.forEach(label => {
-        const bufferSize = this.getTimerBufferSize(label.data?.timerFormat);
-        code += `char ${label.id}_timer_str[${bufferSize}] = {0};\n`;
-        code += `int ${label.id}_timer_value = ${label.data?.timerInitialValue || 0}; // 计时器值（毫秒）\n`;
+        const generator = ComponentGeneratorFactory.getGenerator('hg_timer_label');
+        if ('generateTimerGlobals' in generator) {
+          code += (generator as any).generateTimerGlobals(label);
+        }
       });
     }
 

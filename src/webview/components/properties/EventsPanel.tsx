@@ -237,8 +237,8 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
         });
       }
 
-      // 检查是否是计时标签（isTimerLabel）
-      if (comp.type === 'hg_label' && comp.data?.isTimerLabel === true) {
+      // 检查是否是计时标签组件
+      if (comp.type === 'hg_timer_label') {
         timerComponents.push({
           id: comp.id,
           name: comp.name || comp.id,

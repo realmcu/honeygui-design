@@ -134,19 +134,16 @@ export function generateControlTimerCallbackImpl(component: Component, component
         if (!targetComp) return;
 
         // 检查是否是计时标签
-        const isTimerLabel = targetComp.type === 'hg_label' && targetComp.data?.isTimerLabel === true;
+        const isTimerLabel = targetComp.type === 'hg_timer_label';
 
         if (isTimerLabel) {
-          // 计时标签的启停控制
+          // 计时标签的启停控制（使用生成的控制函数）
           if (target.action === 'start') {
-            // 启动计时标签的定时器
-            callbackBody += `    gui_obj_create_timer((void *)${target.componentId}, 10, -1, ${target.componentId}_timer_update_cb);\n`;
-            callbackBody += `    gui_obj_start_timer((void *)${target.componentId});\n`;
+            callbackBody += `    ${target.componentId}_start();\n`;
           } else if (target.action === 'stop') {
-            // 停止计时标签的定时器
-            callbackBody += `    if (GUI_BASE(${target.componentId})->timer) {\n`;
-            callbackBody += `        gui_obj_stop_timer((void *)${target.componentId});\n`;
-            callbackBody += `    }\n`;
+            callbackBody += `    ${target.componentId}_stop();\n`;
+          } else if (target.action === 'reset') {
+            callbackBody += `    ${target.componentId}_reset();\n`;
           }
         } else {
           // 普通定时器的启停控制

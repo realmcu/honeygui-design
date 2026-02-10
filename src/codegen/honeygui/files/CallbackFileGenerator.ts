@@ -1411,8 +1411,12 @@ void ${callback}(void *obj)\n{\n`;
             
             if (targetComp) {
               // 判断目标类型并生成相应的控制代码
-              if (targetComp.type === 'hg_label' && targetComp.data?.isTimerLabel === true) {
-                // 计时器标签：启动/停止计时器
+              if (targetComp.type === 'hg_timer_label') {
+                // 计时器标签：使用生成的控制函数
+                onCallbackBody = `    // 启动计时器\n    ${targetComp.id}_start();`;
+                offCallbackBody = `    // 停止计时器\n    ${targetComp.id}_stop();`;
+              } else if (targetComp.type === 'hg_label' && targetComp.data?.isTimerLabel === true) {
+                // 旧版计时器标签（向后兼容）：启动/停止计时器
                 onCallbackBody = `    // 启动计时器\n    gui_obj_start_timer((void *)${targetComp.id});`;
                 offCallbackBody = `    // 停止计时器\n    if (GUI_BASE(${targetComp.id})->timer) {\n        gui_obj_stop_timer((void *)${targetComp.id});\n    }`;
               } else if (targetComp.type === 'hg_video') {
@@ -1436,12 +1440,20 @@ void ${callback}(void *obj)\n{\n`;
             
             if (timerLabels.length > 0) {
               // 找到了计时标签，生成计时器控制代码
-              onCallbackBody = timerLabels.map(label => 
-                `    // 启动计时器\n    gui_obj_start_timer((void *)${label.id});`
-              ).join('\n');
-              offCallbackBody = timerLabels.map(label => 
-                `    // 停止计时器\n    if (GUI_BASE(${label.id})->timer) {\n        gui_obj_stop_timer((void *)${label.id});\n    }`
-              ).join('\n');
+              onCallbackBody = timerLabels.map(label => {
+                if (label.type === 'hg_timer_label') {
+                  return `    // 启动计时器\n    ${label.id}_start();`;
+                } else {
+                  return `    // 启动计时器\n    gui_obj_start_timer((void *)${label.id});`;
+                }
+              }).join('\n');
+              offCallbackBody = timerLabels.map(label => {
+                if (label.type === 'hg_timer_label') {
+                  return `    // 停止计时器\n    ${label.id}_stop();`;
+                } else {
+                  return `    // 停止计时器\n    if (GUI_BASE(${label.id})->timer) {\n        gui_obj_stop_timer((void *)${label.id});\n    }`;
+                }
+              }).join('\n');
             } else {
               // 没有找到任何控制目标，生成通用模板
               onCallbackBody = `    // TODO: 实现开启状态的业务逻辑\n    // 提示：可以在按钮属性中设置 "Control Target" 来指定控制目标\n    // 例如：music_player_play();`;
@@ -1504,11 +1516,15 @@ ${offCallbackBody}
     // 遍历 view 的所有子组件
     view.children.forEach(childId => {
       const child = this.componentMap.get(childId);
-      if (child && 
-          child.type === 'hg_label' && 
-          child.data?.isTimerLabel === true &&
-          child.data?.timerAutoStart === false) {
-        timerLabels.push(child);
+      if (child) {
+        // 支持新版 hg_timer_label 和旧版 hg_label (isTimerLabel=true)
+        const isTimerLabel = child.type === 'hg_timer_label' || 
+                            (child.type === 'hg_label' && child.data?.isTimerLabel === true);
+        const autoStart = child.data?.timerAutoStart !== false; // 默认自动启动
+        
+        if (isTimerLabel && !autoStart) {
+          timerLabels.push(child);
+        }
       }
     });
     

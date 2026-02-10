@@ -8,6 +8,7 @@ import { ImageGenerator } from './ImageGenerator';
 import { VideoGenerator } from './VideoGenerator';
 import { Model3DGenerator } from './Model3DGenerator';
 import { LabelGenerator } from './LabelGenerator';
+import { TimerLabelGenerator } from './TimerLabelGenerator';
 import { ButtonGenerator } from './ButtonGenerator';
 import { InputGenerator } from './InputGenerator';
 import { CheckboxGenerator } from './CheckboxGenerator';
@@ -36,6 +37,7 @@ export class ComponentGeneratorFactory {
     this.generators.set('hg_button', new ButtonGenerator());
     this.generators.set('hg_label', new LabelGenerator());
     this.generators.set('hg_time_label', new TimeLabelGenerator());
+    this.generators.set('hg_timer_label', new TimerLabelGenerator());
     this.generators.set('hg_image', new ImageGenerator());
     this.generators.set('hg_input', new InputGenerator());
     this.generators.set('hg_checkbox', new CheckboxGenerator());

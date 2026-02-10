@@ -23,15 +23,12 @@ const advancedVariants: Record<string, AdvancedVariant[]> = {
   'hg_label': [
     { type: 'hg_time_label', label: 'Time Label', icon: '🕐' },
     { 
-      type: 'hg_label', 
+      type: 'hg_timer_label', 
       label: '计时标签', 
       icon: '⏱️',
       preset: {
         text: '00:00:00',
-        isTimerLabel: true,  // 标识为计时标签
-        timerType: 'stopwatch', // stopwatch 或 countdown
-        timerInitialValue: 0, // 初始值（毫秒）
-        timerFormat: 'HH:MM:SS' // 显示格式
+        timerAutoStart: false
       }
     },
   ],
@@ -171,6 +168,36 @@ const componentDefinitions: ComponentDefinition[] = [
         options: ['1', '2', '4', '8'], group: 'font' },
     ],
   },
+  // hg_timer_label 定义保留用于属性面板，但不在组件库中显示
+  {
+    type: 'hg_timer_label',
+    name: 'Timer Label',
+    icon: '⏱️',
+    defaultSize: { width: 120, height: 24 },
+    properties: [
+      { name: 'text', label: 'Display Text', type: 'string', defaultValue: '00:00:00', group: 'data' },
+      { name: 'timerType', label: 'Timer Type', type: 'select', defaultValue: 'stopwatch', 
+        options: ['stopwatch', 'countdown'], group: 'timer' },
+      { name: 'timerInitialValue', label: 'Initial Value (ms)', type: 'number', defaultValue: 0, group: 'timer' },
+      { name: 'timerFormat', label: 'Display Format', type: 'select', defaultValue: 'HH:MM:SS', 
+        options: ['HH:MM:SS', 'MM:SS', 'MM:SS:MS', 'SS'], group: 'timer' },
+      { name: 'timerAutoStart', label: 'Auto Start', type: 'boolean', defaultValue: false, group: 'timer' },
+      { name: 'hAlign', label: 'Horizontal Align', type: 'select', defaultValue: 'LEFT', 
+        options: ['LEFT', 'CENTER', 'RIGHT'], group: 'style' },
+      { name: 'vAlign', label: 'Vertical Align', type: 'select', defaultValue: 'TOP', 
+        options: ['TOP', 'MID'], group: 'style' },
+      { name: 'color', label: 'Color', type: 'color', defaultValue: '#ffffff', group: 'style' },
+      { name: 'letterSpacing', label: 'Letter Spacing', type: 'number', defaultValue: 0, group: 'style' },
+      { name: 'lineSpacing', label: 'Line Spacing', type: 'number', defaultValue: 0, group: 'style' },
+      { name: 'wordWrap', label: 'Word Wrap', type: 'boolean', defaultValue: false, group: 'style' },
+      { name: 'fontFile', label: 'Font File', type: 'string', defaultValue: '', group: 'font' },
+      { name: 'fontSize', label: 'Font Size', type: 'number', defaultValue: 16, group: 'font' },
+      { name: 'fontType', label: 'Font Type', type: 'select', defaultValue: 'bitmap', 
+        options: ['bitmap', 'vector'], group: 'font' },
+      { name: 'renderMode', label: 'Render Mode', type: 'select', defaultValue: '4', 
+        options: ['1', '2', '4', '8'], group: 'font' },
+    ],
+  },
   {
     type: 'hg_input',
     name: 'Input',
@@ -219,7 +246,7 @@ const componentDefinitions: ComponentDefinition[] = [
     properties: [
       { name: 'entry', label: 'Entry View', type: 'boolean', defaultValue: false, group: 'general' },
       { name: 'backgroundColor', label: 'Background Color', type: 'color', defaultValue: '#000000', group: 'style', hint: 'Designer only - helps identify container boundaries' },
-      { name: 'borderRadius', label: 'Border Radius', type: 'number', defaultValue: 0, group: 'style' },
+      { name: 'borderRadius', label: 'Border Radius', type: 'number', defaultValue: 20, group: 'style' },
       { name: 'padding', label: 'Padding', type: 'number', defaultValue: 12, group: 'style' },
       { name: 'overflow', label: 'Overflow', type: 'select', defaultValue: 'auto', options: ['auto', 'hidden', 'scroll'], group: 'style' },
     ],

@@ -15,6 +15,7 @@ export const propertyPanelRegistry: Record<ComponentType, React.FC<PropertyPanel
   hg_button: DefaultProperties,
   hg_label: DefaultProperties,
   hg_time_label: DefaultProperties,
+  hg_timer_label: DefaultProperties,
   hg_input: DefaultProperties,
   hg_textarea: DefaultProperties,
   hg_checkbox: DefaultProperties,
