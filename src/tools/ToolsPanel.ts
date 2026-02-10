@@ -779,55 +779,81 @@ export class ToolsPanel {
         let completed = 0;
         const total = this.files.size;
 
-        // 按类型分组文件，确保转换顺序正确：
-        // 1. 先转换图片（3D 模型的纹理依赖图片的 .bin 文件）
-        // 2. 再转换视频
-        // 3. 再转换 3D 模型（需要查找已转换的纹理 .bin）
-        // 4. 最后转换字体和玻璃效果
-        const filesByType: Map<string, FileItem[]> = new Map();
-        const typeOrder = ['image', 'video', 'model', 'font', 'glass'];
-        
-        for (const type of typeOrder) {
-            filesByType.set(type, []);
-        }
-        
-        for (const file of this.files.values()) {
-            const typeFiles = filesByType.get(file.type);
-            if (typeFiles) {
-                typeFiles.push(file);
-            } else {
-                // 未知类型放到最后
-                if (!filesByType.has('unknown')) {
-                    filesByType.set('unknown', []);
+        // 创建临时构建目录，用于存放生成的资源文件
+        // 这样可以确保 mkromfs 只打包生成的文件，而不会把输出目录下的杂乱文件（如原图）打包进去
+        const os = require('os');
+        const tempBuildDir = fs.mkdtempSync(path.join(os.tmpdir(), 'honeygui-build-'));
+        logger.info(`创建临时构建目录: ${tempBuildDir}`);
+
+        try {
+            // 按类型分组文件，确保转换顺序正确：
+            // 1. 先转换图片（3D 模型的纹理依赖图片的 .bin 文件）
+            // 2. 再转换视频
+            // 3. 再转换 3D 模型（需要查找已转换的纹理 .bin）
+            // 4. 最后转换字体和玻璃效果
+            const filesByType: Map<string, FileItem[]> = new Map();
+            const typeOrder = ['image', 'video', 'model', 'font', 'glass'];
+            
+            for (const type of typeOrder) {
+                filesByType.set(type, []);
+            }
+            
+            for (const file of this.files.values()) {
+                const typeFiles = filesByType.get(file.type);
+                if (typeFiles) {
+                    typeFiles.push(file);
+                } else {
+                    // 未知类型放到最后
+                    if (!filesByType.has('unknown')) {
+                        filesByType.set('unknown', []);
+                    }
+                    filesByType.get('unknown')!.push(file);
                 }
-                filesByType.get('unknown')!.push(file);
             }
-        }
 
-        // 按顺序转换各类型文件
-        for (const type of [...typeOrder, 'unknown']) {
-            const files = filesByType.get(type) || [];
-            for (const file of files) {
-                this.panel.webview.postMessage({ 
-                    type: 'progress', current: completed, total, fileName: file.name 
-                });
+            // 按顺序转换各类型文件，输出到临时构建目录
+            for (const type of [...typeOrder, 'unknown']) {
+                const files = filesByType.get(type) || [];
+                for (const file of files) {
+                    this.panel.webview.postMessage({ 
+                        type: 'progress', current: completed, total, fileName: file.name 
+                    });
 
-                const result = await this.convertFile(file);
-                results.push(result);
-                completed++;
+                    // 传入 tempBuildDir 作为输出根目录
+                    const result = await this.convertFile(file, tempBuildDir);
+                    results.push(result);
+                    completed++;
+                }
             }
-        }
 
-        // 转换完成后，打包成 ROMFS
-        const romfsResult = await this.generateRomfs(baseAddr);
-        if (romfsResult) {
-            results.push(romfsResult);
+            // 转换完成后，在临时目录下打包成 ROMFS
+            // mkromfs 会扫描 tempBuildDir 下的所有文件
+            const romfsResult = await this.generateRomfs(baseAddr, tempBuildDir);
+            if (romfsResult) {
+                results.push(romfsResult);
+            }
+
+            // 将生成的 ROMFS 文件和资源文件从临时目录复制到最终输出目录
+            logger.info(`正在将生成的文件复制到输出目录: ${this.outputDir}`);
+            this.copyDirectory(tempBuildDir, this.outputDir);
+
+        } catch (error: any) {
+            logger.error(`转换过程出错: ${error}`);
+            results.push({ success: false, error: `转换过程出错: ${error.message}` });
+        } finally {
+            // 清理临时目录
+            try {
+                fs.rmSync(tempBuildDir, { recursive: true, force: true });
+                logger.info(`已清理临时构建目录: ${tempBuildDir}`);
+            } catch (error) {
+                logger.error(`清理临时目录失败: ${error}`);
+            }
         }
 
         this.panel.webview.postMessage({ type: 'convertComplete', results });
     }
 
-    private async convertFile(file: FileItem): Promise<any> {
+    private async convertFile(file: FileItem, outputRootDir?: string): Promise<any> {
         const tempDir = require('os').tmpdir();
         // 字体文件和 3D 模型文件使用原始文件名（因为它们之间有文件名依赖关系）
         // 其他类型使用带 ID 的名称避免冲突
@@ -842,7 +868,10 @@ export class ToolsPanel {
             let result: any;
 
             // 确保输出子目录存在
-            const outputSubDir = path.join(this.outputDir, file.relativePath);
+            const targetRootDir = outputRootDir || this.outputDir;
+            if (!targetRootDir) return { success: false, error: '输出目录未设置' };
+
+            const outputSubDir = path.join(targetRootDir, file.relativePath);
             if (!fs.existsSync(outputSubDir)) {
                 fs.mkdirSync(outputSubDir, { recursive: true });
             }
@@ -1221,10 +1250,35 @@ export class ToolsPanel {
     }
 
     /**
-     * 生成 ROMFS 打包文件（romfs.c 和 romfs.bin）和 ui_resource.h
+     * 递归复制目录内容
      */
-    private async generateRomfs(baseAddr: string): Promise<any> {
-        if (!this.outputDir) {
+    private copyDirectory(src: string, dest: string): void {
+        if (!fs.existsSync(dest)) {
+            fs.mkdirSync(dest, { recursive: true });
+        }
+        
+        const entries = fs.readdirSync(src, { withFileTypes: true });
+        for (const entry of entries) {
+            const srcPath = path.join(src, entry.name);
+            const destPath = path.join(dest, entry.name);
+            
+            if (entry.isDirectory()) {
+                this.copyDirectory(srcPath, destPath);
+            } else {
+                fs.copyFileSync(srcPath, destPath);
+            }
+        }
+    }
+
+    /**
+     * 生成 ROMFS 打包文件（romfs.c 和 romfs.bin）和 ui_resource.h
+     * @param baseAddr 基地址
+     * @param inputDir 输入目录（默认为 this.outputDir）
+     */
+    private async generateRomfs(baseAddr: string, inputDir?: string): Promise<any> {
+        const targetDir = inputDir || this.outputDir;
+        
+        if (!targetDir) {
             return { success: false, error: '输出目录未设置', fileName: 'romfs' };
         }
 
@@ -1249,27 +1303,27 @@ export class ToolsPanel {
                 }
             }
 
-            const romfsCOutput = path.join(this.outputDir, 'app_romfs.c');
-            const romfsBinOutput = path.join(this.outputDir, 'app_romfs.bin');
+            const romfsCOutput = path.join(targetDir, 'app_romfs.c');
+            const romfsBinOutput = path.join(targetDir, 'app_romfs.bin');
 
             // 生成 C 文件
-            execSync(`${pythonCmd} "${mkromfsScript}" -i "${this.outputDir}" -o "${romfsCOutput}" -a ${baseAddr}`, {
-                cwd: this.outputDir,
+            execSync(`${pythonCmd} "${mkromfsScript}" -i "${targetDir}" -o "${romfsCOutput}" -a ${baseAddr}`, {
+                cwd: targetDir,
                 stdio: 'pipe',
                 windowsHide: true
             });
             logger.info(`ROMFS C 文件生成完成: ${romfsCOutput}`);
 
             // 生成二进制文件（同时会生成 ui_resource.h）
-            execSync(`${pythonCmd} "${mkromfsScript}" -i "${this.outputDir}" -o "${romfsBinOutput}" -a ${baseAddr} -b`, {
-                cwd: this.outputDir,
+            execSync(`${pythonCmd} "${mkromfsScript}" -i "${targetDir}" -o "${romfsBinOutput}" -a ${baseAddr} -b`, {
+                cwd: targetDir,
                 stdio: 'pipe',
                 windowsHide: true
             });
             logger.info(`ROMFS 二进制文件生成完成: ${romfsBinOutput}`);
             
             // 检查 ui_resource.h 是否生成
-            const headerPath = path.join(this.outputDir, 'ui_resource.h');
+            const headerPath = path.join(targetDir, 'ui_resource.h');
             const headerGenerated = fs.existsSync(headerPath);
 
             return { 
