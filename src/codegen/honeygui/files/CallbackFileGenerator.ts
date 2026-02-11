@@ -60,6 +60,7 @@ export class CallbackFileGenerator {
 
 #include "gui_api.h"
 #include "gui_text.h"
+#include "gui_obj_focus.h"
 
 `;
 
@@ -74,6 +75,27 @@ export class CallbackFileGenerator {
         code += `extern gui_text_t *${label.id}_hour;\n`;
         code += `extern gui_text_t *${label.id}_colon;\n`;
         code += `extern gui_text_t *${label.id}_min;\n`;
+      });
+      code += `\n`;
+    }
+
+    // 收集所有有定时器的组件，为它们声明计数器
+    const componentsWithTimers = this.allComponents.filter(c => {
+      // 新版：有 timers 数组
+      if (c.data?.timers && Array.isArray(c.data.timers) && c.data.timers.length > 0) {
+        return true;  // 所有有定时器的组件都需要计数器
+      }
+      // 旧版：有 timerEnabled
+      if (c.data?.timerEnabled === true) {
+        return true;  // 所有有定时器的组件都需要计数器
+      }
+      return false;
+    });
+
+    if (componentsWithTimers.length > 0) {
+      code += `// 定时动画计数器（在 callbacks.c 中定义）\n`;
+      componentsWithTimers.forEach(comp => {
+        code += `extern uint16_t ${comp.id}_timer_cnt;\n`;
       });
       code += `\n`;
     }
@@ -182,6 +204,27 @@ export class CallbackFileGenerator {
         const bufferSize = this.getTimerBufferSize(label.data?.timerFormat);
         code += `extern char ${label.id}_timer_str[${bufferSize}];\n`;
         code += `extern int ${label.id}_timer_value;\n`;
+      });
+      code += `\n`;
+    }
+
+    // 定义定时动画计数器变量
+    const componentsWithTimers = this.allComponents.filter(c => {
+      // 新版：有 timers 数组
+      if (c.data?.timers && Array.isArray(c.data.timers) && c.data.timers.length > 0) {
+        return true;  // 所有有定时器的组件都需要计数器
+      }
+      // 旧版：有 timerEnabled
+      if (c.data?.timerEnabled === true) {
+        return true;  // 所有有定时器的组件都需要计数器
+      }
+      return false;
+    });
+
+    if (componentsWithTimers.length > 0) {
+      code += `// 定时动画计数器\n`;
+      componentsWithTimers.forEach(comp => {
+        code += `uint16_t ${comp.id}_timer_cnt = 0;\n`;
       });
       code += `\n`;
     }
@@ -717,9 +760,10 @@ void ${callback}(void *obj)
     // 计算 cnt_max
     const cntMax = Math.ceil(duration / interval);
     
+    const cntVarName = `${component.id}_timer_cnt`;
+    
     let code = `void ${callback}(void *obj)\n{\n`;
     code += `    gui_obj_t *target = (gui_obj_t *)obj;\n`;
-    code += `    static uint16_t cnt = 0;\n`;
     code += `    const uint16_t cnt_max = ${cntMax};\n`;
     code += `    \n`;
     
@@ -732,8 +776,8 @@ void ${callback}(void *obj)
         code += `    const int16_t y_origin = ${action.fromY};\n`;
         code += `    const int16_t x_target = ${action.toX};\n`;
         code += `    const int16_t y_target = ${action.toY};\n`;
-        code += `    int16_t x_cur = x_origin + (x_target - x_origin) * cnt / cnt_max;\n`;
-        code += `    int16_t y_cur = y_origin + (y_target - y_origin) * cnt / cnt_max;\n`;
+        code += `    int16_t x_cur = x_origin + (x_target - x_origin) * ${cntVarName} / cnt_max;\n`;
+        code += `    int16_t y_cur = y_origin + (y_target - y_origin) * ${cntVarName} / cnt_max;\n`;
         code += `    gui_obj_move(target, x_cur, y_cur);\n`;
         code += `    \n`;
       } else if (action.type === 'size') {
@@ -743,8 +787,8 @@ void ${callback}(void *obj)
         code += `    const int16_t h_origin = ${action.fromH};\n`;
         code += `    const int16_t w_target = ${action.toW};\n`;
         code += `    const int16_t h_target = ${action.toH};\n`;
-        code += `    int16_t w_cur = w_origin + (w_target - w_origin) * cnt / cnt_max;\n`;
-        code += `    int16_t h_cur = h_origin + (h_target - h_origin) * cnt / cnt_max;\n`;
+        code += `    int16_t w_cur = w_origin + (w_target - w_origin) * ${cntVarName} / cnt_max;\n`;
+        code += `    int16_t h_cur = h_origin + (h_target - h_origin) * ${cntVarName} / cnt_max;\n`;
         code += `    target->w = w_cur;\n`;
         code += `    target->h = h_cur;\n`;
         code += `    \n`;
@@ -753,7 +797,7 @@ void ${callback}(void *obj)
         code += `    // 调整透明度: ${action.from} -> ${action.to}\n`;
         code += `    const uint8_t opacity_origin = ${action.from};\n`;
         code += `    const uint8_t opacity_target = ${action.to};\n`;
-        code += `    int16_t opacity_cur = opacity_origin + (opacity_target - opacity_origin) * cnt / cnt_max;\n`;
+        code += `    int16_t opacity_cur = opacity_origin + (opacity_target - opacity_origin) * ${cntVarName} / cnt_max;\n`;
         // hg_image 使用 gui_img_set_opacity，其他组件使用 target->opacity_value
         if (component.type === 'hg_image') {
           code += `    gui_img_set_opacity((gui_img_t *)target, opacity_cur);\n`;
@@ -766,7 +810,7 @@ void ${callback}(void *obj)
         code += `    // 调整旋转: ${action.angleOrigin}° -> ${action.angleTarget}°\n`;
         code += `    const float angle_origin = ${action.angleOrigin};\n`;
         code += `    const float angle_target = ${action.angleTarget};\n`;
-        code += `    float angle_cur = angle_origin + (angle_target - angle_origin) * cnt / cnt_max;\n`;
+        code += `    float angle_cur = angle_origin + (angle_target - angle_origin) * ${cntVarName} / cnt_max;\n`;
         code += `    gui_img_rotation((gui_img_t *)target, angle_cur);\n`;
         code += `    \n`;
       } else if (action.type === 'scale') {
@@ -776,8 +820,8 @@ void ${callback}(void *obj)
         code += `    const float zoom_x_target = ${action.zoomXTarget};\n`;
         code += `    const float zoom_y_origin = ${action.zoomYOrigin};\n`;
         code += `    const float zoom_y_target = ${action.zoomYTarget};\n`;
-        code += `    float zoom_x_cur = zoom_x_origin + (zoom_x_target - zoom_x_origin) * cnt / cnt_max;\n`;
-        code += `    float zoom_y_cur = zoom_y_origin + (zoom_y_target - zoom_y_origin) * cnt / cnt_max;\n`;
+        code += `    float zoom_x_cur = zoom_x_origin + (zoom_x_target - zoom_x_origin) * ${cntVarName} / cnt_max;\n`;
+        code += `    float zoom_y_cur = zoom_y_origin + (zoom_y_target - zoom_y_origin) * ${cntVarName} / cnt_max;\n`;
         code += `    gui_img_scale((gui_img_t *)target, zoom_x_cur, zoom_y_cur);\n`;
         code += `    \n`;
       } else if (action.type === 'setFocus') {
@@ -789,17 +833,17 @@ void ${callback}(void *obj)
     });
     
     // 增加计数器
-    code += `    cnt++;\n`;
+    code += `    ${cntVarName}++;\n`;
     
     // 到达总时间后的处理
     if (stopOnComplete) {
-      code += `    if (cnt >= cnt_max) {\n`;
+      code += `    if (${cntVarName} >= cnt_max) {\n`;
       code += `        gui_obj_stop_timer(target);\n`;
-      code += `        cnt = 0; // 重置计数器\n`;
+      code += `        ${cntVarName} = 0; // 重置计数器\n`;
       code += `    }\n`;
     } else {
-      code += `    if (cnt >= cnt_max) {\n`;
-      code += `        cnt = 0; // 重置计数器，继续循环\n`;
+      code += `    if (${cntVarName} >= cnt_max) {\n`;
+      code += `        ${cntVarName} = 0; // 重置计数器，继续循环\n`;
       code += `    }\n`;
     }
     
@@ -832,6 +876,8 @@ void ${callback}(void *obj)
     const cntMax = Math.ceil(duration / interval);
     const cntWait = Math.ceil(delayStart / interval);
     
+    const cntVarName = `${component.id}_timer_cnt`;
+    
     let code = `/**
  * ${timerName}
  * 组件: ${component.id}
@@ -839,7 +885,6 @@ void ${callback}(void *obj)
  */
 void ${callback}(void *obj)\n{\n`;
     code += `    gui_obj_t *target = (gui_obj_t *)obj;\n`;
-    code += `    static uint16_t cnt = 0;\n`;
     code += `    const uint16_t cnt_max = ${cntMax};\n`;
     
     // 如果有延时启动，添加 cnt_wait
@@ -847,8 +892,8 @@ void ${callback}(void *obj)\n{\n`;
       code += `    const uint16_t cnt_wait = ${cntWait}; // 延时启动: ${delayStart}ms\n`;
       code += `    \n`;
       code += `    // 延时启动检查\n`;
-      code += `    if (cnt <= cnt_wait) {\n`;
-      code += `        cnt++;\n`;
+      code += `    if (${cntVarName} <= cnt_wait) {\n`;
+      code += `        ${cntVarName}++;\n`;
       code += `        return;\n`;
       code += `    }\n`;
       code += `    \n`;
@@ -858,27 +903,27 @@ void ${callback}(void *obj)\n{\n`;
     
     // 为每个动作生成代码
     actions.forEach((action: any) => {
-      code += this.generateActionCode(action, delayStart > 0, 'cnt', 'cnt_wait', 'cnt_max', component);
+      code += this.generateActionCode(action, delayStart > 0, cntVarName, 'cnt_wait', 'cnt_max', component);
     });
     
     // 增加计数器
-    code += `    cnt++;\n`;
+    code += `    ${cntVarName}++;\n`;
     
     // 如果启用了日志，添加 gui_log 打印
     if (timer.enableLog) {
-      code += `    gui_log("${callback}: cnt=%d\\n", cnt);\n`;
+      code += `    gui_log("${callback}: cnt=%d\\n", ${cntVarName});\n`;
     }
     
     // 到达总时间后的处理
     const totalCnt = delayStart > 0 ? `cnt_wait + cnt_max` : `cnt_max`;
     if (stopOnComplete) {
-      code += `    if (cnt >= ${totalCnt}) {\n`;
+      code += `    if (${cntVarName} >= ${totalCnt}) {\n`;
       code += `        gui_obj_stop_timer(target);\n`;
-      code += `        cnt = 0; // 重置计数器\n`;
+      code += `        ${cntVarName} = 0; // 重置计数器\n`;
       code += `    }\n`;
     } else {
-      code += `    if (cnt >= ${totalCnt}) {\n`;
-      code += `        cnt = 0; // 重置计数器，继续循环\n`;
+      code += `    if (${cntVarName} >= ${totalCnt}) {\n`;
+      code += `        ${cntVarName} = 0; // 重置计数器，继续循环\n`;
       code += `    }\n`;
     }
     
@@ -903,6 +948,8 @@ void ${callback}(void *obj)\n{\n`;
     const segmentCntMaxes = segments.map(seg => Math.ceil(seg.duration / interval));
     const totalCntMax = segmentCntMaxes.reduce((sum, cnt) => sum + cnt, 0);
     
+    const cntVarName = `${component.id}_timer_cnt`;
+    
     let code = `/**
  * ${timerName}
  * 组件: ${component.id}
@@ -911,7 +958,6 @@ void ${callback}(void *obj)\n{\n`;
  */
 void ${callback}(void *obj)\n{\n`;
     code += `    gui_obj_t *target = (gui_obj_t *)obj;\n`;
-    code += `    static uint16_t cnt = 0;\n`;
     code += `    const uint16_t total_cnt_max = ${totalCntMax};\n`;
     code += `    \n`;
     
@@ -926,11 +972,11 @@ void ${callback}(void *obj)\n{\n`;
     code += `    \n`;
     
     // cnt++ 在判断前执行
-    code += `    cnt++;\n`;
+    code += `    ${cntVarName}++;\n`;
     
     // 如果启用了日志，添加 gui_log 打印
     if (timer.enableLog) {
-      code += `    gui_log("${callback}: cnt=%d\\n", cnt);\n`;
+      code += `    gui_log("${callback}: cnt=%d\\n", ${cntVarName});\n`;
     }
     
     code += `    \n`;
@@ -943,7 +989,7 @@ void ${callback}(void *obj)\n{\n`;
       if (actions.length === 0) {
         // 空段（等待）
         code += `    // 段 ${idx + 1}: 等待 ${seg.duration}ms\n`;
-        code += `    ${ifKeyword} (cnt > seg${idx}_start && cnt <= seg${idx}_end) {\n`;
+        code += `    ${ifKeyword} (${cntVarName} > seg${idx}_start && ${cntVarName} <= seg${idx}_end) {\n`;
         code += `        // 无动作，仅等待\n`;
         code += `    }\n`;
       } else {
@@ -954,11 +1000,11 @@ void ${callback}(void *obj)\n{\n`;
         
         // 有动作的段
         code += `    // 段 ${idx + 1}: ${seg.duration}ms, ${actions.length} 个动作\n`;
-        code += `    ${ifKeyword} (cnt > seg${idx}_start && cnt <= seg${idx}_end) {\n`;
+        code += `    ${ifKeyword} (${cntVarName} > seg${idx}_start && ${cntVarName} <= seg${idx}_end) {\n`;
         
         // 只有在需要渐变计算时才生成段内计数器
         if (!allNoSegCounter) {
-          code += `        uint16_t seg_cnt = cnt - seg${idx}_start;\n`;
+          code += `        uint16_t seg_cnt = ${cntVarName} - seg${idx}_start;\n`;
           code += `        const uint16_t seg_cnt_max = seg${idx}_end - seg${idx}_start;\n`;
           code += `        \n`;
         }
@@ -979,13 +1025,13 @@ void ${callback}(void *obj)\n{\n`;
     
     // 到达总时间后的处理
     if (stopOnComplete) {
-      code += `    if (cnt >= total_cnt_max) {\n`;
+      code += `    if (${cntVarName} >= total_cnt_max) {\n`;
       code += `        gui_obj_stop_timer(target);\n`;
-      code += `        cnt = 0; // 重置计数器\n`;
+      code += `        ${cntVarName} = 0; // 重置计数器\n`;
       code += `    }\n`;
     } else {
-      code += `    if (cnt >= total_cnt_max) {\n`;
-      code += `        cnt = 0; // 重置计数器，继续循环\n`;
+      code += `    if (${cntVarName} >= total_cnt_max) {\n`;
+      code += `        ${cntVarName} = 0; // 重置计数器，继续循环\n`;
       code += `    }\n`;
     }
     
@@ -1085,12 +1131,12 @@ void ${callback}(void *obj)\n{\n`;
       
       const timerName = targetTimer.name || targetTimer.id;
       code += `    // 切换定时动画: ${timerName}\n`;
+      code += `    ${component?.id}_timer_cnt = 0; // 清零计数器\n`;
       code += `    gui_obj_create_timer(target, ${targetTimer.interval}, ${targetTimer.reload !== false ? 'true' : 'false'}, ${callback});\n`;
       // 如果目标定时器没有设置立即运行，则调用 gui_obj_start_timer
       if (!targetTimer.runImmediately) {
         code += `    gui_obj_start_timer(target);\n`;
       }
-      code += `    cnt = 0; // 重置计数器\n`;
       code += `    return; // 切换定时动画后立即返回\n`;
       code += `    \n`;
     } else if (action.type === 'position') {

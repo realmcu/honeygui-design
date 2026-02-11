@@ -148,6 +148,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
 
 #include "guidef.h"
 #include "gui_obj.h"
+#include "gui_obj_focus.h"
 `;
 
     if (hasView) {
@@ -240,6 +241,26 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
         if ('generateTimerHeaders' in generator) {
           code += (generator as any).generateTimerHeaders(comp);
         }
+      });
+    }
+
+    // 定时动画计数器声明（在 callbacks.c 中定义）
+    const componentsWithTimers = this.components.filter(c => {
+      // 新版：有 timers 数组
+      if (c.data?.timers && Array.isArray(c.data.timers) && c.data.timers.length > 0) {
+        return true;  // 所有有定时器的组件都需要计数器
+      }
+      // 旧版：有 timerEnabled
+      if (c.data?.timerEnabled === true) {
+        return true;  // 所有有定时器的组件都需要计数器
+      }
+      return false;
+    });
+
+    if (componentsWithTimers.length > 0) {
+      code += `\n// 定时动画计数器（在 callbacks.c 中定义）\n`;
+      componentsWithTimers.forEach(comp => {
+        code += `extern uint16_t ${comp.id}_timer_cnt;\n`;
       });
     }
 
@@ -631,6 +652,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
           
           const timerName = timer.name || timer.id;
           code += `${indentStr}// 绑定定时器: ${timerName}\n`;
+          code += `${indentStr}${component.id}_timer_cnt = 0; // 清零计数器\n`;
           code += `${indentStr}gui_obj_create_timer((gui_obj_t *)${component.id}, ${timer.interval}, ${timer.reload !== false ? 'true' : 'false'}, ${callback});\n`;
           // 如果没有设置立即运行，则调用 gui_obj_start_timer
           if (!timer.runImmediately) {
@@ -655,6 +677,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       }
       
       code += `${indentStr}// 绑定定时器\n`;
+      code += `${indentStr}${component.id}_timer_cnt = 0; // 清零计数器\n`;
       code += `${indentStr}gui_obj_create_timer((gui_obj_t *)${component.id}, ${component.data.timerInterval || 1000}, ${component.data.timerReload !== false ? 'true' : 'false'}, ${callback});\n`;
       code += `${indentStr}gui_obj_start_timer((gui_obj_t *)${component.id});\n`;
     }

@@ -158,6 +158,7 @@ export function generateControlTimerCallbackImpl(component: Component, component
             const callback = timer.mode === 'preset' 
               ? `${target.componentId}_${timer.id}_cb`
               : (timer.callback || `${target.componentId}_timer_cb`);
+            callbackBody += `    ${target.componentId}_timer_cnt = 0; // 清零计数器\n`;
             callbackBody += `    gui_obj_create_timer(GUI_BASE(${target.componentId}), ${timer.interval}, ${timer.reload ? 'true' : 'false'}, ${callback});\n`;
             callbackBody += `    gui_obj_start_timer(GUI_BASE(${target.componentId}));\n`;
           } else if (target.action === 'stop') {
@@ -224,6 +225,7 @@ export function generateMessageCallbackImpl(component: Component, componentMap: 
               const callback = timer.mode === 'preset' 
                 ? `${target.componentId}_${timer.id}_cb`
                 : (timer.callback || `${target.componentId}_timer_cb`);
+              body += `    ${target.componentId}_timer_cnt = 0; // 清零计数器\n`;
               body += `    gui_obj_create_timer(GUI_BASE(${target.componentId}), ${timer.interval}, ${timer.reload ? 'true' : 'false'}, ${callback});\n`;
               body += `    gui_obj_start_timer(GUI_BASE(${target.componentId}));\n`;
             } else if (target.action === 'stop') {
@@ -342,6 +344,7 @@ export function generateKeyEventCallbackImpl(component: Component, componentMap:
                   const callback = timer.mode === 'preset'
                     ? `${target.componentId}_${timer.id}_cb`
                     : (timer.callback || `${target.componentId}_timer_cb`);
+                  callbackBody += `        ${target.componentId}_timer_cnt = 0; // 清零计数器\n`;
                   callbackBody += `        gui_obj_create_timer(GUI_BASE(${target.componentId}), ${timer.interval}, ${timer.reload ? 'true' : 'false'}, ${callback});\n`;
                   callbackBody += `        gui_obj_start_timer(GUI_BASE(${target.componentId}));\n`;
                 } else if (target.action === 'stop') {
