@@ -176,7 +176,7 @@ export class TimerLabelGenerator extends LabelGenerator {
         code += `    uint32_t minutes = ${component.id}_time_count / 60000;\n`;
         code += `    uint32_t seconds = (${component.id}_time_count % 60000) / 1000;\n`;
         code += `    uint32_t centiseconds = (${component.id}_time_count % 1000) / 10;\n`;
-        code += `    snprintf(${varName}, sizeof(${varName}), "%02u:%02u:%02u", minutes, seconds, centiseconds);\n`;
+        code += `    snprintf(${varName}, sizeof(${varName}), "%02u:%02u.%02u", minutes, seconds, centiseconds);\n`;
         break;
       case 'SS':
         code += `    uint32_t seconds = ${component.id}_time_count / 1000;\n`;
@@ -273,7 +273,7 @@ export class TimerLabelGenerator extends LabelGenerator {
       case 'MM:SS':
         return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
       case 'MM:SS:MS':
-        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}:${centiseconds.toString().padStart(2, '0')}`;
+        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
       case 'SS':
         return seconds.toString().padStart(2, '0');
       default:

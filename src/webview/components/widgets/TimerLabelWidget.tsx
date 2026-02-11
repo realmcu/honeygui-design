@@ -34,7 +34,7 @@ export const TimerLabelWidget: React.FC<WidgetProps> = ({ component, style, hand
       case 'MM:SS':
         return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
       case 'MM:SS:MS':
-        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}:${centiseconds.toString().padStart(2, '0')}`;
+        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
       case 'SS':
         return seconds.toString().padStart(2, '0');
       default:
