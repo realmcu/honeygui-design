@@ -501,16 +501,27 @@ const AssetsPanel: React.FC = () => {
   }, [assets, currentPath, getCurrentFolderContent, activeCategory]);
 
   // 获取各类型数量
-  const counts = React.useMemo(() => ({
-    all: categorizedAssets.all.length,
-    images: categorizedAssets.images.length,
-    svgs: categorizedAssets.svgs.length,
-    videos: categorizedAssets.videos.length,
-    models: categorizedAssets.models.length,
-    fonts: categorizedAssets.fonts.length,
-    glass: categorizedAssets.glass.length,
-    lottie: categorizedAssets.lottie.length
-  }), [categorizedAssets]);
+  const counts = React.useMemo(() => {
+    // "全部" 的数量应该是所有分类的总和
+    const allCount = categorizedAssets.images.length + 
+                     categorizedAssets.svgs.length + 
+                     categorizedAssets.videos.length + 
+                     categorizedAssets.models.length + 
+                     categorizedAssets.fonts.length + 
+                     categorizedAssets.glass.length + 
+                     categorizedAssets.lottie.length;
+    
+    return {
+      all: allCount,
+      images: categorizedAssets.images.length,
+      svgs: categorizedAssets.svgs.length,
+      videos: categorizedAssets.videos.length,
+      models: categorizedAssets.models.length,
+      fonts: categorizedAssets.fonts.length,
+      glass: categorizedAssets.glass.length,
+      lottie: categorizedAssets.lottie.length
+    };
+  }, [categorizedAssets]);
 
   useEffect(() => {
     window.vscodeAPI?.postMessage({ command: 'loadAssets' });

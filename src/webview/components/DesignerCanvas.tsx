@@ -522,6 +522,9 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
     const hadDragOperation = !!draggedComponent;
     
     // 处理跨容器拖拽（框选移动不触发跨容器拖拽）
+    // 注意：禁用自动跨容器移动，避免误操作
+    // 用户可以通过属性面板手动修改父容器
+    /*
     if (draggedComponent && !isBoxSelectMove) {
       // 多选跨容器拖拽
       if (multiDragOffsets.size > 1) {
@@ -567,6 +570,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
         }
       }
     }
+    */
     
     handleCanvasMouseUp();
     setPendingDragComponent(null);
