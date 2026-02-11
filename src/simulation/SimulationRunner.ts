@@ -158,7 +158,7 @@ export class SimulationRunner {
      * 检查环境
      */
     private async checkEnvironment(): Promise<void> {
-        this.log('检查编译环境...');
+        this.log(vscode.l10n.t('Checking build environment...'));
 
         const checker = new EnvironmentChecker();
         const result = await checker.checkAll();
@@ -168,31 +168,31 @@ export class SimulationRunner {
             throw new Error(guide);
         }
 
-        this.log('环境检查通过');
+        this.log(vscode.l10n.t('Environment check passed'));
     }
 
     /**
      * 生成代码
      */
     private async generateCode(): Promise<void> {
-        this.log('生成 C 代码（所有界面）...');
+        this.log(vscode.l10n.t('Generating C code (all views)...'));
 
         // 使用统一的代码生成器
         const codeGenerator = new CodeGenerator();
         const result = await codeGenerator.generate(this.projectRoot);
 
         if (!result.success) {
-            throw new Error(result.errors?.[0]?.error || '代码生成失败');
+            throw new Error(result.errors?.[0]?.error || vscode.l10n.t('Code generation failed'));
         }
 
-        this.log(`代码生成完成: ${result.totalFiles} 个文件`);
+        this.log(vscode.l10n.t('Code generation completed: {0} files', result.totalFiles));
     }
 
     /**
      * 准备编译环境
      */
     private async setupBuildEnvironment(): Promise<void> {
-        this.log('准备编译环境...');
+        this.log(vscode.l10n.t('Preparing build environment...'));
 
         this.buildManager = new BuildManager(this.projectRoot, this.outputChannel);
 

@@ -1,5 +1,6 @@
 import * as path from 'path';
 import * as fs from 'fs';
+import * as vscode from 'vscode';
 import { spawn } from 'child_process';
 import { minimatch } from 'minimatch';
 import { ImageConverterService, ImageConvertOptions, ConvertResult, CompressionType, YuvSampleMode, YuvBlurBits } from '../services/ImageConverterService';
@@ -43,7 +44,7 @@ export class BuildCore {
     }
 
     async setupBuildDir(): Promise<void> {
-        this.logger.log('准备编译目录...');
+        this.logger.log(vscode.l10n.t('Preparing build directory...'));
 
         const parentDir = path.dirname(this.buildDir);
         if (!fs.existsSync(parentDir)) {
@@ -53,15 +54,15 @@ export class BuildCore {
         // 使用内置的 win32_sim
         const win32SimSource = path.join(this.libSimPath, 'win32_sim');
         if (!fs.existsSync(win32SimSource)) {
-            throw new Error(`内置 win32_sim 目录不存在: ${win32SimSource}`);
+            throw new Error(vscode.l10n.t('Built-in win32_sim directory does not exist: {0}', win32SimSource));
         }
 
         if (!fs.existsSync(this.buildDir)) {
-            this.logger.log('拷贝 win32_sim...');
+            this.logger.log(vscode.l10n.t('Copying win32_sim...'));
             this.copyDirectory(win32SimSource, this.buildDir);
-            this.logger.log('win32_sim 拷贝完成');
+            this.logger.log(vscode.l10n.t('win32_sim copied'));
         } else {
-            this.logger.log('编译目录已存在，跳过拷贝');
+            this.logger.log(vscode.l10n.t('Build directory exists, skipping copy'));
         }
 
         // 拷贝 .config
@@ -69,9 +70,9 @@ export class BuildCore {
         const configDest = path.join(this.buildDir, '.config');
         if (fs.existsSync(configSource)) {
             fs.copyFileSync(configSource, configDest);
-            this.logger.log('.config 拷贝完成');
+            this.logger.log(vscode.l10n.t('.config copied'));
         } else {
-            this.logger.log('.config 不存在，生成默认配置');
+            this.logger.log(vscode.l10n.t('.config does not exist, generating default'));
             this.generateConfig();
         }
 
@@ -80,7 +81,7 @@ export class BuildCore {
         const menuConfigDest = path.join(this.buildDir, 'menu_config.py');
         if (fs.existsSync(menuConfigSource) && !fs.existsSync(menuConfigDest)) {
             fs.copyFileSync(menuConfigSource, menuConfigDest);
-            this.logger.log('menu_config.py 拷贝完成');
+            this.logger.log(vscode.l10n.t('menu_config.py copied'));
         }
 
         // 确保链接脚本文件存在
@@ -88,7 +89,7 @@ export class BuildCore {
         const linkerScriptDest = path.join(this.buildDir, 'honeygui_mingw.ld');
         if (fs.existsSync(linkerScriptSource) && !fs.existsSync(linkerScriptDest)) {
             fs.copyFileSync(linkerScriptSource, linkerScriptDest);
-            this.logger.log('honeygui_mingw.ld 拷贝完成');
+            this.logger.log(vscode.l10n.t('honeygui_mingw.ld copied'));
         }
 
         // 确保 main.c 存在
@@ -96,7 +97,7 @@ export class BuildCore {
         const mainDest = path.join(this.buildDir, 'main.c');
         if (fs.existsSync(mainSource) && !fs.existsSync(mainDest)) {
             fs.copyFileSync(mainSource, mainDest);
-            this.logger.log('main.c 拷贝完成');
+            this.logger.log(vscode.l10n.t('main.c copied'));
         }
 
         // 创建 SConscript（编译 main.c 和 app_romfs.c）
@@ -116,11 +117,11 @@ objs = DefineGroup('build', src, depend = [''], CPPPATH = inc)
 Return('objs')
 `;
             fs.writeFileSync(sconscriptPath, sconscriptContent, 'utf-8');
-            this.logger.log('SConscript 文件已生成');
+            this.logger.log(vscode.l10n.t('SConscript file generated'));
         }
 
         this.modifySConstruct();
-        this.logger.log('编译目录准备完成');
+        this.logger.log(vscode.l10n.t('Build directory ready'));
     }
 
     async copyGeneratedCode(): Promise<void> {
@@ -149,12 +150,12 @@ Return('objs')
         }
 
         // 扫描 HML 文件，获取所有使用的资源
-        this.logger.log('扫描 HML 文件中的资源引用...');
+        this.logger.log(vscode.l10n.t('Scanning asset references in HML files...'));
         const usedAssets = await this.scanUsedAssets();
         this.logger.log(`找到 ${usedAssets.images.size} 个图片, ${usedAssets.videos.size} 个视频, ${usedAssets.models.size} 个3D模型`);
 
         // 转换图片资源（只转换使用的）
-        this.logger.log('转换图片资源...');
+        this.logger.log(vscode.l10n.t('Converting image assets...'));
         const imageConverter = new ImageConverterService();
         
         // 从项目配置读取压缩设置
@@ -183,12 +184,12 @@ Return('objs')
         this.logger.log(`图片转换完成: ${imageResults.length} 个`);
 
         // 拷贝 SVG 资源（不需要转换）
-        this.logger.log('拷贝 SVG 资源...');
+        this.logger.log(vscode.l10n.t('Copying SVG assets...'));
         const svgCount = this.copySvgAssets(assetsDir, outputDir);
         this.logger.log(`SVG 拷贝完成: ${svgCount} 个`);
 
         // 转换视频资源（只转换使用的）
-        this.logger.log('检查视频资源...');
+        this.logger.log(vscode.l10n.t('Checking video assets...'));
         const videoConverter = new VideoConverterService((msg) => {
             this.logger.log(msg);
         });

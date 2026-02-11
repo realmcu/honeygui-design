@@ -382,5 +382,26 @@
   "Enter serial port": "输入串口号",
   "Select Image": "选择图片",
   "Renamed successfully": "重命名成功",
-  "Folder deleted": "文件夹已删除"
+  "Folder deleted": "文件夹已删除",
+
+  "Checking build environment...": "检查编译环境...",
+  "Generating C code (all views)...": "生成 C 代码（所有界面）...",
+  "Code generation completed: {0} files": "代码生成完成: {0} 个文件",
+  "Code generation failed": "代码生成失败",
+  "Preparing build environment...": "准备编译环境...",
+  "Built-in win32_sim directory does not exist: {0}": "内置 win32_sim 目录不存在: {0}",
+  "Copying win32_sim...": "拷贝 win32_sim...",
+  "win32_sim copied": "win32_sim 拷贝完成",
+  "Build directory exists, skipping copy": "编译目录已存在，跳过拷贝",
+  ".config copied": ".config 拷贝完成",
+  ".config does not exist, generating default": ".config 不存在，生成默认配置",
+  "menu_config.py copied": "menu_config.py 拷贝完成",
+  "honeygui_mingw.ld copied": "honeygui_mingw.ld 拷贝完成",
+  "main.c copied": "main.c 拷贝完成",
+  "SConscript file generated": "SConscript 文件已生成",
+  "Build directory ready": "编译目录准备完成",
+  "Scanning asset references in HML files...": "扫描 HML 文件中的资源引用...",
+  "Converting image assets...": "转换图片资源...",
+  "Copying SVG assets...": "拷贝 SVG 资源...",
+  "Checking video assets...": "检查视频资源..."
 }

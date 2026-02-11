@@ -383,5 +383,26 @@
   "Enter serial port": "Enter serial port",
   "Select Image": "Select Image",
   "Renamed successfully": "Renamed successfully",
-  "Folder deleted": "Folder deleted"
+  "Folder deleted": "Folder deleted",
+
+  "Checking build environment...": "Checking build environment...",
+  "Generating C code (all views)...": "Generating C code (all views)...",
+  "Code generation completed: {0} files": "Code generation completed: {0} files",
+  "Code generation failed": "Code generation failed",
+  "Preparing build environment...": "Preparing build environment...",
+  "Built-in win32_sim directory does not exist: {0}": "Built-in win32_sim directory does not exist: {0}",
+  "Copying win32_sim...": "Copying win32_sim...",
+  "win32_sim copied": "win32_sim copied",
+  "Build directory exists, skipping copy": "Build directory exists, skipping copy",
+  ".config copied": ".config copied",
+  ".config does not exist, generating default": ".config does not exist, generating default",
+  "menu_config.py copied": "menu_config.py copied",
+  "honeygui_mingw.ld copied": "honeygui_mingw.ld copied",
+  "main.c copied": "main.c copied",
+  "SConscript file generated": "SConscript file generated",
+  "Build directory ready": "Build directory ready",
+  "Scanning asset references in HML files...": "Scanning asset references in HML files...",
+  "Converting image assets...": "Converting image assets...",
+  "Copying SVG assets...": "Copying SVG assets...",
+  "Checking video assets...": "Checking video assets..."
 }
