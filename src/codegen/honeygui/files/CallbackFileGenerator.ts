@@ -698,11 +698,12 @@ export class CallbackFileGenerator {
               impls.set(callback, impl);
             }
           } else if (timer.mode === 'custom' && timer.callback) {
-            // 自定义函数模式：生成空实现供用户填充
+            // 自定义函数模式：生成能调用保护区实现的回调
             const callback = timer.callback;
             // 跳过已存在于 custom_functions 保护区的函数
             if (!impls.has(callback) && !existingFunctions.has(callback)) {
               const timerName = timer.name || timer.id;
+              const implFuncName = `${callback}_impl`;
               const impl = `/**
  * ${timerName}
  * 组件: ${component.id}
@@ -710,7 +711,22 @@ export class CallbackFileGenerator {
 void ${callback}(void *obj)
 {
     GUI_UNUSED(obj);
-    // TODO: 实现定时器回调逻辑
+    // 调用保护区中的实现函数（如果存在）
+    // 在 custom_functions 保护区中定义 ${implFuncName}() 来实现自定义逻辑
+#ifdef __cplusplus
+    extern "C" {
+#endif
+    extern void ${implFuncName}(void) __attribute__((weak));
+#ifdef __cplusplus
+    }
+#endif
+    
+    if (${implFuncName}) {
+        ${implFuncName}();
+    } else {
+        // TODO: 实现定时器回调逻辑
+        // 或在 custom_functions 保护区中定义 ${implFuncName}() 函数
+    }
 }`;
               impls.set(callback, impl);
             }
@@ -729,14 +745,30 @@ void ${callback}(void *obj)
             impls.set(callback, impl);
           }
         } else if (timerMode === 'custom' && component.data.timerCallback) {
-          // 自定义函数模式：生成空实现供用户填充
+          // 自定义函数模式：生成能调用保护区实现的回调
           const callback = component.data.timerCallback;
           // 跳过已存在于 custom_functions 保护区的函数
           if (!impls.has(callback) && !existingFunctions.has(callback)) {
+            const implFuncName = `${callback}_impl`;
             const impl = `void ${callback}(void *obj)
 {
     GUI_UNUSED(obj);
-    // TODO: 实现定时器回调逻辑
+    // 调用保护区中的实现函数（如果存在）
+    // 在 custom_functions 保护区中定义 ${implFuncName}() 来实现自定义逻辑
+#ifdef __cplusplus
+    extern "C" {
+#endif
+    extern void ${implFuncName}(void) __attribute__((weak));
+#ifdef __cplusplus
+    }
+#endif
+    
+    if (${implFuncName}) {
+        ${implFuncName}();
+    } else {
+        // TODO: 实现定时器回调逻辑
+        // 或在 custom_functions 保护区中定义 ${implFuncName}() 函数
+    }
 }`;
             impls.set(callback, impl);
           }
