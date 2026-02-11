@@ -230,7 +230,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
           }}>
             {fontFiles.length === 0 ? (
               <div style={{ padding: '8px', color: 'var(--vscode-descriptionForeground)', fontSize: '12px' }}>
-                暂无字体文件，请先上传到 assets 目录
+                {t('No font files, please upload to assets directory')}
               </div>
             ) : (
               fontFiles.map((font) => (

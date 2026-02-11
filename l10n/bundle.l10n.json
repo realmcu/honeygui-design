@@ -373,5 +373,15 @@
   "Cloning repository...": "Cloning repository...",
   "Cleaning up...": "Cleaning up...",
   "Updating configuration...": "Updating configuration...",
-  "Template project created successfully: {0}": "Template project created successfully: {0}"
+  "Template project created successfully: {0}": "Template project created successfully: {0}",
+
+  "Chip Type": "Chip Type",
+  "Baud Rate": "Baud Rate",
+  "Serial Port": "Serial Port",
+  "Manual Input...": "Manual Input...",
+  "Start Download": "Start Download",
+  "Enter serial port": "Enter serial port",
+  "Select Image": "Select Image",
+  "Renamed successfully": "Renamed successfully",
+  "Folder deleted": "Folder deleted"
 }

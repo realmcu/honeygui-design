@@ -42,7 +42,7 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
       .map(c => ({
         id: c.id,
         name: c.name || c.id,
-        file: '当前文件'
+        file: 'current'  // 使用常量标识符
       }));
     
     // 其他文件的 view（排除当前文件中已有的）
@@ -310,7 +310,7 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
                   <option value="">-- {t('Select')} --</option>
                   {views.map(v => (
                     <option key={v.id} value={v.id}>
-                      {v.name} {v.file !== '当前文件' ? `(${v.file})` : ''}
+                      {v.name} {v.file !== 'current' ? `(${v.file})` : `(${t('Current File')})`}
                     </option>
                   ))}
                 </select>
@@ -322,7 +322,7 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
                   onChange={(e) => handleActionUpdate(eventIndex, actionIndex, { switchOutStyle: e.target.value })}
                 >
                   {SWITCH_OUT_STYLES.map(s => (
-                    <option key={s.value} value={s.value}>{s.label}</option>
+                    <option key={s.value} value={s.value}>{t(s.labelKey as any)}</option>
                   ))}
                 </select>
               </div>
@@ -333,7 +333,7 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
                   onChange={(e) => handleActionUpdate(eventIndex, actionIndex, { switchInStyle: e.target.value })}
                 >
                   {SWITCH_IN_STYLES.map(s => (
-                    <option key={s.value} value={s.value}>{s.label}</option>
+                    <option key={s.value} value={s.value}>{t(s.labelKey as any)}</option>
                   ))}
                 </select>
               </div>

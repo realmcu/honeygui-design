@@ -32,7 +32,7 @@ export const TimerProperties: React.FC<TimerPropertiesProps> = ({
       .map(c => ({
         id: c.id,
         name: c.name || c.id,
-        file: '当前文件'
+        file: 'current'
       }));
     
     const currentViewIds = new Set(currentViews.map(v => v.id));
@@ -1027,7 +1027,7 @@ const TimerActionEditor: React.FC<{
               <option value="">-- {t('Select')} --</option>
               {availableViews.map(v => (
                 <option key={v.id} value={v.id}>
-                  {v.name} {v.file !== '当前文件' ? `(${v.file})` : ''}
+                  {v.name} {v.file !== 'current' ? `(${v.file})` : `(${t('Current File')})`}
                 </option>
               ))}
             </select>
@@ -1048,7 +1048,7 @@ const TimerActionEditor: React.FC<{
               }}
             >
               {SWITCH_OUT_STYLES.map(s => (
-                <option key={s.value} value={s.value}>{s.label}</option>
+                <option key={s.value} value={s.value}>{t(s.labelKey as any)}</option>
               ))}
             </select>
           </div>
@@ -1068,7 +1068,7 @@ const TimerActionEditor: React.FC<{
               }}
             >
               {SWITCH_IN_STYLES.map(s => (
-                <option key={s.value} value={s.value}>{s.label}</option>
+                <option key={s.value} value={s.value}>{t(s.labelKey as any)}</option>
               ))}
             </select>
           </div>

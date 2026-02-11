@@ -135,31 +135,31 @@ export class UartDownloadService {
         // 更新选项列表
         const updateItems = () => {
             const items: vscode.QuickPickItem[] = [
-                { label: '芯片类型', kind: vscode.QuickPickItemKind.Separator },
+                { label: vscode.l10n.t('Chip Type'), kind: vscode.QuickPickItemKind.Separator },
                 ...SUPPORTED_CHIPS.map(c => ({
                     label: c,
                     description: c === selectedChip ? '✓' : '',
                     picked: c === selectedChip
                 })),
-                { label: '波特率', kind: vscode.QuickPickItemKind.Separator },
+                { label: vscode.l10n.t('Baud Rate'), kind: vscode.QuickPickItemKind.Separator },
                 ...BAUD_RATES.map(b => ({
                     label: b,
                     description: b === selectedBaud ? '✓' : '',
                     picked: b === selectedBaud
                 })),
-                { label: '串口', kind: vscode.QuickPickItemKind.Separator },
+                { label: vscode.l10n.t('Serial Port'), kind: vscode.QuickPickItemKind.Separator },
                 ...ports.map(p => ({
                     label: p,
                     description: p === selectedPort ? '✓' : '',
                     picked: p === selectedPort
                 })),
                 {
-                    label: '$(edit) 手动输入串口...',
+                    label: `$(edit) ${vscode.l10n.t('Manual Input...')}`,
                     alwaysShow: true
                 },
                 { label: '', kind: vscode.QuickPickItemKind.Separator },
                 {
-                    label: '$(play) 开始下载',
+                    label: `$(play) ${vscode.l10n.t('Start Download')}`,
                     description: `${selectedChip} | ${selectedPort} | ${selectedBaud}`,
                     alwaysShow: true
                 }
@@ -176,7 +176,7 @@ export class UartDownloadService {
             const label = selected.label;
 
             // 点击开始下载
-            if (label.includes('开始下载') || label.includes('Start Download')) {
+            if (label.includes(vscode.l10n.t('Start Download'))) {
                 if (!selectedPort) {
                     vscode.window.showWarningMessage(vscode.l10n.t('Please select or enter a serial port'));
                     return;
@@ -195,10 +195,10 @@ export class UartDownloadService {
             }
 
             // 手动输入串口
-            if (label.includes('手动输入') || label.includes('Manual Input')) {
+            if (label.includes(vscode.l10n.t('Manual Input...'))) {
                 quickPick.hide();
                 const inputPort = await vscode.window.showInputBox({
-                    prompt: '输入串口号',
+                    prompt: vscode.l10n.t('Enter serial port'),
                     placeHolder: process.platform === 'win32' ? 'COM3' : '/dev/ttyUSB0',
                     value: selectedPort
                 });

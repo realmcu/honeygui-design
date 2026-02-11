@@ -648,7 +648,7 @@ export class AssetManager extends EventEmitter {
                 filters: {
                     'Images': ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'webp', 'bin']
                 },
-                openLabel: '选择图片'
+                openLabel: vscode.l10n.t('Select Image')
             };
 
             const fileUri = await vscode.window.showOpenDialog(options);

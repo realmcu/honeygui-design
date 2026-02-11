@@ -124,7 +124,7 @@ export const ACTION_LABELS: Record<ActionType, string> = {
 
 // ============ 视图切换动画选项 ============
 
-// 按键名选项
+// 按键名选项（保持英文，这些是硬件按键的标准名称）
 export const KEY_NAMES = [
   { value: 'Home', label: 'Home' },
   { value: 'Back', label: 'Back' },
@@ -132,90 +132,79 @@ export const KEY_NAMES = [
   { value: 'Power', label: 'Power' },
 ];
 
+// 动画类型的翻译键映射
+const ANIMATION_LABEL_KEYS: Record<string, string> = {
+  'SWITCH_INIT_STATE': 'No Animation (Initial)',
+  'SWITCH_OUT_TO_LEFT_USE_TRANSLATION': 'Slide Left',
+  'SWITCH_OUT_TO_RIGHT_USE_TRANSLATION': 'Slide Right',
+  'SWITCH_OUT_TO_TOP_USE_TRANSLATION': 'Slide Up',
+  'SWITCH_OUT_TO_BOTTOM_USE_TRANSLATION': 'Slide Down',
+  'SWITCH_OUT_TO_LEFT_USE_CUBE': 'Cube Left',
+  'SWITCH_OUT_TO_RIGHT_USE_CUBE': 'Cube Right',
+  'SWITCH_OUT_TO_TOP_USE_CUBE': 'Cube Up',
+  'SWITCH_OUT_TO_BOTTOM_USE_CUBE': 'Cube Down',
+  'SWITCH_OUT_TO_LEFT_USE_ROTATE': 'Rotate Left',
+  'SWITCH_OUT_TO_RIGHT_USE_ROTATE': 'Rotate Right',
+  'SWITCH_OUT_TO_TOP_USE_ROTATE': 'Rotate Up',
+  'SWITCH_OUT_TO_BOTTOM_USE_ROTATE': 'Rotate Down',
+  'SWITCH_OUT_TO_LEFT_USE_REDUCTION': 'Reduce Left',
+  'SWITCH_OUT_TO_RIGHT_USE_REDUCTION': 'Reduce Right',
+  'SWITCH_OUT_TO_TOP_USE_REDUCTION': 'Reduce Up',
+  'SWITCH_OUT_TO_BOTTOM_USE_REDUCTION': 'Reduce Down',
+  'SWITCH_OUT_STILL_USE_BLUR': 'Blur (Still)',
+};
+
+// 导出静态选项（用于 Webview，使用翻译键）
 export const SWITCH_OUT_STYLES = [
-  // 初始状态（无动画）
-  { value: 'SWITCH_INIT_STATE', label: '无动画（初始状态）' },
-  
-  // Translation (平移)
-  { value: 'SWITCH_OUT_TO_LEFT_USE_TRANSLATION', label: '向左平移' },
-  { value: 'SWITCH_OUT_TO_RIGHT_USE_TRANSLATION', label: '向右平移' },
-  { value: 'SWITCH_OUT_TO_TOP_USE_TRANSLATION', label: '向上平移' },
-  { value: 'SWITCH_OUT_TO_BOTTOM_USE_TRANSLATION', label: '向下平移' },
-  
-  // Cube (立方体)
-  { value: 'SWITCH_OUT_TO_LEFT_USE_CUBE', label: '向左立方体' },
-  { value: 'SWITCH_OUT_TO_RIGHT_USE_CUBE', label: '向右立方体' },
-  { value: 'SWITCH_OUT_TO_TOP_USE_CUBE', label: '向上立方体' },
-  { value: 'SWITCH_OUT_TO_BOTTOM_USE_CUBE', label: '向下立方体' },
-  
-  // Rotate (旋转)
-  { value: 'SWITCH_OUT_TO_LEFT_USE_ROTATE', label: '向左旋转' },
-  { value: 'SWITCH_OUT_TO_RIGHT_USE_ROTATE', label: '向右旋转' },
-  { value: 'SWITCH_OUT_TO_TOP_USE_ROTATE', label: '向上旋转' },
-  { value: 'SWITCH_OUT_TO_BOTTOM_USE_ROTATE', label: '向下旋转' },
-  
-  // Reduction (缩小)
-  { value: 'SWITCH_OUT_TO_LEFT_USE_REDUCTION', label: '向左缩小' },
-  { value: 'SWITCH_OUT_TO_RIGHT_USE_REDUCTION', label: '向右缩小' },
-  { value: 'SWITCH_OUT_TO_TOP_USE_REDUCTION', label: '向上缩小' },
-  { value: 'SWITCH_OUT_TO_BOTTOM_USE_REDUCTION', label: '向下缩小' },
-  
-  // Blur (模糊)
-  { value: 'SWITCH_OUT_STILL_USE_BLUR', label: '高斯模糊（静止）' },
-  
-  // Animation (动画)
-  { value: 'SWITCH_OUT_NONE_ANIMATION', label: '无动画（立即消失）' },
-  { value: 'SWITCH_OUT_ANIMATION_ZOOM', label: '缩放' },
-  { value: 'SWITCH_OUT_ANIMATION_FADE', label: '淡出' },
-  { value: 'SWITCH_OUT_ANIMATION_MOVE_TO_RIGHT', label: '向右移动' },
-  { value: 'SWITCH_OUT_ANIMATION_MOVE_TO_LEFT', label: '向左移动' },
-  { value: 'SWITCH_OUT_ANIMATION_ZOOM_TO_TOP_LEFT', label: '缩放到左上角' },
-  { value: 'SWITCH_OUT_ANIMATION_ZOOM_TO_TOP_RIGHT', label: '缩放到右上角' },
+  { value: 'SWITCH_INIT_STATE', labelKey: 'No Animation (Initial)' },
+  { value: 'SWITCH_OUT_TO_LEFT_USE_TRANSLATION', labelKey: 'Slide Left' },
+  { value: 'SWITCH_OUT_TO_RIGHT_USE_TRANSLATION', labelKey: 'Slide Right' },
+  { value: 'SWITCH_OUT_TO_TOP_USE_TRANSLATION', labelKey: 'Slide Up' },
+  { value: 'SWITCH_OUT_TO_BOTTOM_USE_TRANSLATION', labelKey: 'Slide Down' },
+  { value: 'SWITCH_OUT_TO_LEFT_USE_CUBE', labelKey: 'Cube Left' },
+  { value: 'SWITCH_OUT_TO_RIGHT_USE_CUBE', labelKey: 'Cube Right' },
+  { value: 'SWITCH_OUT_TO_TOP_USE_CUBE', labelKey: 'Cube Up' },
+  { value: 'SWITCH_OUT_TO_BOTTOM_USE_CUBE', labelKey: 'Cube Down' },
+  { value: 'SWITCH_OUT_TO_LEFT_USE_ROTATE', labelKey: 'Rotate Left' },
+  { value: 'SWITCH_OUT_TO_RIGHT_USE_ROTATE', labelKey: 'Rotate Right' },
+  { value: 'SWITCH_OUT_TO_TOP_USE_ROTATE', labelKey: 'Rotate Up' },
+  { value: 'SWITCH_OUT_TO_BOTTOM_USE_ROTATE', labelKey: 'Rotate Down' },
+  { value: 'SWITCH_OUT_TO_LEFT_USE_REDUCTION', labelKey: 'Reduce Left' },
+  { value: 'SWITCH_OUT_TO_RIGHT_USE_REDUCTION', labelKey: 'Reduce Right' },
+  { value: 'SWITCH_OUT_TO_TOP_USE_REDUCTION', labelKey: 'Reduce Up' },
+  { value: 'SWITCH_OUT_TO_BOTTOM_USE_REDUCTION', labelKey: 'Reduce Down' },
+  { value: 'SWITCH_OUT_STILL_USE_BLUR', labelKey: 'Blur (Still)' },
 ];
 
 export const SWITCH_IN_STYLES = [
-  // 初始状态（无动画）
-  { value: 'SWITCH_INIT_STATE', label: '无动画（初始状态）' },
-  
-  // Translation (平移)
-  { value: 'SWITCH_IN_FROM_LEFT_USE_TRANSLATION', label: '从左平移' },
-  { value: 'SWITCH_IN_FROM_RIGHT_USE_TRANSLATION', label: '从右平移' },
-  { value: 'SWITCH_IN_FROM_TOP_USE_TRANSLATION', label: '从上平移' },
-  { value: 'SWITCH_IN_FROM_BOTTOM_USE_TRANSLATION', label: '从下平移' },
-  { value: 'SWITCH_IN_FROM_TOP_RIGHT_USE_TRANSLATION', label: '从右上平移' },
-  
-  // Cube (立方体)
-  { value: 'SWITCH_IN_FROM_LEFT_USE_CUBE', label: '从左立方体' },
-  { value: 'SWITCH_IN_FROM_RIGHT_USE_CUBE', label: '从右立方体' },
-  { value: 'SWITCH_IN_FROM_TOP_USE_CUBE', label: '从上立方体' },
-  { value: 'SWITCH_IN_FROM_BOTTOM_USE_CUBE', label: '从下立方体' },
-  
-  // Rotate (旋转)
-  { value: 'SWITCH_IN_FROM_LEFT_USE_ROTATE', label: '从左旋转' },
-  { value: 'SWITCH_IN_FROM_RIGHT_USE_ROTATE', label: '从右旋转' },
-  { value: 'SWITCH_IN_FROM_TOP_USE_ROTATE', label: '从上旋转' },
-  { value: 'SWITCH_IN_FROM_BOTTOM_USE_ROTATE', label: '从下旋转' },
-  
-  // Reduction (缩小)
-  { value: 'SWITCH_IN_FROM_LEFT_USE_REDUCTION', label: '从左缩小' },
-  { value: 'SWITCH_IN_FROM_RIGHT_USE_REDUCTION', label: '从右缩小' },
-  { value: 'SWITCH_IN_FROM_TOP_USE_REDUCTION', label: '从上缩小' },
-  { value: 'SWITCH_IN_FROM_BOTTOM_USE_REDUCTION', label: '从下缩小' },
-  
-  // Blur (模糊)
-  { value: 'SWITCH_IN_STILL_USE_BLUR', label: '高斯模糊（静止）' },
-  
-  // Animation (动画)
-  { value: 'SWITCH_IN_NONE_ANIMATION', label: '无动画（立即出现）' },
-  { value: 'SWITCH_IN_ANIMATION_ZOOM', label: '缩放' },
-  { value: 'SWITCH_IN_ANIMATION_FADE', label: '淡入' },
-  { value: 'SWITCH_IN_ANIMATION_MOVE_FADE', label: '移动淡入' },
-  { value: 'SWITCH_IN_ANIMATION_MOVE_FROM_RIGHT', label: '从右移动' },
-  { value: 'SWITCH_IN_ANIMATION_MOVE_FROM_LEFT', label: '从左移动' },
-  { value: 'SWITCH_IN_ANIMATION_BOUNCE_FROM_RIGHT', label: '从右弹跳' },
-  { value: 'SWITCH_IN_ANIMATION_ZOOM_FROM_TOP_LEFT', label: '从左上角缩放' },
-  { value: 'SWITCH_IN_ANIMATION_ZOOM_FROM_TOP_RIGHT', label: '从右上角缩放' },
-  { value: 'SWITCH_IN_CENTER_ZOOM_FADE', label: '中心缩放淡入' },
+  { value: 'SWITCH_INIT_STATE', labelKey: 'No Animation (Initial)' },
+  { value: 'SWITCH_IN_FROM_LEFT_USE_TRANSLATION', labelKey: 'Slide Left' },
+  { value: 'SWITCH_IN_FROM_RIGHT_USE_TRANSLATION', labelKey: 'Slide Right' },
+  { value: 'SWITCH_IN_FROM_TOP_USE_TRANSLATION', labelKey: 'Slide Up' },
+  { value: 'SWITCH_IN_FROM_BOTTOM_USE_TRANSLATION', labelKey: 'Slide Down' },
+  { value: 'SWITCH_IN_FROM_LEFT_USE_CUBE', labelKey: 'Cube Left' },
+  { value: 'SWITCH_IN_FROM_RIGHT_USE_CUBE', labelKey: 'Cube Right' },
+  { value: 'SWITCH_IN_FROM_TOP_USE_CUBE', labelKey: 'Cube Up' },
+  { value: 'SWITCH_IN_FROM_BOTTOM_USE_CUBE', labelKey: 'Cube Down' },
+  { value: 'SWITCH_IN_FROM_LEFT_USE_ROTATE', labelKey: 'Rotate Left' },
+  { value: 'SWITCH_IN_FROM_RIGHT_USE_ROTATE', labelKey: 'Rotate Right' },
+  { value: 'SWITCH_IN_FROM_TOP_USE_ROTATE', labelKey: 'Rotate Up' },
+  { value: 'SWITCH_IN_FROM_BOTTOM_USE_ROTATE', labelKey: 'Rotate Down' },
+  { value: 'SWITCH_IN_FROM_LEFT_USE_REDUCTION', labelKey: 'Reduce Left' },
+  { value: 'SWITCH_IN_FROM_RIGHT_USE_REDUCTION', labelKey: 'Reduce Right' },
+  { value: 'SWITCH_IN_FROM_TOP_USE_REDUCTION', labelKey: 'Reduce Up' },
+  { value: 'SWITCH_IN_FROM_BOTTOM_USE_REDUCTION', labelKey: 'Reduce Down' },
+  { value: 'SWITCH_IN_STILL_USE_BLUR', labelKey: 'Blur (Still)' },
+  { value: 'SWITCH_IN_NONE_ANIMATION', labelKey: 'Anim: No Animation' },
+  { value: 'SWITCH_IN_ANIMATION_ZOOM', labelKey: 'Anim: Zoom' },
+  { value: 'SWITCH_IN_ANIMATION_FADE', labelKey: 'Anim: Fade In' },
+  { value: 'SWITCH_IN_ANIMATION_MOVE_FADE', labelKey: 'Anim: Move Fade' },
+  { value: 'SWITCH_IN_ANIMATION_MOVE_FROM_RIGHT', labelKey: 'Anim: Move From Right' },
+  { value: 'SWITCH_IN_ANIMATION_MOVE_FROM_LEFT', labelKey: 'Anim: Move From Left' },
+  { value: 'SWITCH_IN_ANIMATION_BOUNCE_FROM_RIGHT', labelKey: 'Anim: Bounce From Right' },
+  { value: 'SWITCH_IN_ANIMATION_ZOOM_FROM_TOP_LEFT', labelKey: 'Anim: Zoom From Top Left' },
+  { value: 'SWITCH_IN_ANIMATION_ZOOM_FROM_TOP_RIGHT', labelKey: 'Anim: Zoom From Top Right' },
+  { value: 'SWITCH_IN_CENTER_ZOOM_FADE', labelKey: 'Anim: Center Zoom Fade' },
 ];
 
 // ============ 辅助函数 ============

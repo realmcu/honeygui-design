@@ -1020,7 +1020,7 @@ const AssetsPanel: React.FC = () => {
           max="6" 
           value={gridColumns} 
           onChange={(e) => setGridColumns(Number(e.target.value))}
-          title={`列数: ${gridColumns}`}
+          title={`${t('Columns')}: ${gridColumns}`}
         />
         <span className="grid-columns-label">{gridColumns} 列</span>
       </div>

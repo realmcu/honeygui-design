@@ -617,6 +617,72 @@ const zhCN = {
   'Connect': '连接',
   'Connected to Host': '已连接到主机',
   'Disconnect': '断开连接',
+
+  // Canvas Editor Tools
+  'Pen': '画笔',
+  'Triangle': '三角形',
+  'Polygon': '多边形',
+  'Line': '线条',
+  'Stroke Color': '描边颜色',
+  'Line Width': '线宽',
+  'Solid Color': '纯色',
+  'Linear Gradient': '线性渐变',
+  'Radial Gradient': '径向渐变',
+  'Line Cap Style': '线端样式',
+  'Butt': '平端',
+  'Round': '圆端',
+  'Square': '方端',
+  'Solid Line': '实线',
+  'Dashed Line': '虚线',
+  'Dotted Line': '点线',
+  'Vertical Center': '垂直居中',
+  'Bottom Align': '底对齐',
+
+  // Animation Types
+  'No Animation (Initial)': '无动画（初始状态）',
+  'Slide Left': '向左平移',
+  'Slide Right': '向右平移',
+  'Slide Up': '向上平移',
+  'Slide Down': '向下平移',
+  'Cube Left': '向左立方体',
+  'Cube Right': '向右立方体',
+  'Cube Up': '向上立方体',
+  'Cube Down': '向下立方体',
+  'Rotate Left': '向左旋转',
+  'Rotate Right': '向右旋转',
+  'Rotate Up': '向上旋转',
+  'Rotate Down': '向下旋转',
+  'Reduce Left': '向左缩小',
+  'Reduce Right': '向右缩小',
+  'Reduce Up': '向上缩小',
+  'Reduce Down': '向下缩小',
+  'Blur (Still)': '高斯模糊（静止）',
+
+  // 额外的入场动画
+  'Anim: No Animation': '无动画（立即出现）',
+  'Anim: Zoom': '缩放',
+  'Anim: Fade In': '淡入',
+  'Anim: Move Fade': '移动淡入',
+  'Anim: Move From Right': '从右移动',
+  'Anim: Move From Left': '从左移动',
+  'Anim: Bounce From Right': '从右弹跳',
+  'Anim: Zoom From Top Left': '从左上角缩放',
+  'Anim: Zoom From Top Right': '从右上角缩放',
+  'Anim: Center Zoom Fade': '中心缩放淡入',
+
+  // UART Download
+  'Chip Type': '芯片类型',
+  'Baud Rate': '波特率',
+  'Serial Port': '串口',
+  'Manual Input...': '手动输入串口...',
+  'Start Download': '开始下载',
+  'Enter serial port': '输入串口号',
+
+  // Misc
+  'Current File': '当前文件',
+  'No font files, please upload to assets directory': '暂无字体文件，请先上传到 assets 目录',
+  'Columns': '列数',
 };
 
 export default zhCN;
+  // 注意：上面已经有结束的 }; 需要先删除

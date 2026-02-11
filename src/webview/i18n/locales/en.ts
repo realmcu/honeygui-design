@@ -617,6 +617,71 @@ const en = {
   'Connect': 'Connect',
   'Connected to Host': 'Connected to Host',
   'Disconnect': 'Disconnect',
+
+  // Canvas Editor Tools
+  'Pen': 'Pen',
+  'Triangle': 'Triangle',
+  'Polygon': 'Polygon',
+  'Line': 'Line',
+  'Stroke Color': 'Stroke Color',
+  'Line Width': 'Line Width',
+  'Solid Color': 'Solid Color',
+  'Linear Gradient': 'Linear Gradient',
+  'Radial Gradient': 'Radial Gradient',
+  'Line Cap Style': 'Line Cap Style',
+  'Butt': 'Butt',
+  'Round': 'Round',
+  'Square': 'Square',
+  'Solid Line': 'Solid Line',
+  'Dashed Line': 'Dashed Line',
+  'Dotted Line': 'Dotted Line',
+  'Vertical Center': 'Vertical Center',
+  'Bottom Align': 'Bottom Align',
+
+  // Animation Types
+  'No Animation (Initial)': 'No Animation (Initial)',
+  'Slide Left': 'Slide Left',
+  'Slide Right': 'Slide Right',
+  'Slide Up': 'Slide Up',
+  'Slide Down': 'Slide Down',
+  'Cube Left': 'Cube Left',
+  'Cube Right': 'Cube Right',
+  'Cube Up': 'Cube Up',
+  'Cube Down': 'Cube Down',
+  'Rotate Left': 'Rotate Left',
+  'Rotate Right': 'Rotate Right',
+  'Rotate Up': 'Rotate Up',
+  'Rotate Down': 'Rotate Down',
+  'Reduce Left': 'Reduce Left',
+  'Reduce Right': 'Reduce Right',
+  'Reduce Up': 'Reduce Up',
+  'Reduce Down': 'Reduce Down',
+  'Blur (Still)': 'Blur (Still)',
+
+  // Additional enter animations
+  'Anim: No Animation': 'No Animation (Instant)',
+  'Anim: Zoom': 'Zoom',
+  'Anim: Fade In': 'Fade In',
+  'Anim: Move Fade': 'Move Fade',
+  'Anim: Move From Right': 'Move From Right',
+  'Anim: Move From Left': 'Move From Left',
+  'Anim: Bounce From Right': 'Bounce From Right',
+  'Anim: Zoom From Top Left': 'Zoom From Top Left',
+  'Anim: Zoom From Top Right': 'Zoom From Top Right',
+  'Anim: Center Zoom Fade': 'Center Zoom Fade',
+
+  // UART Download
+  'Chip Type': 'Chip Type',
+  'Baud Rate': 'Baud Rate',
+  'Serial Port': 'Serial Port',
+  'Manual Input...': 'Manual Input...',
+  'Start Download': 'Start Download',
+  'Enter serial port': 'Enter serial port',
+
+  // Misc
+  'Current File': 'Current File',
+  'No font files, please upload to assets directory': 'No font files, please upload to assets directory',
+  'Columns': 'Columns',
 };
 
 export default en;

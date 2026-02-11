@@ -648,14 +648,14 @@ export const CanvasEditorModal: React.FC<CanvasEditorModalProps> = ({
                   <button
                     className={`tool-btn ${currentTool === 'select' ? 'active' : ''}`}
                     onClick={() => setCurrentTool('select')}
-                    title="选择 (V)"
+                    title={`${t('Select')} (V)`}
                   >
                     ↖
                   </button>
                   <button
                     className={`tool-btn ${currentTool === 'path' ? 'active' : ''}`}
                     onClick={() => setCurrentTool('path')}
-                    title="画笔 (P)"
+                    title={`${t('Pen')} (P)`}
                   >
                     ✎
                   </button>
@@ -665,31 +665,31 @@ export const CanvasEditorModal: React.FC<CanvasEditorModalProps> = ({
 
                 {/* 形状工具 */}
                 <div className="toolbar-group">
-                  <button className="tool-btn" onClick={() => addShape('rect')} title="矩形 (R)">▢</button>
-                  <button className="tool-btn" onClick={() => addShape('circle')} title="圆形 (C)">○</button>
-                  <button className="tool-btn" onClick={() => addShape('triangle')} title="三角形 (T)">△</button>
-                  <button className="tool-btn" onClick={() => addShape('polygon')} title="多边形">⬟</button>
-                  <button className="tool-btn" onClick={() => addShape('line')} title="线条 (L)">╱</button>
-                  <button className="tool-btn" onClick={() => addShape('text')} title="文本 (T)">T</button>
+                  <button className="tool-btn" onClick={() => addShape('rect')} title={`${t('Rectangle')} (R)`}>▢</button>
+                  <button className="tool-btn" onClick={() => addShape('circle')} title={`${t('Circle')} (C)`}>○</button>
+                  <button className="tool-btn" onClick={() => addShape('triangle')} title={`${t('Triangle')} (T)`}>△</button>
+                  <button className="tool-btn" onClick={() => addShape('polygon')} title={t('Polygon')}>⬟</button>
+                  <button className="tool-btn" onClick={() => addShape('line')} title={`${t('Line')} (L)`}>╱</button>
+                  <button className="tool-btn" onClick={() => addShape('text')} title={`${t('Text')} (T)`}>T</button>
                 </div>
 
                 <div className="toolbar-separator" />
 
                 {/* 颜色工具 */}
                 <div className="toolbar-group">
-                  <label className="color-picker" title="描边颜色">
+                  <label className="color-picker" title={t('Stroke Color')}>
                     <span>边</span>
                     <input type="color" value={strokeColor} onChange={(e) => setStrokeColor(e.target.value)} />
                   </label>
-                  <label className="color-picker" title="填充颜色">
+                  <label className="color-picker" title={t('Fill Color')}>
                     <span>填</span>
                     <input type="color" value={fillColor} onChange={(e) => setFillColor(e.target.value)} />
                   </label>
-                  <label className="stroke-width" title="线宽">
+                  <label className="stroke-width" title={t('Line Width')}>
                     <span>宽</span>
                     <input type="number" min="1" max="20" value={strokeWidth} onChange={(e) => setStrokeWidth(parseInt(e.target.value) || 1)} />
                   </label>
-                  <label className="stroke-width" title="透明度">
+                  <label className="stroke-width" title={t('Opacity')}>
                     <span>透</span>
                     <input type="number" min="0" max="1" step="0.1" value={opacity} onChange={(e) => setOpacity(parseFloat(e.target.value) || 1)} />
                   </label>
@@ -699,15 +699,15 @@ export const CanvasEditorModal: React.FC<CanvasEditorModalProps> = ({
 
                 {/* 渐变工具 */}
                 <div className="toolbar-group">
-                  <select value={gradientType} onChange={(e) => setGradientType(e.target.value as GradientType)} title="渐变类型">
-                    <option value="none">纯色</option>
-                    <option value="linear">线性渐变</option>
-                    <option value="radial">径向渐变</option>
+                  <select value={gradientType} onChange={(e) => setGradientType(e.target.value as GradientType)} title={t('Gradient Type')}>
+                    <option value="none">{t('Solid Color')}</option>
+                    <option value="linear">{t('Linear Gradient')}</option>
+                    <option value="radial">{t('Radial Gradient')}</option>
                   </select>
                   {gradientType !== 'none' && (
                     <>
-                      <input type="color" value={gradientColor1} onChange={(e) => setGradientColor1(e.target.value)} title="渐变色1" />
-                      <input type="color" value={gradientColor2} onChange={(e) => setGradientColor2(e.target.value)} title="渐变色2" />
+                      <input type="color" value={gradientColor1} onChange={(e) => setGradientColor1(e.target.value)} title={`${t('Gradient Type')} 1`} />
+                      <input type="color" value={gradientColor2} onChange={(e) => setGradientColor2(e.target.value)} title={`${t('Gradient Type')} 2`} />
                     </>
                   )}
                 </div>
@@ -716,38 +716,38 @@ export const CanvasEditorModal: React.FC<CanvasEditorModalProps> = ({
 
                 {/* 线条样式 */}
                 <div className="toolbar-group">
-                  <select value={strokeLineCap} onChange={(e) => setStrokeLineCap(e.target.value as any)} title="线端样式">
-                    <option value="butt">平端</option>
-                    <option value="round">圆端</option>
-                    <option value="square">方端</option>
+                  <select value={strokeLineCap} onChange={(e) => setStrokeLineCap(e.target.value as any)} title={t('Line Cap Style')}>
+                    <option value="butt">{t('Butt')}</option>
+                    <option value="round">{t('Round')}</option>
+                    <option value="square">{t('Square')}</option>
                   </select>
-                  <button className="tool-btn" onClick={() => setStrokeDashArray([])} title="实线">━</button>
-                  <button className="tool-btn" onClick={() => setStrokeDashArray([5, 5])} title="虚线">┄</button>
-                  <button className="tool-btn" onClick={() => setStrokeDashArray([1, 3])} title="点线">┈</button>
+                  <button className="tool-btn" onClick={() => setStrokeDashArray([])} title={t('Solid Line')}>━</button>
+                  <button className="tool-btn" onClick={() => setStrokeDashArray([5, 5])} title={t('Dashed Line')}>┄</button>
+                  <button className="tool-btn" onClick={() => setStrokeDashArray([1, 3])} title={t('Dotted Line')}>┈</button>
                 </div>
 
                 <div className="toolbar-separator" />
 
                 {/* 编辑工具 */}
                 <div className="toolbar-group">
-                  <button className="tool-btn" onClick={undo} disabled={historyStep <= 0} title="撤销 (Ctrl+Z)">↶</button>
-                  <button className="tool-btn" onClick={redo} disabled={historyStep >= history.length - 1} title="重做 (Ctrl+Y)">↷</button>
-                  <button className="tool-btn" onClick={copySelected} title="复制 (Ctrl+C)">📋</button>
-                  <button className="tool-btn" onClick={pasteSelected} title="粘贴 (Ctrl+V)">📄</button>
-                  <button className="tool-btn" onClick={duplicateSelected} title="复制 (Ctrl+D)">⎘</button>
-                  <button className="tool-btn" onClick={deleteSelected} title="删除 (Del)">🗑</button>
+                  <button className="tool-btn" onClick={undo} disabled={historyStep <= 0} title={`${t('Undo')} (Ctrl+Z)`}>↶</button>
+                  <button className="tool-btn" onClick={redo} disabled={historyStep >= history.length - 1} title={`${t('Redo')} (Ctrl+Y)`}>↷</button>
+                  <button className="tool-btn" onClick={copySelected} title={`${t('Copy')} (Ctrl+C)`}>📋</button>
+                  <button className="tool-btn" onClick={pasteSelected} title={`${t('Paste')} (Ctrl+V)`}>📄</button>
+                  <button className="tool-btn" onClick={duplicateSelected} title={`${t('Duplicate')} (Ctrl+D)`}>⎘</button>
+                  <button className="tool-btn" onClick={deleteSelected} title={`${t('Delete')} (Del)`}>🗑</button>
                 </div>
 
                 <div className="toolbar-separator" />
 
                 {/* 对齐工具 */}
                 <div className="toolbar-group">
-                  <button className="tool-btn" onClick={() => alignObjects('left')} title="左对齐">⫷</button>
-                  <button className="tool-btn" onClick={() => alignObjects('center')} title="水平居中">⫼</button>
-                  <button className="tool-btn" onClick={() => alignObjects('right')} title="右对齐">⫸</button>
-                  <button className="tool-btn" onClick={() => alignObjects('top')} title="顶对齐">⫴</button>
-                  <button className="tool-btn" onClick={() => alignObjects('middle')} title="垂直居中">⫽</button>
-                  <button className="tool-btn" onClick={() => alignObjects('bottom')} title="底对齐">⫵</button>
+                  <button className="tool-btn" onClick={() => alignObjects('left')} title={t('Align Left')}>⫷</button>
+                  <button className="tool-btn" onClick={() => alignObjects('center')} title={t('Align Center')}>⫼</button>
+                  <button className="tool-btn" onClick={() => alignObjects('right')} title={t('Align Right')}>⫸</button>
+                  <button className="tool-btn" onClick={() => alignObjects('top')} title={t('Align Top')}>⫴</button>
+                  <button className="tool-btn" onClick={() => alignObjects('middle')} title={t('Vertical Center')}>⫽</button>
+                  <button className="tool-btn" onClick={() => alignObjects('bottom')} title={t('Bottom Align')}>⫵</button>
                 </div>
 
                 <div className="toolbar-separator" />

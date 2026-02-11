@@ -372,5 +372,15 @@
   "Cloning repository...": "正在克隆仓库...",
   "Cleaning up...": "正在清理...",
   "Updating configuration...": "正在更新配置...",
-  "Template project created successfully: {0}": "模板项目创建成功: {0}"
+  "Template project created successfully: {0}": "模板项目创建成功: {0}",
+
+  "Chip Type": "芯片类型",
+  "Baud Rate": "波特率",
+  "Serial Port": "串口",
+  "Manual Input...": "手动输入串口...",
+  "Start Download": "开始下载",
+  "Enter serial port": "输入串口号",
+  "Select Image": "选择图片",
+  "Renamed successfully": "重命名成功",
+  "Folder deleted": "文件夹已删除"
 }
