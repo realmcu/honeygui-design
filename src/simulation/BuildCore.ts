@@ -1527,13 +1527,13 @@ Return('objs')
      * 从 HML 内容中提取 Label 组件的字体配置
      */
     private extractLabelConfigsFromHml(hmlContent: string, configs: Array<any>): void {
-        // 匹配 hg_label 和 hg_time_label 标签
-        const labelTagRegex = /<hg_(label|time_label)[^>]*>/g;
+        // 匹配 hg_label、hg_time_label 和 hg_timer_label 标签
+        const labelTagRegex = /<hg_(label|time_label|timer_label)[^>]*>/g;
         let match;
         
         while ((match = labelTagRegex.exec(hmlContent)) !== null) {
             const tagContent = match[0];
-            const tagType = match[1]; // 'label' 或 'time_label'
+            const tagType = match[1]; // 'label'、'time_label' 或 'timer_label'
             
             // 提取 fontFile 属性
             const fontFileMatch = tagContent.match(/fontFile\s*=\s*["']([^"']+)["']/);
