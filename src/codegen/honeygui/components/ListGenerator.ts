@@ -314,6 +314,20 @@ export class ListGenerator implements ComponentCodeGenerator {
   }
 
   /**
+   * 检查组件是否设置了按键事件
+   */
+  private hasKeyEvents(component: Component): boolean {
+    if (!component.eventConfigs || component.eventConfigs.length === 0) {
+      return false;
+    }
+    
+    return component.eventConfigs.some(eventConfig => 
+      (eventConfig.type === 'onKeyShortPress' || eventConfig.type === 'onKeyLongPress') && 
+      eventConfig.keyName
+    );
+  }
+
+  /**
    * 生成子组件的创建代码
    * @param component 要生成的组件
    * @param context 生成器上下文（包含父组件引用信息）
@@ -414,10 +428,26 @@ export class ListGenerator implements ComponentCodeGenerator {
           }
         }
 
+        // 按键效果：为 rect、circle、image 生成事件绑定
+        if (['hg_rect', 'hg_circle', 'hg_image'].includes(component.type)) {
+          const buttonMode = component.data?.buttonMode;
+          if (buttonMode && buttonMode !== 'none') {
+            const generator = ComponentGeneratorFactory.getGenerator(component.type);
+            if ('generateEventBinding' in generator) {
+              code += (generator as any).generateEventBinding(component, indent);
+            }
+          }
+        }
+
         // 生成事件绑定代码
         const eventGenerator = EventGeneratorFactory.getGenerator(component.type);
         if (eventGenerator && component.eventConfigs && component.eventConfigs.length > 0) {
           code += eventGenerator.generateEventBindings(component, indent, context.componentMap);
+        }
+
+        // 如果组件设置了按键事件，添加焦点设置
+        if (this.hasKeyEvents(component)) {
+          code += `${indentStr}gui_obj_focus_set((gui_obj_t *)${component.id});\n`;
         }
 
         // 递归生成子组件（如果有）
