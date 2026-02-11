@@ -529,6 +529,12 @@ Return('objs')
         // 添加 alwaysConvert 配置中的资源
         this.addAlwaysConvertAssets(images, videos, models);
 
+        // 扫描 3D 模型中引用的纹理图片
+        const assetsDir = path.join(this.projectRoot, 'assets');
+        if (fs.existsSync(assetsDir)) {
+            this.scanModelTextures(assetsDir, models, images);
+        }
+
         return { images, videos, models };
     }
 
@@ -623,13 +629,13 @@ Return('objs')
         videos: Set<string>,
         models: Set<string>
     ): void {
-        // 匹配所有标签的 src 属性
-        const srcRegex = /src\s*=\s*["']([^"']+)["']/g;
-        let match;
+        // 定义图片、视频、模型的扩展名
+        const imageExts = ['.png', '.jpg', '.jpeg', '.bmp', '.gif', '.svg'];
+        const videoExts = ['.mp4', '.avi', '.mov', '.mkv', '.webm', '.flv', '.wmv', '.m4v', '.3gp', '.asf', '.rm', '.rmvb', '.vob', '.ts'];
+        const modelExts = ['.obj', '.gltf', '.glb'];
 
-        while ((match = srcRegex.exec(hmlContent)) !== null) {
-            let assetPath = match[1];
-            
+        // 辅助函数：处理资源路径并分类
+        const processAssetPath = (assetPath: string) => {
             // 移除 assets/ 前缀
             if (assetPath.startsWith('assets/')) {
                 assetPath = assetPath.substring(7);
@@ -638,30 +644,81 @@ Return('objs')
             // 根据扩展名分类
             const ext = path.extname(assetPath).toLowerCase();
             
-            // 图片格式
-            const imageExts = ['.png', '.jpg', '.jpeg', '.bmp', '.gif', '.svg'];
             if (imageExts.includes(ext)) {
                 images.add(assetPath);
-                continue;
-            }
-
-            // 视频格式
-            const videoExts = ['.mp4', '.avi', '.mov', '.mkv', '.webm', '.flv', '.wmv', '.m4v', '.3gp', '.asf', '.rm', '.rmvb', '.vob', '.ts'];
-            if (videoExts.includes(ext)) {
+            } else if (videoExts.includes(ext)) {
                 videos.add(assetPath);
-                continue;
-            }
-
-            // 3D 模型格式
-            const modelExts = ['.obj', '.gltf', '.glb'];
-            if (modelExts.includes(ext)) {
+            } else if (modelExts.includes(ext)) {
                 models.add(assetPath);
-                continue;
             }
+        };
+
+        // 匹配所有可能包含资源路径的属性
+        // src, modelPath, imageOn, imageOff, imageNormal, imagePressed, imageDisabled, backgroundImage 等
+        const assetAttributeRegex = /(src|modelPath|imageOn|imageOff|imageNormal|imagePressed|imageDisabled|backgroundImage)\s*=\s*["']([^"']+)["']/g;
+        let match;
+
+        while ((match = assetAttributeRegex.exec(hmlContent)) !== null) {
+            const assetPath = match[2];
+            processAssetPath(assetPath);
         }
 
         // 特殊处理：fontFile 属性（字体文件已经在 convertFontsWithLabelConfig 中处理）
         // 特殊处理：hg_glass 的 src（玻璃效果文件已经在 convertGlassWithComponentConfig 中处理）
+    }
+
+    /**
+     * 扫描 3D 模型文件中引用的纹理图片
+     * 将纹理图片添加到待转换的图片列表中
+     */
+    private scanModelTextures(
+        assetsDir: string,
+        models: Set<string>,
+        images: Set<string>
+    ): void {
+        for (const modelPath of models) {
+            const fullPath = path.join(assetsDir, modelPath);
+            if (!fs.existsSync(fullPath)) {
+                continue;
+            }
+
+            const ext = path.extname(modelPath).toLowerCase();
+            const modelDir = path.dirname(modelPath);
+
+            try {
+                if (ext === '.gltf') {
+                    // 解析 GLTF 文件中的纹理引用
+                    const gltfContent = JSON.parse(fs.readFileSync(fullPath, 'utf-8'));
+                    if (gltfContent.images) {
+                        for (const image of gltfContent.images) {
+                            if (image.uri && !image.uri.startsWith('data:')) {
+                                // GLTF 中的 URI 是相对于 GLTF 文件的路径
+                                const texturePath = modelDir ? `${modelDir}/${image.uri}` : image.uri;
+                                images.add(texturePath);
+                            }
+                        }
+                    }
+                } else if (ext === '.obj') {
+                    // 解析 OBJ 文件中的 MTL 引用
+                    const objContent = fs.readFileSync(fullPath, 'utf-8');
+                    const mtlMatch = /^mtllib\s+(.+)$/m.exec(objContent);
+                    if (mtlMatch) {
+                        const mtlPath = path.join(assetsDir, modelDir, mtlMatch[1].trim());
+                        if (fs.existsSync(mtlPath)) {
+                            // 解析 MTL 文件中的纹理引用
+                            const mtlContent = fs.readFileSync(mtlPath, 'utf-8');
+                            const textureMatches = mtlContent.matchAll(/^map_Kd\s+(.+)$/gm);
+                            for (const match of textureMatches) {
+                                const texturePath = modelDir ? `${modelDir}/${match[1].trim()}` : match[1].trim();
+                                images.add(texturePath);
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                this.logger.log(`扫描模型纹理失败: ${modelPath} - ${error}`, true);
+            }
+        }
     }
 
     /**
@@ -837,11 +894,20 @@ Return('objs')
                 continue;
             }
 
-            const outputPath = path.join(outputDir, relativePath.replace(/\.(obj|gltf|glb)$/i, '.bin'));
+            // 根据文件类型生成正确的输出文件名
+            const ext = path.extname(relativePath).toLowerCase();
+            const baseName = path.basename(relativePath, ext);
+            const dirName = path.dirname(relativePath);
             
-            // 添加转换任务
+            // GLTF 文件使用 gltf_desc_ 前缀，OBJ 文件使用 desc_ 前缀
+            const prefix = ext === '.gltf' ? 'gltf_desc_' : 'desc_';
+            const outputFileName = prefix + baseName + '.bin';
+            const outputPath = path.join(outputDir, dirName, outputFileName);
+            
+            // 直接传递 outputDir，让 Parser 在整个输出目录中查找纹理
+            // Parser 会使用递归查找来定位纹理 bin 文件
             convertTasks.push(
-                model3DConverter.convert(fullPath, outputPath)
+                model3DConverter.convert(fullPath, outputPath, outputDir)
             );
         }
 
