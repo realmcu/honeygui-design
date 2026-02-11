@@ -18,25 +18,19 @@ export class SimulationRunner {
     private sdkPath: string;
     private outputChannel: vscode.OutputChannel;
     private currentProcess: ChildProcess | null = null;
-    private simulatorTerminal: vscode.Terminal | null = null;
+    private currentTask: vscode.TaskExecution | null = null; // 当前运行的任务
     private isRunning: boolean = false;
     private listener?: RunnerListener;
     private buildManager: BuildManager | null = null;
+    private isManuallyStopped: boolean = false; // 标记是否手动停止
+    private taskEndListener: vscode.Disposable | null = null; // 任务结束监听器
+    private processMonitorInterval: NodeJS.Timeout | null = null; // 进程监听定时器
+    private hasExited: boolean = false; // 标记是否已经处理过退出事件
 
     constructor(projectRoot: string, sdkPath: string, outputChannel: vscode.OutputChannel) {
         this.projectRoot = projectRoot;
         this.sdkPath = sdkPath;
         this.outputChannel = outputChannel;
-        
-        // 监听终端关闭事件
-        vscode.window.onDidCloseTerminal((terminal) => {
-            if (terminal === this.simulatorTerminal) {
-                this.isRunning = false;
-                this.simulatorTerminal = null;
-                this.listener?.onExit?.(0);
-                this.log('仿真器终端已关闭');
-            }
-        });
     }
 
     /**
@@ -80,15 +74,22 @@ export class SimulationRunner {
      * 停止仿真
      */
     async stop(): Promise<void> {
-        // 关闭终端方式的仿真器
-        if (this.simulatorTerminal) {
-            this.log('正在关闭仿真器终端...');
-            this.simulatorTerminal.dispose();
-            this.simulatorTerminal = null;
-            this.log('仿真器终端已关闭');
+        this.isManuallyStopped = true;
+        
+        // 终止任务
+        if (this.currentTask) {
+            this.log('正在停止仿真器任务...');
+            this.currentTask.terminate();
+            this.currentTask = null;
         }
         
-        // 兼容旧的进程方式（保留以防需要）
+        // 清理任务监听器
+        if (this.taskEndListener) {
+            this.taskEndListener.dispose();
+            this.taskEndListener = null;
+        }
+        
+        // 兼容：如果有进程，也终止
         if (this.currentProcess && this.currentProcess.pid) {
             this.log('正在停止仿真器进程...');
             
@@ -137,9 +138,11 @@ export class SimulationRunner {
             }
             
             this.currentProcess = null;
-            this.log('仿真器进程已停止');
         }
+        
+        this.log('仿真器已停止');
         this.isRunning = false;
+        this.isManuallyStopped = false;
     }
 
     /**
@@ -212,7 +215,7 @@ export class SimulationRunner {
     }
 
     /**
-     * 运行仿真器（使用 Terminal，支持交互输入）
+     * 运行仿真器（使用 Task API，在终端中显示输出并监听退出）
      */
     private async run(): Promise<void> {
         if (!this.buildManager) {
@@ -225,35 +228,109 @@ export class SimulationRunner {
         this.log(`启动仿真器: ${exePath}`);
         this.log(`工作目录: ${buildDir}`);
 
-        // 关闭已有的仿真器终端
-        if (this.simulatorTerminal) {
-            this.simulatorTerminal.dispose();
-            this.simulatorTerminal = null;
+        // 停止已有的仿真器
+        if (this.currentTask || this.currentProcess) {
+            await this.stop();
         }
 
-        // 创建新终端运行仿真器
-        this.simulatorTerminal = vscode.window.createTerminal({
-            name: 'HoneyGUI Simulator',
-            cwd: buildDir,
-            env: {
-                SDL_STDIO_REDIRECT: '0',
-                TERM: 'xterm'
+        // 创建一个 Shell Task 来运行仿真器
+        const task = new vscode.Task(
+            { type: 'shell' },
+            vscode.TaskScope.Workspace,
+            'HoneyGUI Simulator',
+            'HoneyGUI',
+            new vscode.ShellExecution(exePath, {
+                cwd: buildDir,
+                env: {
+                    SDL_STDIO_REDIRECT: '0'
+                }
+            }),
+            [] // 不需要 problem matcher
+        );
+
+        // 配置任务显示
+        task.presentationOptions = {
+            reveal: vscode.TaskRevealKind.Always,
+            panel: vscode.TaskPanelKind.Dedicated,
+            clear: false,
+            showReuseMessage: false
+        };
+
+        // 监听任务结束事件
+        this.taskEndListener = vscode.tasks.onDidEndTask((e) => {
+            if (e.execution === this.currentTask) {
+                this.handleTaskEnd();
             }
         });
 
-        // 显示终端
-        this.simulatorTerminal.show();
+        // 执行任务
+        this.currentTask = await vscode.tasks.executeTask(task);
 
-        // 发送运行命令
-        if (process.platform === 'win32') {
-            this.simulatorTerminal.sendText(exePath);
-        } else {
-            // Linux: 直接运行
-            this.simulatorTerminal.sendText(exePath);
+        // 尝试获取进程 ID 并监听进程退出（更快响应）
+        setTimeout(async () => {
+            if (this.currentTask) {
+                try {
+                    // 获取任务的进程 ID
+                    const processId = (this.currentTask as any).processId;
+                    if (processId) {
+                        this.log(`仿真器进程 PID: ${processId}`);
+                        this.startProcessMonitor(processId);
+                    }
+                } catch (err) {
+                    // 如果无法获取进程 ID，依赖 onDidEndTask 事件
+                    this.log('无法获取进程 ID，使用任务结束事件监听');
+                }
+            }
+        }, 500);
+
+        this.log('仿真器已启动');
+        this.log('提示: 仿真器输出将显示在终端中');
+    }
+
+    /**
+     * 处理任务结束
+     */
+    private handleTaskEnd(): void {
+        if (this.hasExited) {
+            return; // 已经处理过退出事件
         }
+        this.hasExited = true;
 
-        this.log('仿真器已在终端中启动');
-        this.log('提示: 可在终端中输入 letter shell 命令进行交互');
+        const wasManuallyStopped = this.isManuallyStopped;
+        this.log(`仿真器任务已结束`);
+        this.currentTask = null;
+        this.isRunning = false;
+        
+        // 清理监听器
+        if (this.taskEndListener) {
+            this.taskEndListener.dispose();
+            this.taskEndListener = null;
+        }
+        
+        // 清理进程监听器
+        if (this.processMonitorInterval) {
+            clearInterval(this.processMonitorInterval);
+            this.processMonitorInterval = null;
+        }
+        
+        // 通知监听器仿真已退出
+        this.listener?.onExit?.(wasManuallyStopped ? null : 0);
+    }
+
+    /**
+     * 监听进程是否还在运行（更快响应进程退出）
+     */
+    private startProcessMonitor(pid: number): void {
+        this.processMonitorInterval = setInterval(() => {
+            try {
+                // 发送信号 0 来检查进程是否存在
+                process.kill(pid, 0);
+                // 进程还在运行
+            } catch (err) {
+                // 进程已退出，立即处理
+                this.handleTaskEnd();
+            }
+        }, 100); // 每 100ms 检查一次，快速响应
     }
 
     /**
@@ -485,9 +562,9 @@ export class SimulationRunner {
      */
     dispose(): void {
         this.stop();
-        if (this.simulatorTerminal) {
-            this.simulatorTerminal.dispose();
-            this.simulatorTerminal = null;
+        if (this.taskEndListener) {
+            this.taskEndListener.dispose();
+            this.taskEndListener = null;
         }
         this.buildManager?.dispose();
     }

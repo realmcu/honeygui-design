@@ -94,13 +94,13 @@ export class SimulationService {
             this.setupRunnerListeners();
 
             // 启动仿真
-            this.updateStatusBar(`$(sync~spin) ${vscode.l10n.t('Starting simulation...')}`);
             await this.runner.start();
 
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             vscode.window.showErrorMessage(vscode.l10n.t('Compilation failed: {0}', message));
-            this.updateStatusBar(`$(rocket) ${vscode.l10n.t('Compile & Simulate: Not Running')}`);
+            this.isRunning = false;
+            this.notifyStatusChange(false);
         }
     }
 
@@ -112,7 +112,7 @@ export class SimulationService {
             await this.runner.stop();
             this.runner.dispose();
             this.runner = null;
-            this.updateStatusBar(`$(rocket) ${vscode.l10n.t('Compile & Simulate: Not Running')}`);
+            this.isRunning = false;
             this.notifyStatusChange(false); // 通知状态变化
             vscode.window.showInformationMessage(vscode.l10n.t('Simulation stopped'));
         }
@@ -269,31 +269,37 @@ export class SimulationService {
 
         this.runner.setListener({
             onStart: () => {
-                this.updateStatusBar(`$(sync~spin) ${vscode.l10n.t('Starting simulation...')}`);
                 this.outputChannel.clear();
                 this.outputChannel.show(true);
-                this.notifyStatusChange(false); // 启动中，暂时显示为未运行
+                this.isRunning = false; // 启动中，暂时显示为未运行
+                this.notifyStatusChange(false);
             },
             
             onSuccess: () => {
-                this.updateStatusBar(`$(rocket) ${vscode.l10n.t('Compile & Simulate: Running')}`);
-                this.notifyStatusChange(true); // 运行中
+                this.isRunning = true; // 运行中
+                this.notifyStatusChange(true);
             },
             
             onError: (error) => {
-                this.updateStatusBar(`$(error) ${vscode.l10n.t('Compile & Simulate: Error')}`);
                 this.outputChannel.appendLine(`[Error] ${error.message}`);
-                this.notifyStatusChange(false); // 错误，显示为未运行
+                this.isRunning = false; // 错误，显示为未运行
+                this.notifyStatusChange(false);
             },
             
             onExit: (code) => {
-                this.updateStatusBar(`$(rocket) ${vscode.l10n.t('Compile & Simulate: Not Running')}`);
-                this.notifyStatusChange(false); // 已停止
                 // 清理 runner 引用
                 if (this.runner) {
                     this.runner.dispose();
                     this.runner = null;
                 }
+                
+                // 更新状态（必须在清理 runner 之后）
+                this.isRunning = false;
+                this.notifyStatusChange(false); // 已停止，刷新 UI
+                
+                // 显示停止提示
+                vscode.window.showInformationMessage(vscode.l10n.t('Simulation stopped'));
+                
                 if (code !== null && code !== 0) {
                     vscode.window.showWarningMessage(vscode.l10n.t('Simulation exited abnormally, exit code: {0}', code));
                 }
@@ -319,15 +325,6 @@ export class SimulationService {
 
         // 通知 QUICK 面板刷新
         vscode.commands.executeCommand('_honeygui.updateQuickPanel');
-    }
-
-    /**
-     * 更新状态栏（已移除）
-     */
-    private updateStatusBar(text: string): void {
-        // 状态栏已移除，功能已移至 QUICK 面板
-        const nowRunning = text.includes('Running');
-        this.isRunning = nowRunning;
     }
 
     /**
