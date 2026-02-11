@@ -597,6 +597,7 @@ const en = {
   'FastLZ Secondary Compression': 'FastLZ secondary compression',
   'Enable Dither': 'Enable Dither',
   'ditherHint': 'Reduces color banding using error diffusion (Recommended for RGB565)',
+  'Font files do not require conversion settings': 'Font files do not require conversion settings',
 
   // Collaboration
   'Collaboration': 'Collaboration',

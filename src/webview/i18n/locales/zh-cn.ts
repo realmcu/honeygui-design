@@ -597,6 +597,7 @@ const zhCN = {
   'FastLZ Secondary Compression': 'FastLZ 二次压缩',
   'Enable Dither': '启用抖动 (Dither)',
   'ditherHint': '使用误差扩散减少色彩损失带来的色带（推荐用于 RGB565）',
+  'Font files do not require conversion settings': '字体文件无需转换设置',
 
   // Collaboration
   'Collaboration': '多人协作',

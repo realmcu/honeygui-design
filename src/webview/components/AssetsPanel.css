@@ -398,6 +398,11 @@
   opacity: 0;
   transition: opacity 0.2s;
   flex-shrink: 0;
+  position: absolute;
+  right: 6px;
+  background: rgba(0, 0, 0, 0.9);
+  padding: 2px;
+  border-radius: 3px;
 }
 
 .asset-grid-item .asset-actions .action-btn {
@@ -405,7 +410,8 @@
   font-size: 10px;
 }
 
-.asset-grid-item:hover .asset-actions {
+.asset-grid-item:hover .asset-actions,
+.asset-grid-item.selected .asset-actions {
   opacity: 1;
 }
 

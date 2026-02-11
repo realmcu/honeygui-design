@@ -21,6 +21,9 @@ import './ConversionConfigPanel.css';
 // 视频文件扩展名
 const VIDEO_EXTS = ['mp4', 'avi', 'mov', 'mkv', 'webm'];
 
+// 字体文件扩展名
+const FONT_EXTS = ['ttf', 'otf', 'woff', 'woff2'];
+
 // 文件夹可用的格式选项
 const FOLDER_FORMAT_OPTIONS: { value: TargetFormat; label: string }[] = [
   { value: 'RGB565', label: 'RGB565' },
@@ -145,6 +148,13 @@ const ConversionConfigPanel: React.FC<ConversionConfigPanelProps> = () => {
     if (!selectedAsset || isFolder) return false;
     const ext = selectedAsset.name.split('.').pop()?.toLowerCase() || '';
     return VIDEO_EXTS.includes(ext);
+  }, [selectedAsset, isFolder]);
+
+  // 判断是否是字体文件
+  const isFont = useMemo(() => {
+    if (!selectedAsset || isFolder) return false;
+    const ext = selectedAsset.name.split('.').pop()?.toLowerCase() || '';
+    return FONT_EXTS.includes(ext);
   }, [selectedAsset, isFolder]);
 
   // 获取当前资源的配置
@@ -730,7 +740,7 @@ const ConversionConfigPanel: React.FC<ConversionConfigPanelProps> = () => {
         {/* 资源信息 */}
         <div className="asset-info-section">
           <div className="asset-name">
-            <span className="asset-icon">{isFolder ? '📁' : isVideo ? '🎬' : '🖼️'}</span>
+            <span className="asset-icon">{isFolder ? '📁' : isVideo ? '🎬' : isFont ? '🔤' : '🖼️'}</span>
             <span>{selectedAsset.name}</span>
           </div>
           {selectedAsset.relativePath && (
@@ -748,6 +758,11 @@ const ConversionConfigPanel: React.FC<ConversionConfigPanelProps> = () => {
         ) : isVideo ? (
           /* 视频文件：只显示视频设置 */
           renderVideoSettings()
+        ) : isFont ? (
+          /* 字体文件：不显示转换设置 */
+          <div className="no-conversion-needed">
+            <p>{t('Font files do not require conversion settings')}</p>
+          </div>
         ) : (
           /* 图片文件：只显示图片设置 */
           renderImageSettings()
