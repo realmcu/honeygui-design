@@ -131,7 +131,7 @@ const Toolbar: React.FC<{
   };
 
   return (
-    <div className="toolbar">
+    <div className="toolbar" onContextMenu={(e) => e.preventDefault()}>
       <div className="toolbar-section">
         <button
           className="toolbar-button"

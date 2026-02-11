@@ -1270,14 +1270,10 @@ const App: React.FC = () => {
         console.error('[拖放] 鼠标位置下没有容器组件');
         const api = useDesignerStore.getState().vscodeAPI;
         if (api) {
-          // 针对不同组件类型提供特定的错误提示
-          let errorMessage = t('Please drop component into container (View/Window)');
-          if (isNestedContainer) {
-            errorMessage = `${componentType} must be placed inside a container (hg_view or hg_window)`;
-          }
+          // 所有组件类型统一使用国际化错误提示
           api.postMessage({
             command: 'error',
-            text: errorMessage
+            text: t('Please drop component into container (View/Window)')
           });
         }
         return;
@@ -1438,7 +1434,7 @@ const App: React.FC = () => {
       />
 
       {/* Main Content */}
-      <div className="main-content">
+      <div className="main-content" onContextMenu={(e) => e.preventDefault()}>
         {/* Left Panel - Tabbed */}
         <div className="left-panel" style={{ width: `${leftPanel.width}px`, display: leftPanel.isCollapsed ? 'none' : 'flex' }}>
           {/* Tab Headers */}
