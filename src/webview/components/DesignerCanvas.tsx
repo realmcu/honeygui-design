@@ -12,7 +12,7 @@ import { executeMenuAction, MenuActionHelpers } from '../services/contextMenuAct
 import { ViewConnectionLayer } from './ViewConnectionLayer';
 import { AlignmentGuides, AlignmentLine } from './AlignmentGuides';
 import { ResizeHandles, ResizeDirection } from './ResizeHandles';
-import { calculateAlignment } from '../utils/alignmentHelper';
+import { calculateAlignment } from '../utils/dragAlignmentGuides';
 import { getAbsolutePosition, findComponentAtPosition, isContainerType } from '../utils/componentUtils';
 import { t } from '../i18n';
 import './DesignerCanvas.css';

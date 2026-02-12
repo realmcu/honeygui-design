@@ -16,8 +16,9 @@ export interface ValidationResult {
 
 /**
  * 校验 C 语言变量名合法性
+ * @internal 内部使用，不对外导出
  */
-export function isValidCIdentifier(id: string): ValidationResult {
+function isValidCIdentifier(id: string): ValidationResult {
   if (!id || !id.trim()) {
     return { valid: false, error: '名称不能为空' };
   }
@@ -32,8 +33,9 @@ export function isValidCIdentifier(id: string): ValidationResult {
 
 /**
  * 校验 ID 唯一性
+ * @internal 内部使用，不对外导出
  */
-export function isUniqueId(id: string, existingIds: string[], currentId?: string): ValidationResult {
+function isUniqueId(id: string, existingIds: string[], currentId?: string): ValidationResult {
   const othersIds = currentId ? existingIds.filter(i => i !== currentId) : existingIds;
   if (othersIds.includes(id)) {
     return { valid: false, error: `"${id}" 已被其他组件使用` };
