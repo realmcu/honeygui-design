@@ -68,8 +68,9 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
       return false; // 前面已经处理了 hg_list_item 的情况
     }
 
-    // 只有容器控件可以作为父组件
-    const containerTypes = ['hg_view', 'hg_window', 'hg_list_item'];
+    // 只有顶级容器控件（hg_view, hg_window）和 hg_list_item 可以作为父组件
+    // hg_canvas 和 hg_list 虽然可以包含子组件，但它们本身必须在容器内，不能作为顶级容器
+    const containerTypes = ['hg_view', 'hg_window', 'hg_list_item', 'hg_canvas', 'hg_list'];
     if (!containerTypes.includes(targetComp.type)) {
       return false;
     }
@@ -256,6 +257,12 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
         return;
       }
       if (draggedComp.type === 'hg_list_item' && component.type !== 'hg_list_item') {
+        return;
+      }
+      
+      // 验证：只有 hg_view 可以放在顶层（parent 为 null）
+      // hg_window, hg_list, hg_canvas 等都必须在容器内
+      if (!targetParent && draggedComp.type !== 'hg_view') {
         return;
       }
       
