@@ -47,6 +47,16 @@ export class SimulationRunner {
         try {
             this.listener?.onStart?.();
 
+            const targetEngine = this.resolveTargetEngine();
+            this.log(`目标引擎: ${targetEngine}`);
+
+            if (targetEngine === 'lvgl') {
+                await this.startLvglSimulation();
+                this.isRunning = true;
+                this.listener?.onSuccess?.();
+                return;
+            }
+
             // 1. 环境检查
             await this.checkEnvironment();
 
@@ -257,6 +267,7 @@ export class SimulationRunner {
         };
 
         // 监听任务结束事件
+        this.hasExited = false;
         this.taskEndListener = vscode.tasks.onDidEndTask((e) => {
             if (e.execution === this.currentTask) {
                 this.handleTaskEnd();
@@ -278,6 +289,174 @@ export class SimulationRunner {
                     }
                 } catch (err) {
                     // 如果无法获取进程 ID，依赖 onDidEndTask 事件
+                    this.log('无法获取进程 ID，使用任务结束事件监听');
+                }
+            }
+        }, 500);
+
+        this.log('仿真器已启动');
+        this.log('提示: 仿真器输出将显示在终端中');
+    }
+
+    /**
+     * 启动 LVGL 仿真（基于 honeygui-design/lvgl-pc）
+     */
+    private async startLvglSimulation(): Promise<void> {
+        const lvglPcRoot = this.getLvglPcRoot();
+        this.log(`使用 LVGL PC 工程: ${lvglPcRoot}`);
+
+        if (!fs.existsSync(lvglPcRoot)) {
+            throw new Error(`LVGL PC 工程不存在: ${lvglPcRoot}`);
+        }
+
+        const cmakeLists = path.join(lvglPcRoot, 'CMakeLists.txt');
+        if (!fs.existsSync(cmakeLists)) {
+            throw new Error(`LVGL PC 工程不完整，缺少 CMakeLists.txt: ${cmakeLists}`);
+        }
+
+        const lvglHeader = path.join(lvglPcRoot, 'lvgl-lib', 'include', 'lvgl', 'lvgl.h');
+        if (!fs.existsSync(lvglHeader)) {
+            this.log('未检测到预编译 LVGL 库，开始构建 lvgl-lib...');
+            if (process.platform === 'win32') {
+                await this.runCommand('cmd', ['/c', 'scripts\\build-lvgl-lib.cmd'], lvglPcRoot, '构建 lvgl-lib 失败');
+            } else {
+                throw new Error('当前仅支持 Windows 下通过 scripts/build-lvgl-lib.cmd 构建 LVGL 预编译库');
+            }
+        }
+
+        this.log('配置 LVGL PC CMake 工程...');
+        if (process.platform === 'win32') {
+            await this.runCommand('cmake', ['-G', 'MinGW Makefiles', '-S', '.', '-B', 'build'], lvglPcRoot, 'CMake 配置失败');
+        } else {
+            await this.runCommand('cmake', ['-S', '.', '-B', 'build'], lvglPcRoot, 'CMake 配置失败');
+        }
+
+        this.log('编译 LVGL PC 工程...');
+        await this.runCommand('cmake', ['--build', 'build', '-j4'], lvglPcRoot, 'LVGL PC 编译失败');
+
+        const exeName = process.platform === 'win32' ? 'lvgl_pc.exe' : 'lvgl_pc';
+        const exePath = path.join(lvglPcRoot, 'build', exeName);
+        if (!fs.existsSync(exePath)) {
+            throw new Error(`未找到 LVGL 可执行文件: ${exePath}`);
+        }
+
+        await this.runTaskExecutable(exePath, path.join(lvglPcRoot, 'build'), 'LVGL PC Simulator', 'LVGL');
+    }
+
+    /**
+     * 获取当前项目目标引擎
+     */
+    private resolveTargetEngine(): 'honeygui' | 'lvgl' {
+        const config = ProjectUtils.loadProjectConfig(this.projectRoot);
+        return config.targetEngine === 'lvgl' ? 'lvgl' : 'honeygui';
+    }
+
+    /**
+     * 解析 LVGL PC 工程目录（位于扩展根目录下的 lvgl-pc）
+     */
+    private getLvglPcRoot(): string {
+        return path.join(__dirname, '..', '..', '..', 'lvgl-pc');
+    }
+
+    /**
+     * 运行命令并将输出写入日志
+     */
+    private async runCommand(cmd: string, args: string[], cwd: string, errorPrefix: string): Promise<void> {
+        await new Promise<void>((resolve, reject) => {
+            const child = spawn(cmd, args, {
+                cwd,
+                shell: false,
+                windowsHide: true
+            });
+
+            child.stdout?.on('data', (data) => {
+                const text = data.toString().trim();
+                if (text) {
+                    text.split('\n').forEach((line: string) => {
+                        const trimmed = line.trim();
+                        if (trimmed) {
+                            this.log(trimmed);
+                        }
+                    });
+                }
+            });
+
+            child.stderr?.on('data', (data) => {
+                const text = data.toString().trim();
+                if (text) {
+                    text.split('\n').forEach((line: string) => {
+                        const trimmed = line.trim();
+                        if (trimmed) {
+                            this.log(trimmed);
+                        }
+                    });
+                }
+            });
+
+            child.on('error', (err) => {
+                reject(new Error(`${errorPrefix}: ${err.message}`));
+            });
+
+            child.on('exit', (code) => {
+                if (code === 0) {
+                    resolve();
+                } else {
+                    reject(new Error(`${errorPrefix}，退出码: ${code}`));
+                }
+            });
+        });
+    }
+
+    /**
+     * 使用 Task API 启动可执行程序并监听退出
+     */
+    private async runTaskExecutable(exePath: string, cwd: string, taskName: string, taskSource: string): Promise<void> {
+        this.log(`启动仿真器: ${exePath}`);
+        this.log(`工作目录: ${cwd}`);
+
+        if (this.currentTask || this.currentProcess) {
+            await this.stop();
+        }
+
+        const task = new vscode.Task(
+            { type: 'shell' },
+            vscode.TaskScope.Workspace,
+            taskName,
+            taskSource,
+            new vscode.ShellExecution(exePath, {
+                cwd,
+                env: {
+                    SDL_STDIO_REDIRECT: '0'
+                }
+            }),
+            []
+        );
+
+        task.presentationOptions = {
+            reveal: vscode.TaskRevealKind.Always,
+            panel: vscode.TaskPanelKind.Dedicated,
+            clear: false,
+            showReuseMessage: false
+        };
+
+        this.hasExited = false;
+        this.taskEndListener = vscode.tasks.onDidEndTask((e) => {
+            if (e.execution === this.currentTask) {
+                this.handleTaskEnd();
+            }
+        });
+
+        this.currentTask = await vscode.tasks.executeTask(task);
+
+        setTimeout(async () => {
+            if (this.currentTask) {
+                try {
+                    const processId = (this.currentTask as any).processId;
+                    if (processId) {
+                        this.log(`仿真器进程 PID: ${processId}`);
+                        this.startProcessMonitor(processId);
+                    }
+                } catch {
                     this.log('无法获取进程 ID，使用任务结束事件监听');
                 }
             }

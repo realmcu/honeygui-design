@@ -1,0 +1,26 @@
+# CMake build artifacts
+/build/
+/CMakeFiles/
+/CMakeCache.txt
+/cmake_install.cmake
+/compile_commands.json
+/Makefile
+
+# Generated binaries and libs
+*.exe
+*.dll
+*.a
+*.lib
+*.obj
+*.pdb
+
+# Keep prebuilt LVGL artifacts if you choose to vendor them
+!lvgl-lib/
+!lvgl-lib/**
+_lvgl_build/
+# Common IDE/temp files
+.vscode/
+.idea/
+*.user
+*.tmp
+*.log
