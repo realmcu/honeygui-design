@@ -14,6 +14,7 @@ export type MenuActionHandler = (
 export interface MenuActionHelpers {
   updateComponent: (id: string, updates: Partial<Component>) => void;
   removeComponent: (id: string) => void;
+  removeComponents: (ids: string[]) => void;
   selectComponent: (id: string | null) => void;
   moveComponentLayer: (id: string, direction: 'up' | 'down' | 'top' | 'bottom') => void;
   copyComponent: (id: string) => void;
@@ -24,6 +25,7 @@ export interface MenuActionHelpers {
   cutSelectedComponents: () => void;
   alignSelectedComponents: (type: 'left' | 'right' | 'top' | 'bottom' | 'centerH' | 'centerV') => void;
   postMessage: (message: any) => void;
+  selectedComponents: string[];
 }
 
 /**
@@ -112,6 +114,14 @@ const actionHandlers: Record<string, MenuActionHandler> = {
 
   alignCenterV: (_, { alignSelectedComponents }) => {
     alignSelectedComponents('centerV');
+  },
+
+  // 删除选中的多个组件
+  deleteSelected: (_, { removeComponents, selectComponent, selectedComponents }) => {
+    if (selectedComponents.length > 0) {
+      removeComponents(selectedComponents);
+      selectComponent(null);
+    }
   },
 };
 

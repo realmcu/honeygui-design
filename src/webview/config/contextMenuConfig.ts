@@ -1,4 +1,5 @@
 import { Component } from '../types';
+import { t } from '../i18n';
 
 /**
  * 菜单项定义
@@ -22,6 +23,7 @@ const commonMenuItems: MenuItem[] = [
   { id: 'sendBackward', label: '下移一层', dividerAfter: true },
   { id: 'lock', label: (c) => c.locked ? '解锁' : '锁定' },
   { id: 'delete', label: '删除', danger: true },
+  { id: 'deleteSelected', label: '删除选中的组件', danger: true },
 ];
 
 /**
@@ -38,10 +40,22 @@ const menuItemsByType: Record<string, MenuItem[]> = {
 export function getMenuItems(
   componentType: string, 
   _hasClipboard: boolean = false,
-  _multiSelectCount: number = 1
+  multiSelectCount: number = 1
 ): MenuItem[] {
   const items = menuItemsByType[componentType] || commonMenuItems;
-  return items;
+  
+  // 如果是多选，将"删除"改为"deleteSelected"以便触发批量删除逻辑
+  if (multiSelectCount > 1) {
+    return items.map(item => {
+      if (item.id === 'delete') {
+        return { ...item, id: 'deleteSelected' };
+      }
+      return item;
+    }).filter(item => item.id !== 'deleteSelected' || multiSelectCount > 1);
+  }
+  
+  // 单选时，隐藏"deleteSelected"菜单项
+  return items.filter(item => item.id !== 'deleteSelected');
 }
 
 /**

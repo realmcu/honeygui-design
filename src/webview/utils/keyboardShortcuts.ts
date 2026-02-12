@@ -80,8 +80,16 @@ export const useKeyboardShortcuts = () => {
 
         // Delete (Delete key only, Backspace is reserved for text input)
         case 'Delete':
-          if (selectedComponent) {
-            e.preventDefault();
+          e.preventDefault();
+          
+          // 多选删除
+          if (selectedComponents.length > 1) {
+            const { removeComponents } = useDesignerStore.getState();
+            console.log('[键盘快捷键] 批量删除组件:', selectedComponents);
+            removeComponents(selectedComponents);
+          }
+          // 单选删除
+          else if (selectedComponent) {
             const component = components.find(c => c.id === selectedComponent);
             
             // 禁止删除列表项

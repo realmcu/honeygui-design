@@ -104,6 +104,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
   const menuActionHelpers: MenuActionHelpers = {
     updateComponent,
     removeComponent,
+    removeComponents,
     selectComponent: onComponentSelect,
     moveComponentLayer: useDesignerStore.getState().moveComponentLayer,
     copyComponent: useDesignerStore.getState().copyComponent,
@@ -114,6 +115,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
     cutSelectedComponents: useDesignerStore.getState().cutSelectedComponents,
     alignSelectedComponents: useDesignerStore.getState().alignSelectedComponents,
     postMessage: (msg) => window.vscodeAPI?.postMessage(msg),
+    selectedComponents,
   };
   
   // 处理菜单动作
