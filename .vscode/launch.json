@@ -6,6 +6,15 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
+			"name": "Run Extension (Fast - No Webview Build)",
+			"type": "extensionHost",
+			"request": "launch",
+			"runtimeExecutable": "${execPath}",
+			"args": ["--extensionDevelopmentPath=${workspaceRoot}"],
+			"outFiles": ["${workspaceFolder}/out/**/*.js"],
+			"preLaunchTask": "compile-only"
+		},
+		{
 			"name": "Run Extension (Full Compile)",
 			"type": "extensionHost",
 			"request": "launch",

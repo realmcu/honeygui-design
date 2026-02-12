@@ -293,7 +293,10 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
                     type="number"
                     step="0.1"
                     value={transform.scaleX ?? 1.0}
-                    onChange={(e) => handleTransformChange('scaleX', parseFloat(e.target.value) || 1.0)}
+                    onChange={(e) => {
+                      const val = e.target.value === '' ? 1.0 : parseFloat(e.target.value);
+                      handleTransformChange('scaleX', isNaN(val) ? 1.0 : val);
+                    }}
                     style={{
                       width: '100%',
                       padding: '4px 6px',
@@ -310,7 +313,10 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
                     type="number"
                     step="0.1"
                     value={transform.scaleY ?? 1.0}
-                    onChange={(e) => handleTransformChange('scaleY', parseFloat(e.target.value) || 1.0)}
+                    onChange={(e) => {
+                      const val = e.target.value === '' ? 1.0 : parseFloat(e.target.value);
+                      handleTransformChange('scaleY', isNaN(val) ? 1.0 : val);
+                    }}
                     style={{
                       width: '100%',
                       padding: '4px 6px',

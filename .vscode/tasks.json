@@ -17,6 +17,27 @@
 			}
 		},
 		{
+			"label": "compile-only",
+			"type": "shell",
+			"command": "npm run compile",
+			"windows": {
+				"options": {
+					"shell": {
+						"executable": "cmd.exe",
+						"args": [
+							"/d",
+							"/c"
+						]
+					}
+				}
+			},
+			"problemMatcher": "$tsc",
+			"presentation": {
+				"reveal": "silent",
+				"panel": "shared"
+			}
+		},
+		{
 			"label": "compile-all",
 			"type": "shell",
 			"command": "npm run compile && npm run build:webview",
