@@ -1,101 +1,59 @@
 #include <stdint.h>
+#include <stdio.h>
 
 #include "lvgl.h"
 
 #include "src/drivers/windows/lv_windows_display.h"
 #include "src/drivers/windows/lv_windows_input.h"
+#include "generated/lvgl_generated_ui.h"
 
-typedef struct {
-    lv_obj_t * value_label;
-    lv_obj_t * bar;
-    lv_obj_t * arc;
-} slider_ui_ctx_t;
+/* Default LCD dimensions if not provided via CMake */
+#ifndef LCD_WIDTH
+#define LCD_WIDTH 480
+#endif
+#ifndef LCD_HEIGHT
+#define LCD_HEIGHT 480
+#endif
 
-static slider_ui_ctx_t g_slider_ui_ctx;
-
-static void slider_changed_cb(lv_event_t * e)
+static void lvgl_log_cb(lv_log_level_t level, const char * buf)
 {
-    lv_obj_t * slider = (lv_obj_t *)lv_event_get_target(e);
-    slider_ui_ctx_t * ctx = (slider_ui_ctx_t *)lv_event_get_user_data(e);
-    if(!slider || !ctx) return;
+    const char * level_str = "LOG";
+    switch(level) {
+        case LV_LOG_LEVEL_TRACE: level_str = "TRACE"; break;
+        case LV_LOG_LEVEL_INFO:  level_str = "INFO"; break;
+        case LV_LOG_LEVEL_WARN:  level_str = "WARN"; break;
+        case LV_LOG_LEVEL_ERROR: level_str = "ERROR"; break;
+        case LV_LOG_LEVEL_USER:  level_str = "USER"; break;
+        default: break;
+    }
 
-    int32_t v = lv_slider_get_value(slider);
-    if(ctx->value_label) lv_label_set_text_fmt(ctx->value_label, "Slider: %d", (int)v);
-    if(ctx->bar) lv_bar_set_value(ctx->bar, v, LV_ANIM_OFF);
-    if(ctx->arc) lv_arc_set_value(ctx->arc, v);
+    printf("[LVGL][%s] %s\n", level_str, buf);
+    fflush(stdout);
 }
 
 static void create_ui(void)
 {
     lv_obj_t * scr = lv_screen_active();
-
-    lv_obj_t * cont = lv_obj_create(scr);
-    lv_obj_set_size(cont, lv_pct(100), lv_pct(100));
-    lv_obj_set_flex_flow(cont, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(cont, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_all(cont, 24, 0);
-    lv_obj_set_style_pad_row(cont, 12, 0);
-    /* If widgets exceed the window height, allow scrolling instead of clipping. */
-    lv_obj_set_scroll_dir(cont, LV_DIR_VER);
-    lv_obj_set_scrollbar_mode(cont, LV_SCROLLBAR_MODE_AUTO);
-
-    lv_obj_t * title = lv_label_create(cont);
-    lv_label_set_text(title, "Hello LVGL (MinGW + Windows backend)");
-
-    lv_obj_t * btn = lv_button_create(cont);
-    lv_obj_set_width(btn, 160);
-    lv_obj_t * btn_label = lv_label_create(btn);
-    lv_label_set_text(btn_label, "Button");
-    lv_obj_center(btn_label);
-
-    lv_obj_t * slider_value = lv_label_create(cont);
-    lv_label_set_text(slider_value, "Slider: 30");
-
-    lv_obj_t * slider = lv_slider_create(cont);
-    lv_obj_set_width(slider, 360);
-    lv_slider_set_range(slider, 0, 100);
-    lv_slider_set_value(slider, 30, LV_ANIM_OFF);
-    g_slider_ui_ctx.value_label = slider_value;
-    g_slider_ui_ctx.bar = NULL;
-    g_slider_ui_ctx.arc = NULL;
-    lv_obj_add_event_cb(slider, slider_changed_cb, LV_EVENT_VALUE_CHANGED, &g_slider_ui_ctx);
-
-    lv_obj_t * bar = lv_bar_create(cont);
-    lv_obj_set_width(bar, 360);
-    lv_bar_set_range(bar, 0, 100);
-    lv_bar_set_value(bar, 30, LV_ANIM_OFF);
-    g_slider_ui_ctx.bar = bar;
-
-    lv_obj_t * arc = lv_arc_create(cont);
-    lv_obj_set_size(arc, 120, 120);
-    lv_arc_set_range(arc, 0, 100);
-    lv_arc_set_value(arc, 30);
-    g_slider_ui_ctx.arc = arc;
-
-    lv_obj_t * sw = lv_switch_create(cont);
-    lv_obj_add_state(sw, LV_STATE_CHECKED);
-
-    lv_obj_t * cb = lv_checkbox_create(cont);
-    lv_checkbox_set_text(cb, "Checkbox");
-
-    lv_obj_t * dd = lv_dropdown_create(cont);
-    lv_obj_set_width(dd, 220);
-    lv_dropdown_set_options(dd, "Option A\nOption B\nOption C");
-
-    lv_obj_t * ta = lv_textarea_create(cont);
-    lv_obj_set_width(ta, 360);
-    lv_textarea_set_one_line(ta, true);
-    lv_textarea_set_placeholder_text(ta, "Type here...");
+    honeygui_lvgl_ui_create(scr);
 }
 
 int main(void)
 {
+    printf("[APP] boot\n");
+    fflush(stdout);
+
     lv_init();
+    lv_log_register_print_cb(lvgl_log_cb);
+
+    printf("[APP] LV_USE_LOG=%d LV_LOG_LEVEL=%d\n", LV_USE_LOG, LV_LOG_LEVEL);
+    fflush(stdout);
+
+    LV_LOG_WARN("LVGL logging initialized");
 
     lv_display_t * disp = lv_windows_create_display(
         L"LVGL PC (MinGW)",
-        800,
-        480,
+        LCD_WIDTH,
+        LCD_HEIGHT,
         100,  /* zoom level: 100% */
         true, /* allow DPI override */
         true  /* simulator mode (not resizable) */

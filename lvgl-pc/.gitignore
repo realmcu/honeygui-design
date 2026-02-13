@@ -13,7 +13,7 @@
 *.lib
 *.obj
 *.pdb
-
+src/generated/
 # Keep prebuilt LVGL artifacts if you choose to vendor them
 !lvgl-lib/
 !lvgl-lib/**

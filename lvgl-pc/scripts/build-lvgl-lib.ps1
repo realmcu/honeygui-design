@@ -10,8 +10,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $LvglPcRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
-$RepoRoot = Resolve-Path (Join-Path $LvglPcRoot "..")
-$LvglSrc = Join-Path $RepoRoot "lvgl"
+$LvglSrc = Join-Path $LvglPcRoot "..\..\lvgl"
 
 if(-not (Test-Path $LvglSrc)) {
     throw "LVGL source folder not found: $LvglSrc"
@@ -51,7 +50,7 @@ Write-Host "== Build + Install LVGL ($Config) ==" -ForegroundColor Cyan
 $buildArgs = @(
     "--build", $BuildDir,
     "--target", "install",
-    "--parallel", $Parallel
+    "--parallel", 64
 )
 
 # Multi-config generators (e.g. Visual Studio) need --config.

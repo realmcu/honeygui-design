@@ -51,6 +51,7 @@ export class SimulationRunner {
             this.log(`目标引擎: ${targetEngine}`);
 
             if (targetEngine === 'lvgl') {
+                await this.generateCode();
                 await this.startLvglSimulation();
                 this.isRunning = true;
                 this.listener?.onSuccess?.();
@@ -314,25 +315,33 @@ export class SimulationRunner {
             throw new Error(`LVGL PC 工程不完整，缺少 CMakeLists.txt: ${cmakeLists}`);
         }
 
+        this.syncLvglGeneratedCode(lvglPcRoot);
+
         const lvglHeader = path.join(lvglPcRoot, 'lvgl-lib', 'include', 'lvgl', 'lvgl.h');
         if (!fs.existsSync(lvglHeader)) {
-            this.log('未检测到预编译 LVGL 库，开始构建 lvgl-lib...');
-            if (process.platform === 'win32') {
-                await this.runCommand('cmd', ['/c', 'scripts\\build-lvgl-lib.cmd'], lvglPcRoot, '构建 lvgl-lib 失败');
-            } else {
-                throw new Error('当前仅支持 Windows 下通过 scripts/build-lvgl-lib.cmd 构建 LVGL 预编译库');
-            }
+            throw new Error('未检测到预编译 LVGL 库，请先在 lvgl-pc 目录执行 scripts\\build-lvgl-lib.cmd');
         }
+
+        if (this.shouldRebuildLvglLib(lvglPcRoot)) {
+            throw new Error('检测到 lv_conf.h 与预编译库不一致，请先在 lvgl-pc 目录执行 scripts\\build-lvgl-lib.cmd 重新构建');
+        }
+
+        // 获取项目分辨率
+        const config = ProjectUtils.loadProjectConfig(this.projectRoot);
+        const { width, height } = ProjectUtils.parseResolution(config.resolution);
+        this.log(`使用分辨率: ${width}x${height}`);
 
         this.log('配置 LVGL PC CMake 工程...');
         if (process.platform === 'win32') {
-            await this.runCommand('cmake', ['-G', 'MinGW Makefiles', '-S', '.', '-B', 'build'], lvglPcRoot, 'CMake 配置失败');
+            await this.runCommand('cmake', ['-G', 'MinGW Makefiles', `-DLCD_WIDTH=${width}`, `-DLCD_HEIGHT=${height}`, '-S', '.', '-B', 'build'], lvglPcRoot, 'CMake 配置失败');
         } else {
-            await this.runCommand('cmake', ['-S', '.', '-B', 'build'], lvglPcRoot, 'CMake 配置失败');
+            await this.runCommand('cmake', [`-DLCD_WIDTH=${width}`, `-DLCD_HEIGHT=${height}`, '-S', '.', '-B', 'build'], lvglPcRoot, 'CMake 配置失败');
         }
 
         this.log('编译 LVGL PC 工程...');
         await this.runCommand('cmake', ['--build', 'build', '-j4'], lvglPcRoot, 'LVGL PC 编译失败');
+
+        this.syncLvglAssetsToBuild(lvglPcRoot);
 
         const exeName = process.platform === 'win32' ? 'lvgl_pc.exe' : 'lvgl_pc';
         const exePath = path.join(lvglPcRoot, 'build', exeName);
@@ -356,6 +365,91 @@ export class SimulationRunner {
      */
     private getLvglPcRoot(): string {
         return path.join(__dirname, '..', '..', '..', 'lvgl-pc');
+    }
+
+    private shouldRebuildLvglLib(lvglPcRoot: string): boolean {
+        const sourceConf = path.join(lvglPcRoot, 'lv_conf.h');
+        const builtConf = path.join(lvglPcRoot, 'lvgl-lib', 'include', 'lvgl', 'lv_conf.h');
+
+        if (!fs.existsSync(sourceConf) || !fs.existsSync(builtConf)) {
+            return true;
+        }
+
+        try {
+            const sourceContent = fs.readFileSync(sourceConf, 'utf-8');
+            const builtContent = fs.readFileSync(builtConf, 'utf-8');
+            return sourceContent !== builtContent;
+        } catch {
+            return true;
+        }
+    }
+
+    private syncLvglGeneratedCode(lvglPcRoot: string): void {
+        const sourceDir = path.join(this.projectRoot, 'src', 'lvgl');
+        const targetDir = path.join(lvglPcRoot, 'src', 'generated');
+
+        if (!fs.existsSync(sourceDir)) {
+            throw new Error(`未找到 LVGL 生成代码目录: ${sourceDir}。请先执行 create ccode files 或 Simulate。`);
+        }
+
+        fs.mkdirSync(targetDir, { recursive: true });
+
+        for (const fileName of fs.readdirSync(targetDir)) {
+            if (fileName.endsWith('.c') || fileName.endsWith('.h')) {
+                fs.rmSync(path.join(targetDir, fileName), { force: true });
+            }
+        }
+
+        const copiedFiles: string[] = [];
+        for (const fileName of fs.readdirSync(sourceDir)) {
+            if (!fileName.endsWith('.c') && !fileName.endsWith('.h')) {
+                continue;
+            }
+
+            const sourceFile = path.join(sourceDir, fileName);
+            const targetFile = path.join(targetDir, fileName);
+            fs.copyFileSync(sourceFile, targetFile);
+            copiedFiles.push(fileName);
+        }
+
+        if (!copiedFiles.includes('lvgl_generated_ui.c') || !copiedFiles.includes('lvgl_generated_ui.h')) {
+            throw new Error('LVGL 入口文件缺失（lvgl_generated_ui.c/h），请检查代码生成结果。');
+        }
+
+        this.log(`已同步 LVGL 生成代码: ${copiedFiles.length} 个文件`);
+    }
+
+    private syncLvglAssetsToBuild(lvglPcRoot: string): void {
+        const sourceAssetsDir = path.join(this.projectRoot, 'assets');
+        const buildAssetsDir = path.join(lvglPcRoot, 'build', 'assets');
+
+        if (!fs.existsSync(sourceAssetsDir)) {
+            this.log(`未找到项目资源目录，跳过资源同步: ${sourceAssetsDir}`);
+            return;
+        }
+
+        if (fs.existsSync(buildAssetsDir)) {
+            fs.rmSync(buildAssetsDir, { recursive: true, force: true });
+        }
+
+        this.copyDirectoryRecursive(sourceAssetsDir, buildAssetsDir);
+        this.log(`已同步资源到 LVGL 构建目录: ${buildAssetsDir}`);
+    }
+
+    private copyDirectoryRecursive(sourceDir: string, targetDir: string): void {
+        fs.mkdirSync(targetDir, { recursive: true });
+
+        const entries = fs.readdirSync(sourceDir, { withFileTypes: true });
+        for (const entry of entries) {
+            const sourcePath = path.join(sourceDir, entry.name);
+            const targetPath = path.join(targetDir, entry.name);
+
+            if (entry.isDirectory()) {
+                this.copyDirectoryRecursive(sourcePath, targetPath);
+            } else {
+                fs.copyFileSync(sourcePath, targetPath);
+            }
+        }
     }
 
     /**

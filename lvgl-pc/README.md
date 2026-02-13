@@ -38,3 +38,5 @@ cmake --build . -j
 
 - Configuration is in `lvgl-pc/lv_conf.h` (used when building the prebuilt LVGL library).
 - The runner links against the prebuilt LVGL installed to `lvgl-pc/lvgl-lib`.
+- GIF support is enabled with LVGL built-in decoder (`LV_USE_GIF=1`).
+

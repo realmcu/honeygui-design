@@ -1,4 +1,4 @@
-prefix="${pcfiledir}/../.."
+prefix="C:/Users/triton_yu/Documents/lvgl/honeygui-design/lvgl-pc/lvgl-lib"
 includedir="${prefix}/include/lvgl"
 libdir=${prefix}/lib
 

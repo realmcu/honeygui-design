@@ -4,7 +4,6 @@ import { ProjectUtils } from '../utils/ProjectUtils';
 import { HmlController } from '../hml/HmlController';
 import { CodeGenOptions } from '../codegen/ICodeGenerator';
 import { CodeGeneratorFactory, TargetEngine } from '../codegen/CodeGeneratorFactory';
-import { EntryFileGenerator } from '../codegen/EntryFileGenerator';
 import { logger } from '../utils/Logger';
 
 export interface GenerationResult {
@@ -69,14 +68,6 @@ export class CodeGenerator {
 
         const config = ProjectUtils.loadProjectConfig(projectRoot);
         const srcDir = ProjectUtils.getSrcDir(projectRoot);
-
-        // 生成项目入口文件（只生成一次）
-        try {
-            const entryFile = EntryFileGenerator.generate(srcDir, config.name || 'HoneyGUI');
-            logger.info(`入口文件: ${path.basename(entryFile)}`);
-        } catch (error) {
-            logger.error(`生成入口文件失败: ${error}`);
-        }
 
         let successCount = 0;
         let totalFiles = 0;
