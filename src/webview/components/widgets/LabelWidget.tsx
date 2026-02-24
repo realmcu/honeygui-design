@@ -141,7 +141,7 @@ export const LabelWidget: React.FC<WidgetProps> = ({ component, style, handlers,
   const configuredFontSize = Number(component.data?.fontSize) || 16;
   
   // 是否使用精确预览模式（默认开启）
-  const useAccuratePreview = component.data?.useAccuratePreview ?? true;
+  const useAccuratePreview = component.data?.useAccuratePreview ?? false;
   
   // 计算实际渲染字号
   let actualFontSize = configuredFontSize;

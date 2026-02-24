@@ -1,6 +1,10 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #include "lvgl.h"
 
 #include "src/drivers/windows/lv_windows_display.h"
@@ -39,6 +43,12 @@ static void create_ui(void)
 
 int main(void)
 {
+#ifdef _WIN32
+    /* 禁用 Windows DPI 缩放，保持 1:1 像素 */
+    extern BOOL __stdcall SetProcessDPIAware(void);
+    SetProcessDPIAware();
+#endif
+
     printf("[APP] boot\n");
     fflush(stdout);
 
@@ -55,8 +65,8 @@ int main(void)
         LCD_WIDTH,
         LCD_HEIGHT,
         100,  /* zoom level: 100% */
-        true, /* allow DPI override */
-        true  /* simulator mode (not resizable) */
+        true, /* allow DPI override: false = 禁用系统 DPI 缩放，保持 1:1 像素 */
+        false  /* simulator mode (not resizable) */
     );
 
     if(disp == NULL) {

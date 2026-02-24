@@ -43,7 +43,11 @@ file(GLOB LVGL_GENERATED_UI_SOURCES
 file(GLOB LVGL_GENERATED_IMG_SOURCES
     "${CMAKE_CURRENT_LIST_DIR}/src/generated/img_*.c")
 
-target_sources(lvgl_pc PRIVATE ${LVGL_GENERATED_UI_SOURCES} ${LVGL_GENERATED_IMG_SOURCES})
+file(GLOB LVGL_GENERATED_FONT_SOURCES
+    "${CMAKE_CURRENT_LIST_DIR}/src/generated/fonts/*.c"
+    "${CMAKE_CURRENT_LIST_DIR}/src/generated/font_*.c")
+
+target_sources(lvgl_pc PRIVATE ${LVGL_GENERATED_UI_SOURCES} ${LVGL_GENERATED_IMG_SOURCES} ${LVGL_GENERATED_FONT_SOURCES})
 
 target_link_libraries(lvgl_pc PRIVATE lvgl)
 

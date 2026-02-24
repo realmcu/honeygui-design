@@ -15,6 +15,8 @@ export class LvglCCodeGenerator implements ICodeGenerator {
   private componentMap: Map<string, Component>;
   private builtinImageVarMap: Map<string, string>;
   private builtinImageVars: string[];
+  private builtinFontVarMap: Map<string, string>;  // fontFile 路径 -> 字体变量名
+  private builtinFontVars: string[];  // 所有转换后的字体变量名
 
   constructor(components: Component[], options: CodeGenOptions) {
     this.components = components;
@@ -22,6 +24,8 @@ export class LvglCCodeGenerator implements ICodeGenerator {
     this.componentMap = new Map(components.map(component => [component.id, component]));
     this.builtinImageVarMap = new Map();
     this.builtinImageVars = [];
+    this.builtinFontVarMap = new Map();
+    this.builtinFontVars = [];
   }
 
   /**
@@ -39,6 +43,7 @@ export class LvglCCodeGenerator implements ICodeGenerator {
       }
 
       this.prepareBuiltinImages(lvglDir);
+      this.prepareBuiltinFonts(lvglDir);
 
       const headerFile = path.join(lvglDir, `${designName}_lvgl_ui.h`);
       const sourceFile = path.join(lvglDir, `${designName}_lvgl_ui.c`);
@@ -106,6 +111,14 @@ export class LvglCCodeGenerator implements ICodeGenerator {
       code += `// LVGL 内置图片资源声明\n`;
       this.builtinImageVars.forEach(varName => {
         code += `extern const lv_image_dsc_t ${varName};\n`;
+      });
+      code += `\n`;
+    }
+
+    if (this.builtinFontVars.length > 0) {
+      code += `// LVGL 内置字体资源声明\n`;
+      this.builtinFontVars.forEach(varName => {
+        code += `extern const lv_font_t ${varName};\n`;
       });
       code += `\n`;
     }
@@ -218,12 +231,43 @@ export class LvglCCodeGenerator implements ICodeGenerator {
 
     switch (component.type) {
       case 'hg_view':
-      case 'hg_window':
+      {
+        // 根视图（直接挂在 parent 下）坐标始终为 0, 0
+        const isRootView = parentRef === 'parent';
+        const posX = isRootView ? 0 : Math.round(x);
+        const posY = isRootView ? 0 : Math.round(y);
+        code += `    ${component.id} = lv_obj_create(${parentRef});\n`;
+        code += `    lv_obj_set_pos(${component.id}, ${posX}, ${posY});\n`;
+        code += `    lv_obj_set_size(${component.id}, ${Math.round(width)}, ${Math.round(height)});\n`;
+        code += `    lv_obj_set_scrollbar_mode(${component.id}, LV_SCROLLBAR_MODE_OFF);\n`;
+        // 设置背景颜色
+        const bgColor = component.style?.backgroundColor;
+        if (bgColor) {
+          const bgColorHex = this.parseColorHex(bgColor);
+          code += `    lv_obj_set_style_bg_color(${component.id}, lv_color_hex(0x${bgColorHex}), LV_PART_MAIN);\n`;
+          code += `    lv_obj_set_style_bg_opa(${component.id}, LV_OPA_COVER, LV_PART_MAIN);\n`;
+        }
+        // 去除边框
+        code += `    lv_obj_set_style_border_width(${component.id}, 0, LV_PART_MAIN);\n`;
+        code += `    lv_obj_set_style_pad_all(${component.id}, 0, LV_PART_MAIN);\n`;
+        break;
+      }
+      case 'hg_window': {
         code += `    ${component.id} = lv_obj_create(${parentRef});\n`;
         code += `    lv_obj_set_pos(${component.id}, ${Math.round(x)}, ${Math.round(y)});\n`;
         code += `    lv_obj_set_size(${component.id}, ${Math.round(width)}, ${Math.round(height)});\n`;
+        code += `    lv_obj_set_scrollbar_mode(${component.id}, LV_SCROLLBAR_MODE_OFF);\n`;
+        // 设置背景颜色
+        const winBgColor = component.style?.backgroundColor;
+        if (winBgColor) {
+          const winBgColorHex = this.parseColorHex(winBgColor);
+          code += `    lv_obj_set_style_bg_color(${component.id}, lv_color_hex(0x${winBgColorHex}), LV_PART_MAIN);\n`;
+          code += `    lv_obj_set_style_bg_opa(${component.id}, LV_OPA_COVER, LV_PART_MAIN);\n`;
+        }
+        code += `    lv_obj_set_style_border_width(${component.id}, 0, LV_PART_MAIN);\n`;
+        code += `    lv_obj_set_style_pad_all(${component.id}, 0, LV_PART_MAIN);\n`;
         break;
-
+      }
       case 'hg_image': {
         const isGif = this.isGifComponent(component);
         const hasBuiltinVar = this.getBuiltinImageVar(String(component.data?.src || ''));
@@ -237,6 +281,11 @@ export class LvglCCodeGenerator implements ICodeGenerator {
       case 'hg_circle':
         code += `    ${component.id} = lv_obj_create(${parentRef});\n`;
         code += this.generateCircleSetters(component);
+        break;
+
+      case 'hg_label':
+        code += `    ${component.id} = lv_label_create(${parentRef});\n`;
+        code += this.generateLabelSetters(component);
         break;
 
       default:
@@ -409,6 +458,77 @@ export class LvglCCodeGenerator implements ICodeGenerator {
     return code;
   }
 
+  private generateLabelSetters(component: Component): string {
+    const tx = Number(component.style?.transform?.translateX || 0);
+    const ty = Number(component.style?.transform?.translateY || 0);
+
+    const x = Math.round(component.position.x + tx);
+    const y = Math.round(component.position.y + ty);
+
+    const text = component.data?.text || '';
+    const color = this.parseColorHex(component.style?.color || component.data?.color || '#000000');
+    const fontSize = Number(component.style?.fontSize || component.data?.fontSize || 16);
+    const fontFile = component.data?.fontFile;
+
+    let code = `    lv_obj_set_pos(${component.id}, ${x}, ${y});\n`;
+    code += `    lv_label_set_text(${component.id}, "${this.escapeCString(String(text))}");\n`;
+    code += `    lv_obj_set_style_text_color(${component.id}, lv_color_hex(0x${color}), LV_PART_MAIN);\n`;
+
+    // 优先使用用户指定的 TTF 字体（已转换为 LVGL 格式）
+    const customFontVar = fontFile ? this.getBuiltinFontVar(String(fontFile), fontSize) : null;
+    if (customFontVar) {
+      code += `    lv_obj_set_style_text_font(${component.id}, &${customFontVar}, LV_PART_MAIN);\n`;
+    } else {
+      // 回退到 LVGL 内置字体
+      const fontName = this.getLvglFontBySize(fontSize);
+      code += `    lv_obj_set_style_text_font(${component.id}, &${fontName}, LV_PART_MAIN);\n`;
+    }
+
+    return code;
+  }
+
+  /**
+   * 获取转换后的字体变量名
+   */
+  private getBuiltinFontVar(fontFile: string, fontSize: number): string | null {
+    const key = this.normalizeFontKey(fontFile, fontSize);
+    return this.builtinFontVarMap.get(key) || null;
+  }
+
+  /**
+   * 规范化字体 key（fontFile + fontSize 组合）
+   */
+  private normalizeFontKey(fontFile: string, fontSize: number): string {
+    const normalized = fontFile.replace(/\\/g, '/').toLowerCase().trim();
+    return `${normalized}@${fontSize}`;
+  }
+
+  private parseColorHex(color: string): string {
+    // 移除 # 前缀，返回纯16进制颜色值
+    const hex = color.replace(/^#/, '').toUpperCase();
+    // 如果是 3 位颜色，扩展为 6 位
+    if (hex.length === 3) {
+      return hex.split('').map(c => c + c).join('');
+    }
+    return hex.padStart(6, '0');
+  }
+
+  private getLvglFontBySize(fontSize: number): string {
+    // LVGL 内置字体：montserrat 系列
+    // 选择最接近的字体大小
+    const sizes = [8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48];
+    let closest = 14; // 默认
+    let minDiff = Infinity;
+    for (const size of sizes) {
+      const diff = Math.abs(size - fontSize);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closest = size;
+      }
+    }
+    return `lv_font_montserrat_${closest}`;
+  }
+
   private getParentRef(component: Component): string {
     const parentId = component.parent;
     if (!parentId || !this.componentMap.has(parentId)) {
@@ -440,6 +560,203 @@ export class LvglCCodeGenerator implements ICodeGenerator {
     }
 
     return `A:assets/${withoutLeadingSlash}`;
+  }
+
+  /**
+   * 准备内置字体资源：将项目中使用的 TTF 字体转换为 LVGL C 格式
+   */
+  private prepareBuiltinFonts(lvglDir: string): void {
+    this.builtinFontVarMap.clear();
+    this.builtinFontVars = [];
+
+    const projectRoot = path.dirname(this.options.srcDir);
+    const assetsDir = path.join(projectRoot, 'assets');
+
+    // 收集所有 hg_label 组件中使用的字体
+    const fontConfigs = this.collectFontConfigs();
+    if (fontConfigs.length === 0) {
+      return;
+    }
+
+    // 确保输出目录存在
+    const fontOutputDir = path.join(lvglDir, 'fonts');
+    if (!fs.existsSync(fontOutputDir)) {
+      fs.mkdirSync(fontOutputDir, { recursive: true });
+    }
+
+    // 转换每个字体
+    for (const config of fontConfigs) {
+      const inputPath = this.resolveFontPath(projectRoot, assetsDir, config.fontFile);
+      if (!inputPath) {
+        console.warn(`字体文件不存在，跳过: ${config.fontFile}`);
+        continue;
+      }
+
+      // 生成变量名
+      const varName = this.buildFontVarName(config.fontFile, config.fontSize);
+
+      // 使用 lv_font_conv 转换字体
+      const success = this.convertFontToLvgl(inputPath, fontOutputDir, varName, config.fontSize, config.characters);
+      if (success) {
+        const key = this.normalizeFontKey(config.fontFile, config.fontSize);
+        this.builtinFontVarMap.set(key, varName);
+        this.builtinFontVars.push(varName);
+      }
+    }
+  }
+
+  /**
+   * 收集所有 hg_label 组件中使用的字体配置
+   */
+  private collectFontConfigs(): Array<{ fontFile: string; fontSize: number; characters: string }> {
+    const fontExts = new Set(['.ttf', '.otf', '.woff', '.woff2']);
+    const seen = new Map<string, { fontFile: string; fontSize: number; characters: Set<string> }>();
+
+    for (const component of this.components) {
+      if (component.type !== 'hg_label') {
+        continue;
+      }
+
+      const fontFile = component.data?.fontFile;
+      if (!fontFile) {
+        continue;
+      }
+
+      const fontFileStr = String(fontFile).trim();
+      const ext = path.extname(fontFileStr).toLowerCase();
+      if (!fontExts.has(ext)) {
+        continue;
+      }
+
+      const fontSize = Number(component.style?.fontSize || component.data?.fontSize || 16);
+      const text = String(component.data?.text || '');
+      const key = this.normalizeFontKey(fontFileStr, fontSize);
+
+      if (seen.has(key)) {
+        // 合并字符集
+        const existing = seen.get(key)!;
+        for (const char of text) {
+          existing.characters.add(char);
+        }
+      } else {
+        seen.set(key, {
+          fontFile: fontFileStr,
+          fontSize,
+          characters: new Set(text)
+        });
+      }
+    }
+
+    // 转换为数组，并添加基本字符集
+    return Array.from(seen.values()).map(config => ({
+      fontFile: config.fontFile,
+      fontSize: config.fontSize,
+      // 合并用户文本和基本 ASCII 字符
+      characters: this.buildCharacterSet(config.characters)
+    }));
+  }
+
+  /**
+   * 构建字符集：合并用户文本中的字符和基本字符
+   */
+  private buildCharacterSet(userChars: Set<string>): string {
+    // 基本 ASCII + 用户使用的字符
+    const chars = new Set<string>();
+    
+    // 添加基本 ASCII 可打印字符
+    for (let i = 0x20; i <= 0x7E; i++) {
+      chars.add(String.fromCharCode(i));
+    }
+    
+    // 添加用户文本中的字符
+    for (const char of userChars) {
+      chars.add(char);
+    }
+
+    return Array.from(chars).sort().join('');
+  }
+
+  /**
+   * 解析字体文件的绝对路径
+   */
+  private resolveFontPath(projectRoot: string, assetsDir: string, fontFile: string): string | null {
+    let normalized = fontFile.replace(/\\/g, '/').trim();
+    
+    // 移除 A: 或 /font/ 前缀
+    normalized = normalized.replace(/^A:/i, '').replace(/^\/+/, '');
+    
+    // 尝试多种路径
+    const candidates = [
+      path.join(assetsDir, normalized),
+      path.join(assetsDir, 'font', path.basename(normalized)),
+      path.join(projectRoot, normalized),
+      path.join(projectRoot, 'assets', normalized),
+    ];
+
+    for (const candidate of candidates) {
+      if (fs.existsSync(candidate)) {
+        return candidate;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * 生成字体变量名
+   */
+  private buildFontVarName(fontFile: string, fontSize: number): string {
+    const baseName = path.basename(fontFile, path.extname(fontFile))
+      .replace(/[^a-zA-Z0-9_]/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .replace(/_+/g, '_');
+    return `font_${baseName}_${fontSize}`;
+  }
+
+  /**
+   * 使用 lv_font_conv 将字体转换为 LVGL C 格式
+   */
+  private convertFontToLvgl(
+    inputPath: string,
+    outputDir: string,
+    varName: string,
+    fontSize: number,
+    characters: string
+  ): boolean {
+    try {
+      const outputFile = path.join(outputDir, `${varName}.c`);
+
+      // 构建 lv_font_conv 命令参数
+      // lv_font_conv 需要通过 npx 或全局安装运行
+      const args = [
+        'lv_font_conv',
+        '--font', inputPath,
+        '--size', String(fontSize),
+        '--format', 'lvgl',
+        '--output', outputFile,
+        '--bpp', '4',  // 4 位抗锯齿
+        '--symbols', characters
+      ];
+
+      // 尝试使用 npx 运行
+      const result = spawnSync('npx', args, {
+        encoding: 'utf-8',
+        timeout: 60000,
+        cwd: path.dirname(this.options.srcDir),
+        shell: true
+      });
+
+      if (result.status === 0) {
+        console.log(`字体转换成功: ${varName}`);
+        return true;
+      } else {
+        console.warn(`字体转换失败 ${varName}: ${result.stderr || result.error}`);
+        return false;
+      }
+    } catch (error) {
+      console.warn(`字体转换异常 ${varName}: ${error}`);
+      return false;
+    }
   }
 
   /**

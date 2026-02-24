@@ -394,29 +394,66 @@ export class SimulationRunner {
 
         fs.mkdirSync(targetDir, { recursive: true });
 
-        for (const fileName of fs.readdirSync(targetDir)) {
-            if (fileName.endsWith('.c') || fileName.endsWith('.h')) {
-                fs.rmSync(path.join(targetDir, fileName), { force: true });
-            }
-        }
+        // 清理目标目录中的旧文件（包括子目录）
+        this.cleanGeneratedDir(targetDir);
 
         const copiedFiles: string[] = [];
-        for (const fileName of fs.readdirSync(sourceDir)) {
-            if (!fileName.endsWith('.c') && !fileName.endsWith('.h')) {
-                continue;
-            }
-
-            const sourceFile = path.join(sourceDir, fileName);
-            const targetFile = path.join(targetDir, fileName);
-            fs.copyFileSync(sourceFile, targetFile);
-            copiedFiles.push(fileName);
-        }
+        this.copyGeneratedFilesRecursive(sourceDir, targetDir, copiedFiles);
 
         if (!copiedFiles.includes('lvgl_generated_ui.c') || !copiedFiles.includes('lvgl_generated_ui.h')) {
             throw new Error('LVGL 入口文件缺失（lvgl_generated_ui.c/h），请检查代码生成结果。');
         }
 
         this.log(`已同步 LVGL 生成代码: ${copiedFiles.length} 个文件`);
+    }
+
+    /**
+     * 清理生成目录中的旧 C/H 文件
+     */
+    private cleanGeneratedDir(targetDir: string): void {
+        if (!fs.existsSync(targetDir)) {
+            return;
+        }
+
+        const entries = fs.readdirSync(targetDir, { withFileTypes: true });
+        for (const entry of entries) {
+            const fullPath = path.join(targetDir, entry.name);
+            if (entry.isDirectory()) {
+                // 递归清理子目录
+                this.cleanGeneratedDir(fullPath);
+                // 如果子目录为空，删除它
+                try {
+                    const remaining = fs.readdirSync(fullPath);
+                    if (remaining.length === 0) {
+                        fs.rmdirSync(fullPath);
+                    }
+                } catch {
+                    // 忽略删除错误
+                }
+            } else if (entry.name.endsWith('.c') || entry.name.endsWith('.h')) {
+                fs.rmSync(fullPath, { force: true });
+            }
+        }
+    }
+
+    /**
+     * 递归复制生成的 C/H 文件（包括子目录如 fonts/）
+     */
+    private copyGeneratedFilesRecursive(sourceDir: string, targetDir: string, copiedFiles: string[]): void {
+        const entries = fs.readdirSync(sourceDir, { withFileTypes: true });
+        for (const entry of entries) {
+            const sourcePath = path.join(sourceDir, entry.name);
+            const targetPath = path.join(targetDir, entry.name);
+
+            if (entry.isDirectory()) {
+                // 递归复制子目录
+                fs.mkdirSync(targetPath, { recursive: true });
+                this.copyGeneratedFilesRecursive(sourcePath, targetPath, copiedFiles);
+            } else if (entry.name.endsWith('.c') || entry.name.endsWith('.h')) {
+                fs.copyFileSync(sourcePath, targetPath);
+                copiedFiles.push(entry.name);
+            }
+        }
     }
 
     private syncLvglAssetsToBuild(lvglPcRoot: string): void {

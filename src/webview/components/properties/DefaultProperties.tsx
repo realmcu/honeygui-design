@@ -1118,7 +1118,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                         alignItems: 'center', 
                         gap: '8px',
                         padding: '6px 8px',
-                        backgroundColor: (component.data as any)?.useAccuratePreview ?? true 
+                        backgroundColor: (component.data as any)?.useAccuratePreview ?? false 
                           ? 'var(--vscode-list-activeSelectionBackground)' 
                           : 'transparent',
                         borderRadius: '3px',
@@ -1129,7 +1129,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                     >
                       <input 
                         type="radio" 
-                        checked={(component.data as any)?.useAccuratePreview ?? true}
+                        checked={(component.data as any)?.useAccuratePreview ?? false}
                         onChange={() => handleDataChange('useAccuratePreview', true)}
                         style={{ margin: 0 }}
                       />
@@ -1147,7 +1147,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                         alignItems: 'center', 
                         gap: '8px',
                         padding: '6px 8px',
-                        backgroundColor: !((component.data as any)?.useAccuratePreview ?? true)
+                        backgroundColor: !((component.data as any)?.useAccuratePreview ?? false)
                           ? 'var(--vscode-list-activeSelectionBackground)' 
                           : 'transparent',
                         borderRadius: '3px',
@@ -1157,7 +1157,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                     >
                       <input 
                         type="radio" 
-                        checked={!((component.data as any)?.useAccuratePreview ?? true)}
+                        checked={!((component.data as any)?.useAccuratePreview ?? false)}
                         onChange={() => handleDataChange('useAccuratePreview', false)}
                         style={{ margin: 0 }}
                       />
