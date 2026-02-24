@@ -1,6 +1,15 @@
 import { Component } from '../types';
 import { getAbsolutePosition } from '../utils/componentUtils';
 
+const getNextZIndex = (components: Component[], parentId: string): number => {
+  const siblings = components.filter(c => c.parent === parentId);
+  if (siblings.length === 0) {
+    return 1;
+  }
+  const maxZIndex = Math.max(...siblings.map(c => (typeof c.zIndex === 'number' ? c.zIndex : 0)));
+  return maxZIndex + 1;
+};
+
 /**
  * 创建图片组件的统一函数
  */
@@ -21,6 +30,7 @@ export const createImageComponentAtPosition = (
 
   const width = imageSize?.width || 100;
   const height = imageSize?.height || 100;
+  const zIndex = getNextZIndex(components, targetContainerId);
 
   const imageComponent: Component = {
     id: `hg_image_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
@@ -30,7 +40,7 @@ export const createImageComponentAtPosition = (
     visible: true,
     enabled: true,
     locked: false,
-    zIndex: 1,
+    zIndex,
     children: [],
     parent: targetContainerId,
     style: {},
@@ -56,6 +66,7 @@ export const create3DComponentAtPosition = (
   const targetAbsPos = getAbsolutePosition(targetContainer, components);
   const relativeX = Math.max(0, dropPosition.x - targetAbsPos.x);
   const relativeY = Math.max(0, dropPosition.y - targetAbsPos.y);
+  const zIndex = getNextZIndex(components, targetContainerId);
 
   const component3D: Component = {
     id: `hg_3d_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
@@ -65,7 +76,7 @@ export const create3DComponentAtPosition = (
     visible: true,
     enabled: true,
     locked: false,
-    zIndex: 1,
+    zIndex,
     children: [],
     parent: targetContainerId,
     style: {},
@@ -110,6 +121,7 @@ export const createVideoComponentAtPosition = (
 
   // 使用视频真实尺寸，如果没有则使用默认值 320x240
   const { width, height } = videoSize || { width: 320, height: 240 };
+  const zIndex = getNextZIndex(components, targetContainerId);
 
   const videoComponent: Component = {
     id: `hg_video_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
@@ -119,7 +131,7 @@ export const createVideoComponentAtPosition = (
     visible: true,
     enabled: true,
     locked: false,
-    zIndex: 1,
+    zIndex,
     children: [],
     parent: targetContainerId,
     style: {},
@@ -146,6 +158,7 @@ export const createSvgComponentAtPosition = (
   const targetAbsPos = getAbsolutePosition(targetContainer, components);
   const relativeX = Math.max(0, dropPosition.x - targetAbsPos.x);
   const relativeY = Math.max(0, dropPosition.y - targetAbsPos.y);
+  const zIndex = getNextZIndex(components, targetContainerId);
 
   const svgComponent: Component = {
     id: `hg_svg_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
@@ -160,7 +173,7 @@ export const createSvgComponentAtPosition = (
     visible: true,
     enabled: true,
     locked: false,
-    zIndex: 1,
+    zIndex,
     children: [],
     parent: targetContainerId,
     style: {},
@@ -187,6 +200,7 @@ export const createGlassComponentAtPosition = (
   const targetAbsPos = getAbsolutePosition(targetContainer, components);
   const relativeX = Math.max(0, dropPosition.x - targetAbsPos.x);
   const relativeY = Math.max(0, dropPosition.y - targetAbsPos.y);
+  const zIndex = getNextZIndex(components, targetContainerId);
 
   const glassComponent: Component = {
     id: `hg_glass_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
@@ -201,7 +215,7 @@ export const createGlassComponentAtPosition = (
     visible: true,
     enabled: true,
     locked: false,
-    zIndex: 1,
+    zIndex,
     children: [],
     parent: targetContainerId,
     style: {},
@@ -232,6 +246,7 @@ export const createLottieComponentAtPosition = (
   const targetAbsPos = getAbsolutePosition(targetContainer, components);
   const relativeX = Math.max(0, dropPosition.x - targetAbsPos.x);
   const relativeY = Math.max(0, dropPosition.y - targetAbsPos.y);
+  const zIndex = getNextZIndex(components, targetContainerId);
 
   const lottieComponent: Component = {
     id: `hg_lottie_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
@@ -246,7 +261,7 @@ export const createLottieComponentAtPosition = (
     visible: true,
     enabled: true,
     locked: false,
-    zIndex: 1,
+    zIndex,
     children: [],
     parent: targetContainerId,
     style: {},
