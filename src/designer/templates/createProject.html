@@ -413,6 +413,36 @@
             document.getElementById('errorMessage').classList.add('hidden');
         }
         
+        // 根据 targetEngine 更新 minSdk 选项
+        function updateMinSdkOptions(engine) {
+            const minSdkSelect = document.getElementById('minSdk');
+            if (!minSdkSelect) return;
+            
+            // 清空现有选项
+            minSdkSelect.innerHTML = '';
+            
+            if (engine === 'lvgl') {
+                // LVGL 选项
+                const lvglOption = document.createElement('option');
+                lvglOption.value = 'LVGL v9.5.0';
+                lvglOption.textContent = 'LVGL v9.5.0';
+                minSdkSelect.appendChild(lvglOption);
+            } else {
+                // HoneyGUI 选项
+                const options = [
+                    { value: 'API 2: HoneyGUI V1.1.0', text: 'API 2: HoneyGUI V1.1.0' },
+                    { value: 'API 3: HoneyGUI V1.2.0', text: 'API 3: HoneyGUI V1.2.0' },
+                    { value: 'API 4: HoneyGUI V2.0.0', text: 'API 4: HoneyGUI V2.0.0' }
+                ];
+                options.forEach(opt => {
+                    const option = document.createElement('option');
+                    option.value = opt.value;
+                    option.textContent = opt.text;
+                    minSdkSelect.appendChild(option);
+                });
+            }
+        }
+        
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('tab-empty')?.addEventListener('click', () => switchTab('empty'));
             document.getElementById('tab-template')?.addEventListener('click', () => switchTab('template'));
@@ -427,6 +457,11 @@
             });
             ['resolution', 'minSdk', 'pixelMode'].forEach(id => {
                 document.getElementById(id)?.addEventListener('change', validateForm);
+            });
+            
+            // 监听 targetEngine 变化，动态更新 minSdk 选项
+            document.getElementById('targetEngine')?.addEventListener('change', function() {
+                updateMinSdkOptions(this.value);
             });
             
             // 监听分辨率选择变化
