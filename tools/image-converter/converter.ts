@@ -58,23 +58,28 @@ export class ImageConverter {
         const isJPEG = buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF;
         const isBMP = buffer[0] === 0x42 && buffer[1] === 0x4D; // 'BM'
         const isGIF = buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46; // 'GIF'
+        const ext = path.extname(inputPath).toLowerCase();
+        const usePngExt = !isPNG && !isJPEG && !isBMP && !isGIF && ext === '.png';
+        const useJpegExt = !isPNG && !isJPEG && !isBMP && !isGIF && (ext === '.jpg' || ext === '.jpeg');
+        const useBmpExt = !isPNG && !isJPEG && !isBMP && !isGIF && ext === '.bmp';
+        const useGifExt = !isPNG && !isJPEG && !isBMP && !isGIF && ext === '.gif';
         
         // GIF 特殊处理：直接打包原始数据，不做像素转换
-        if (isGIF) {
+        if (isGIF || useGifExt) {
             await this.convertGIF(inputPath, outputPath, buffer);
             return;
         }
         
         let result: ImageLoadResult;
 
-        if (isPNG) {
+        if (isPNG || usePngExt) {
             result = await this.loadPNG(inputPath);
-        } else if (isJPEG) {
+        } else if (isJPEG || useJpegExt) {
             result = await this.loadJPEG(inputPath);
-        } else if (isBMP) {
+        } else if (isBMP || useBmpExt) {
             result = await this.loadBMP(inputPath);
         } else {
-            throw new Error(`Unsupported image format (not PNG, JPEG, BMP or GIF)`);
+            throw new Error(`Unsupported image format (not PNG, JPG/JPEG, BMP or GIF)`);
         }
 
         const { pixels, width, height, hasAlpha, indexed } = result;
