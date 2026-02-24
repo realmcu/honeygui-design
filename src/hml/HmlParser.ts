@@ -619,6 +619,8 @@ export class HmlParser {
       'radius', 'startAngle', 'endAngle', 'strokeWidth',
       // 矩形属性
       'fillColor',
+      // 窗口属性
+      'showBackground',
       // 列表属性
       'itemWidth', 'itemHeight', 'direction', 'style', 'space', 'cardStackLocation',
       // 图像变换属性
@@ -702,8 +704,8 @@ export class HmlParser {
             console.warn(`Failed to parse transform JSON: ${value}`);
           }
         }
-        // 布尔值转换（useGradient, wordWrap, wordBreak）
-        if (['useGradient', 'wordWrap', 'wordBreak'].includes(key)) {
+        // 布尔值转换（useGradient, wordWrap, wordBreak, showBackground）
+        if (['useGradient', 'wordWrap', 'wordBreak', 'showBackground'].includes(key)) {
           value = value === 'true' || value === true;
         }
         style[key] = value;

@@ -257,12 +257,40 @@ export class LvglCCodeGenerator implements ICodeGenerator {
         code += `    lv_obj_set_pos(${component.id}, ${Math.round(x)}, ${Math.round(y)});\n`;
         code += `    lv_obj_set_size(${component.id}, ${Math.round(width)}, ${Math.round(height)});\n`;
         code += `    lv_obj_set_scrollbar_mode(${component.id}, LV_SCROLLBAR_MODE_OFF);\n`;
-        // 设置背景颜色
-        const winBgColor = component.style?.backgroundColor;
-        if (winBgColor) {
-          const winBgColorHex = this.parseColorHex(winBgColor);
-          code += `    lv_obj_set_style_bg_color(${component.id}, lv_color_hex(0x${winBgColorHex}), LV_PART_MAIN);\n`;
-          code += `    lv_obj_set_style_bg_opa(${component.id}, LV_OPA_COVER, LV_PART_MAIN);\n`;
+        // 检查 showBackground 和 enableBlur 属性
+        const showBackground = component.style?.showBackground ?? false;
+        const enableBlur = component.data?.enableBlur ?? false;
+        const blurDegree = component.data?.blurDegree ?? 225;
+
+        if (enableBlur) {
+          // 模糊效果需要半透明背景
+          const winBgColor = component.style?.backgroundColor;
+          if (showBackground && winBgColor) {
+            // 有背景色：使用背景颜色做模糊
+            const winBgColorHex = this.parseColorHex(winBgColor);
+            code += `    lv_obj_set_style_bg_color(${component.id}, lv_color_hex(0x${winBgColorHex}), 0);\n`;
+            code += `    lv_obj_set_style_bg_opa(${component.id}, LV_OPA_40, 0);\n`;
+          } else {
+            // 无背景色：无色模糊
+            code += `    lv_obj_set_style_bg_opa(${component.id}, LV_OPA_0, 0);\n`;
+          }
+
+          // 启用背景模糊
+          code += `    lv_obj_set_style_blur_backdrop(${component.id}, true, 0);\n`;
+          // 设置模糊半径：将 blurDegree (0-255) 映射到 blur_radius (0-64)
+          const blurRadius = Math.max(1, Math.min(64, Math.round(blurDegree / 4)));
+          code += `    lv_obj_set_style_blur_radius(${component.id}, ${blurRadius}, 0);\n`;
+        } else if (showBackground) {
+          // 无模糊，但有背景
+          const winBgColor = component.style?.backgroundColor;
+          if (winBgColor) {
+            const winBgColorHex = this.parseColorHex(winBgColor);
+            code += `    lv_obj_set_style_bg_color(${component.id}, lv_color_hex(0x${winBgColorHex}), LV_PART_MAIN);\n`;
+            code += `    lv_obj_set_style_bg_opa(${component.id}, LV_OPA_COVER, LV_PART_MAIN);\n`;
+          }
+        } else {
+          // 不显示背景，也没有模糊，设置为完全透明
+          code += `    lv_obj_set_style_bg_opa(${component.id}, LV_OPA_TRANSP, LV_PART_MAIN);\n`;
         }
         code += `    lv_obj_set_style_border_width(${component.id}, 0, LV_PART_MAIN);\n`;
         code += `    lv_obj_set_style_pad_all(${component.id}, 0, LV_PART_MAIN);\n`;
