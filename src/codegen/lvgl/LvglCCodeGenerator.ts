@@ -374,6 +374,11 @@ export class LvglCCodeGenerator implements ICodeGenerator {
         break;
       }
 
+      case 'hg_input':
+        code += `    ${component.id} = lv_textarea_create(${parentRef});\n`;
+        code += this.generateInputSetters(component);
+        break;
+
       default:
         code += `    ${component.id} = lv_obj_create(${parentRef});\n`;
         code += `    lv_obj_set_pos(${component.id}, ${Math.round(x)}, ${Math.round(y)});\n`;
@@ -701,6 +706,55 @@ export class LvglCCodeGenerator implements ICodeGenerator {
     // 添加按钮事件回调绑定
     const cbName = `${component.id}_event_cb`;
     code += `    lv_obj_add_event_cb(${component.id}, ${cbName}, LV_EVENT_ALL, NULL);\n`;
+
+    return code;
+  }
+
+  /**
+   * 生成输入框属性设置代码
+   */
+  private generateInputSetters(component: Component): string {
+    const tx = Number(component.style?.transform?.translateX || 0);
+    const ty = Number(component.style?.transform?.translateY || 0);
+
+    const x = Math.round(component.position.x + tx);
+    const y = Math.round(component.position.y + ty);
+    const width = Math.max(1, Math.round(component.position.width));
+    const height = Math.max(1, Math.round(component.position.height));
+
+    const placeholder = component.data?.placeholder || '';
+    const text = component.data?.text || '';
+    const color = component.style?.color || component.data?.color;
+    const bgColor = component.style?.backgroundColor;
+
+    let code = `    lv_obj_set_pos(${component.id}, ${x}, ${y});\n`;
+    code += `    lv_obj_set_size(${component.id}, ${width}, ${height});\n`;
+
+    // 设置为单行模式
+    code += `    lv_textarea_set_one_line(${component.id}, true);\n`;
+
+    // 设置占位符文本
+    if (placeholder) {
+      code += `    lv_textarea_set_placeholder_text(${component.id}, "${this.escapeCString(String(placeholder))}");\n`;
+    }
+
+    // 设置初始文本
+    if (text) {
+      code += `    lv_textarea_set_text(${component.id}, "${this.escapeCString(String(text))}");\n`;
+    }
+
+    // 设置文字颜色
+    if (color) {
+      const colorHex = this.parseColorHex(String(color));
+      code += `    lv_obj_set_style_text_color(${component.id}, lv_color_hex(0x${colorHex}), LV_PART_MAIN);\n`;
+    }
+
+    // 设置背景颜色
+    if (bgColor) {
+      const bgColorHex = this.parseColorHex(String(bgColor));
+      code += `    lv_obj_set_style_bg_color(${component.id}, lv_color_hex(0x${bgColorHex}), LV_PART_MAIN);\n`;
+      code += `    lv_obj_set_style_bg_opa(${component.id}, LV_OPA_COVER, LV_PART_MAIN);\n`;
+    }
 
     return code;
   }
