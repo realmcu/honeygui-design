@@ -365,6 +365,11 @@ export class LvglCCodeGenerator implements ICodeGenerator {
         code += this.generateArcSetters(component);
         break;
 
+      case 'hg_rect':
+        code += `    ${component.id} = lv_obj_create(${parentRef});\n`;
+        code += this.generateRectSetters(component);
+        break;
+
       case 'hg_circle':
         code += `    ${component.id} = lv_obj_create(${parentRef});\n`;
         code += this.generateCircleSetters(component);
@@ -568,6 +573,125 @@ export class LvglCCodeGenerator implements ICodeGenerator {
     code += `    lv_obj_set_style_pad_all(${component.id}, 0, LV_PART_MAIN);\n`;
 
     return code;
+  }
+
+  /**
+   * 生成矩形 (hg_rect) 属性设置代码
+   * 使用 lv_obj + 样式实现矩形：背景色、圆角、透明度、渐变
+   */
+  private generateRectSetters(component: Component): string {
+    const { x, y, width, height } = component.position;
+    const posX = Math.round(x);
+    const posY = Math.round(y);
+    const w = Math.max(1, Math.round(width));
+    const h = Math.max(1, Math.round(height));
+
+    // 圆角
+    let borderRadius = Number(component.style?.borderRadius || 0);
+    const maxRadius = Math.min(w / 2, h / 2);
+    if (borderRadius > maxRadius) {
+      borderRadius = Math.round(maxRadius);
+    } else {
+      borderRadius = Math.round(borderRadius);
+    }
+
+    // 透明度
+    const opacity = Math.max(0, Math.min(255, Math.round(Number(component.style?.opacity ?? component.data?.opacity ?? 255))));
+
+    // 填充颜色（考虑双态按键模式）
+    const fillColor = this.resolveRectFillColor(component);
+
+    // 渐变
+    const useGradient = component.style?.useGradient === true;
+    const gradientDirection = String(component.style?.gradientDirection || 'horizontal');
+    const gradientStops = this.resolveGradientStops(component.data?.gradientStops, fillColor);
+
+    let code = `    lv_obj_set_pos(${component.id}, ${posX}, ${posY});\n`;
+    code += `    lv_obj_set_size(${component.id}, ${w}, ${h});\n`;
+    code += `    lv_obj_set_scrollbar_mode(${component.id}, LV_SCROLLBAR_MODE_OFF);\n`;
+    code += `    lv_obj_set_style_radius(${component.id}, ${borderRadius}, LV_PART_MAIN);\n`;
+    code += `    lv_obj_set_style_border_width(${component.id}, 0, LV_PART_MAIN);\n`;
+    code += `    lv_obj_set_style_pad_all(${component.id}, 0, LV_PART_MAIN);\n`;
+    code += `    lv_obj_set_style_bg_color(${component.id}, lv_color_hex(0x${fillColor}), LV_PART_MAIN);\n`;
+    code += `    lv_obj_set_style_bg_opa(${component.id}, ${opacity}, LV_PART_MAIN);\n`;
+
+    // 渐变设置
+    if (useGradient && gradientStops.length >= 2) {
+      const gradVar = `${component.id}_grad_dsc`;
+      const gradInitVar = `${component.id}_grad_initialized`;
+      const gradColorsVar = `${component.id}_grad_colors`;
+      const gradOpaVar = `${component.id}_grad_opas`;
+      const gradFracsVar = `${component.id}_grad_fracs`;
+
+      // 映射方向到 LVGL 渐变类型
+      // LVGL 支持线性渐变方向：LV_GRAD_DIR_HOR, LV_GRAD_DIR_VER
+      // 对于对角线方向，使用高级渐变 API
+      const isSimpleLinear = (gradientDirection === 'horizontal' || gradientDirection === 'vertical');
+
+      if (isSimpleLinear && gradientStops.length === 2) {
+        // 简单线性渐变：直接设置 bg_grad_color + bg_grad_dir
+        const startColor = gradientStops[0].colorHex;
+        const endColor = gradientStops[gradientStops.length - 1].colorHex;
+        const lvglDir = gradientDirection === 'vertical' ? 'LV_GRAD_DIR_VER' : 'LV_GRAD_DIR_HOR';
+        code += `    lv_obj_set_style_bg_color(${component.id}, lv_color_hex(0x${startColor}), LV_PART_MAIN);\n`;
+        code += `    lv_obj_set_style_bg_grad_color(${component.id}, lv_color_hex(0x${endColor}), LV_PART_MAIN);\n`;
+        code += `    lv_obj_set_style_bg_grad_dir(${component.id}, ${lvglDir}, LV_PART_MAIN);\n`;
+      } else {
+        // 复杂渐变：使用 lv_grad_dsc_t
+        code += `    static lv_grad_dsc_t ${gradVar};\n`;
+        code += `    static bool ${gradInitVar} = false;\n`;
+        code += `    static lv_color_t ${gradColorsVar}[${gradientStops.length}];\n`;
+        code += `    static const lv_opa_t ${gradOpaVar}[${gradientStops.length}] = { ${gradientStops.map(() => 'LV_OPA_COVER').join(', ')} };\n`;
+        code += `    static const uint8_t ${gradFracsVar}[${gradientStops.length}] = { ${gradientStops.map(s => `${s.frac}`).join(', ')} };\n`;
+        code += `    if (!${gradInitVar}) {\n`;
+        gradientStops.forEach((stop, index) => {
+          code += `        ${gradColorsVar}[${index}] = lv_color_hex(0x${stop.colorHex});\n`;
+        });
+        code += `        lv_grad_init_stops(&${gradVar}, ${gradColorsVar}, ${gradOpaVar}, ${gradFracsVar}, ${gradientStops.length});\n`;
+
+        // 根据方向选择渐变类型
+        if (gradientDirection === 'vertical') {
+          code += `        lv_grad_linear_init(&${gradVar}, LV_GRAD_CENTER, LV_GRAD_TOP, LV_GRAD_CENTER, LV_GRAD_BOTTOM, LV_GRAD_EXTEND_PAD);\n`;
+        } else if (gradientDirection === 'diagonal_tl_br') {
+          code += `        lv_grad_linear_init(&${gradVar}, LV_GRAD_LEFT, LV_GRAD_TOP, LV_GRAD_RIGHT, LV_GRAD_BOTTOM, LV_GRAD_EXTEND_PAD);\n`;
+        } else if (gradientDirection === 'diagonal_tr_bl') {
+          code += `        lv_grad_linear_init(&${gradVar}, LV_GRAD_RIGHT, LV_GRAD_TOP, LV_GRAD_LEFT, LV_GRAD_BOTTOM, LV_GRAD_EXTEND_PAD);\n`;
+        } else {
+          // horizontal (default)
+          code += `        lv_grad_linear_init(&${gradVar}, LV_GRAD_LEFT, LV_GRAD_CENTER, LV_GRAD_RIGHT, LV_GRAD_CENTER, LV_GRAD_EXTEND_PAD);\n`;
+        }
+
+        code += `        ${gradInitVar} = true;\n`;
+        code += `    }\n`;
+        code += `    lv_obj_set_style_bg_grad(${component.id}, &${gradVar}, LV_PART_MAIN);\n`;
+        code += `    lv_obj_set_style_bg_grad_dir(${component.id}, LV_GRAD_DIR_LINEAR, LV_PART_MAIN);\n`;
+        code += `    lv_obj_set_style_bg_grad_opa(${component.id}, ${opacity}, LV_PART_MAIN);\n`;
+      }
+    } else if (useGradient) {
+      code += `    /* NOTE(lvgl): hg_rect 渐变至少需要 2 个色标，当前回退为纯色填充 */\n`;
+    }
+
+    // 按键模式提示
+    if (component.data?.buttonMode && component.data?.buttonMode !== 'none') {
+      code += `    /* TODO(lvgl): hg_rect buttonMode=${this.escapeCString(String(component.data.buttonMode))} 暂未映射 */\n`;
+    }
+
+    return code;
+  }
+
+  /**
+   * 解析矩形填充颜色（考虑双态按键模式）
+   */
+  private resolveRectFillColor(component: Component): string {
+    const buttonMode = component.data?.buttonMode;
+    if (buttonMode === 'dual-state') {
+      const initialOn = component.data?.buttonInitialState === 'on';
+      const onColor = String(component.data?.buttonStateOnColor || '#00FF00');
+      const offColor = String(component.data?.buttonStateOffColor || '#FF0000');
+      return this.normalizeHexColor(initialOn ? onColor : offColor, 'FFFFFF');
+    }
+
+    return this.normalizeHexColor(String(component.style?.fillColor || '#FFFFFF'), 'FFFFFF');
   }
 
   private generateCircleSetters(component: Component): string {
