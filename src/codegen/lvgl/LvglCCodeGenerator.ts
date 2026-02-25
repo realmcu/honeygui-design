@@ -289,12 +289,13 @@ export class LvglCCodeGenerator implements ICodeGenerator {
         code += `    lv_obj_set_pos(${component.id}, ${posX}, ${posY});\n`;
         code += `    lv_obj_set_size(${component.id}, ${Math.round(width)}, ${Math.round(height)});\n`;
         code += `    lv_obj_set_scrollbar_mode(${component.id}, LV_SCROLLBAR_MODE_OFF);\n`;
-        // 设置背景颜色
+        // 设置背景颜色（支持 RGBA 格式）
         const bgColor = component.style?.backgroundColor;
         if (bgColor) {
           const bgColorHex = this.parseColorHex(bgColor);
+          const bgAlpha = this.parseColorAlpha(bgColor);
           code += `    lv_obj_set_style_bg_color(${component.id}, lv_color_hex(0x${bgColorHex}), LV_PART_MAIN);\n`;
-          code += `    lv_obj_set_style_bg_opa(${component.id}, LV_OPA_COVER, LV_PART_MAIN);\n`;
+          code += `    lv_obj_set_style_bg_opa(${component.id}, ${bgAlpha}, LV_PART_MAIN);\n`;
         }
         // 去除边框
         code += `    lv_obj_set_style_border_width(${component.id}, 0, LV_PART_MAIN);\n`;
@@ -315,10 +316,13 @@ export class LvglCCodeGenerator implements ICodeGenerator {
           // 模糊效果需要半透明背景
           const winBgColor = component.style?.backgroundColor;
           if (showBackground && winBgColor) {
-            // 有背景色：使用背景颜色做模糊
+            // 有背景色：使用背景颜色做模糊，支持 RGBA alpha
             const winBgColorHex = this.parseColorHex(winBgColor);
+            const winBgAlpha = this.parseColorAlpha(winBgColor);
             code += `    lv_obj_set_style_bg_color(${component.id}, lv_color_hex(0x${winBgColorHex}), 0);\n`;
-            code += `    lv_obj_set_style_bg_opa(${component.id}, LV_OPA_40, 0);\n`;
+            // 模糊时如果颜色自带 alpha 则使用它，否则默认 LV_OPA_40
+            const blurOpa = winBgAlpha < 255 ? winBgAlpha : 'LV_OPA_40';
+            code += `    lv_obj_set_style_bg_opa(${component.id}, ${blurOpa}, 0);\n`;
           } else {
             // 无背景色：无色模糊
             code += `    lv_obj_set_style_bg_opa(${component.id}, LV_OPA_0, 0);\n`;
@@ -330,12 +334,13 @@ export class LvglCCodeGenerator implements ICodeGenerator {
           const blurRadius = Math.max(1, Math.min(64, Math.round(blurDegree / 4)));
           code += `    lv_obj_set_style_blur_radius(${component.id}, ${blurRadius}, 0);\n`;
         } else if (showBackground) {
-          // 无模糊，但有背景
+          // 无模糊，但有背景（支持 RGBA 格式）
           const winBgColor = component.style?.backgroundColor;
           if (winBgColor) {
             const winBgColorHex = this.parseColorHex(winBgColor);
+            const winBgAlpha = this.parseColorAlpha(winBgColor);
             code += `    lv_obj_set_style_bg_color(${component.id}, lv_color_hex(0x${winBgColorHex}), LV_PART_MAIN);\n`;
-            code += `    lv_obj_set_style_bg_opa(${component.id}, LV_OPA_COVER, LV_PART_MAIN);\n`;
+            code += `    lv_obj_set_style_bg_opa(${component.id}, ${winBgAlpha}, LV_PART_MAIN);\n`;
           }
         } else {
           // 不显示背景，也没有模糊，设置为完全透明
@@ -1030,13 +1035,41 @@ export class LvglCCodeGenerator implements ICodeGenerator {
   }
 
   private parseColorHex(color: string): string {
-    // 移除 # 前缀，返回纯16进制颜色值
+    // 移除 # 前缀，返回纯16进制颜色值（仅 RGB 部分）
     const hex = color.replace(/^#/, '').toUpperCase();
     // 如果是 3 位颜色，扩展为 6 位
     if (hex.length === 3) {
       return hex.split('').map(c => c + c).join('');
     }
+    // 如果是 4 位颜色（RGBA 简写），扩展为 6 位 RGB
+    if (hex.length === 4) {
+      return hex.slice(0, 3).split('').map(c => c + c).join('');
+    }
+    // 如果是 8 位颜色（RRGGBBAA），只取前 6 位 RGB
+    if (hex.length === 8) {
+      return hex.slice(0, 6);
+    }
     return hex.padStart(6, '0');
+  }
+
+  /**
+   * 从颜色字符串中解析 alpha 值（0-255）
+   * 支持格式：#RGB, #RGBA, #RRGGBB, #RRGGBBAA
+   * 无 alpha 通道时返回 255（完全不透明）
+   */
+  private parseColorAlpha(color: string): number {
+    const hex = color.replace(/^#/, '').toUpperCase();
+    if (hex.length === 4) {
+      // #RGBA 简写，第4位是 alpha
+      const a = hex[3];
+      return parseInt(a + a, 16);
+    }
+    if (hex.length === 8) {
+      // #RRGGBBAA，最后2位是 alpha
+      return parseInt(hex.slice(6, 8), 16);
+    }
+    // 无 alpha 通道，默认完全不透明
+    return 255;
   }
 
   private getLvglFontBySize(fontSize: number): string {
