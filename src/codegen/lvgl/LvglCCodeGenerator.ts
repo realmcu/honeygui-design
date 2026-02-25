@@ -123,9 +123,13 @@ export class LvglCCodeGenerator implements ICodeGenerator {
       code += `\n`;
     }
 
-    // 生成按钮/复选框事件回调函数
+    // 生成按钮/复选框/单选框事件回调函数
     code += this.generateButtonEventCallbacks(orderedComponents);
     code += this.generateCheckboxEventCallbacks(orderedComponents);
+    code += this.generateRadioEventCallbacks(orderedComponents);
+
+    // 生成 radio 按钮样式（全局，同一父容器下的 radio 互斥）
+    code += this.generateRadioStyleDefinitions(orderedComponents);
 
     code += `// 组件句柄定义\n`;
     orderedComponents.forEach(component => {
@@ -383,6 +387,11 @@ export class LvglCCodeGenerator implements ICodeGenerator {
       case 'hg_checkbox':
         code += `    ${component.id} = lv_checkbox_create(${parentRef});\n`;
         code += this.generateCheckboxSetters(component);
+        break;
+
+      case 'hg_radio':
+        code += `    ${component.id} = lv_checkbox_create(${parentRef});\n`;
+        code += this.generateRadioSetters(component);
         break;
 
       default:
@@ -856,6 +865,143 @@ export class LvglCCodeGenerator implements ICodeGenerator {
       code += `    lv_obj_set_style_text_font(${component.id}, &${customFontVar}, LV_PART_MAIN);\n`;
     } else if (fontSize !== 16) {
       // 非默认字体大小时设置 LVGL 内置字体
+      const fontName = this.getLvglFontBySize(fontSize);
+      code += `    lv_obj_set_style_text_font(${component.id}, &${fontName}, LV_PART_MAIN);\n`;
+    }
+
+    // 添加事件回调绑定
+    const cbName = `${component.id}_event_cb`;
+    code += `    lv_obj_add_event_cb(${component.id}, ${cbName}, LV_EVENT_VALUE_CHANGED, NULL);\n`;
+
+    return code;
+  }
+
+  /**
+   * 生成 radio 按钮样式定义（圆形 indicator）
+   */
+  private generateRadioStyleDefinitions(components: Component[]): string {
+    const radios = components.filter(c => c.type === 'hg_radio');
+    if (radios.length === 0) {
+      return '';
+    }
+
+    let code = `// Radio 按钮样式（圆形 indicator）\n`;
+    code += `static lv_style_t style_radio;\n`;
+    code += `static lv_style_t style_radio_chk;\n`;
+    code += `static bool style_radio_initialized = false;\n\n`;
+    code += `static void radio_style_init(void)\n`;
+    code += `{\n`;
+    code += `    if(style_radio_initialized) return;\n`;
+    code += `    style_radio_initialized = true;\n\n`;
+    code += `    lv_style_init(&style_radio);\n`;
+    code += `    lv_style_set_radius(&style_radio, LV_RADIUS_CIRCLE);\n\n`;
+    code += `    lv_style_init(&style_radio_chk);\n`;
+    code += `    lv_style_set_bg_image_src(&style_radio_chk, NULL);\n`;
+    code += `}\n\n`;
+    return code;
+  }
+
+  /**
+   * 生成 radio 按钮事件回调函数
+   */
+  private generateRadioEventCallbacks(components: Component[]): string {
+    const radios = components.filter(c => c.type === 'hg_radio');
+    if (radios.length === 0) {
+      return '';
+    }
+
+    let code = `// Radio 按钮事件回调函数\n`;
+    for (const rb of radios) {
+      const cbName = `${rb.id}_event_cb`;
+      code += `static void ${cbName}(lv_event_t * e)\n`;
+      code += `{\n`;
+      code += `    lv_event_code_t code = lv_event_get_code(e);\n`;
+      code += `    lv_obj_t * obj = lv_event_get_target(e);\n`;
+      code += `    (void)obj; // 避免未使用警告\n\n`;
+      code += `    if(code == LV_EVENT_VALUE_CHANGED) {\n`;
+      code += `        const char * txt = lv_checkbox_get_text(obj);\n`;
+      code += `        if(lv_obj_has_state(obj, LV_STATE_CHECKED)) {\n`;
+      code += `            LV_LOG_USER("%s is selected.", txt);\n`;
+      code += `        } else {\n`;
+      code += `            LV_LOG_USER("%s is de-selected.", txt);\n`;
+      code += `        }\n`;
+      code += `    }\n`;
+      code += `}\n\n`;
+    }
+    return code;
+  }
+
+  /**
+   * 生成 radio 按钮属性设置代码
+   * Radio 使用 lv_checkbox + lv_obj_set_radio_button(obj, true)
+   * 同一父容器内的 radio 自动互斥
+   */
+  private generateRadioSetters(component: Component): string {
+    const tx = Number(component.style?.transform?.translateX || 0);
+    const ty = Number(component.style?.transform?.translateY || 0);
+
+    const x = Math.round(component.position.x + tx);
+    const y = Math.round(component.position.y + ty);
+    const width = Math.max(1, Math.round(component.position.width));
+    const height = Math.max(1, Math.round(component.position.height));
+
+    // Radio 文本：优先使用 label，其次 text，再次 name
+    const text = component.data?.label || component.data?.text || component.name || '';
+    const checked = component.data?.checked === true || component.data?.value === true;
+    const color = component.style?.color || component.data?.color;
+    const fontSize = Number(component.style?.fontSize || component.data?.fontSize || 16);
+    const fontFile = component.data?.fontFile;
+
+    let code = `    lv_obj_set_pos(${component.id}, ${x}, ${y});\n`;
+
+    // 设置 indicator 大小
+    const indicatorSize = Math.min(width, height);
+    code += `    {\n`;
+    code += `        const lv_font_t * _font = lv_obj_get_style_text_font(${component.id}, LV_PART_MAIN);\n`;
+    code += `        lv_coord_t _fh = lv_font_get_line_height(_font);\n`;
+    code += `        lv_coord_t _pad = (${indicatorSize} - _fh) / 2;\n`;
+    code += `        if(_pad < 0) _pad = 0;\n`;
+    code += `        lv_obj_set_style_pad_all(${component.id}, _pad, LV_PART_INDICATOR);\n`;
+    code += `    }\n`;
+
+    // 设置 radio 文本
+    if (text) {
+      code += `    lv_checkbox_set_text(${component.id}, "${this.escapeCString(String(text))}");\n`;
+    } else {
+      code += `    lv_checkbox_set_text(${component.id}, "");\n`;
+    }
+
+    // 启用 radio button 模式（同一父容器下互斥）
+    code += `    lv_obj_set_radio_button(${component.id}, true);\n`;
+
+    // 初始化并应用 radio 圆形样式
+    code += `    radio_style_init();\n`;
+    code += `    lv_obj_add_style(${component.id}, &style_radio, LV_PART_INDICATOR);\n`;
+    code += `    lv_obj_add_style(${component.id}, &style_radio_chk, LV_PART_INDICATOR | LV_STATE_CHECKED);\n`;
+
+    // 设置初始选中状态
+    if (checked) {
+      code += `    lv_obj_add_state(${component.id}, LV_STATE_CHECKED);\n`;
+    }
+
+    // 设置文字颜色
+    if (color) {
+      const colorHex = this.parseColorHex(String(color));
+      code += `    lv_obj_set_style_text_color(${component.id}, lv_color_hex(0x${colorHex}), LV_PART_MAIN);\n`;
+    } else {
+      // 未指定文字颜色时，根据父容器背景色自动选择高对比度颜色
+      const parentBgColor = this.getAncestorBackgroundColor(component);
+      if (parentBgColor) {
+        const contrastColor = this.getContrastTextColor(parentBgColor);
+        code += `    lv_obj_set_style_text_color(${component.id}, lv_color_hex(0x${contrastColor}), LV_PART_MAIN);\n`;
+      }
+    }
+
+    // 设置字体
+    const customFontVar = fontFile ? this.getBuiltinFontVar(String(fontFile), fontSize) : null;
+    if (customFontVar) {
+      code += `    lv_obj_set_style_text_font(${component.id}, &${customFontVar}, LV_PART_MAIN);\n`;
+    } else if (fontSize !== 16) {
       const fontName = this.getLvglFontBySize(fontSize);
       code += `    lv_obj_set_style_text_font(${component.id}, &${fontName}, LV_PART_MAIN);\n`;
     }
