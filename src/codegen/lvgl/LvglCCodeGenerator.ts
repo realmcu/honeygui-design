@@ -123,6 +123,9 @@ export class LvglCCodeGenerator implements ICodeGenerator {
       code += `\n`;
     }
 
+    // 生成按钮事件回调函数
+    code += this.generateButtonEventCallbacks(orderedComponents);
+
     code += `// 组件句柄定义\n`;
     orderedComponents.forEach(component => {
       code += `lv_obj_t * ${component.id} = NULL;\n`;
@@ -139,6 +142,47 @@ export class LvglCCodeGenerator implements ICodeGenerator {
     });
 
     code += `}\n`;
+    return code;
+  }
+
+  /**
+   * 生成按钮事件回调函数
+   */
+  private generateButtonEventCallbacks(components: Component[]): string {
+    const buttons = components.filter(c => c.type === 'hg_button');
+    if (buttons.length === 0) {
+      return '';
+    }
+
+    let code = `// 按钮事件回调函数\n`;
+    for (const btn of buttons) {
+      const cbName = `${btn.id}_event_cb`;
+      code += `static void ${cbName}(lv_event_t * e)\n`;
+      code += `{\n`;
+      code += `    lv_event_code_t code = lv_event_get_code(e);\n`;
+      code += `    lv_obj_t * obj = lv_event_get_target(e);\n`;
+      code += `    (void)obj; // 避免未使用警告\n\n`;
+      code += `    switch(code) {\n`;
+      code += `        case LV_EVENT_CLICKED:\n`;
+      code += `            LV_LOG_USER("${btn.id} clicked");\n`;
+      code += `            break;\n`;
+      code += `        case LV_EVENT_PRESSED:\n`;
+      code += `            LV_LOG_USER("${btn.id} pressed");\n`;
+      code += `            break;\n`;
+      code += `        case LV_EVENT_RELEASED:\n`;
+      code += `            LV_LOG_USER("${btn.id} released");\n`;
+      code += `            break;\n`;
+      code += `        case LV_EVENT_LONG_PRESSED:\n`;
+      code += `            LV_LOG_USER("${btn.id} long pressed");\n`;
+      code += `            break;\n`;
+      code += `        case LV_EVENT_VALUE_CHANGED:\n`;
+      code += `            LV_LOG_USER("${btn.id} value changed (toggled)");\n`;
+      code += `            break;\n`;
+      code += `        default:\n`;
+      code += `            break;\n`;
+      code += `    }\n`;
+      code += `}\n\n`;
+    }
     return code;
   }
 
@@ -315,6 +359,20 @@ export class LvglCCodeGenerator implements ICodeGenerator {
         code += `    ${component.id} = lv_label_create(${parentRef});\n`;
         code += this.generateLabelSetters(component);
         break;
+
+      case 'hg_button': {
+        // 检查是否有图片（toggleMode 模式使用 imageOn/imageOff）
+        const hasImage = !!(component.data?.imageOn || component.data?.imageOff);
+        if (hasImage) {
+          // 使用 lv_imagebutton 创建图片按钮
+          code += `    ${component.id} = lv_imagebutton_create(${parentRef});\n`;
+        } else {
+          // 使用 lv_button 创建普通按钮
+          code += `    ${component.id} = lv_button_create(${parentRef});\n`;
+        }
+        code += this.generateButtonSetters(component, hasImage);
+        break;
+      }
 
       default:
         code += `    ${component.id} = lv_obj_create(${parentRef});\n`;
@@ -511,6 +569,138 @@ export class LvglCCodeGenerator implements ICodeGenerator {
       const fontName = this.getLvglFontBySize(fontSize);
       code += `    lv_obj_set_style_text_font(${component.id}, &${fontName}, LV_PART_MAIN);\n`;
     }
+
+    return code;
+  }
+
+  /**
+   * 生成按钮属性设置代码
+   * @param component 组件
+   * @param hasImage 是否有图片（imagebutton）
+   */
+  private generateButtonSetters(component: Component, hasImage: boolean): string {
+    const tx = Number(component.style?.transform?.translateX || 0);
+    const ty = Number(component.style?.transform?.translateY || 0);
+
+    const x = Math.round(component.position.x + tx);
+    const y = Math.round(component.position.y + ty);
+    const width = Math.max(1, Math.round(component.position.width));
+    const height = Math.max(1, Math.round(component.position.height));
+
+    const text = component.data?.text || '';
+    const toggleMode = component.data?.toggleMode === true || component.data?.toggleMode === 'true';
+
+    let code = `    lv_obj_set_pos(${component.id}, ${x}, ${y});\n`;
+
+    if (hasImage) {
+      // 图片按钮使用图片原始尺寸，不设置固定大小
+      code += `    lv_obj_set_size(${component.id}, LV_SIZE_CONTENT, LV_SIZE_CONTENT);\n`;
+      // 图片按钮 (lv_imagebutton)
+      const imageOn = String(component.data?.imageOn || '');
+      const imageOff = String(component.data?.imageOff || '');
+      const initialState = component.data?.initialState === 'on';
+      const hasTwoImages = !!(imageOn && imageOff);
+
+      // 获取图片的内置变量名（如果已转换）
+      const imageOnVar = this.getBuiltinImageVar(imageOn);
+      const imageOffVar = this.getBuiltinImageVar(imageOff);
+
+      // 取消图片平铺放大，移除内边距
+      code += `    lv_obj_set_style_pad_all(${component.id}, 0, 0);\n`;
+
+      // 如果没有两张图片切换，添加按下变暗效果
+      if (!hasTwoImages) {
+        code += `    lv_obj_set_style_image_recolor(${component.id}, lv_color_black(), LV_STATE_PRESSED);\n`;
+        code += `    lv_obj_set_style_image_recolor_opa(${component.id}, LV_OPA_30, LV_STATE_PRESSED);\n`;
+      }
+
+      // 设置 RELEASED 状态的图片（正常状态）
+      if (toggleMode) {
+        // 双态模式：RELEASED 使用 off 图片，CHECKED 使用 on 图片
+        if (imageOffVar) {
+          code += `    lv_imagebutton_set_src(${component.id}, LV_IMAGEBUTTON_STATE_RELEASED, NULL, &${imageOffVar}, NULL);\n`;
+        } else if (imageOff) {
+          const offSrc = this.normalizeLvglImageSource(imageOff);
+          code += `    lv_imagebutton_set_src(${component.id}, LV_IMAGEBUTTON_STATE_RELEASED, NULL, "${this.escapeCString(offSrc)}", NULL);\n`;
+        }
+
+        if (imageOnVar) {
+          code += `    lv_imagebutton_set_src(${component.id}, LV_IMAGEBUTTON_STATE_CHECKED_RELEASED, NULL, &${imageOnVar}, NULL);\n`;
+        } else if (imageOn) {
+          const onSrc = this.normalizeLvglImageSource(imageOn);
+          code += `    lv_imagebutton_set_src(${component.id}, LV_IMAGEBUTTON_STATE_CHECKED_RELEASED, NULL, "${this.escapeCString(onSrc)}", NULL);\n`;
+        }
+
+        // 启用可选中标志
+        code += `    lv_obj_add_flag(${component.id}, LV_OBJ_FLAG_CHECKABLE);\n`;
+
+        // 设置初始状态
+        if (initialState) {
+          code += `    lv_obj_add_state(${component.id}, LV_STATE_CHECKED);\n`;
+        }
+      } else {
+        // 普通图片按钮
+        // RELEASED 状态使用 imageOn 作为默认图片
+        if (imageOnVar) {
+          code += `    lv_imagebutton_set_src(${component.id}, LV_IMAGEBUTTON_STATE_RELEASED, NULL, &${imageOnVar}, NULL);\n`;
+        } else if (imageOn) {
+          const imgSrc = this.normalizeLvglImageSource(imageOn);
+          code += `    lv_imagebutton_set_src(${component.id}, LV_IMAGEBUTTON_STATE_RELEASED, NULL, "${this.escapeCString(imgSrc)}", NULL);\n`;
+        } else if (imageOffVar) {
+          // 如果没有 imageOn，使用 imageOff
+          code += `    lv_imagebutton_set_src(${component.id}, LV_IMAGEBUTTON_STATE_RELEASED, NULL, &${imageOffVar}, NULL);\n`;
+        } else if (imageOff) {
+          const imgSrc = this.normalizeLvglImageSource(imageOff);
+          code += `    lv_imagebutton_set_src(${component.id}, LV_IMAGEBUTTON_STATE_RELEASED, NULL, "${this.escapeCString(imgSrc)}", NULL);\n`;
+        }
+
+        // 如果有两张图片，PRESSED 状态使用 imageOff 实现按下切换效果
+        if (imageOn && imageOff) {
+          if (imageOffVar) {
+            code += `    lv_imagebutton_set_src(${component.id}, LV_IMAGEBUTTON_STATE_PRESSED, NULL, &${imageOffVar}, NULL);\n`;
+          } else {
+            const imgSrc = this.normalizeLvglImageSource(imageOff);
+            code += `    lv_imagebutton_set_src(${component.id}, LV_IMAGEBUTTON_STATE_PRESSED, NULL, "${this.escapeCString(imgSrc)}", NULL);\n`;
+          }
+        }
+      }
+
+      // 在图片按钮上创建文字标签
+      if (text) {
+        const labelId = `${component.id}_label`;
+        code += `    lv_obj_t * ${labelId} = lv_label_create(${component.id});\n`;
+        code += `    lv_label_set_text(${labelId}, "${this.escapeCString(String(text))}");\n`;
+        code += `    lv_obj_center(${labelId});\n`;
+      }
+    } else {
+      // 普通按钮 (lv_button)
+      code += `    lv_obj_set_size(${component.id}, ${width}, ${height});\n`;
+      // 移除按钮按下锁定
+      code += `    lv_obj_remove_flag(${component.id}, LV_OBJ_FLAG_PRESS_LOCK);\n`;
+
+      if (toggleMode) {
+        // 双态模式：添加可选中标志
+        code += `    lv_obj_add_flag(${component.id}, LV_OBJ_FLAG_CHECKABLE);\n`;
+        code += `    lv_obj_set_height(${component.id}, LV_SIZE_CONTENT);\n`;
+
+        const initialState = component.data?.initialState === 'on';
+        if (initialState) {
+          code += `    lv_obj_add_state(${component.id}, LV_STATE_CHECKED);\n`;
+        }
+      }
+
+      // 在按钮内创建标签显示文本
+      if (text) {
+        const labelId = `${component.id}_label`;
+        code += `    lv_obj_t * ${labelId} = lv_label_create(${component.id});\n`;
+        code += `    lv_label_set_text(${labelId}, "${this.escapeCString(String(text))}");\n`;
+        code += `    lv_obj_center(${labelId});\n`;
+      }
+    }
+
+    // 添加按钮事件回调绑定
+    const cbName = `${component.id}_event_cb`;
+    code += `    lv_obj_add_event_cb(${component.id}, ${cbName}, LV_EVENT_ALL, NULL);\n`;
 
     return code;
   }
@@ -838,39 +1028,45 @@ export class LvglCCodeGenerator implements ICodeGenerator {
   }
 
   /**
-   * 收集所有 hg_image 组件中使用的图片源
+   * 收集所有组件中使用的图片源（hg_image 的 src，hg_button 的 imageOn/imageOff）
    */
   private collectImageSources(): string[] {
     const imageExts = new Set(['.png', '.jpg', '.jpeg', '.bmp', '.webp', '.gif']);
     const seen = new Set<string>();
     const result: string[] = [];
 
-    for (const component of this.components) {
-      if (component.type !== 'hg_image') {
-        continue;
-      }
-      
-      const src = component.data?.src;
+    const addImage = (src: string | undefined | null) => {
       if (!src) {
-        continue;
+        return;
       }
       
       const srcText = String(src).trim();
       if (!srcText) {
-        continue;
+        return;
       }
       
       const ext = path.extname(srcText).toLowerCase();
       if (!imageExts.has(ext)) {
-        continue;
+        return;
       }
 
       const key = this.normalizeImageKey(srcText);
       if (seen.has(key)) {
-        continue;
+        return;
       }
       seen.add(key);
       result.push(srcText);
+    };
+
+    for (const component of this.components) {
+      if (component.type === 'hg_image') {
+        // hg_image 组件的 src
+        addImage(component.data?.src);
+      } else if (component.type === 'hg_button') {
+        // hg_button 组件的 imageOn/imageOff
+        addImage(component.data?.imageOn);
+        addImage(component.data?.imageOff);
+      }
     }
 
     return result;

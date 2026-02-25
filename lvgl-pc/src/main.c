@@ -89,6 +89,8 @@ int main(void)
 
     while(1) {
         lv_lock();
+        /* 强制每帧全屏刷新，解决 Windows 驱动双缓冲问题 */
+        lv_obj_invalidate(lv_screen_active());
         uint32_t delay_ms = lv_timer_handler();
         lv_unlock();
 
