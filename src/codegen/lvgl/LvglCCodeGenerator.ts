@@ -360,6 +360,11 @@ export class LvglCCodeGenerator implements ICodeGenerator {
         break;
       }
 
+      case 'hg_arc':
+        code += `    ${component.id} = lv_arc_create(${parentRef});\n`;
+        code += this.generateArcSetters(component);
+        break;
+
       case 'hg_circle':
         code += `    ${component.id} = lv_obj_create(${parentRef});\n`;
         code += this.generateCircleSetters(component);
@@ -504,6 +509,63 @@ export class LvglCCodeGenerator implements ICodeGenerator {
     if (component.data?.buttonMode) {
       code += `    /* TODO(lvgl): buttonMode=${this.escapeCString(String(component.data.buttonMode))} 暂未映射 */\n`;
     }
+
+    return code;
+  }
+
+  private generateArcSetters(component: Component): string {
+    const { x, y, width, height } = component.position;
+    const posX = Math.round(x);
+    const posY = Math.round(y);
+    const w = Math.max(1, Math.round(width));
+    const h = Math.max(1, Math.round(height));
+
+    const radius = Number(component.style?.radius ?? 40);
+    const startAngle = Number(component.style?.startAngle ?? 0);
+    const endAngle = Number(component.style?.endAngle ?? 270);
+    const strokeWidth = Number(component.style?.strokeWidth ?? 8);
+    const color = component.style?.color || '#007acc';
+    const opacity = Math.max(0, Math.min(255, Math.round(Number(component.style?.opacity ?? component.data?.opacity ?? 255))));
+    const colorHex = this.parseColorHex(color);
+
+    // 弧形尺寸基于半径 + 线宽
+    const arcSize = Math.round((radius + strokeWidth / 2) * 2 + 4);
+
+    let code = `    lv_obj_set_pos(${component.id}, ${posX}, ${posY});\n`;
+    code += `    lv_obj_set_size(${component.id}, ${w}, ${h});\n`;
+
+    // LVGL arc 角度：0度在3点钟方向（右侧），顺时针增加
+    // HoneyGUI arc 角度：0度在3点钟方向（右侧），顺时针增加
+    // 两者坐标系一致，无需转换
+    const lvglStart = Math.round(startAngle) % 360;
+    const lvglEnd = Math.round(endAngle) % 360;
+
+    // 移除旋转指示器（knob）和背景弧线
+    code += `    lv_obj_remove_style(${component.id}, NULL, LV_PART_KNOB);\n`;
+    code += `    lv_arc_set_rotation(${component.id}, 0);\n`;
+    code += `    lv_arc_set_mode(${component.id}, LV_ARC_MODE_NORMAL);\n`;
+
+    // 设置背景弧线（完整圆弧，透明），隐藏背景
+    code += `    lv_arc_set_bg_angles(${component.id}, 0, 360);\n`;
+    code += `    lv_obj_set_style_arc_width(${component.id}, 0, LV_PART_MAIN);\n`;
+
+    // 设置前景弧线角度和宽度
+    code += `    lv_arc_set_angles(${component.id}, ${lvglStart}, ${lvglEnd});\n`;
+    code += `    lv_obj_set_style_arc_width(${component.id}, ${Math.round(strokeWidth)}, LV_PART_INDICATOR);\n`;
+    code += `    lv_obj_set_style_arc_rounded(${component.id}, true, LV_PART_INDICATOR);\n`;
+
+    // 设置弧线颜色
+    code += `    lv_obj_set_style_arc_color(${component.id}, lv_color_hex(0x${colorHex}), LV_PART_INDICATOR);\n`;
+
+    // 设置透明度
+    if (opacity < 255) {
+      code += `    lv_obj_set_style_arc_opa(${component.id}, ${opacity}, LV_PART_INDICATOR);\n`;
+    }
+
+    // 移除背景样式（去边框、去背景色）
+    code += `    lv_obj_set_style_bg_opa(${component.id}, LV_OPA_TRANSP, LV_PART_MAIN);\n`;
+    code += `    lv_obj_set_style_border_width(${component.id}, 0, LV_PART_MAIN);\n`;
+    code += `    lv_obj_set_style_pad_all(${component.id}, 0, LV_PART_MAIN);\n`;
 
     return code;
   }
