@@ -419,6 +419,8 @@ const en = {
   'Foreground Color': 'Foreground Color',
   'High Quality Rendering': 'Anti-aliasing',
   'Enable Clipping': 'Enable Clipping',
+  'Rendering': 'Rendering',
+  'Appearance': 'Appearance',
 
   // HgVideoProperties
   'Video Settings': 'Video Settings',

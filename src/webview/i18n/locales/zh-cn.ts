@@ -419,6 +419,8 @@ const zhCN = {
   'Foreground Color': '前景色',
   'High Quality Rendering': '抗锯齿',
   'Enable Clipping': '启用裁剪',
+  'Rendering': '渲染',
+  'Appearance': '外观',
 
   // HgVideoProperties
   'Video Settings': '视频设置',

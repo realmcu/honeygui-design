@@ -165,14 +165,17 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
 
       {activeTab === 'properties' ? (
         <>
-          <BaseProperties component={component} onUpdate={onUpdate} components={components} disableSize={true} sizeTooltip="图片尺寸由源文件决定" />
-
-          <div className="property-group">
-            <div className="property-group-header">{t('Image')}</div>
+          <BaseProperties component={component} onUpdate={onUpdate} components={components} disableSize={true} sizeTooltip="图片尺寸由源文件决定">
+            {/* 图片路径 */}
             <div className="property-item">
               <label>{t('Image Path')}</label>
               {renderImageProperty(component.data?.src, (value) => handleDataChange('src', value))}
             </div>
+          </BaseProperties>
+
+          {/* Rendering 分组 */}
+          <div className="property-group">
+            <div className="property-group-header">{t('Rendering')}</div>
             
             {/* 渲染模式 */}
             <div className="property-item">
@@ -477,7 +480,12 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
                 {t('Leave empty to use default (rotation: image center, scale: top-left)')}
               </div>
             </div>
+          </div>
 
+          {/* Appearance 分组 */}
+          <div className="property-group">
+            <div className="property-group-header">{t('Appearance')}</div>
+            
             {/* 透明度 */}
             <div className="property-item">
               <label>{t('Opacity (0-255)')}</label>

@@ -12,6 +12,7 @@ interface BasePropertiesProps extends PropertyPanelProps {
   sizeTooltip?: string;
   hideParent?: boolean;  // 是否隐藏父对象选择（用于 hg_view 等顶级容器）
   disableParent?: boolean;  // 是否禁用父对象选择（用于 hg_list_item）
+  children?: React.ReactNode;  // 允许插入自定义内容
 }
 
 export const BaseProperties: React.FC<BasePropertiesProps> = ({ 
@@ -22,6 +23,7 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
   sizeTooltip,
   hideParent = false,
   disableParent = false,
+  children,
 }) => {
   const handlePositionChange = (field: 'x' | 'y' | 'width' | 'height', value: number) => {
     // 对于 3D 组件，XY 必须是整数
@@ -296,6 +298,9 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
           </div>
         )}
       </div>
+
+      {/* 插入自定义内容 */}
+      {children}
     </>
   );
 };
