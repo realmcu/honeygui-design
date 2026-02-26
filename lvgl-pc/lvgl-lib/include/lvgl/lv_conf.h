@@ -43,4 +43,5 @@
 #define LV_USE_TJPGD 1
 #define LV_USE_GIF 1
 #define LV_USE_FONT_COMPRESSED 1
+#define LV_USE_FFMPEG 1
 #endif /*LV_CONF_H*/

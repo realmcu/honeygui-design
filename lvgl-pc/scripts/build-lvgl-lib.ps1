@@ -4,7 +4,8 @@ param(
     [ValidateSet("Release","Debug","RelWithDebInfo","MinSizeRel")]
     [string]$Config = "Release",
     [int]$Parallel = 8,
-    [switch]$Clean
+    [switch]$Clean,
+    [string]$FfmpegRoot = ""
 )
 
 $ErrorActionPreference = 'Stop'
@@ -18,6 +19,36 @@ if(-not (Test-Path $LvglSrc)) {
 
 $BuildDir = Join-Path $LvglPcRoot "_lvgl_build"
 $InstallDir = Join-Path $LvglPcRoot "lvgl-lib"
+
+if([string]::IsNullOrWhiteSpace($FfmpegRoot) -and $env:FFMPEG_ROOT) {
+    $FfmpegRoot = $env:FFMPEG_ROOT
+}
+
+$HasFfmpeg = $false
+$FfmpegInclude = $null
+$FfmpegLib = $null
+$FfmpegBin = $null
+$FfmpegIncludePosix = $null
+
+if(-not [string]::IsNullOrWhiteSpace($FfmpegRoot)) {
+    $ResolvedFfmpegRoot = Resolve-Path $FfmpegRoot -ErrorAction SilentlyContinue
+    if($ResolvedFfmpegRoot) {
+        $FfmpegRoot = $ResolvedFfmpegRoot.Path
+        $FfmpegInclude = Join-Path $FfmpegRoot "include"
+        $FfmpegLib = Join-Path $FfmpegRoot "lib"
+        $FfmpegBin = Join-Path $FfmpegRoot "bin"
+
+        if((Test-Path $FfmpegInclude) -and (Test-Path $FfmpegLib)) {
+            $HasFfmpeg = $true
+            $FfmpegIncludePosix = ($FfmpegInclude -replace "\\", "/")
+            if(Test-Path $FfmpegBin) {
+                $env:Path = "$FfmpegBin;$env:Path"
+            }
+            $env:CMAKE_INCLUDE_PATH = if($env:CMAKE_INCLUDE_PATH) { "$FfmpegInclude;$($env:CMAKE_INCLUDE_PATH)" } else { $FfmpegInclude }
+            $env:CMAKE_LIBRARY_PATH = if($env:CMAKE_LIBRARY_PATH) { "$FfmpegLib;$($env:CMAKE_LIBRARY_PATH)" } else { $FfmpegLib }
+        }
+    }
+}
 
 if($Clean) {
     if(Test-Path $BuildDir) { Remove-Item -Recurse -Force $BuildDir }
@@ -42,6 +73,29 @@ $cmakeArgs = @(
     "-DCONFIG_LV_BUILD_EXAMPLES=OFF",
     "-DCONFIG_LV_USE_THORVG_INTERNAL=OFF"
 )
+
+if($HasFfmpeg) {
+    Write-Host "FFmpeg enabled: $FfmpegRoot" -ForegroundColor Yellow
+    $cFlags = "-I$FfmpegIncludePosix"
+    $cxxFlags = "-I$FfmpegIncludePosix"
+    if($env:CFLAGS) {
+        $cFlags = "$($env:CFLAGS) $cFlags"
+    }
+    if($env:CXXFLAGS) {
+        $cxxFlags = "$($env:CXXFLAGS) $cxxFlags"
+    }
+    $cmakeArgs += @(
+        "-DCONFIG_LV_USE_FFMPEG=ON",
+        "-DCMAKE_PREFIX_PATH=$FfmpegRoot",
+        "-DCMAKE_INCLUDE_PATH=$FfmpegInclude",
+        "-DCMAKE_LIBRARY_PATH=$FfmpegLib",
+        "-DCMAKE_C_FLAGS=$cFlags",
+        "-DCMAKE_CXX_FLAGS=$cxxFlags"
+    )
+}
+else {
+    Write-Host "FFmpeg path not found or incomplete, continue without extra FFmpeg CMake path." -ForegroundColor DarkYellow
+}
 
 & cmake @cmakeArgs
 

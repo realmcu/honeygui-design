@@ -51,6 +51,74 @@ target_sources(lvgl_pc PRIVATE ${LVGL_GENERATED_UI_SOURCES} ${LVGL_GENERATED_IMG
 
 target_link_libraries(lvgl_pc PRIVATE lvgl)
 
+# FFmpeg libraries required by lv_ffmpeg (LV_USE_FFMPEG=1)
+# Look for FFmpeg in -DFFMPEG_ROOT=... cmake arg, or FFMPEG_ROOT env var
+set(FFMPEG_ROOT "" CACHE PATH "Path to FFmpeg dev installation (contains include/lib/bin)")
+if(NOT FFMPEG_ROOT AND DEFINED ENV{FFMPEG_ROOT})
+    set(FFMPEG_ROOT "$ENV{FFMPEG_ROOT}")
+endif()
+
+if(FFMPEG_ROOT)
+    list(APPEND CMAKE_PREFIX_PATH "${FFMPEG_ROOT}")
+    set(FFMPEG_LIB_DIR "${FFMPEG_ROOT}/lib")
+    set(FFMPEG_INCLUDE_DIR "${FFMPEG_ROOT}/include")
+endif()
+
+find_library(AVFORMAT_LIBRARY  NAMES avformat  PATHS "${FFMPEG_LIB_DIR}" NO_DEFAULT_PATH)
+find_library(AVCODEC_LIBRARY   NAMES avcodec   PATHS "${FFMPEG_LIB_DIR}" NO_DEFAULT_PATH)
+find_library(AVUTIL_LIBRARY    NAMES avutil    PATHS "${FFMPEG_LIB_DIR}" NO_DEFAULT_PATH)
+find_library(SWSCALE_LIBRARY   NAMES swscale   PATHS "${FFMPEG_LIB_DIR}" NO_DEFAULT_PATH)
+find_library(SWRESAMPLE_LIBRARY NAMES swresample PATHS "${FFMPEG_LIB_DIR}" NO_DEFAULT_PATH)
+
+# Fallback: search system paths
+if(NOT AVFORMAT_LIBRARY)
+    find_library(AVFORMAT_LIBRARY  NAMES avformat)
+endif()
+if(NOT AVCODEC_LIBRARY)
+    find_library(AVCODEC_LIBRARY   NAMES avcodec)
+endif()
+if(NOT AVUTIL_LIBRARY)
+    find_library(AVUTIL_LIBRARY    NAMES avutil)
+endif()
+if(NOT SWSCALE_LIBRARY)
+    find_library(SWSCALE_LIBRARY   NAMES swscale)
+endif()
+if(NOT SWRESAMPLE_LIBRARY)
+    find_library(SWRESAMPLE_LIBRARY NAMES swresample)
+endif()
+
+if(AVFORMAT_LIBRARY AND AVCODEC_LIBRARY AND AVUTIL_LIBRARY AND SWSCALE_LIBRARY)
+    message(STATUS "FFmpeg libraries found:")
+    message(STATUS "  avformat:   ${AVFORMAT_LIBRARY}")
+    message(STATUS "  avcodec:    ${AVCODEC_LIBRARY}")
+    message(STATUS "  avutil:     ${AVUTIL_LIBRARY}")
+    message(STATUS "  swscale:    ${SWSCALE_LIBRARY}")
+    target_link_libraries(lvgl_pc PRIVATE
+        ${AVFORMAT_LIBRARY}
+        ${AVCODEC_LIBRARY}
+        ${AVUTIL_LIBRARY}
+        ${SWSCALE_LIBRARY})
+    if(SWRESAMPLE_LIBRARY)
+        message(STATUS "  swresample: ${SWRESAMPLE_LIBRARY}")
+        target_link_libraries(lvgl_pc PRIVATE ${SWRESAMPLE_LIBRARY})
+    endif()
+    if(FFMPEG_INCLUDE_DIR)
+        target_include_directories(lvgl_pc PRIVATE "${FFMPEG_INCLUDE_DIR}")
+    endif()
+    # Copy FFmpeg DLLs to build output for runtime
+    if(WIN32 AND DEFINED FFMPEG_ROOT)
+        file(GLOB FFMPEG_DLLS "${FFMPEG_ROOT}/bin/*.dll")
+        if(FFMPEG_DLLS)
+            add_custom_command(TARGET lvgl_pc POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${FFMPEG_DLLS} $<TARGET_FILE_DIR:lvgl_pc>
+                COMMENT "Copying FFmpeg DLLs to output directory")
+        endif()
+    endif()
+else()
+    message(WARNING "FFmpeg libraries not found. Video playback (lv_ffmpeg) will have link errors.\n"
+        "Set FFMPEG_ROOT environment variable to your FFmpeg dev installation path.")
+endif()
+
 target_compile_definitions(lvgl_pc PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX LCD_WIDTH=${LCD_WIDTH} LCD_HEIGHT=${LCD_HEIGHT})
 
 if(WIN32)

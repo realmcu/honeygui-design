@@ -332,11 +332,17 @@ export class SimulationRunner {
         this.log(`使用分辨率: ${width}x${height}`);
 
         this.log('配置 LVGL PC CMake 工程...');
+        const cmakeArgs = [`-DLCD_WIDTH=${width}`, `-DLCD_HEIGHT=${height}`, '-S', '.', '-B', 'build'];
         if (process.platform === 'win32') {
-            await this.runCommand('cmake', ['-G', 'MinGW Makefiles', `-DLCD_WIDTH=${width}`, `-DLCD_HEIGHT=${height}`, '-S', '.', '-B', 'build'], lvglPcRoot, 'CMake 配置失败');
-        } else {
-            await this.runCommand('cmake', [`-DLCD_WIDTH=${width}`, `-DLCD_HEIGHT=${height}`, '-S', '.', '-B', 'build'], lvglPcRoot, 'CMake 配置失败');
+            cmakeArgs.unshift('-G', 'MinGW Makefiles');
         }
+        // 传递 FFmpeg 路径（从环境变量 FFMPEG_ROOT 获取）
+        const ffmpegRoot = process.env.FFMPEG_ROOT;
+        if (ffmpegRoot) {
+            cmakeArgs.push(`-DFFMPEG_ROOT=${ffmpegRoot}`);
+            this.log(`FFmpeg 路径: ${ffmpegRoot}`);
+        }
+        await this.runCommand('cmake', cmakeArgs, lvglPcRoot, 'CMake 配置失败');
 
         this.log('编译 LVGL PC 工程...');
         await this.runCommand('cmake', ['--build', 'build', '-j4'], lvglPcRoot, 'LVGL PC 编译失败');

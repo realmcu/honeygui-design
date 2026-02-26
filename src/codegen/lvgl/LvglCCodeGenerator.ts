@@ -409,6 +409,11 @@ export class LvglCCodeGenerator implements ICodeGenerator {
         code += this.generateRadioSetters(component);
         break;
 
+      case 'hg_video':
+        code += `    ${component.id} = lv_ffmpeg_player_create(${parentRef});\n`;
+        code += this.generateVideoSetters(component);
+        break;
+
       default:
         code += `    ${component.id} = lv_obj_create(${parentRef});\n`;
         code += `    lv_obj_set_pos(${component.id}, ${Math.round(x)}, ${Math.round(y)});\n`;
@@ -1205,6 +1210,46 @@ export class LvglCCodeGenerator implements ICodeGenerator {
   }
 
   /**
+   * 生成 hg_video 组件的属性设置代码
+   * 使用 LVGL FFmpeg player 组件 (lv_ffmpeg_player)
+   */
+  private generateVideoSetters(component: Component): string {
+    const { x, y, width, height } = component.position;
+    const posX = Math.round(x);
+    const posY = Math.round(y);
+    const w = Math.max(1, Math.round(width));
+    const h = Math.max(1, Math.round(height));
+
+    const src = component.data?.src || '';
+    // 属性值可能是字符串 "true"/"false" 或布尔值，需要兼容处理
+    const autoplayRaw = component.data?.autoPlay ?? component.data?.autoplay;
+    const autoplay = autoplayRaw === true || autoplayRaw === 'true';
+    const loopRaw = component.data?.loop;
+    const loop = loopRaw === true || loopRaw === 'true';
+
+    let code = `    lv_obj_set_pos(${component.id}, ${posX}, ${posY});\n`;
+    code += `    lv_obj_set_size(${component.id}, ${w}, ${h});\n`;
+
+    // 设置视频源（FFmpeg 不使用 LVGL 文件系统，需要 OS 原生路径）
+    if (src) {
+      const videoSrc = this.normalizeVideoSource(String(src));
+      code += `    lv_ffmpeg_player_set_src(${component.id}, "${this.escapeCString(videoSrc)}");\n`;
+    }
+
+    // 设置循环播放
+    if (loop) {
+      code += `    lv_ffmpeg_player_set_auto_restart(${component.id}, true);\n`;
+    }
+
+    // 自动播放
+    if (autoplay) {
+      code += `    lv_ffmpeg_player_set_cmd(${component.id}, LV_FFMPEG_PLAYER_CMD_START);\n`;
+    }
+
+    return code;
+  }
+
+  /**
    * 获取转换后的字体变量名
    */
   private getBuiltinFontVar(fontFile: string, fontSize: number): string | null {
@@ -1338,6 +1383,33 @@ export class LvglCCodeGenerator implements ICodeGenerator {
     }
 
     return `A:assets/${withoutLeadingSlash}`;
+  }
+
+  /**
+   * 规范化视频源路径（FFmpeg 使用 OS 原生路径，不走 LVGL 文件系统）
+   * 生成相对于 exe 工作目录的路径：assets/xxx.mp4
+   */
+  private normalizeVideoSource(source: string): string {
+    const normalized = source.replace(/\\/g, '/').trim();
+    if (!normalized) {
+      return normalized;
+    }
+
+    // 已经是绝对路径，直接返回
+    if (/^[A-Z]:/i.test(normalized) && normalized.length > 2 && normalized[2] === '/') {
+      return normalized;
+    }
+
+    // 去掉 LVGL 虚拟驱动器前缀（如 A:）
+    const withoutDriveLetter = normalized.replace(/^[A-Z]:/i, '');
+    const withoutLeadingSlash = withoutDriveLetter.replace(/^\/+/, '');
+
+    // 确保以 assets/ 开头
+    if (withoutLeadingSlash.startsWith('assets/')) {
+      return withoutLeadingSlash;
+    }
+
+    return `assets/${withoutLeadingSlash}`;
   }
 
   /**
