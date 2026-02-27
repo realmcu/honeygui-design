@@ -52,10 +52,41 @@ target_sources(lvgl_pc PRIVATE ${LVGL_GENERATED_UI_SOURCES} ${LVGL_GENERATED_IMG
 target_link_libraries(lvgl_pc PRIVATE lvgl)
 
 # FFmpeg libraries required by lv_ffmpeg (LV_USE_FFMPEG=1)
-# Look for FFmpeg in -DFFMPEG_ROOT=... cmake arg, or FFMPEG_ROOT env var
+# Look for FFmpeg in -DFFMPEG_ROOT=... cmake arg, FFMPEG_ROOT env var, or auto-detect from PATH
 set(FFMPEG_ROOT "" CACHE PATH "Path to FFmpeg dev installation (contains include/lib/bin)")
 if(NOT FFMPEG_ROOT AND DEFINED ENV{FFMPEG_ROOT})
     set(FFMPEG_ROOT "$ENV{FFMPEG_ROOT}")
+endif()
+
+# Auto-detect FFmpeg from PATH if not explicitly set
+if(NOT FFMPEG_ROOT)
+    if(WIN32)
+        execute_process(
+            COMMAND cmd /c where ffmpeg
+            OUTPUT_VARIABLE FFMPEG_EXE_PATH
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_QUIET
+            RESULT_VARIABLE FFMPEG_FOUND_RESULT
+        )
+    else()
+        execute_process(
+            COMMAND which ffmpeg
+            OUTPUT_VARIABLE FFMPEG_EXE_PATH
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_QUIET
+            RESULT_VARIABLE FFMPEG_FOUND_RESULT
+        )
+    endif()
+    
+    if(FFMPEG_FOUND_RESULT EQUAL 0 AND FFMPEG_EXE_PATH)
+        # Handle multiple results (where may return multiple lines), take the first one
+        string(REGEX REPLACE "\n.*" "" FFMPEG_EXE_PATH "${FFMPEG_EXE_PATH}")
+        # Get the bin directory (parent of ffmpeg.exe)
+        get_filename_component(FFMPEG_BIN_DIR "${FFMPEG_EXE_PATH}" DIRECTORY)
+        # Get the root directory (parent of bin)
+        get_filename_component(FFMPEG_ROOT "${FFMPEG_BIN_DIR}" DIRECTORY)
+        message(STATUS "Auto-detected FFmpeg installation: ${FFMPEG_ROOT}")
+    endif()
 endif()
 
 if(FFMPEG_ROOT)
@@ -116,7 +147,8 @@ if(AVFORMAT_LIBRARY AND AVCODEC_LIBRARY AND AVUTIL_LIBRARY AND SWSCALE_LIBRARY)
     endif()
 else()
     message(WARNING "FFmpeg libraries not found. Video playback (lv_ffmpeg) will have link errors.\n"
-        "Set FFMPEG_ROOT environment variable to your FFmpeg dev installation path.")
+        "Please ensure FFmpeg is installed and 'ffmpeg' is in your PATH,\n"
+        "or set FFMPEG_ROOT environment variable to your FFmpeg dev installation path.")
 endif()
 
 target_compile_definitions(lvgl_pc PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX LCD_WIDTH=${LCD_WIDTH} LCD_HEIGHT=${LCD_HEIGHT})
