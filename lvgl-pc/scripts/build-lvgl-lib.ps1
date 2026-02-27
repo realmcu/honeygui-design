@@ -5,7 +5,8 @@ param(
     [string]$Config = "Release",
     [int]$Parallel = 8,
     [switch]$Clean,
-    [string]$FfmpegRoot = ""
+    [string]$FfmpegRoot = "",
+    [string]$RustglbRoot = ""
 )
 
 $ErrorActionPreference = 'Stop'
@@ -20,9 +21,38 @@ if(-not (Test-Path $LvglSrc)) {
 $BuildDir = Join-Path $LvglPcRoot "_lvgl_build"
 $InstallDir = Join-Path $LvglPcRoot "lvgl-lib"
 
-if([string]::IsNullOrWhiteSpace($FfmpegRoot) -and $env:FFMPEG_ROOT) {
-    $FfmpegRoot = $env:FFMPEG_ROOT
+if([string]::IsNullOrWhiteSpace($RustglbRoot)) {
+    $RustglbRoot = Join-Path $LvglPcRoot "..\..\rustglb"
 }
+
+$ResolvedRustglbRoot = Resolve-Path $RustglbRoot -ErrorAction SilentlyContinue
+if(-not $ResolvedRustglbRoot) {
+    throw "rustglb source folder not found: $RustglbRoot"
+}
+$RustglbRoot = $ResolvedRustglbRoot.Path
+
+$FfmpegFailureReasons = New-Object System.Collections.Generic.List[string]
+
+ $FfmpegRoot = ""
+$WhereFfmpegOutput = & cmd /d /c "where ffmpeg 2>nul"
+if($LASTEXITCODE -eq 0 -and $WhereFfmpegOutput) {
+    $FirstFfmpegExe = ($WhereFfmpegOutput | Select-Object -First 1).Trim()
+    if(-not [string]::IsNullOrWhiteSpace($FirstFfmpegExe)) {
+        $FfmpegBinDir = Split-Path -Path $FirstFfmpegExe -Parent
+        if(-not [string]::IsNullOrWhiteSpace($FfmpegBinDir)) {
+            $AutoDetectedFfmpegRoot = Split-Path -Path $FfmpegBinDir -Parent
+            if(-not [string]::IsNullOrWhiteSpace($AutoDetectedFfmpegRoot)) {
+                $FfmpegRoot = $AutoDetectedFfmpegRoot
+                Write-Host "Auto-detected FFmpeg installation: $FfmpegRoot" -ForegroundColor Yellow
+            }
+        }
+    }
+}
+else {
+    $FfmpegFailureReasons.Add("ffmpeg.exe not found in PATH (where ffmpeg returned no result)")
+}
+
+
 
 $HasFfmpeg = $false
 $FfmpegInclude = $null
@@ -38,7 +68,11 @@ if(-not [string]::IsNullOrWhiteSpace($FfmpegRoot)) {
         $FfmpegLib = Join-Path $FfmpegRoot "lib"
         $FfmpegBin = Join-Path $FfmpegRoot "bin"
 
-        if((Test-Path $FfmpegInclude) -and (Test-Path $FfmpegLib)) {
+        $MissingDirs = @()
+        if(-not (Test-Path $FfmpegInclude)) { $MissingDirs += "include" }
+        if(-not (Test-Path $FfmpegLib)) { $MissingDirs += "lib" }
+
+        if($MissingDirs.Count -eq 0) {
             $HasFfmpeg = $true
             $FfmpegIncludePosix = ($FfmpegInclude -replace "\\", "/")
             if(Test-Path $FfmpegBin) {
@@ -47,9 +81,14 @@ if(-not [string]::IsNullOrWhiteSpace($FfmpegRoot)) {
             $env:CMAKE_INCLUDE_PATH = if($env:CMAKE_INCLUDE_PATH) { "$FfmpegInclude;$($env:CMAKE_INCLUDE_PATH)" } else { $FfmpegInclude }
             $env:CMAKE_LIBRARY_PATH = if($env:CMAKE_LIBRARY_PATH) { "$FfmpegLib;$($env:CMAKE_LIBRARY_PATH)" } else { $FfmpegLib }
         }
+        else {
+            $FfmpegFailureReasons.Add("FFmpeg root is missing required directories: $($MissingDirs -join ', ') ($FfmpegRoot)")
+        }
+    }
+    else {
+        $FfmpegFailureReasons.Add("FFmpeg root does not exist or is not accessible: $FfmpegRoot")
     }
 }
-
 if($Clean) {
     if(Test-Path $BuildDir) { Remove-Item -Recurse -Force $BuildDir }
     if(Test-Path $InstallDir) { Remove-Item -Recurse -Force $InstallDir }
@@ -95,6 +134,9 @@ if($HasFfmpeg) {
 }
 else {
     Write-Host "FFmpeg path not found or incomplete, continue without extra FFmpeg CMake path." -ForegroundColor DarkYellow
+    foreach($reason in $FfmpegFailureReasons) {
+        Write-Host "  - $reason" -ForegroundColor DarkYellow
+    }
 }
 
 & cmake @cmakeArgs
@@ -114,7 +156,38 @@ if($Generator -match "Visual Studio" -or $Generator -match "Multi-Config") {
 
 & cmake @buildArgs
 
+Write-Host "== Build rustglb DLL ==" -ForegroundColor Cyan
+
+Push-Location $RustglbRoot
+try {
+    & cargo build --release --lib
+    if($LASTEXITCODE -ne 0) {
+        throw "cargo build --release --lib failed in $RustglbRoot"
+    }
+}
+finally {
+    Pop-Location
+}
+
+$RustglbDll = Join-Path $RustglbRoot "target\release\rustglb.dll"
+$RustglbImportLib = Join-Path $RustglbRoot "target\release\rustglb.dll.lib"
+$InstallLibDir = Join-Path $InstallDir "lib"
+
+if(-not (Test-Path $RustglbDll)) {
+    throw "rustglb.dll not found after build: $RustglbDll"
+}
+
+Copy-Item -Force $RustglbDll (Join-Path $InstallLibDir "rustglb.dll")
+
+if(Test-Path $RustglbImportLib) {
+    Copy-Item -Force $RustglbImportLib (Join-Path $InstallLibDir "rustglb.dll.lib")
+}
+else {
+    Write-Host "rustglb import library not found: $RustglbImportLib" -ForegroundColor DarkYellow
+}
+
 Write-Host "== Done ==" -ForegroundColor Green
 Write-Host "Installed to: $InstallDir" -ForegroundColor Green
 Write-Host "- Headers:   $(Join-Path $InstallDir 'include\lvgl')" -ForegroundColor Green
 Write-Host "- Library:   $(Join-Path $InstallDir 'lib')" -ForegroundColor Green
+Write-Host "- rustglb:   $(Join-Path $InstallLibDir 'rustglb.dll')" -ForegroundColor Green

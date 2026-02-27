@@ -5,6 +5,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js';
 import { useWebviewUri } from '../../hooks/useWebviewUri';
+import { t } from '../../i18n';
 
 export const Model3DWidget: React.FC<WidgetProps> = ({ component, style, handlers }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -125,7 +126,7 @@ export const Model3DWidget: React.FC<WidgetProps> = ({ component, style, handler
     // 加载模型
     const ext = modelPath?.split('.').pop()?.toLowerCase();
     
-    const onLoadSuccess = (model: THREE.Object3D, modelType: 'obj' | 'gltf') => {
+    const onLoadSuccess = (model: THREE.Object3D, modelType: 'obj' | 'gltf' | 'glb') => {
       // 先更新骨骼（如果有）到初始姿态
       model.traverse((child: any) => {
         if (child.isSkinnedMesh && child.skeleton) {
@@ -155,11 +156,11 @@ export const Model3DWidget: React.FC<WidgetProps> = ({ component, style, handler
     
     const onLoadError = (error: any) => {
       console.warn('[3D模型] 加载失败:', error?.message || error);
-      setLoadError(`加载失败: ${error?.message || '未知错误'}`);
+      setLoadError(t('3D model load failed: {0}', error?.message || t('Unknown error')));
       setIsLoading(false);
     };
     
-    if (ext === 'gltf') {
+    if (ext === 'gltf' || ext === 'glb') {
       const loader = new GLTFLoader();
       
       // GLTF 文件可能引用外部资源，需要设置基础路径
@@ -208,7 +209,7 @@ export const Model3DWidget: React.FC<WidgetProps> = ({ component, style, handler
             }
           });
           
-          onLoadSuccess(model, 'gltf');
+          onLoadSuccess(model, ext === 'glb' ? 'glb' : 'gltf');
         },
         undefined,
         onLoadError
@@ -330,7 +331,7 @@ export const Model3DWidget: React.FC<WidgetProps> = ({ component, style, handler
           onLoadError(error);
         });
     } else {
-      setLoadError(`不支持的文件格式: ${ext}`);
+      setLoadError(t('Unsupported file format: {0}', ext || 'unknown'));
       setIsLoading(false);
     }
 

@@ -34,7 +34,17 @@ set_target_properties(lvgl PROPERTIES
 
 add_executable(lvgl_pc
     src/main.c
+    src/lv_gltf_override.c
     src/generated/lvgl_generated_ui.c
+)
+
+target_include_directories(lvgl_pc PRIVATE
+    "${CMAKE_CURRENT_LIST_DIR}/src"
+)
+
+target_compile_options(lvgl_pc PRIVATE
+    $<$<COMPILE_LANG_AND_ID:C,GNU,Clang,AppleClang>:-include;lv_gltf_override.h>
+    $<$<COMPILE_LANG_AND_ID:C,MSVC>:/FIlv_gltf_override.h>
 )
 
 file(GLOB LVGL_GENERATED_UI_SOURCES
@@ -50,6 +60,15 @@ file(GLOB LVGL_GENERATED_FONT_SOURCES
 target_sources(lvgl_pc PRIVATE ${LVGL_GENERATED_UI_SOURCES} ${LVGL_GENERATED_IMG_SOURCES} ${LVGL_GENERATED_FONT_SOURCES})
 
 target_link_libraries(lvgl_pc PRIVATE lvgl)
+
+set(RUSTGLB_DLL "${LVGL_PREBUILT_DIR}/lib/rustglb.dll")
+if(EXISTS "${RUSTGLB_DLL}")
+    add_custom_command(TARGET lvgl_pc POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${RUSTGLB_DLL}" $<TARGET_FILE_DIR:lvgl_pc>
+        COMMENT "Copying rustglb.dll to output directory")
+else()
+    message(WARNING "rustglb.dll not found in ${LVGL_PREBUILT_DIR}/lib, GLB rendering will be unavailable in simulator runtime.")
+endif()
 
 # FFmpeg libraries required by lv_ffmpeg (LV_USE_FFMPEG=1)
 # Look for FFmpeg in -DFFMPEG_ROOT=... cmake arg, FFMPEG_ROOT env var, or auto-detect from PATH

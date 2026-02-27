@@ -414,6 +414,11 @@ export class LvglCCodeGenerator implements ICodeGenerator {
         code += this.generateVideoSetters(component);
         break;
 
+      case 'hg_3d':
+        code += `    ${component.id} = lv_gltf_create(${parentRef});\n`;
+        code += this.generate3DSetters(component);
+        break;
+
       default:
         code += `    ${component.id} = lv_obj_create(${parentRef});\n`;
         code += `    lv_obj_set_pos(${component.id}, ${Math.round(x)}, ${Math.round(y)});\n`;
@@ -1244,6 +1249,63 @@ export class LvglCCodeGenerator implements ICodeGenerator {
     // 自动播放
     if (autoplay) {
       code += `    lv_ffmpeg_player_set_cmd(${component.id}, LV_FFMPEG_PLAYER_CMD_START);\n`;
+    }
+
+    return code;
+  }
+
+  /**
+   * 生成 hg_3d 组件的属性设置代码
+   * 使用 LVGL glTF 组件 (lv_gltf)
+   */
+  private generate3DSetters(component: Component): string {
+    const { x, y, width, height } = component.position;
+    const posX = Math.round(x);
+    const posY = Math.round(y);
+    const w = Math.max(1, Math.round(width));
+    const h = Math.max(1, Math.round(height));
+
+    const bgColor = String(component.style?.backgroundColor || '#000000');
+    const bgColorHex = this.parseColorHex(bgColor);
+    const modelPathRaw = component.data?.modelPath || component.data?.src || '';
+    const modelPath = this.normalizeVideoSource(String(modelPathRaw));
+
+    const fovValue = this.toFiniteNumber(component.data?.fov, 45.0);
+    const distanceValue = this.toFiniteNumber(component.data?.distance, 1.8);
+    const fov = Number(fovValue.toFixed(3));
+    const distance = Number(distanceValue.toFixed(3));
+
+    const bgMode = String(component.data?.backgroundMode || component.data?.bgMode || 'solid').toLowerCase();
+    const aaMode = String(component.data?.antialiasingMode || component.data?.aaMode || 'on').toLowerCase();
+
+    const lvBgMode = bgMode === 'environment' || bgMode === 'env'
+      ? 'LV_GLTF_BG_MODE_ENVIRONMENT'
+      : 'LV_GLTF_BG_MODE_SOLID';
+
+    let lvAaMode = 'LV_GLTF_AA_MODE_ON';
+    if (aaMode === 'off') {
+      lvAaMode = 'LV_GLTF_AA_MODE_OFF';
+    } else if (aaMode === 'dynamic') {
+      lvAaMode = 'LV_GLTF_AA_MODE_DYNAMIC';
+    }
+
+    let code = `    lv_obj_set_pos(${component.id}, ${posX}, ${posY});\n`;
+    code += `    lv_obj_set_size(${component.id}, ${w}, ${h});\n`;
+    code += `    lv_obj_set_style_bg_color(${component.id}, lv_color_hex(0x${bgColorHex}), LV_PART_MAIN);\n`;
+    code += `    lv_obj_set_style_bg_opa(${component.id}, LV_OPA_COVER, LV_PART_MAIN);\n`;
+    code += `    lv_obj_set_style_border_width(${component.id}, 0, LV_PART_MAIN);\n`;
+    code += `    lv_obj_set_style_pad_all(${component.id}, 0, LV_PART_MAIN);\n`;
+    code += `    lv_gltf_set_background_mode(${component.id}, ${lvBgMode});\n`;
+    code += `    lv_gltf_set_antialiasing_mode(${component.id}, ${lvAaMode});\n`;
+    code += `    lv_gltf_set_fov(${component.id}, ${fov.toFixed(3)}f);\n`;
+    code += `    lv_gltf_set_distance(${component.id}, ${distance.toFixed(3)}f);\n`;
+
+    if (modelPathRaw) {
+      code += `    if(lv_gltf_load_model_from_file(${component.id}, "${this.escapeCString(modelPath)}") == NULL) {\n`;
+      code += `        LV_LOG_WARN("GLB load failed: ${this.escapeCString(modelPath)}");\n`;
+      code += `    }\n`;
+    } else {
+      code += `    /* TODO(lvgl): hg_3d 未设置 modelPath/src，无法加载模型 */\n`;
     }
 
     return code;

@@ -178,6 +178,7 @@ struct _lv_gltf_t {
  **********************/
 
 GLuint lv_gltf_view_render(lv_gltf_t * viewer);
+void lv_gltf_view_render_cleanup(void);
 lv_result_t lv_gltf_view_shader_injest_discover_defines(lv_array_t * result, lv_gltf_model_t * data,
                                                         fastgltf::Node * node,
                                                         fastgltf::Primitive * prim);

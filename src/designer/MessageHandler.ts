@@ -476,10 +476,20 @@ export class MessageHandler {
 
             if (uris && uris.length > 0) {
                 const selectedPath = uris[0].fsPath;
-                // 转换为相对于项目根目录的路径
-                let relativePath = path.relative(projectRoot, selectedPath);
-                // 统一使用正斜杠
-                relativePath = relativePath.replace(/\\/g, '/');
+                // modelPath 必须指向项目 assets 内资源，避免 webview 访问项目外文件导致 401
+                const isModelPath = propertyName === 'modelPath';
+                let relativePath: string;
+
+                if (isModelPath) {
+                    relativePath = await this._ensureModelPathInAssets(selectedPath, projectRoot);
+                    // 同步刷新资源面板
+                    await this._assetManager.handleLoadAssets(this._fileManager.currentFilePath);
+                } else {
+                    // 转换为相对于项目根目录的路径
+                    relativePath = path.relative(projectRoot, selectedPath);
+                    // 统一使用正斜杠
+                    relativePath = relativePath.replace(/\\/g, '/');
+                }
 
                 // 发送更新消息给 webview
                 this._componentManager.updateComponentProperty(componentId, propertyName, relativePath);
@@ -488,6 +498,37 @@ export class MessageHandler {
             logger.error(`[MessageHandler] 文件浏览失败: ${error}`);
             vscode.window.showErrorMessage(vscode.l10n.t('File browse failed: {0}', error instanceof Error ? error.message : vscode.l10n.t('Unknown error')));
         }
+    }
+
+    private async _ensureModelPathInAssets(selectedPath: string, projectRoot: string): Promise<string> {
+        const assetsDir = ProjectUtils.getAssetsDir(projectRoot);
+        await fs.promises.mkdir(assetsDir, { recursive: true });
+
+        const normalizedSelectedPath = path.resolve(selectedPath);
+        const normalizedAssetsDir = path.resolve(assetsDir);
+        const selectedPathLower = normalizedSelectedPath.toLowerCase();
+        const assetsDirLower = normalizedAssetsDir.toLowerCase();
+
+        const isUnderAssets = selectedPathLower === assetsDirLower || selectedPathLower.startsWith(`${assetsDirLower}${path.sep.toLowerCase()}`);
+
+        if (isUnderAssets) {
+            const relativeToAssets = path.relative(assetsDir, normalizedSelectedPath).replace(/\\/g, '/');
+            return `assets/${relativeToAssets}`;
+        }
+
+        const parsed = path.parse(selectedPath);
+        let targetPath = path.join(assetsDir, `${parsed.name}${parsed.ext}`);
+        let suffix = 1;
+
+        while (fs.existsSync(targetPath)) {
+            targetPath = path.join(assetsDir, `${parsed.name}_${suffix}${parsed.ext}`);
+            suffix++;
+        }
+
+        await fs.promises.copyFile(selectedPath, targetPath);
+
+        const relativeToAssets = path.relative(assetsDir, targetPath).replace(/\\/g, '/');
+        return `assets/${relativeToAssets}`;
     }
 
     /**
