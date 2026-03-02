@@ -419,6 +419,11 @@ export class LvglCCodeGenerator implements ICodeGenerator {
         code += this.generate3DSetters(component);
         break;
 
+      case 'hg_lottie':
+        code += `    ${component.id} = lv_lottie_create(${parentRef});\n`;
+        code += this.generateLottieSetters(component);
+        break;
+
       default:
         code += `    ${component.id} = lv_obj_create(${parentRef});\n`;
         code += `    lv_obj_set_pos(${component.id}, ${Math.round(x)}, ${Math.round(y)});\n`;
@@ -1250,6 +1255,69 @@ export class LvglCCodeGenerator implements ICodeGenerator {
     if (autoplay) {
       code += `    lv_ffmpeg_player_set_cmd(${component.id}, LV_FFMPEG_PLAYER_CMD_START);\n`;
     }
+
+    return code;
+  }
+
+  /**
+   * 生成 hg_lottie 组件的属性设置代码
+   * 使用 LVGL Lottie 组件 (lv_lottie)
+   * 路径使用 OS 原生路径（同 FFmpeg），不走 LVGL 虚拟文件系统
+   */
+  private generateLottieSetters(component: Component): string {
+    const { x, y, width, height } = component.position;
+    const posX = Math.round(x);
+    const posY = Math.round(y);
+    const w = Math.max(1, Math.round(width));
+    const h = Math.max(1, Math.round(height));
+
+    const srcRaw = component.data?.src || '';
+    const src = this.normalizeVideoSource(String(srcRaw));
+
+    // autoPlay 和 loop 独立读取，避免互相 fallback 导致设置失效
+    // autoPlay: 未设置时默认 true
+    const autoPlayRaw = component.data?.autoPlay ?? component.data?.autoplay;
+    const autoPlay = autoPlayRaw !== false && autoPlayRaw !== 'false';
+
+    // loop: 未设置时默认 true（Lottie 常见用法）
+    const loopRaw = component.data?.loop;
+    const loop = loopRaw !== false && loopRaw !== 'false';
+
+    // 缓冲区变量名基于 component id，避免多实例冲突
+    const bufVarName = `${component.id}_lottie_buf`;
+
+    let code = `    lv_obj_set_pos(${component.id}, ${posX}, ${posY});\n`;
+    code += `    lv_obj_set_size(${component.id}, ${w}, ${h});\n`;
+
+    // 分配渲染缓冲区（RGBA8888：每像素 4 字节）
+    code += `    static uint8_t ${bufVarName}[${w} * ${h} * 4];\n`;
+    code += `    lv_lottie_set_buffer(${component.id}, ${w}, ${h}, ${bufVarName});\n`;
+
+    // 设置动画文件路径（OS 原生路径，不走 LVGL 虚拟文件系统）
+    // 注意：set_src_file 之后动画默认立即开始播放
+    if (srcRaw) {
+      code += `    lv_lottie_set_src_file(${component.id}, "${this.escapeCString(src)}");\n`;
+    } else {
+      code += `    /* TODO(lvgl): hg_lottie 未设置 src，需要指定 Lottie JSON 文件路径 */\n`;
+    }
+
+    // LVGL v9.x：通过内部 lv_anim_t 控制循环次数和播放时长
+    code += `    {\n`;
+    code += `        lv_anim_t * anim = lv_lottie_get_anim(${component.id});\n`;
+    code += `        if(anim != NULL) {\n`;
+    // 循环控制
+    if (loop) {
+      code += `            lv_anim_set_repeat_count(anim, LV_ANIM_REPEAT_INFINITE);\n`;
+    } else {
+      code += `            lv_anim_set_repeat_count(anim, 1); /* 只播放一次 */\n`;
+    }
+    code += `            lv_anim_set_duration(anim, 2000); /* 单位：ms，整个动画循环一次的时长 */\n`;
+    // autoPlay 控制：set_src_file 后动画默认启动，关闭时立即暂停
+    if (!autoPlay) {
+      code += `            lv_anim_pause(anim); /* autoPlay=false：暂停，需手动调用 lv_anim_resume() 启动 */\n`;
+    }
+    code += `        }\n`;
+    code += `    }\n`;
 
     return code;
   }

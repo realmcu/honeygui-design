@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(lvgl_pc LANGUAGES C)
+project(lvgl_pc LANGUAGES C CXX)
+
+# LVGL v9.x 内置 ThorVG（C++ 实现），必须用 g++ 链接，否则出现
+# undefined reference to __gxx_personality_sj0 / std::allocator 等错误
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -37,6 +42,10 @@ add_executable(lvgl_pc
     src/lv_gltf_override.c
     src/generated/lvgl_generated_ui.c
 )
+
+# 源文件全是 .c，但 liblvgl.a 内含 C++ 对象（ThorVG / tvgCapi.cpp.obj）
+# 强制 CMake 用 g++ 驱动链接，自动带入 libstdc++ 和 C++ EH personality
+set_target_properties(lvgl_pc PROPERTIES LINKER_LANGUAGE CXX)
 
 target_include_directories(lvgl_pc PRIVATE
     "${CMAKE_CURRENT_LIST_DIR}/src"
@@ -174,4 +183,9 @@ target_compile_definitions(lvgl_pc PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX LCD_WIDT
 
 if(WIN32)
     target_link_libraries(lvgl_pc PRIVATE user32 gdi32 imm32)
+endif()
+
+# 显式链接 C++ 标准库（MinGW / GCC 工具链需要；MSVC 会自动处理）
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    target_link_libraries(lvgl_pc PRIVATE stdc++)
 endif()

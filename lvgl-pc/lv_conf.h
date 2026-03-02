@@ -44,4 +44,10 @@
 #define LV_USE_GIF 1
 #define LV_USE_FONT_COMPRESSED 1
 #define LV_USE_FFMPEG 1
+#define LV_USE_THORVG  1
+#define LV_DRAW_THREAD_STACK_SIZE 32*1024
+#define LV_USE_LOTTIE 1              // 启用 Lottie 组件
+#define LV_USE_VECTOR_GRAPHIC 1      // 必须启用矢量图形支持
+#define LV_USE_THORVG_INTERNAL 1     // 使用内置的 ThorVG 库
+
 #endif /*LV_CONF_H*/
