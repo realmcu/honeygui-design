@@ -150,8 +150,9 @@ const componentDefinitions: ComponentDefinition[] = [
     icon: '🕐',
     defaultSize: { width: 120, height: 24 },
     properties: [
+      { name: 'text', label: 'Display Text', type: 'string', defaultValue: '', group: 'data' },
       { name: 'timeFormat', label: 'Time Format', type: 'select', defaultValue: 'HH:mm:ss', 
-        options: ['HH:mm:ss', 'HH:mm', 'HH:mm-split', 'YYYY-MM-DD', 'YYYY-MM-DD HH:mm:ss', 'MM-DD HH:mm'], group: 'data' },
+        options: ['HH:mm:ss', 'HH:mm', 'HH:mm-split', 'YYYY-MM-DD', 'YYYY-MM-DD HH:mm:ss', 'MM-DD HH:mm'], group: 'time' },
       { name: 'hAlign', label: 'Horizontal Align', type: 'select', defaultValue: 'LEFT', 
         options: ['LEFT', 'CENTER', 'RIGHT'], group: 'style' },
       { name: 'vAlign', label: 'Vertical Align', type: 'select', defaultValue: 'TOP', 

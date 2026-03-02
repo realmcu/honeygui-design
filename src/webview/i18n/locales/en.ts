@@ -359,6 +359,10 @@ const en = {
   'Start timer automatically on load': 'Start timer automatically on load',
   'Timer text is auto-generated': 'Timer text is auto-generated',
 
+  // DefaultProperties - Time section
+  'Time Settings': 'Time Settings',
+  'Time text is auto-generated': 'Time text is auto-generated',
+
   // EventsPanel
   'Exit Animation': 'Exit Animation',
   'Enter Animation': 'Enter Animation',

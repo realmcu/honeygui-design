@@ -359,6 +359,10 @@ const zhCN = {
   'Start timer automatically on load': '界面加载时自动启动计时器',
   'Timer text is auto-generated': '计时器文本自动生成',
 
+  // DefaultProperties - Time section
+  'Time Settings': '时间设置',
+  'Time text is auto-generated': '时间文本自动生成',
+
   // EventsPanel
   'Exit Animation': '退出动画',
   'Enter Animation': '进入动画',

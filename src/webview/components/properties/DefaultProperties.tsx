@@ -859,8 +859,8 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                           (component.data as any)?.[property.name],
                           (value) => handleDataChange(property.name, value)
                         )
-                      ) : property.name === 'text' && component.type === 'hg_timer_label' ? (
-                        // 计时器标签的文本是自动生成的，不显示输入框
+                      ) : property.name === 'text' && (component.type === 'hg_timer_label' || component.type === 'hg_time_label') ? (
+                        // 计时器标签和时间标签的文本是自动生成的，不显示输入框
                         <div style={{
                           padding: '6px 8px',
                           backgroundColor: 'var(--vscode-input-background)',
@@ -870,7 +870,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                           fontSize: '12px',
                           fontStyle: 'italic'
                         }}>
-                          {t('Timer text is auto-generated')}
+                          {component.type === 'hg_timer_label' ? t('Timer text is auto-generated') : t('Time text is auto-generated')}
                         </div>
                       ) : property.name === 'text' && (component.type === 'hg_label' || component.type === 'hg_time_label') && (component.style as any)?.wordWrap ? (
                         // 自动换行开启时，文本输入框变成多行
@@ -1246,6 +1246,23 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                   <span style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '2px' }}>
                     {t('Start timer automatically on load')}
                   </span>
+                </div>
+              </div>
+            )}
+
+            {/* Time Properties - 对 hg_time_label 显示 */}
+            {definition && component.type === 'hg_time_label' && definition.properties.filter(p => p.group === 'time').length > 0 && (
+              <div className="property-group">
+                <div className="property-group-title">{t('Time Settings')}</div>
+                {/* 显示格式 */}
+                <div className="property-item">
+                  <label>{t('Display Format')}</label>
+                  <PropertyEditor
+                    type="select"
+                    value={(component.data as any)?.timeFormat || 'HH:mm:ss'}
+                    onChange={(value) => handleDataChange('timeFormat', value)}
+                    options={['HH:mm:ss', 'HH:mm', 'HH:mm-split', 'YYYY-MM-DD', 'YYYY-MM-DD HH:mm:ss', 'MM-DD HH:mm']}
+                  />
                 </div>
               </div>
             )}
