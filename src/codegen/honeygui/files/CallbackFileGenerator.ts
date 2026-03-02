@@ -1136,40 +1136,65 @@ void ${callback}(void *obj)\n{\n`;
       code += `    gui_view_switch_direct(gui_view_get_current(), "${targetName}", ${switchOutStyle}, ${switchInStyle});\n`;
       code += `    \n`;
     } else if (action.type === 'switchTimer') {
-      // 切换定时动画动作
-      const timerId = action.timerId || '';
-      if (!timerId) {
-        code += `    // 警告：未指定目标定时动画ID\n`;
+      // 切换定时动画动作（新版：支持多个定时器控制）
+      const timerTargets = action.timerTargets || [];
+      
+      // 兼容旧版：如果没有 timerTargets 但有 timerId，转换为新格式
+      if (timerTargets.length === 0 && action.timerId) {
+        timerTargets.push({
+          timerId: action.timerId,
+          action: 'start'
+        });
+      }
+      
+      if (timerTargets.length === 0) {
+        code += `    // 警告：未指定任何定时器控制\n`;
         return code;
       }
       
-      // 查找目标定时器配置
-      const targetTimer = component?.data?.timers?.find((t: any) => t.id === timerId);
-      if (!targetTimer) {
-        code += `    // 警告：未找到定时动画 ${timerId}\n`;
-        return code;
+      code += `    // 定时器控制\n`;
+      
+      for (const target of timerTargets) {
+        const timerId = target.timerId;
+        const timerAction = target.action;
+        
+        // 查找目标定时器配置
+        const targetTimer = component?.data?.timers?.find((t: any) => t.id === timerId);
+        if (!targetTimer) {
+          code += `    // 警告：未找到定时动画 ${timerId}\n`;
+          continue;
+        }
+        
+        const timerName = targetTimer.name || targetTimer.id;
+        
+        if (timerAction === 'start') {
+          // 启动定时器
+          // 生成回调函数名
+          let callback: string;
+          if (targetTimer.mode === 'preset') {
+            callback = `${component?.id}_${targetTimer.id}_cb`;
+          } else if (targetTimer.mode === 'custom' && targetTimer.callback) {
+            callback = targetTimer.callback;
+          } else {
+            code += `    // 警告：定时动画 ${timerId} 配置无效\n`;
+            continue;
+          }
+          
+          code += `    // 启动定时动画: ${timerName}\n`;
+          code += `    ${component?.id}_timer_cnt = 0; // 清零计数器\n`;
+          code += `    gui_obj_create_timer(target, ${targetTimer.interval}, ${targetTimer.reload !== false ? 'true' : 'false'}, ${callback});\n`;
+          // 如果目标定时器没有设置立即运行，则调用 gui_obj_start_timer
+          if (!targetTimer.runImmediately) {
+            code += `    gui_obj_start_timer(target);\n`;
+          }
+        } else if (timerAction === 'stop') {
+          // 停止定时器
+          code += `    // 停止定时动画: ${timerName}\n`;
+          code += `    gui_obj_stop_timer(target);\n`;
+        }
       }
       
-      // 生成回调函数名
-      let callback: string;
-      if (targetTimer.mode === 'preset') {
-        callback = `${component?.id}_${targetTimer.id}_cb`;
-      } else if (targetTimer.mode === 'custom' && targetTimer.callback) {
-        callback = targetTimer.callback;
-      } else {
-        code += `    // 警告：定时动画 ${timerId} 配置无效\n`;
-        return code;
-      }
-      
-      const timerName = targetTimer.name || targetTimer.id;
-      code += `    // 切换定时动画: ${timerName}\n`;
-      code += `    ${component?.id}_timer_cnt = 0; // 清零计数器\n`;
-      code += `    gui_obj_create_timer(target, ${targetTimer.interval}, ${targetTimer.reload !== false ? 'true' : 'false'}, ${callback});\n`;
-      // 如果目标定时器没有设置立即运行，则调用 gui_obj_start_timer
-      if (!targetTimer.runImmediately) {
-        code += `    gui_obj_start_timer(target);\n`;
-      }
-      code += `    return; // 切换定时动画后立即返回\n`;
+      code += `    return; // 定时器控制后立即返回\n`;
       code += `    \n`;
     } else if (action.type === 'position') {
       // 调整位置动作

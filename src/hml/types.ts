@@ -103,8 +103,13 @@ export interface TimerAction {
   imageSequence?: string[];  // 图片路径数组
   // 可见性动作
   visible?: boolean;         // 是否可见（true=显示，false=隐藏）
-  // 切换定时动画动作
-  timerId?: string;          // 要切换到的定时动画ID
+  // 切换定时动画动作（新版：支持多个定时器控制）
+  timerTargets?: Array<{     // 目标定时器列表
+    timerId: string;         // 定时器ID
+    action: 'start' | 'stop'; // 动作：启动或停止
+  }>;
+  // 切换定时动画动作（旧版：保留兼容）
+  timerId?: string;          // 要切换到的定时动画ID（已废弃，使用 timerTargets）
 }
 
 /**

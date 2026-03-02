@@ -121,26 +121,58 @@ export const TimerProperties: React.FC<TimerPropertiesProps> = ({
             <div
               style={{
                 display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                cursor: 'pointer',
+                flexDirection: 'column',
+                gap: '8px',
               }}
-              onClick={() => toggleExpand(timer.id)}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
-                <input
-                  type="checkbox"
-                  checked={timer.enabled}
-                  onChange={(e) => {
+              {/* 第一行：启用复选框和删除按钮 */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <input
+                    type="checkbox"
+                    checked={timer.enabled}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      handleUpdateTimer(timer.id, { enabled: e.target.checked });
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ cursor: 'pointer' }}
+                  />
+                  <span style={{ fontSize: '11px', opacity: 0.7, whiteSpace: 'nowrap' }}>
+                    {t('Bind on component creation')}
+                  </span>
+                </div>
+                <button
+                  onClick={(e) => {
                     e.stopPropagation();
-                    handleUpdateTimer(timer.id, { enabled: e.target.checked });
+                    handleDeleteTimer(timer.id);
                   }}
-                  onClick={(e) => e.stopPropagation()}
-                  style={{ cursor: 'pointer' }}
-                />
-                <span style={{ fontSize: '11px', opacity: 0.7, whiteSpace: 'nowrap' }}>
-                  {t('Bind on component creation')}
-                </span>
+                  style={{
+                    padding: '2px 8px',
+                    background: 'var(--vscode-button-secondaryBackground)',
+                    color: 'var(--vscode-button-secondaryForeground)',
+                    border: 'none',
+                    borderRadius: '2px',
+                    cursor: 'pointer',
+                    fontSize: '11px',
+                    flexShrink: 0,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {t('Delete')}
+                </button>
+              </div>
+
+              {/* 第二行：名称输入框和展开按钮 */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  cursor: 'pointer',
+                }}
+                onClick={() => toggleExpand(timer.id)}
+              >
                 <input
                   type="text"
                   value={timer.name || ''}
@@ -152,7 +184,7 @@ export const TimerProperties: React.FC<TimerPropertiesProps> = ({
                   placeholder={t('Animation Name')}
                   style={{
                     flex: 1,
-                    padding: '2px 6px',
+                    padding: '4px 8px',
                     backgroundColor: 'var(--vscode-input-background)',
                     color: 'var(--vscode-input-foreground)',
                     border: '1px solid var(--vscode-input-border)',
@@ -164,24 +196,6 @@ export const TimerProperties: React.FC<TimerPropertiesProps> = ({
                   {expandedTimerId === timer.id ? '▼' : '▶'}
                 </span>
               </div>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeleteTimer(timer.id);
-                }}
-                style={{
-                  padding: '2px 8px',
-                  background: 'var(--vscode-button-secondaryBackground)',
-                  color: 'var(--vscode-button-secondaryForeground)',
-                  border: 'none',
-                  borderRadius: '2px',
-                  cursor: 'pointer',
-                  fontSize: '11px',
-                  marginLeft: '8px',
-                }}
-              >
-                {t('Delete')}
-              </button>
             </div>
 
             {/* 定时动画详细配置 */}
@@ -1076,43 +1090,101 @@ const TimerActionEditor: React.FC<{
       )}
 
       {action.type === 'switchTimer' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div>
-            <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('Target Timer')}</label>
-            {otherTimers.length === 0 ? (
-              <div style={{ 
-                padding: '8px', 
-                backgroundColor: 'var(--vscode-inputValidation-warningBackground)',
-                border: '1px solid var(--vscode-inputValidation-warningBorder)',
-                borderRadius: '2px',
-                fontSize: '11px',
-                color: 'var(--vscode-inputValidation-warningForeground)'
-              }}>
-                ⚠️ {t('No other timers available. Please add another timer first.')}
-              </div>
-            ) : (
-              <select
-                value={action.timerId || ''}
-                onChange={(e) => onUpdate({ timerId: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '3px',
-                  backgroundColor: 'var(--vscode-input-background)',
-                  color: 'var(--vscode-input-foreground)',
-                  border: '1px solid var(--vscode-input-border)',
-                  borderRadius: '2px',
-                  fontSize: '11px',
-                }}
-              >
-                <option value="">-- {t('Select')} --</option>
-                {otherTimers.map(t => (
-                  <option key={t.id} value={t.id}>
-                    {t.name || t.id}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {/* 提示信息 */}
+          {otherTimers.length === 0 && (
+            <div style={{ 
+              padding: '8px', 
+              backgroundColor: 'var(--vscode-inputValidation-warningBackground)',
+              border: '1px solid var(--vscode-inputValidation-warningBorder)',
+              borderRadius: '2px',
+              fontSize: '11px',
+              color: 'var(--vscode-inputValidation-warningForeground)'
+            }}>
+              ⚠️ {t('No other timers available. Please add another timer first.')}
+            </div>
+          )}
+          
+          {/* 定时器控制列表 */}
+          {otherTimers.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '10px', fontWeight: 'bold', marginBottom: '2px' }}>
+                {t('Timer Controls')}
+              </label>
+              {otherTimers.map(timer => {
+                // 查找当前定时器的控制配置
+                const timerTargets = action.timerTargets || [];
+                const currentTarget = timerTargets.find(tt => tt.timerId === timer.id);
+                const controlAction = currentTarget?.action || 'none';
+                
+                return (
+                  <div 
+                    key={timer.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '6px',
+                      backgroundColor: 'var(--vscode-editor-background)',
+                      borderRadius: '2px',
+                      border: '1px solid var(--vscode-panel-border)',
+                    }}
+                  >
+                    <span style={{ 
+                      flex: 1, 
+                      fontSize: '11px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {timer.name || timer.id}
+                    </span>
+                    <select
+                      value={controlAction}
+                      onChange={(e) => {
+                        const newAction = e.target.value as 'none' | 'start' | 'stop';
+                        let newTimerTargets = [...timerTargets];
+                        
+                        if (newAction === 'none') {
+                          // 移除该定时器的控制
+                          newTimerTargets = newTimerTargets.filter(tt => tt.timerId !== timer.id);
+                        } else {
+                          // 更新或添加该定时器的控制
+                          const existingIndex = newTimerTargets.findIndex(tt => tt.timerId === timer.id);
+                          if (existingIndex >= 0) {
+                            newTimerTargets[existingIndex] = {
+                              ...newTimerTargets[existingIndex],
+                              action: newAction
+                            };
+                          } else {
+                            newTimerTargets.push({
+                              timerId: timer.id,
+                              action: newAction
+                            });
+                          }
+                        }
+                        
+                        onUpdate({ timerTargets: newTimerTargets });
+                      }}
+                      style={{
+                        padding: '3px 6px',
+                        backgroundColor: 'var(--vscode-input-background)',
+                        color: 'var(--vscode-input-foreground)',
+                        border: '1px solid var(--vscode-input-border)',
+                        borderRadius: '2px',
+                        fontSize: '11px',
+                        minWidth: '80px',
+                      }}
+                    >
+                      <option value="none">-- {t('No Action')} --</option>
+                      <option value="start">{t('Start')}</option>
+                      <option value="stop">{t('Stop')}</option>
+                    </select>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

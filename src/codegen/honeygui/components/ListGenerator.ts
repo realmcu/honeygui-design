@@ -103,6 +103,7 @@ export class ListGenerator implements ComponentCodeGenerator {
       const outScope = component.data?.outScope ?? 0;
       const style = component.style?.style ?? 'LIST_CLASSIC';
       const cardStackLocation = component.style?.cardStackLocation ?? 0;
+      const enableAreaDisplay = component.data?.enableAreaDisplay ?? false;
 
       // 1. 条件生成 gui_list_set_auto_align()（仅当 autoAlign 为 true）
       if (autoAlign === true) {
@@ -134,6 +135,11 @@ export class ListGenerator implements ComponentCodeGenerator {
       // 6. LIST_CARD 样式特有：设置堆叠位置（总是调用，即使值为0）
       if (style === 'LIST_CARD') {
         code += `${indentStr}gui_list_set_card_stack_location(${component.id}, ${cardStackLocation});\n`;
+      }
+
+      // 7. 条件生成 gui_list_enable_area_display()（仅当 enableAreaDisplay 为 true）
+      if (enableAreaDisplay === true) {
+        code += `${indentStr}gui_list_enable_area_display(${component.id}, true);\n`;
       }
 
       return code;
