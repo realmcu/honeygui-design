@@ -729,6 +729,8 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                           value={(component.style as any)?.[property.name]}
                           onChange={(value) => handleStyleChange(property.name, value)}
                           options={property.options as string[]}
+                          min={property.name === 'opacity' ? 0 : (property as any).min}
+                          max={property.name === 'opacity' ? 255 : (property as any).max}
                           hint={(property as any).hint ? t((property as any).hint) : undefined}
                         />
                       </div>
@@ -896,6 +898,8 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                           value={(component.data as any)?.[property.name]}
                           onChange={(value) => handleDataChange(property.name, value)}
                           options={property.options as string[]}
+                          min={(property as any).min}
+                          max={(property as any).max}
                         />
                       )}
                     </div>
@@ -917,6 +921,8 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                         value={(component.data as any)?.[property.name]}
                         onChange={(value) => handleGeneralChange(property.name, value)}
                         options={property.options as string[]}
+                        min={(property as any).min}
+                        max={(property as any).max}
                       />
                     </div>
                   ))}
@@ -1009,6 +1015,8 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                           type="number"
                           value={(component.data as any)?.buttonPressedOpacity ?? 128}
                           onChange={(value) => handleDataChange('buttonPressedOpacity', value)}
+                          min={0}
+                          max={255}
                         />
                         <span style={{ fontSize: '10px', color: 'var(--vscode-descriptionForeground)' }}>
                           (0-255)
@@ -1020,6 +1028,8 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                           type="number"
                           value={(component.data as any)?.buttonReleasedOpacity ?? 255}
                           onChange={(value) => handleDataChange('buttonReleasedOpacity', value)}
+                          min={0}
+                          max={255}
                         />
                         <span style={{ fontSize: '10px', color: 'var(--vscode-descriptionForeground)' }}>
                           (0-255)

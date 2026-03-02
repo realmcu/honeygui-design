@@ -1343,7 +1343,20 @@ const TimerActionEditor: React.FC<{
               min="0"
               max="255"
               value={action.from || 255}
-              onChange={(e) => onUpdate({ from: Number(e.target.value) })}
+              onChange={(e) => {
+                let val = Number(e.target.value);
+                if (isNaN(val)) val = 255;
+                else if (val < 0) val = 0;
+                else if (val > 255) val = 255;
+                onUpdate({ from: val });
+              }}
+              onBlur={(e) => {
+                let val = Number(e.target.value);
+                if (isNaN(val) || e.target.value === '') val = 255;
+                else if (val < 0) val = 0;
+                else if (val > 255) val = 255;
+                onUpdate({ from: val });
+              }}
               style={{
                 width: '100%',
                 padding: '3px',
@@ -1362,7 +1375,20 @@ const TimerActionEditor: React.FC<{
               min="0"
               max="255"
               value={action.to || 128}
-              onChange={(e) => onUpdate({ to: Number(e.target.value) })}
+              onChange={(e) => {
+                let val = Number(e.target.value);
+                if (isNaN(val)) val = 128;
+                else if (val < 0) val = 0;
+                else if (val > 255) val = 255;
+                onUpdate({ to: val });
+              }}
+              onBlur={(e) => {
+                let val = Number(e.target.value);
+                if (isNaN(val) || e.target.value === '') val = 128;
+                else if (val < 0) val = 0;
+                else if (val > 255) val = 255;
+                onUpdate({ to: val });
+              }}
               style={{
                 width: '100%',
                 padding: '3px',

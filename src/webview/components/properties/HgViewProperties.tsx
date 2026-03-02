@@ -96,6 +96,8 @@ export const HgViewProperties: React.FC<PropertyPanelProps> = ({ component, onUp
                   type="number"
                   value={component.data?.opacity ?? 255}
                   onChange={(value) => handleDataChange('opacity', value)}
+                  min={0}
+                  max={255}
                 />
               </div>
             </div>

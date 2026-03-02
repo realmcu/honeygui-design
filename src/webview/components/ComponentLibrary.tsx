@@ -344,7 +344,7 @@ const componentDefinitions: ComponentDefinition[] = [
       { name: 'endAngle', label: 'End Angle', type: 'number', defaultValue: 270, group: 'style' },
       { name: 'strokeWidth', label: 'Stroke Width', type: 'number', defaultValue: 8, group: 'style' },
       { name: 'color', label: 'Color', type: 'color', defaultValue: '#007acc', group: 'style' },
-      { name: 'opacity', label: 'Opacity', type: 'number', defaultValue: 255, group: 'style' },
+      { name: 'opacity', label: 'Opacity', type: 'number', defaultValue: 255, min: 0, max: 255, group: 'style' },
       { name: 'useGradient', label: 'Enable Gradient', type: 'boolean', defaultValue: false, group: 'style' },
       { name: 'arcGroup', label: 'Arc Group', type: 'string', defaultValue: '', group: 'general' },
     ],
@@ -357,7 +357,7 @@ const componentDefinitions: ComponentDefinition[] = [
     properties: [
       { name: 'radius', label: 'Radius', type: 'number', defaultValue: 40, group: 'style' },
       { name: 'fillColor', label: 'Fill Color', type: 'color', defaultValue: '#007acc', group: 'style' },
-      { name: 'opacity', label: 'Opacity', type: 'number', defaultValue: 255, group: 'style' },
+      { name: 'opacity', label: 'Opacity (0-255)', type: 'number', defaultValue: 255, min: 0, max: 255, group: 'style' },
       { name: 'useGradient', label: 'Enable Gradient', type: 'boolean', defaultValue: false, group: 'style' },
       { name: 'gradientType', label: 'Gradient Type', type: 'select', defaultValue: 'radial', options: ['radial', 'angular'], group: 'style' },
       // 按键效果属性
@@ -367,8 +367,8 @@ const componentDefinitions: ComponentDefinition[] = [
       { name: 'buttonStateOffColor', label: 'Off State Color', type: 'color', defaultValue: '#FF0000', group: 'interaction' },
       { name: 'buttonInitialState', label: 'Initial State', type: 'select', defaultValue: 'off', 
         options: ['on', 'off'], group: 'interaction' },
-      { name: 'buttonPressedOpacity', label: 'Pressed Opacity', type: 'number', defaultValue: 128, group: 'interaction' },
-      { name: 'buttonReleasedOpacity', label: 'Released Opacity', type: 'number', defaultValue: 255, group: 'interaction' },
+      { name: 'buttonPressedOpacity', label: 'Pressed Opacity', type: 'number', defaultValue: 128, min: 0, max: 255, group: 'interaction' },
+      { name: 'buttonReleasedOpacity', label: 'Released Opacity', type: 'number', defaultValue: 255, min: 0, max: 255, group: 'interaction' },
     ],
   },
   {
@@ -379,7 +379,7 @@ const componentDefinitions: ComponentDefinition[] = [
     properties: [
       { name: 'borderRadius', label: 'Border Radius', type: 'number', defaultValue: 0, group: 'style' },
       { name: 'fillColor', label: 'Fill Color', type: 'color', defaultValue: '#007acc', group: 'style' },
-      { name: 'opacity', label: 'Opacity', type: 'number', defaultValue: 255, group: 'style' },
+      { name: 'opacity', label: 'Opacity', type: 'number', defaultValue: 255, min: 0, max: 255, group: 'style' },
       { name: 'useGradient', label: 'Enable Gradient', type: 'boolean', defaultValue: false, group: 'style' },
       { name: 'gradientDirection', label: 'Gradient Direction', type: 'select', defaultValue: 'horizontal', options: ['horizontal', 'vertical', 'diagonal_tl_br', 'diagonal_tr_bl'], group: 'style' },
       // 按键效果属性
@@ -389,8 +389,8 @@ const componentDefinitions: ComponentDefinition[] = [
       { name: 'buttonStateOffColor', label: 'Off State Color', type: 'color', defaultValue: '#FF0000', group: 'interaction' },
       { name: 'buttonInitialState', label: 'Initial State', type: 'select', defaultValue: 'off', 
         options: ['on', 'off'], group: 'interaction' },
-      { name: 'buttonPressedOpacity', label: 'Pressed Opacity', type: 'number', defaultValue: 128, group: 'interaction' },
-      { name: 'buttonReleasedOpacity', label: 'Released Opacity', type: 'number', defaultValue: 255, group: 'interaction' },
+      { name: 'buttonPressedOpacity', label: 'Pressed Opacity', type: 'number', defaultValue: 128, min: 0, max: 255, group: 'interaction' },
+      { name: 'buttonReleasedOpacity', label: 'Released Opacity', type: 'number', defaultValue: 255, min: 0, max: 255, group: 'interaction' },
     ],
   },
   {

@@ -18,7 +18,9 @@ export const PropertyEditor: React.FC<PropertyEditorProps> = ({
   options,
   disabled,
   title,
-  hint
+  hint,
+  min,
+  max
 }) => {
   const disabledStyle = disabled ? { opacity: 0.6, cursor: 'not-allowed' } : {};
 
@@ -39,27 +41,46 @@ export const PropertyEditor: React.FC<PropertyEditorProps> = ({
         <input
           type="number"
           value={value ?? ''}
+          min={min}
+          max={max}
           onChange={(e) => {
             const val = e.target.value;
             if (val === '' || val === '-') {
-              // 允许暂时为空，方便用户重新输入
-              onChange(val === '-' ? 0 : '');
-            } else {
-              const num = parseFloat(val);
-              onChange(isNaN(num) ? 0 : num);
+              onChange('');
+              return;
+            }
+            let num = parseFloat(val);
+            if (!isNaN(num)) {
+              // 在 onChange 时也应用 min/max 限制，防止输入超出范围的值
+              if (min !== undefined && num < min) {
+                num = min;
+              }
+              if (max !== undefined && num > max) {
+                num = max;
+              }
+              onChange(num);
             }
           }}
           onBlur={(e) => {
-            // 失焦时确保是有效数字
-            const val = e.target.value;
-            if (val === '' || val === '-' || value === '') {
-              onChange(0);
+            let val = parseFloat(e.target.value);
+            
+            // 空值或无效值处理
+            if (isNaN(val) || e.target.value === '') {
+              val = min !== undefined ? min : 0;
             }
+            
+            // 应用 min/max 限制
+            if (min !== undefined && val < min) {
+              val = min;
+            }
+            if (max !== undefined && val > max) {
+              val = max;
+            }
+            
+            // 更新值
+            onChange(val);
           }}
-          onFocus={(e) => {
-            // 聚焦时选中所有文本，方便用户直接输入新值
-            e.target.select();
-          }}
+          onFocus={(e) => e.target.select()}
           disabled={disabled}
           title={title}
           style={{ ...inputStyle, ...disabledStyle }}

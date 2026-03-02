@@ -123,6 +123,8 @@ export const GeometryProperties: React.FC<PropertyPanelProps> = ({ component, on
                         value={(component.style as any)?.[property.name]}
                         onChange={(value) => handleStyleChange(property.name, value)}
                         options={property.options as string[]}
+                        min={(property as any).min}
+                        max={(property as any).max}
                       />
                     </div>
                   ))}

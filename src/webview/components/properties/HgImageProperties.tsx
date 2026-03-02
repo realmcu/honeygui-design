@@ -505,7 +505,28 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
                   min="0"
                   max="255"
                   value={transform.opacity ?? 255}
-                  onChange={(e) => handleTransformChange('opacity', parseInt(e.target.value) || 255)}
+                  onChange={(e) => {
+                    let val = parseInt(e.target.value);
+                    if (isNaN(val)) {
+                      val = 255;
+                    } else if (val < 0) {
+                      val = 0;
+                    } else if (val > 255) {
+                      val = 255;
+                    }
+                    handleTransformChange('opacity', val);
+                  }}
+                  onBlur={(e) => {
+                    let val = parseInt(e.target.value);
+                    if (isNaN(val) || e.target.value === '') {
+                      val = 255;
+                    } else if (val < 0) {
+                      val = 0;
+                    } else if (val > 255) {
+                      val = 255;
+                    }
+                    handleTransformChange('opacity', val);
+                  }}
                   style={{
                     width: '60px',
                     padding: '4px 6px',
