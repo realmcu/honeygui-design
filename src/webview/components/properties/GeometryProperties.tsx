@@ -112,12 +112,12 @@ export const GeometryProperties: React.FC<PropertyPanelProps> = ({ component, on
             {/* Style Properties */}
             {definition && definition.properties.filter(p => p.group === 'style').length > 0 && (
               <div className="property-group">
-                <div className="property-group-title">样式</div>
+                <div className="property-group-title">{t('Style')}</div>
                 {definition.properties
                   .filter(p => p.group === 'style')
                   .map((property) => (
                     <div key={property.name} className="property-item">
-                      <label>{property.label}</label>
+                      <label>{t(property.label as any)}</label>
                       <PropertyEditor
                         type={property.type as any}
                         value={(component.style as any)?.[property.name]}
@@ -207,7 +207,7 @@ export const GeometryProperties: React.FC<PropertyPanelProps> = ({ component, on
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                       <div>
                         <label style={{ fontSize: '12px', display: 'block', marginBottom: '4px' }}>
-                          起始角度
+                          {t('Start Angle')}
                         </label>
                         <PropertyEditor
                           type="number"
@@ -217,7 +217,7 @@ export const GeometryProperties: React.FC<PropertyPanelProps> = ({ component, on
                       </div>
                       <div>
                         <label style={{ fontSize: '12px', display: 'block', marginBottom: '4px' }}>
-                          结束角度
+                          {t('End Angle')}
                         </label>
                         <PropertyEditor
                           type="number"
@@ -254,7 +254,7 @@ export const GeometryProperties: React.FC<PropertyPanelProps> = ({ component, on
                       >
                         <div style={{ flex: 1 }}>
                           <label style={{ fontSize: '11px', display: 'block', marginBottom: '4px' }}>
-                            位置 (0-1)
+                            {t('Position (0-1)')}
                           </label>
                           <input
                             type="number"
@@ -275,7 +275,7 @@ export const GeometryProperties: React.FC<PropertyPanelProps> = ({ component, on
                         </div>
                         <div style={{ flex: 1 }}>
                           <label style={{ fontSize: '11px', display: 'block', marginBottom: '4px' }}>
-                            颜色
+                            {t('Color')}
                           </label>
                           <div style={{ display: 'flex', gap: '4px' }}>
                             <input
@@ -311,7 +311,7 @@ export const GeometryProperties: React.FC<PropertyPanelProps> = ({ component, on
                             fontSize: '12px',
                             marginTop: '16px',
                           }}
-                          title="删除此色标"
+                          title={t('Delete this color stop')}
                         >
                           ✕
                         </button>
@@ -329,18 +329,18 @@ export const GeometryProperties: React.FC<PropertyPanelProps> = ({ component, on
                     fontSize: '11px',
                     color: 'var(--vscode-descriptionForeground)'
                   }}>
-                    <strong>提示：</strong>
+                    <strong>{t('Tip')}：</strong>
                     <ul style={{ margin: '4px 0', paddingLeft: '16px' }}>
-                      <li>位置值范围 0-1，表示渐变的起止位置</li>
-                      <li>至少需要 2 个色标才能形成渐变效果</li>
-                      {component.type === 'hg_arc' && <li>弧形使用角度渐变（沿弧线方向）</li>}
+                      <li>{t('Position value ranges from 0-1, representing gradient start/end position')}</li>
+                      <li>{t('At least 2 color stops are required to form a gradient')}</li>
+                      {component.type === 'hg_arc' && <li>{t('Arc uses angular gradient (along arc direction)')}</li>}
                       {component.type === 'hg_circle' && component.style?.gradientType === 'radial' && (
-                        <li>径向渐变从圆心（位置0）到边缘（位置1）</li>
+                        <li>{t('Radial gradient from center (position 0) to edge (position 1)')}</li>
                       )}
                       {component.type === 'hg_circle' && component.style?.gradientType === 'angular' && (
-                        <li>角度渐变沿圆周方向，从起始角度到结束角度</li>
+                        <li>{t('Angular gradient along circumference, from start angle to end angle')}</li>
                       )}
-                      {component.type === 'hg_rect' && <li>线性渐变按选定方向从起点到终点</li>}
+                      {component.type === 'hg_rect' && <li>{t('Linear gradient from start to end in selected direction')}</li>}
                     </ul>
                   </div>
                 )}

@@ -695,6 +695,17 @@ const en = {
   'Current File': 'Current File',
   'No font files, please upload to assets directory': 'No font files, please upload to assets directory',
   'Columns': 'Columns',
+
+  // GeometryProperties - Additional
+  'Position (0-1)': 'Position (0-1)',
+  'Delete this color stop': 'Delete this color stop',
+  'Tip': 'Tip',
+  'Position value ranges from 0-1, representing gradient start/end position': 'Position value ranges from 0-1, representing gradient start/end position',
+  'At least 2 color stops are required to form a gradient': 'At least 2 color stops are required to form a gradient',
+  'Arc uses angular gradient (along arc direction)': 'Arc uses angular gradient (along arc direction)',
+  'Radial gradient from center (position 0) to edge (position 1)': 'Radial gradient from center (position 0) to edge (position 1)',
+  'Angular gradient along circumference, from start angle to end angle': 'Angular gradient along circumference, from start angle to end angle',
+  'Linear gradient from start to end in selected direction': 'Linear gradient from start to end in selected direction',
 };
 
 export default en;

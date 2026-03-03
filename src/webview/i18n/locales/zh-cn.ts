@@ -695,7 +695,19 @@ const zhCN = {
   'Current File': '当前文件',
   'No font files, please upload to assets directory': '暂无字体文件，请先上传到 assets 目录',
   'Columns': '列数',
+
+  // GeometryProperties - Additional
+  'Position (0-1)': '位置 (0-1)',
+  'Delete this color stop': '删除此色标',
+  'Tip': '提示',
+  'Position value ranges from 0-1, representing gradient start/end position': '位置值范围 0-1，表示渐变的起止位置',
+  'At least 2 color stops are required to form a gradient': '至少需要 2 个色标才能形成渐变效果',
+  'Arc uses angular gradient (along arc direction)': '弧形使用角度渐变（沿弧线方向）',
+  'Radial gradient from center (position 0) to edge (position 1)': '径向渐变从圆心（位置0）到边缘（位置1）',
+  'Angular gradient along circumference, from start angle to end angle': '角度渐变沿圆周方向，从起始角度到结束角度',
+  'Linear gradient from start to end in selected direction': '线性渐变按选定方向从起点到终点',
+  'Pressed Opacity': '按下透明度',
+  'Released Opacity': '松开透明度',
 };
 
 export default zhCN;
-  // 注意：上面已经有结束的 }; 需要先删除
