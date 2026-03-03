@@ -936,6 +936,8 @@ static void ${component.id}_breath_anim_cb(void *p)
         return enableScroll ? 'gui_scroll_text_t' : 'gui_text_t';
       case 'hg_time_label':
         return enableScroll ? 'gui_scroll_text_t' : 'gui_text_t';
+      case 'hg_timer_label':
+        return enableScroll ? 'gui_scroll_text_t' : 'gui_text_t';
       case 'hg_image':
         return 'gui_img_t';
       case 'hg_window':
