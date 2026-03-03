@@ -1,0 +1,24 @@
+.particle-widget {
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+}
+
+.particle-widget-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--vscode-editorWidget-border);
+  background: var(--vscode-editor-background);
+}
+
+.particle-widget-icon {
+  font-size: 32px;
+}
+
+.particle-widget-label {
+  margin-top: 4px;
+  font-size: 10px;
+  color: var(--vscode-descriptionForeground);
+}

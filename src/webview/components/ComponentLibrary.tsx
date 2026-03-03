@@ -1,6 +1,7 @@
 ﻿import React, { useState, useRef, useEffect } from 'react';
 import { ComponentType, ComponentDefinition } from '../types';
 import { t } from '../i18n';
+import { PARTICLE_EFFECT_TYPES } from '../constants/particleEffects';
 import './ComponentLibrary.css';
 
 interface ComponentLibraryProps {
@@ -426,6 +427,22 @@ const componentDefinitions: ComponentDefinition[] = [
       { name: 'click', label: 'Click', type: 'boolean', defaultValue: false, group: 'interaction' },
     ],
   },
+  {
+    type: 'hg_particle',
+    name: 'Particle Effect',
+    icon: '✨',
+    defaultSize: { width: 200, height: 200 },
+    properties: [
+      {
+        name: 'particleEffect',
+        label: 'Effect Type',
+        type: 'select',
+        defaultValue: 'snow',
+        options: PARTICLE_EFFECT_TYPES,
+        group: 'data'
+      },
+    ],
+  },
 ];
 
 // Component categories - hg_time_label 不在组件库中直接显示，只能通过右键标签控件创建
@@ -433,7 +450,7 @@ const componentCategories = [
   { name: 'Containers', types: ['hg_view', 'hg_window', 'hg_canvas', 'hg_list'] },
   { name: 'Basic Controls', types: ['hg_button', 'hg_label', 'hg_image'] },
   { name: 'Input Controls', types: ['hg_input', 'hg_checkbox', 'hg_radio'] },
-  { name: 'Graphics', types: ['hg_arc', 'hg_circle', 'hg_rect', 'hg_svg', 'hg_glass'] },
+  { name: 'Graphics', types: ['hg_arc', 'hg_circle', 'hg_rect', 'hg_svg', 'hg_glass', 'hg_particle'] },
   { name: 'Multimedia', types: ['hg_video', 'hg_3d', 'hg_lottie'] }
 ];
 

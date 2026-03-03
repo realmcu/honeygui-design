@@ -691,6 +691,27 @@ const en = {
   'Start Download': 'Start Download',
   'Enter serial port': 'Enter serial port',
 
+  // Particle Effect
+  'Particle Effect': 'Particle Effect',
+  'Effects': 'Effects',
+  'Effect Type': 'Effect Type',
+  'Snow': 'Snow',
+  'Rain': 'Rain',
+  'Firework': 'Firework',
+  'Bubble': 'Bubble',
+  'Fireflies': 'Fireflies',
+  'Galaxy': 'Galaxy',
+  'Vortex': 'Vortex',
+  'Tunnel': 'Tunnel',
+  'Lightning': 'Lightning',
+  'Light Beam': 'Light Beam',
+  'Magic Circle': 'Magic Circle',
+  'Rocket': 'Rocket',
+  'Ripple': 'Ripple',
+  'Trail': 'Trail',
+  'Touch': 'Touch',
+  // 'Custom' already exists in EventsPanel section
+
   // Misc
   'Current File': 'Current File',
   'No font files, please upload to assets directory': 'No font files, please upload to assets directory',

@@ -22,6 +22,7 @@ import { SvgWidget } from './SvgWidget';
 import { GlassWidget } from './GlassWidget';
 import { LottieWidget } from './LottieWidget';
 import { CanvasWidget } from './CanvasWidget';
+import { ParticleWidget } from './ParticleWidget';
 
 export { WidgetProps } from './types';
 
@@ -52,4 +53,5 @@ export const widgetRegistry: Record<string, React.FC<WidgetProps>> = {
   hg_svg: SvgWidget,
   hg_glass: GlassWidget,
   hg_lottie: LottieWidget,
+  hg_particle: ParticleWidget,
 };

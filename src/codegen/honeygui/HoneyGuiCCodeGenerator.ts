@@ -201,6 +201,19 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       }
     });
 
+    // 粒子效果组件头文件（根据 particleEffect 值动态生成）
+    const particleComponents = this.components.filter(c => c.type === 'hg_particle');
+    if (particleComponents.length > 0) {
+      const effectHeaders = new Set<string>();
+      particleComponents.forEach(comp => {
+        const effectType = comp.data?.particleEffect || 'snow';
+        effectHeaders.add(`effect_${effectType}.h`);
+      });
+      effectHeaders.forEach(header => {
+        code += `#include "${header}"\n`;
+      });
+    }
+
     // 3D 模型不需要外部数据声明（使用 VFS 路径加载 bin 文件）
 
     code += `\n// 组件句柄声明\n`;
@@ -937,6 +950,8 @@ static void ${component.id}_breath_anim_cb(void *p)
         return 'gui_circle_t';
       case 'hg_canvas':
         return 'gui_canvas_t';
+      case 'hg_particle':
+        return 'gui_particle_widget_t';
       default:
         // 其他未实现的组件使用 gui_obj_t
         return 'gui_obj_t';

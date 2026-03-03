@@ -20,7 +20,9 @@ class ComponentRegistry {
     'hg_label', 'hg_glass',
     
     // 容器组件
-    'hg_window', 'hg_dialog', 'hg_container', 'hg_view'
+    'hg_window', 'hg_dialog', 'hg_container', 'hg_view',
+    // 粒子效果组件
+    'hg_particle'
   ]);
 
   static isValidComponent(name: string): boolean {
@@ -662,6 +664,8 @@ export class HmlParser {
       'movable', 'click',
       // hg_canvas SVG 文件属性
       'svgFile',
+      // hg_particle 粒子效果属性
+      'particleEffect',
       // hg_image 图片属性
       'blendMode', 'fgColor', 'bgColor', 'highQuality', 'needClip',
       // 计时标签属性

@@ -1288,6 +1288,15 @@ const App: React.FC = () => {
         defaultStyle[prop.name] = prop.defaultValue;
       });
 
+    // hg_particle 特殊处理：默认宽高为屏幕宽高，因为 effect 支持自适应
+    if (componentType === 'hg_particle') {
+      const projectConfig = useDesignerStore.getState().projectConfig;
+      const resolution = projectConfig?.resolution || '480X272';
+      const [resWidth, resHeight] = resolution.split('X').map(Number);
+      width = resWidth;
+      height = resHeight;
+    }
+
     // hg_list 特殊处理：默认宽高为屏幕宽高，项尺寸根据方向自动计算
     if (componentType === 'hg_list') {
       const projectConfig = useDesignerStore.getState().projectConfig;

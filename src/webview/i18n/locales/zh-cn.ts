@@ -691,6 +691,27 @@ const zhCN = {
   'Start Download': '开始下载',
   'Enter serial port': '输入串口号',
 
+  // Particle Effect
+  'Particle Effect': '粒子效果',
+  'Effects': '特效',
+  'Effect Type': '特效类型',
+  'Snow': '雪花',
+  'Rain': '雨滴',
+  'Firework': '烟花',
+  'Bubble': '气泡',
+  'Fireflies': '萤火虫',
+  'Galaxy': '银河',
+  'Vortex': '漩涡',
+  'Tunnel': '隧道',
+  'Lightning': '闪电',
+  'Light Beam': '光束',
+  'Magic Circle': '魔法阵',
+  'Rocket': '火箭',
+  'Ripple': '涟漪',
+  'Trail': '拖尾',
+  'Touch': '触摸',
+  // 'Custom' 已在 EventsPanel 部分定义为 '自定义'
+
   // Misc
   'Current File': '当前文件',
   'No font files, please upload to assets directory': '暂无字体文件，请先上传到 assets 目录',

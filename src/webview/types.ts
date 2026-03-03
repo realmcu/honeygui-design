@@ -40,7 +40,8 @@ export type ComponentType =
   | 'hg_rect'
   | 'hg_svg'
   | 'hg_lottie'
-  | 'hg_glass';
+  | 'hg_glass'
+  | 'hg_particle';
 
 export interface ComponentDefinition {
   type: ComponentType;

@@ -22,6 +22,7 @@ import { SvgGenerator } from './SvgGenerator';
 import { LottieGenerator } from './LottieGenerator';
 import { GlassGenerator } from './GlassGenerator';
 import { TimeLabelGenerator } from './TimeLabelGenerator';
+import { ParticleGenerator } from './ParticleGenerator';
 import { DefaultGenerator } from './DefaultGenerator';
 
 export class ComponentGeneratorFactory {
@@ -58,6 +59,7 @@ export class ComponentGeneratorFactory {
     this.generators.set('hg_rect', new RectGenerator());
     this.generators.set('hg_svg', new SvgGenerator());
     this.generators.set('hg_glass', new GlassGenerator());
+    this.generators.set('hg_particle', new ParticleGenerator());
   }
 
   static getGenerator(componentType: string): ComponentCodeGenerator {
