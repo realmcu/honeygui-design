@@ -21,6 +21,7 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
   const autoAlign = (component.data as any)?.autoAlign ?? true;
   const inertia = (component.data as any)?.inertia ?? true;
   const loop = (component.data as any)?.loop ?? false;
+  const enableAreaDisplay = (component.data as any)?.enableAreaDisplay ?? false;
   const createBar = (component.data as any)?.createBar ?? false;
   const offset = (component.data as any)?.offset ?? 0;
   const outScope = (component.data as any)?.outScope ?? 0;
@@ -433,6 +434,16 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
                     {t('LIST_CARD style does not support loop scroll')}
                   </div>
                 )}
+              </div>
+
+              {/* 启用区域显示 */}
+              <div className="property-item">
+                <label>{t('Enable Area Display')}</label>
+                <PropertyEditor
+                  type="boolean"
+                  value={enableAreaDisplay}
+                  onChange={(value) => handleDataChange('enableAreaDisplay', value)}
+                />
               </div>
 
               {/* 显示滚动条 */}

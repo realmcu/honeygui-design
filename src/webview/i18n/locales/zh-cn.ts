@@ -109,6 +109,7 @@ const zhCN = {
   'Auto Align': '自动对齐',
   'Inertia Scroll': '惯性滚动',
   'Loop Scroll': '循环滚动',
+  'Enable Area Display': '启用区域显示',
   'Show Scrollbar': '显示滚动条',
   'Initial Offset': '初始偏移',
   'Out of Scope': '超出范围',

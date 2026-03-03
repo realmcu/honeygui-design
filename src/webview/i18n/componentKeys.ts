@@ -68,6 +68,7 @@ export const propertyLabelKeys: Record<string, string> = {
   'inertia': 'Inertia Scroll',
   'loop': 'Loop',
   'createBar': 'Show Scrollbar',
+  'enableAreaDisplay': 'Enable Area Display',
   'offset': 'Initial Offset',
   'outScope': 'Out of Scope',
   'autoplay': 'Autoplay',

@@ -110,6 +110,7 @@ const en = {
   'Inertia Scroll': 'Inertia Scroll',
   'Loop Scroll': 'Loop Scroll',
   'Show Scrollbar': 'Show Scrollbar',
+  'Enable Area Display': 'Enable Area Display',
   'Initial Offset': 'Initial Offset',
   'Out of Scope': 'Out of Scope',
   'Video Path': 'Video Path',

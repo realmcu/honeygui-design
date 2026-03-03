@@ -7,6 +7,7 @@
 #define HML_LOADER_H
 
 #include "gui_obj.h"
+#include "ezxml.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -18,13 +19,6 @@ extern "C" {
 typedef void (*hml_callback_t)(gui_obj_t *obj);
 
 /**
- * @brief Scan directory and register all hg_view descriptors
- * @param dir_path Directory path to scan (e.g., "/hml/ui")
- * @return Number of views registered, -1 on error
- */
-int hml_scan_views(const char *dir_path);
-
-/**
  * @brief Load HML from file
  * @param parent Parent GUI object
  * @param path HML file path in romfs
@@ -33,13 +27,11 @@ int hml_scan_views(const char *dir_path);
 gui_obj_t *hml_load(gui_obj_t *parent, const char *path);
 
 /**
- * @brief Load HML from memory
- * @param parent Parent GUI object
- * @param hml_str HML string
- * @param len String length
- * @return Root GUI object, NULL on failure
+ * @brief Parse children nodes (exported for hml_view_instance.c)
+ * @param parent Parent object
+ * @param node XML node
  */
-gui_obj_t *hml_load_mem(gui_obj_t *parent, char *hml_str, size_t len);
+void hml_parse_children(gui_obj_t *parent, ezxml_t node);
 
 /**
  * @brief Register callback function
