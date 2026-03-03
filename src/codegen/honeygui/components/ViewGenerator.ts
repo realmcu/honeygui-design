@@ -31,8 +31,10 @@ export class ViewGenerator implements ComponentCodeGenerator {
     // 动画步长默认值为屏幕高度的 1/10
     const defaultAnimateStep = Math.round(component.position.height / 10);
     const animateStep = component.data?.animateStep ?? defaultAnimateStep;
-    // 透明度默认值为 255（完全不透明）
-    const opacity = component.data?.opacity ?? 255;
+    // 透明度默认值为 255（完全不透明），确保转换为数字类型
+    // 优先从 data 读取，兼容从 style 读取
+    const opacityValue = component.data?.opacity ?? component.style?.opacity;
+    const opacity = opacityValue !== undefined ? Number(opacityValue) : 255;
 
     let code = '';
     
