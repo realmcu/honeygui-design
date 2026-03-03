@@ -24,6 +24,29 @@ export const PropertyEditor: React.FC<PropertyEditorProps> = ({
 }) => {
   const disabledStyle = disabled ? { opacity: 0.6, cursor: 'not-allowed' } : {};
 
+  // 辅助函数：标准化颜色值为 6 位 RGB 格式
+  const normalizeColor = (color: string): string => {
+    if (!color || !color.startsWith('#')) return color;
+    const hex = color.slice(1).toUpperCase();
+    
+    // 8 位 RGBA -> 6 位 RGB（去掉 Alpha 通道）
+    if (hex.length === 8) {
+      return '#' + hex.slice(0, 6);
+    }
+    
+    // 3 位 RGB -> 6 位 RGB
+    if (hex.length === 3) {
+      return '#' + hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+    }
+    
+    // 6 位 RGB 保持不变
+    if (hex.length === 6) {
+      return '#' + hex;
+    }
+    
+    return color;
+  };
+
   switch (type) {
     case 'boolean':
       return (
@@ -93,7 +116,7 @@ export const PropertyEditor: React.FC<PropertyEditorProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <input
               type="color"
-              value={value || '#000000'}
+              value={normalizeColor(value || '#000000')}
               onChange={(e) => onChange(e.target.value)}
               disabled={disabled}
               style={{ width: '30px', height: '30px', padding: 0, border: 'none' }}
@@ -101,8 +124,32 @@ export const PropertyEditor: React.FC<PropertyEditorProps> = ({
             <input
               type="text"
               value={value || ''}
-              onChange={(e) => onChange(e.target.value)}
+              onChange={(e) => {
+                const input = e.target.value;
+                // 允许空值或正在输入 # 开头
+                if (input === '' || input === '#') {
+                  onChange(input);
+                  return;
+                }
+                // 验证格式：# + 最多6位十六进制字符
+                if (/^#[0-9A-Fa-f]{0,6}$/.test(input)) {
+                  onChange(input.toUpperCase());
+                }
+                // 如果输入超过7位（# + 6位），截断为7位
+                else if (input.startsWith('#') && input.length > 7) {
+                  onChange(input.slice(0, 7).toUpperCase());
+                }
+              }}
+              onBlur={(e) => {
+                // 失焦时自动标准化为 6 位 RGB 格式
+                const normalized = normalizeColor(e.target.value);
+                if (normalized !== e.target.value) {
+                  onChange(normalized);
+                }
+              }}
               disabled={disabled}
+              placeholder="#RRGGBB"
+              maxLength={7}
               style={{ ...inputStyle, flex: 1, ...disabledStyle }}
             />
           </div>
