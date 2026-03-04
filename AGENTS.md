@@ -177,15 +177,30 @@ HmlEditorProvider.resolveCustomTextEditor()
      5. Commit: `chore: bump version to x.x.x`
      6. Push to Gitee
      7. 执行 `vsce publish` 发布到 VSCode 插件市场
-9. **实验工程**：测试用的实验工程, 也是模板工程位于 `./template-projects/smartwatch` 目录
-10. **国际化 (i18n)**：所有用户可见的文本必须支持多语言
+10. **发布预览版本**：
+   - 当用户说"发布预览版"、"publish preview"或"发布测试版"时，执行以下流程：
+     1. 更新版本号为预览版格式（策略 A：预览下一个版本）：
+        - 从稳定版 1.6.30 → 1.6.31-preview.1（预览下一个版本）
+        - 从预览版 1.6.31-preview.1 → 1.6.31-preview.2（继续测试）
+     2. 执行 `npm install` 确保依赖最新
+     3. 执行 `npm run compile` 编译代码
+     4. 执行 `npm run build:webview` 构建前端
+     5. Commit: `chore: bump version to x.x.x-preview.x`
+     6. Push to Gitee
+     7. 执行 `vsce publish --pre-release` 发布预览版到 VSCode 插件市场
+   - **预览版特性**：
+     - 预览版用户不会自动更新到稳定版
+     - 预览版之间可以自动更新（如 1.6.31-preview.1 → 1.6.31-preview.2）
+     - 适合内部测试和公测，不影响稳定版用户
+11. **实验工程**：测试用的实验工程, 也是模板工程位于 `./template-projects/smartwatch` 目录
+12. **国际化 (i18n)**：所有用户可见的文本必须支持多语言
     - **Extension 端**：使用 `vscode.l10n.t('key')` 进行翻译
       - 翻译文件：`l10n/bundle.l10n.json`（英文）、`l10n/bundle.l10n.zh-cn.json`（中文）
     - **Webview 端**：使用 `t('key')` 函数（从 `../i18n` 导入）
       - 翻译文件：`src/webview/i18n/locales/en.ts`（英文）、`src/webview/i18n/locales/zh-cn.ts`（中文）
     - **package.json**：命令标题使用 `%key%` 语法，配合 `package.nls.json` 和 `package.nls.zh-cn.json`
     - **注意**：`viewsWelcome` 不支持 NLS 语法，需使用纯文本
-11. **Bug 日志路径**：Windows 下的插件错误日志位于 `/mnt/c/Users/howie_wang.RSDOMAIN/Desktop/plugin-bug-log`
+13. **Bug 日志路径**：Windows 下的插件错误日志位于 `/mnt/c/Users/howie_wang.RSDOMAIN/Desktop/plugin-bug-log`
 
 ### 不要做的事
 - ❌ 不要修改单元测试（除非用户明确要求）
