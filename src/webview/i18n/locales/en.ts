@@ -710,6 +710,10 @@ const en = {
   'Ripple': 'Ripple',
   'Trail': 'Trail',
   'Touch': 'Touch',
+  'Particle Control': 'Particle Control',
+  'Restart Effect': 'Restart Effect',
+  'Interactive Preview': 'Interactive Preview',
+  'Enable to use mouse interaction on particle. Alt+Click also works as shortcut.': 'Enable to use mouse interaction on particle. Alt+Click also works as shortcut.',
   // 'Custom' already exists in EventsPanel section
 
   // Misc

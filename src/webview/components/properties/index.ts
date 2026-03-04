@@ -8,6 +8,7 @@ import { HgListProperties } from './HgListProperties';
 import { ListItemProperties } from './ListItemProperties';
 import { GeometryProperties } from './GeometryProperties';
 import { DefaultProperties } from './DefaultProperties';
+import { HgParticleProperties } from './HgParticleProperties';
 import { PropertyPanelProps } from './types';
 
 export const propertyPanelRegistry: Record<ComponentType, React.FC<PropertyPanelProps>> = {
@@ -35,7 +36,7 @@ export const propertyPanelRegistry: Record<ComponentType, React.FC<PropertyPanel
   hg_svg: DefaultProperties,
   hg_lottie: DefaultProperties,
   hg_glass: DefaultProperties,
-  hg_particle: DefaultProperties,
+  hg_particle: HgParticleProperties,
 };
 
 export { HgViewProperties } from './HgViewProperties';
@@ -47,6 +48,7 @@ export { HgListProperties } from './HgListProperties';
 export { ListItemProperties } from './ListItemProperties';
 export { GeometryProperties } from './GeometryProperties';
 export { DefaultProperties } from './DefaultProperties';
+export { HgParticleProperties } from './HgParticleProperties';
 export { BaseProperties } from './BaseProperties';
 export { PropertyEditor } from './PropertyEditor';
 export type { PropertyPanelProps, PropertyEditorProps } from './types';

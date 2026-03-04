@@ -1,0 +1,128 @@
+import React, { useState } from 'react';
+import { PropertyPanelProps } from './types';
+import { PropertyEditor } from './PropertyEditor';
+import { BaseProperties } from './BaseProperties';
+import { EventsPanel } from './EventsPanel';
+import { getEffectConfig, PARTICLE_EFFECTS } from '../../constants/particleEffects';
+import { t } from '../../i18n';
+
+// 效果图标映射
+const EFFECT_ICONS: Record<string, string> = {
+  snow: '❄️', rain: '🌧️', firework: '🎆', bubble: '🫧',
+  fireflies: '✨', galaxy: '🌌', vortex: '🌀', tunnel: '🔦',
+  lightning: '⚡', light_beam: '💡', magic_circle: '🔮', rocket: '🚀',
+  ripple: '💧', trail: '🖱️', touch: '👆', custom: '⚙️',
+};
+
+export const HgParticleProperties: React.FC<PropertyPanelProps> = ({ component, onUpdate, components }) => {
+  const [activeTab, setActiveTab] = useState<'properties' | 'events'>('properties');
+  const effectType = (component.data as any)?.particleEffect || 'snow';
+  const config = getEffectConfig(effectType);
+  const isInteractive = !!config?.interactive;
+  const interactivePreview = !!(component.data as any)?.interactivePreview;
+
+  const handleDataChange = (property: string, value: any) => {
+    onUpdate({ data: { ...component.data, [property]: value } });
+  };
+
+  const dispatchControl = (action: string) => {
+    window.dispatchEvent(new CustomEvent('particleControl', {
+      detail: { componentId: component.id, action },
+    }));
+  };
+
+  // 构建带翻译名称的 options（隐藏 custom，仅测试用）
+  const effectOptions = PARTICLE_EFFECTS
+    .filter(e => e.type !== 'custom')
+    .map(e => ({
+      value: e.type,
+      label: `${EFFECT_ICONS[e.type] || '✨'} ${t(e.i18nKey as any)}`,
+    }));
+
+  return (
+    <>
+      <div className="properties-tabs">
+        <button className={activeTab === 'properties' ? 'active' : ''} onClick={() => setActiveTab('properties')}>
+          {t('Properties')}
+        </button>
+        <button className={activeTab === 'events' ? 'active' : ''} onClick={() => setActiveTab('events')}>
+          {t('Events')}
+        </button>
+      </div>
+
+      <div className="properties-content">
+        {activeTab === 'properties' && (
+          <>
+            <BaseProperties component={component} onUpdate={onUpdate} components={components} />
+
+            {/* 粒子控制（合并特效选择 + 控制按钮） */}
+            <div className="property-group">
+              <div className="property-group-title">{t('Particle Control')}</div>
+
+              {/* 特效类型选择 */}
+              <div className="property-item">
+                <label>{t('Effect Type')}</label>
+                <PropertyEditor
+                  type="select"
+                  value={effectType}
+                  onChange={(value) => handleDataChange('particleEffect', value)}
+                  options={effectOptions}
+                />
+              </div>
+
+              {/* 重新开始按钮 */}
+              <div className="property-item">
+                <button
+                  onClick={() => dispatchControl('restart')}
+                  style={{
+                    width: '100%',
+                    padding: '6px 12px',
+                    backgroundColor: 'var(--vscode-button-secondaryBackground)',
+                    color: 'var(--vscode-button-secondaryForeground)',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                  }}
+                >
+                  🔄 {t('Restart Effect')}
+                </button>
+              </div>
+
+              {/* 交互预览开关（仅交互效果显示） */}
+              {isInteractive && (
+                <div className="property-item">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <PropertyEditor
+                      type="boolean"
+                      value={interactivePreview}
+                      onChange={(value) => {
+                        handleDataChange('interactivePreview', value);
+                        if (!value) {
+                          setTimeout(() => dispatchControl('restart'), 50);
+                        }
+                      }}
+                    />
+                    <span style={{ fontSize: '12px' }}>{t('Interactive Preview')}</span>
+                  </div>
+                  <div style={{
+                    fontSize: '10px',
+                    color: 'var(--vscode-descriptionForeground)',
+                    marginTop: '4px',
+                    lineHeight: '1.4',
+                  }}>
+                    💡 {t('Enable to use mouse interaction on particle. Alt+Click also works as shortcut.')}
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {activeTab === 'events' && (
+          <EventsPanel component={component} onUpdate={onUpdate} />
+        )}
+      </div>
+    </>
+  );
+};
