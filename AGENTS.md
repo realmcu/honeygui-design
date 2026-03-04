@@ -168,24 +168,46 @@ HmlEditorProvider.resolveCustomTextEditor()
      2. 执行 `npm run compile` 编译代码
      3. 执行 `npm run build:webview` 构建前端
      4. 执行 `vsce package` 生成 `.vsix` 文件
-9. **发布版本**：
-   - 当用户说"发布版本"或"publish"时，执行以下流程：
-     1. 更新版本号（递增 patch 版本，如 1.4.13 → 1.4.14，或使用用户指定的版本）
-     2. 执行 `npm install` 确保依赖最新（适用于干净仓库）
+9. **版本号规则**：
+   - **格式**：`major.minor.patch`（如 1.6.30）
+   - **patch 版本规则**：
+     - **偶数**：正式版本（如 1.6.30, 1.6.32）
+     - **奇数**：测试版本（如 1.6.31, 1.6.33）
+   - **版本递增**：每次发布都递增 patch 版本，不管是正式版还是测试版
+   - **Git Tag**：每次发布都创建 git tag（如 `v1.6.30`）
+10. **发布正式版本**：
+   - 当用户说"发布版本"、"发布正式版"或"publish"时，执行以下流程：
+     1. 更新版本号到下一个偶数版本（如 1.6.30 → 1.6.32）
+     2. 执行 `npm install` 确保依赖最新
      3. 执行 `npm run compile` 编译代码
      4. 执行 `npm run build:webview` 构建前端
      5. Commit: `chore: bump version to x.x.x`
-     6. Push to Gitee
-     7. 执行 `vsce publish` 发布到 VSCode 插件市场
-9. **实验工程**：测试用的实验工程, 也是模板工程位于 `./template-projects/smartwatch` 目录
-10. **国际化 (i18n)**：所有用户可见的文本必须支持多语言
+     6. 创建 Git Tag: `git tag vx.x.x`
+     7. Push to Gitee: `git push origin master --tags`
+     8. 执行 `vsce publish` 发布到 VSCode 插件市场
+11. **发布测试版本**：
+   - 当用户说"发布测试版"、"发布预览版"或"publish preview"时，执行以下流程：
+     1. 更新版本号到下一个奇数版本（如 1.6.30 → 1.6.31）
+     2. 执行 `npm install` 确保依赖最新
+     3. 执行 `npm run compile` 编译代码
+     4. 执行 `npm run build:webview` 构建前端
+     5. Commit: `chore: bump version to x.x.x (preview)`
+     6. 创建 Git Tag: `git tag vx.x.x`
+     7. Push to Gitee: `git push origin master --tags`
+     8. 执行 `vsce publish --pre-release` 发布测试版到 VSCode 插件市场
+   - **测试版特性**：
+     - 测试版用户不会自动更新到正式版
+     - 测试版之间可以自动更新（如 1.6.31 → 1.6.33）
+     - 适合内部测试和公测，不影响正式版用户
+12. **实验工程**：测试用的实验工程, 也是模板工程位于 `./template-projects/smartwatch` 目录
+13. **国际化 (i18n)**：所有用户可见的文本必须支持多语言
     - **Extension 端**：使用 `vscode.l10n.t('key')` 进行翻译
       - 翻译文件：`l10n/bundle.l10n.json`（英文）、`l10n/bundle.l10n.zh-cn.json`（中文）
     - **Webview 端**：使用 `t('key')` 函数（从 `../i18n` 导入）
       - 翻译文件：`src/webview/i18n/locales/en.ts`（英文）、`src/webview/i18n/locales/zh-cn.ts`（中文）
     - **package.json**：命令标题使用 `%key%` 语法，配合 `package.nls.json` 和 `package.nls.zh-cn.json`
     - **注意**：`viewsWelcome` 不支持 NLS 语法，需使用纯文本
-11. **Bug 日志路径**：Windows 下的插件错误日志位于 `/mnt/c/Users/howie_wang.RSDOMAIN/Desktop/plugin-bug-log`
+14. **Bug 日志路径**：Windows 下的插件错误日志位于 `/mnt/c/Users/howie_wang.RSDOMAIN/Desktop/plugin-bug-log`
 
 ### 不要做的事
 - ❌ 不要修改单元测试（除非用户明确要求）
