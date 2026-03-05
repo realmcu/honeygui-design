@@ -7,6 +7,14 @@ import { t } from '../../i18n';
 
 export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onUpdate, components }) => {
   const [activeTab, setActiveTab] = useState<'properties' | 'events'>('properties');
+  
+  // 保存当前正在编辑的组件 ID（用于 onBlur 时确保操作应用到正确的组件）
+  const componentIdRef = React.useRef(component.id);
+  
+  // 组件切换时更新 ref
+  React.useEffect(() => {
+    componentIdRef.current = component.id;
+  }, [component.id]);
 
   const handleStyleChange = (property: string, value: any) => {
     onUpdate({
@@ -69,12 +77,12 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
           value={value || ''}
           onChange={(e) => onChange(e.target.value)}
           onBlur={(e) => {
-            // 失去焦点时获取图片尺寸
+            // 失去焦点时获取图片尺寸（使用保存的组件 ID）
             const val = e.target.value;
             if (val && val.startsWith('assets/')) {
               window.vscodeAPI?.postMessage({
                 command: 'getImageSizeForComponent',
-                componentId: component.id,
+                componentId: componentIdRef.current,
                 imagePath: val
               });
             }

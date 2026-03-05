@@ -12,6 +12,15 @@ const FONT_EXTS = ['ttf', 'otf', 'woff', 'woff2', 'bin'];
 
 export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onUpdate, components }) => {
   const [activeTab, setActiveTab] = useState<'properties' | 'events'>('properties');
+  
+  // 保存当前正在编辑的组件 ID（用于异步操作时确保操作应用到正确的组件）
+  const componentIdRef = React.useRef(component.id);
+  
+  // 组件切换时更新 ref
+  React.useEffect(() => {
+    componentIdRef.current = component.id;
+  }, [component.id]);
+  
   const [fontMetrics, setFontMetrics] = useState<{
     needsWarning: boolean;
     message: string;
@@ -41,7 +50,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
     if (component.type === 'hg_list' && property === 'noteNum') {
       // 使用 setTimeout 确保状态更新后再同步
       setTimeout(() => {
-        syncListItems(component.id);
+        syncListItems(componentIdRef.current);
       }, 0);
     }
   };
@@ -58,7 +67,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
   const handleSelectImagePath = (propertyName?: string) => {
     window.vscodeAPI?.postMessage({
       command: 'selectImagePath',
-      componentId: component.id,
+      componentId: componentIdRef.current,
       propertyName: propertyName || 'src'
     });
   };
@@ -66,21 +75,21 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
   const handleSelectGlassPath = () => {
     window.vscodeAPI?.postMessage({
       command: 'selectGlassPath',
-      componentId: component.id
+      componentId: componentIdRef.current
     });
   };
 
   const handleSelectFontPath = () => {
     window.vscodeAPI?.postMessage({
       command: 'selectFontPath',
-      componentId: component.id
+      componentId: componentIdRef.current
     });
   };
 
   const handleSelectMapPath = () => {
     window.vscodeAPI?.postMessage({
       command: 'selectMapPath',
-      componentId: component.id
+      componentId: componentIdRef.current
     });
   };
 
@@ -263,7 +272,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
     const handleBrowseCharsetFile = (index: number, type: 'file' | 'codepage') => {
       window.vscodeAPI?.postMessage({
         command: 'browseCharsetFile',
-        componentId: component.id,
+        componentId: componentIdRef.current,
         charsetIndex: index,
         fileType: type,
         filters: type === 'file' 
@@ -505,7 +514,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                   <button
                     onClick={() => {
                       window.dispatchEvent(new CustomEvent('openCanvasEditor', {
-                        detail: { componentId: component.id }
+                        detail: { componentId: componentIdRef.current }
                       }));
                     }}
                     style={{

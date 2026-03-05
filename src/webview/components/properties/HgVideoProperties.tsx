@@ -31,6 +31,14 @@ const helpTextStyle: React.CSSProperties = {
 
 export const HgVideoProperties: React.FC<PropertyPanelProps> = ({ component, onUpdate, components }) => {
   const [activeTab, setActiveTab] = useState<'properties' | 'events'>('properties');
+  
+  // 保存当前正在编辑的组件 ID（用于异步操作时确保操作应用到正确的组件）
+  const componentIdRef = React.useRef(component.id);
+  
+  // 组件切换时更新 ref
+  React.useEffect(() => {
+    componentIdRef.current = component.id;
+  }, [component.id]);
 
   const handlePropertyChange = (property: string, value: any) => {
     const newData = {
@@ -38,14 +46,14 @@ export const HgVideoProperties: React.FC<PropertyPanelProps> = ({ component, onU
       [property]: value
     };
     
-    // 当视频路径改变时，请求获取视频尺寸
+    // 当视频路径改变时，请求获取视频尺寸（使用保存的组件 ID）
     if (property === 'src' && value) {
       const vscodeAPI = (window as any).vscodeAPI;
       if (vscodeAPI) {
         vscodeAPI.postMessage({
           command: 'getVideoSizeForProperty',
           videoPath: value,
-          componentId: component.id
+          componentId: componentIdRef.current
         });
       }
     }

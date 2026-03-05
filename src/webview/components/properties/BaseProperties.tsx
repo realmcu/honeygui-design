@@ -106,35 +106,54 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
   const [editingId, setEditingId] = useState(component.id);
   const [idError, setIdError] = useState<string | null>(null);
   const renameComponent = useDesignerStore(state => state.renameComponent);
+  
+  // 保存当前正在编辑的组件 ID（用于确保修改应用到正确的组件）
+  const editingComponentIdRef = React.useRef(component.id);
 
   // 组件切换时重置编辑状态
   useEffect(() => {
+    // 如果组件切换了，先提交之前的更改
+    if (editingComponentIdRef.current !== component.id && editingId !== editingComponentIdRef.current) {
+      handleIdCommit();
+    }
+    
     setEditingId(component.id);
     setIdError(null);
+    editingComponentIdRef.current = component.id;
   }, [component.id]);
 
   const handleIdChange = (value: string) => {
     setEditingId(value);
+    
     // 实时校验
     const allIds = components.map(c => c.id);
-    const result = validateComponentId(value, allIds, component.id);
+    const result = validateComponentId(value, allIds, editingComponentIdRef.current);
     setIdError(result.valid ? null : result.error || null);
   };
 
-  const handleIdBlur = () => {
-    if (editingId === component.id) return; // 没有变化
+  const handleIdCommit = () => {
+    const originalId = editingComponentIdRef.current;
+    if (editingId === originalId) return; // 没有变化
     if (idError) {
       // 校验失败，恢复原值
-      setEditingId(component.id);
+      setEditingId(originalId);
       setIdError(null);
       return;
     }
-    // 执行重命名
-    const success = renameComponent(component.id, editingId);
+    
+    // 执行重命名（使用保存的原始 ID）
+    const success = renameComponent(originalId, editingId);
     if (!success) {
-      setEditingId(component.id);
+      setEditingId(originalId);
       setIdError(t('Rename failed'));
+    } else {
+      // 更新引用为新的 ID
+      editingComponentIdRef.current = editingId;
     }
+  };
+
+  const handleIdBlur = () => {
+    handleIdCommit();
   };
 
   return (
@@ -148,7 +167,12 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
             value={editingId}
             onChange={(e) => handleIdChange(e.target.value)}
             onBlur={handleIdBlur}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleIdBlur(); }}
+            onKeyDown={(e) => { 
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleIdCommit();
+              }
+            }}
             style={{
               width: '100%',
               padding: '4px 8px',
