@@ -42,6 +42,9 @@ export class ViewEventGenerator implements EventCodeGenerator {
     let code = '';
     const indentStr = '    '.repeat(indent);
     
+    // hg_view 在 switch_in 函数内，使用 view 参数
+    const targetRef = '(gui_obj_t *)view';
+    
     // 为每个事件类型维护独立的索引
     const eventTypeIndexMap = new Map<string, number>();
     const keyEventTypeMap = new Map<string, boolean>(); // 记录每种按键事件类型是否已绑定
@@ -51,13 +54,13 @@ export class ViewEventGenerator implements EventCodeGenerator {
       if (eventConfig.type === 'onMessage' && eventConfig.message) {
         // 如果有 handler 属性，直接使用
         if (eventConfig.handler) {
-          code += `${indentStr}gui_msg_subscribe((gui_obj_t *)${component.id}, "${eventConfig.message}", ${eventConfig.handler});\n`;
+          code += `${indentStr}gui_msg_subscribe(${targetRef}, "${eventConfig.message}", ${eventConfig.handler});\n`;
         }
         // 否则检查 actions 中的 callFunction
         else {
           eventConfig.actions.forEach(action => {
             if (action.type === 'callFunction' && action.functionName) {
-              code += `${indentStr}gui_msg_subscribe((gui_obj_t *)${component.id}, "${eventConfig.message}", ${action.functionName});\n`;
+              code += `${indentStr}gui_msg_subscribe(${targetRef}, "${eventConfig.message}", ${action.functionName});\n`;
             }
           });
         }
@@ -71,7 +74,7 @@ export class ViewEventGenerator implements EventCodeGenerator {
           const keyEventIndex = keyEventTypeMap.size;
           const callbackName = `${component.id}_key_${keyEventIndex}_cb`;
           keyEventTypeMap.set(eventConfig.type, true);
-          code += `${indentStr}gui_obj_add_event_cb(GUI_BASE(${component.id}), (gui_event_cb_t)${callbackName}, ${guiEvent}, NULL);\n`;
+          code += `${indentStr}gui_obj_add_event_cb(${targetRef}, (gui_event_cb_t)${callbackName}, ${guiEvent}, NULL);\n`;
         }
         return;
       }
@@ -88,7 +91,7 @@ export class ViewEventGenerator implements EventCodeGenerator {
           
           controlTimerActions.forEach((_, actionIndex) => {
             const callbackName = generateEventCallbackName(component.id, eventConfig.type, currentIndex + actionIndex);
-            code += `${indentStr}gui_obj_add_event_cb(GUI_BASE(${component.id}), (gui_event_cb_t)${callbackName}, ${guiEvent}, NULL);\n`;
+            code += `${indentStr}gui_obj_add_event_cb(${targetRef}, (gui_event_cb_t)${callbackName}, ${guiEvent}, NULL);\n`;
           });
           
           eventTypeIndexMap.set(eventConfig.type, currentIndex + controlTimerActions.length);

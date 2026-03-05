@@ -559,15 +559,20 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       });
     }
     
-    // 生成事件绑定代码（用于 hg_window 的 onMessage 等事件）
+    // 生成事件绑定代码（用于 hg_view 和 hg_window 的 onMessage、按键事件等）
     let eventBindingsCode = '';
-    if (component.type === 'hg_window') {
-      eventBindingsCode = this.generateEventConfigBindings(component, indent);
+    if (component.type === 'hg_view' || component.type === 'hg_window') {
+      // 对于 hg_view，使用 indent + 1（因为在 switch_in 函数内）
+      // 对于 hg_window，使用 indent（因为直接在父组件内）
+      const eventIndent = component.type === 'hg_view' ? indent + 1 : indent;
+      eventBindingsCode = this.generateEventConfigBindings(component, eventIndent);
       
-      // 如果 window 组件设置了按键事件，添加焦点设置
+      // 如果组件设置了按键事件，添加焦点设置
       if (this.hasKeyEvents(component)) {
-        const indentStr = '    '.repeat(indent);
-        eventBindingsCode += `${indentStr}gui_obj_focus_set((gui_obj_t *)${component.id});\n`;
+        const indentStr = '    '.repeat(eventIndent);
+        // hg_view 使用 view 变量，hg_window 使用组件 id
+        const targetRef = component.type === 'hg_view' ? '(gui_obj_t *)view' : `(gui_obj_t *)${component.id}`;
+        eventBindingsCode += `${indentStr}gui_obj_focus_set(${targetRef});\n`;
       }
       
       if (eventBindingsCode) {

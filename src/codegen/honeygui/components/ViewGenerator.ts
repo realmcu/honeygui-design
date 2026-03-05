@@ -6,13 +6,11 @@ import { Component } from '../../../hml/types';
 import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';
 
 // 事件类型到 GUI_EVENT 的映射（用于 view 的 switch 事件）
+// 注意：按键事件（onKeyShortPress, onKeyLongPress）应使用 gui_obj_add_event_cb 而不是 gui_view_switch_on_event
 const VIEW_SWITCH_EVENT_MAP: Record<string, string> = {
   // 触摸事件
   'onClick': 'GUI_EVENT_TOUCH_CLICKED',
   'onLongPress': 'GUI_EVENT_TOUCH_LONG',
-  // 键盘事件
-  'onKeyShortClick': 'GUI_EVENT_KB_SHORT_PRESSED',
-  'onKeyLongClick': 'GUI_EVENT_KB_LONG_PRESSED',
   // 滑动事件
   'onSwipeLeft': 'GUI_EVENT_TOUCH_MOVE_LEFT',
   'onSwipeRight': 'GUI_EVENT_TOUCH_MOVE_RIGHT',
