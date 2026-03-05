@@ -12,6 +12,8 @@ const FONT_EXTS = ['ttf', 'otf', 'woff', 'woff2', 'bin'];
 
 export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onUpdate, components }) => {
   const [activeTab, setActiveTab] = useState<'properties' | 'events'>('properties');
+  const [showFontPicker, setShowFontPicker] = useState(false);
+  const [fontFiles, setFontFiles] = useState<string[]>([]);
   
   // 保存当前正在编辑的组件 ID（用于异步操作时确保操作应用到正确的组件）
   const componentIdRef = React.useRef(component.id);
@@ -79,6 +81,12 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
     });
   };
 
+  // 请求字体文件列表（用于 label 下拉选择）
+  const handleOpenFontPicker = () => {
+    window.vscodeAPI?.postMessage({ command: 'getFontFiles' });
+    setShowFontPicker(true);
+  };
+
   const handleSelectFontPath = () => {
     window.vscodeAPI?.postMessage({
       command: 'selectFontPath',
@@ -93,10 +101,12 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
     });
   };
 
-  // 监听字体度量信息响应
+  // 监听字体文件列表和字体度量信息响应
   React.useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      if (event.data.command === 'fontMetricsLoaded') {
+      if (event.data.command === 'fontFilesLoaded') {
+        setFontFiles(event.data.fonts || []);
+      } else if (event.data.command === 'fontMetricsLoaded') {
         // 只有当前组件的字体度量信息才更新
         if (event.data.fontPath === (component.data as any)?.fontFile) {
           setFontMetrics(event.data.metrics);
@@ -194,36 +204,92 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
 
   const renderFontProperty = (value: any, onChange: (value: any) => void) => {
     return (
-      <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
-        <input
-          type="text"
-          value={value || ''}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="字体文件路径"
-          style={{
-            flex: 1,
-            padding: '4px 6px',
-            backgroundColor: 'var(--vscode-input-background)',
-            color: 'var(--vscode-input-foreground)',
-            border: '1px solid var(--vscode-input-border)',
-            borderRadius: '2px',
-          }}
-        />
-        <button
-          onClick={handleSelectFontPath}
-          style={{
-            padding: '4px 8px',
-            backgroundColor: 'var(--vscode-button-background)',
-            color: 'var(--vscode-button-foreground)',
-            border: 'none',
-            borderRadius: '2px',
-            cursor: 'pointer',
-            fontSize: '12px'
-          }}
-          title="选择字体文件"
-        >
-          abc
-        </button>
+      <div style={{ position: 'relative' }}>
+        <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
+          <input
+            type="text"
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="字体文件路径"
+            style={{
+              flex: 1,
+              padding: '4px 6px',
+              backgroundColor: 'var(--vscode-input-background)',
+              color: 'var(--vscode-input-foreground)',
+              border: '1px solid var(--vscode-input-border)',
+              borderRadius: '2px',
+            }}
+          />
+          <button
+            onClick={handleOpenFontPicker}
+            style={{
+              padding: '4px 8px',
+              backgroundColor: 'var(--vscode-button-background)',
+              color: 'var(--vscode-button-foreground)',
+              border: 'none',
+              borderRadius: '2px',
+              cursor: 'pointer',
+              fontSize: '12px'
+            }}
+            title="选择字体文件"
+          >
+            🔤
+          </button>
+        </div>
+        {showFontPicker && (
+          <div style={{
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            right: 0,
+            zIndex: 100,
+            backgroundColor: 'var(--vscode-dropdown-background)',
+            border: '1px solid var(--vscode-dropdown-border)',
+            borderRadius: '4px',
+            maxHeight: '200px',
+            overflowY: 'auto',
+            marginTop: '4px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+          }}>
+            {fontFiles.length === 0 ? (
+              <div style={{ padding: '8px', color: 'var(--vscode-descriptionForeground)', fontSize: '12px' }}>
+                {t('No font files, please upload to assets directory')}
+              </div>
+            ) : (
+              fontFiles.map((font) => (
+                <div
+                  key={font}
+                  onClick={() => {
+                    onChange(font);
+                    setShowFontPicker(false);
+                  }}
+                  style={{
+                    padding: '6px 8px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    borderBottom: '1px solid var(--vscode-dropdown-border)',
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  🔤 {font}
+                </div>
+              ))
+            )}
+            <div
+              onClick={() => setShowFontPicker(false)}
+              style={{
+                padding: '6px 8px',
+                cursor: 'pointer',
+                fontSize: '12px',
+                textAlign: 'center',
+                color: 'var(--vscode-descriptionForeground)',
+              }}
+            >
+              {t('Close')}
+            </div>
+          </div>
+        )}
       </div>
     );
   };

@@ -489,15 +489,23 @@ export class BitmapFontGenerator extends FontGenerator {
       this.config.renderMode
     );
 
-    // C++ calculation uses ORIGINAL bitmap dimensions (before padding):
-    // pos.x = slot->left + cols (bitmap.width)
-    // pos.y = baseline_height - slot->top + rows (bitmap.rows)
-    // posO.x = 0 (typically)
-    // posO.y = baseline_height
-    const posX = slotLeft + originalBitmapWidth;  // Character width position
-    const posYHeader = baselineHeight - slotTop + originalBitmapRows;  // Character height position
-    const posOX = 0;  // X offset (typically 0)
-    const posOY = baselineHeight;  // Y offset (baseline)
+    // C++ calculation uses clamped draw positions (after bounds checking):
+    // pos.x starts as drawX (clamped slot->left), then pos.x += cols
+    // pos.y is already clamped in the baseline calculation above
+    // posO.x = drawX - slot->left  (offset for negative left bearing, e.g. 'j')
+    // posO.y = pos.y - rows + slot->top
+    //
+    // C++ CvxText.cpp logic:
+    //   if (slot->left < 0) { pos.x = 0; }
+    //   else if (slot->left + cols > img.cols) { pos.x = img.cols - cols; }
+    //   else { pos.x = slot->left; }
+    //   RenderToBitmap(...)
+    //   pos.x += cols;  // final char_w = drawX + cols
+    //   posO.x = pos.x - slot->left;  // always executed after all branches
+    const posX = drawX + originalBitmapWidth;  // Character width: C++ does pos.x = drawX, then pos.x += cols
+    const posYHeader = posY;  // Character height: posY is already clamped like C++ pos.y
+    const posOX = drawX - slotLeft;  // X offset: compensates for negative left bearing (e.g. 'j')
+    const posOY = posY - originalBitmapRows + slotTop;  // Y offset: C++ posO.y = pos.y - rows + slot->top
 
     return {
       unicode,
