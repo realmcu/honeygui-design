@@ -29,6 +29,7 @@ export class MapGenerator implements ComponentCodeGenerator {
 
     const mapFile  = (component.data?.mapFile  as string) || '';
     const fontFile = (component.data?.fontFile as string) || '';
+    const pcSerialName = (component.data?.pcSerialName as string) || '';
 
     // 生成 VFS 路径（以 / 开头的绝对路径）
     const mapVfsPath = mapFile.startsWith('/') ? mapFile : `/${mapFile}`;
@@ -80,6 +81,7 @@ export class MapGenerator implements ComponentCodeGenerator {
     code += `${indentStr}${component.id} = gui_vector_map_create_from_mem(${parentRef}, "${component.name}",\n`;
     code += `${indentStr}    ${compIdSafe}_map_addr, ${compIdSafe}_map_size,\n`;
     code += `${indentStr}    ${compIdSafe}_ttf_addr, ${compIdSafe}_ttf_size,\n`;
+    code += `${indentStr}    "${pcSerialName}",\n`;
     code += `${indentStr}    ${x}, ${y}, ${width}, ${height});\n`;
 
     return code;

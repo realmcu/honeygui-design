@@ -132,7 +132,7 @@ gps_provider_t *gps_provider_create(const gps_provider_config_t *config,
                     MAP_FPRINTF("GPS Provider: Failed to open serial port: %s\n",
                                 gps_driver_get_error());
                     MAP_FREE(provider);
-                    return NULL;
+                    //return NULL;
                 }
 
                 MAP_PRINTF("GPS Provider: Initialized SERIAL mode on %s @ %u baud\n",

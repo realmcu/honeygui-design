@@ -192,7 +192,8 @@ size_t map_defalut_height = 502;
 /* Application modes */
 typedef enum
 {
-    APP_MODE_GPS_INIT,          /* GPS initialization mode (startup default) */
+    APP_MODE_MAP_VIEW,          /* Simple map view mode (startup default) */
+    APP_MODE_GPS_INIT,          /* GPS initialization mode */
     APP_MODE_GPS_TRACK_RECORD,  /* GPS track recording mode */
     APP_MODE_GPS_TRACK_REPLAY,  /* GPS track replay mode */
     APP_MODE_GPS_MAP,           /* GPS map / navigation setup mode */
@@ -202,7 +203,7 @@ typedef enum
 
 /* Mode switch request (set by keyboard handler, processed by main loop) */
 static volatile int g_mode_switch_requested = 0;
-static volatile app_mode_t g_mode_switch_target = APP_MODE_GPS_INIT;
+static volatile app_mode_t g_mode_switch_target = APP_MODE_MAP_VIEW;
 
 /* ============================================================================
  * GPS Position Structure (Legacy - now uses gps_simulator.h)
@@ -319,6 +320,8 @@ static void print_usage(const char *prog_name)
     MAP_PRINTF("                        - walk:    Small roads and alleys preferred\n");
     MAP_PRINTF("                        - transit: Future subway support\n");
     MAP_PRINTF("  --frames <n>          Max frames (0=infinite, default=100)\n");
+    MAP_PRINTF("  --map-view            Map view mode (simple map, no GPS) - default\n");
+    MAP_PRINTF("  --gps-init            GPS initialization mode (wait for GPS fix)\n");
     MAP_PRINTF("  --nav                 Navigation mode (with route guidance)\n");
     MAP_PRINTF("  --gps-map             Navigation setup mode (select destination)\n");
     MAP_PRINTF("  --gps-track           GPS track mode (records and displays track)\n");
@@ -341,9 +344,9 @@ static void print_usage(const char *prog_name)
     MAP_PRINTF("  List available serial ports:\n");
     MAP_PRINTF("    %s --list-ports\n", prog_name);
     MAP_PRINTF("\nRuntime Mode Switching:\n");
-    MAP_PRINTF("  Press [M] to cycle through modes, or [1/2/3/4] for direct switch:\n");
-    MAP_PRINTF("    [1] Track Record mode\n");
-    MAP_PRINTF("    [2] Track Replay mode\n");
+    MAP_PRINTF("  Press [M] to cycle through modes, or [1/2/3/4/5] for direct switch:\n");
+    MAP_PRINTF("    [1] GPS Init mode\n");
+    MAP_PRINTF("    [2] Track Record mode\n");
     MAP_PRINTF("    [3] Nav Setup mode\n");
     MAP_PRINTF("    [4] Navigation mode\n");
     MAP_PRINTF("  On MCU: Press KEY2 to cycle modes\n");
@@ -406,6 +409,8 @@ static const char *app_mode_to_string(app_mode_t mode)
 {
     switch (mode)
     {
+        case APP_MODE_MAP_VIEW:
+            return "Map View";
         case APP_MODE_GPS_INIT:
             return "GPS Init";
         case APP_MODE_GPS_TRACK_RECORD:
@@ -473,14 +478,14 @@ static void app_clear_mode_switch_request(void)
  * Configuration Functions
  * ============================================================================
  */
-
+const char *pc_serial_name = "COM15";  /* Default serial port name (can be overridden by command line) */
 /**
  * @brief Initialize app configuration with default values
  * Default configuration matches: build_and_test.bat nav suzhou_full car 100 31.25,120.55,31.35,120.65
  */
 static void config_init(app_config_t *config)
 {
-    config->map_file = "../../data/suzhou_full.bin";
+    config->map_file = "../../data/map.trmap";
     config->output_file = DEFAULT_OUTPUT;
     config->width = DEFAULT_WIDTH;
     config->height = DEFAULT_HEIGHT;
@@ -492,11 +497,11 @@ static void config_init(app_config_t *config)
     config->has_end = 1;
     config->transport_mode = TRANSPORT_CAR;
     config->max_frames = 100;
-    config->app_mode = APP_MODE_GPS_INIT;  /* Start with GPS initialization mode */
+    config->app_mode = APP_MODE_MAP_VIEW;  /* Start with simple map view mode */
     config->gps_view_radius = GPS_MAP_VIEW_RADIUS;
     /* GPS Provider defaults */
     config->gps_type = GPS_PROVIDER_SERIAL;
-    config->gps_serial_port = "COM15";
+    config->gps_serial_port = pc_serial_name;
     config->gps_baudrate = 9600;
 }
 
@@ -580,6 +585,14 @@ static int config_parse_args(app_config_t *config, int argc, char *argv[])
         else if (strcmp(argv[i], "--frames") == 0 && i + 1 < argc)
         {
             config->max_frames = atoi(argv[++i]);
+        }
+        else if (strcmp(argv[i], "--map-view") == 0)
+        {
+            config->app_mode = APP_MODE_MAP_VIEW;
+        }
+        else if (strcmp(argv[i], "--gps-init") == 0)
+        {
+            config->app_mode = APP_MODE_GPS_INIT;
         }
         else if (strcmp(argv[i], "--nav") == 0)
         {
@@ -2110,6 +2123,39 @@ typedef struct
     uint32_t init_start_time;     /* Initialization start time (ms) */
     int gps_valid_count;          /* Consecutive valid GPS readings */
 } gps_init_state_t;
+
+/* ============================================================================
+ * Map View Mode State Structure
+ * ============================================================================
+ * Map View mode displays the map without GPS features, allowing pan/zoom.
+ * This is the startup default mode for simple map viewing.
+ */
+typedef struct
+{
+    app_config_t config;          /* Configuration */
+    map_t *map;                   /* Map */
+    renderer_t *renderer;         /* Renderer */
+    int running;                  /* Is running */
+    int frame_count;              /* Frame count */
+    int needs_redraw;             /* Flag to indicate redraw needed */
+    float view_lat;               /* View center latitude */
+    float view_lon;               /* View center longitude */
+    float zoom_factor;            /* Zoom factor (1.0 = default) */
+#ifndef _WIN32
+    /* Touch pan control */
+    int touch_active;             /* Touch is active */
+    int16_t touch_start_x;        /* Touch start X */
+    int16_t touch_start_y;        /* Touch start Y */
+    int16_t touch_last_x;         /* Last touch X */
+    int16_t touch_last_y;         /* Last touch Y */
+    float pan_offset_lat;         /* Pan offset latitude */
+    float pan_offset_lon;         /* Pan offset longitude */
+    /* Double-tap detection */
+    uint32_t last_tap_time;       /* Timestamp of last tap (ms) */
+    uint16_t last_tap_x;          /* X coordinate of last tap */
+    uint16_t last_tap_y;          /* Y coordinate of last tap */
+#endif
+} map_view_state_t;
 
 /**
  * @brief Set viewport centered on GPS position with given radius
@@ -4342,6 +4388,327 @@ static void gps_init_cleanup(gps_init_state_t *state)
     }
 }
 
+/* ============================================================================
+ * Map View Mode Functions
+ * ============================================================================
+ */
+
+/**
+ * @brief Initialize Map View mode
+ * @param state Map view state (must be zero-initialized by caller)
+ * @param map Map data
+ * @param config Application configuration
+ * @return 0 on success, non-zero on failure
+ */
+static int map_view_init(map_view_state_t *state, map_t *map, app_config_t *config)
+{
+    memset(state, 0, sizeof(map_view_state_t));
+    state->map = map;
+    state->config = *config;
+
+    /* Calculate map center point from map bounds */
+    float map_center_lat = (map->header.min_lat + map->header.max_lat) / 2.0f;
+    float map_center_lon = (map->header.min_lon + map->header.max_lon) / 2.0f;
+
+    /* Calculate map radius (approximate, using latitude span) */
+    float lat_span = map->header.max_lat - map->header.min_lat;
+    float lon_span = map->header.max_lon - map->header.min_lon;
+    /* Convert degrees to meters (approximately 111km per degree latitude) */
+    float lat_radius_m = (lat_span / 2.0f) * 111000.0f;
+    float lon_radius_m = (lon_span / 2.0f) * 111000.0f * cosf(map_center_lat * 3.14159265f / 180.0f);
+    float map_radius_m = (lat_radius_m > lon_radius_m) ? lat_radius_m : lon_radius_m;
+
+    /* Initialize view position to map center */
+    state->view_lat = map_center_lat;
+    state->view_lon = map_center_lon;
+    /* Set view radius to 1/4 of map radius */
+    state->config.gps_view_radius = map_radius_m / 4.0f;
+    state->zoom_factor = 1.0f;
+    state->needs_redraw = 1;
+
+#ifndef _WIN32
+    /* Initialize touch pan control */
+    state->touch_active = 0;
+    state->touch_start_x = 0;
+    state->touch_start_y = 0;
+    state->touch_last_x = 0;
+    state->touch_last_y = 0;
+    state->pan_offset_lat = 0.0f;
+    state->pan_offset_lon = 0.0f;
+    /* Initialize double-tap detection */
+    state->last_tap_time = 0;
+    state->last_tap_x = 0;
+    state->last_tap_y = 0;
+#endif
+
+    /* Create renderer */
+    state->renderer = renderer_create(config->width, config->height);
+    if (!state->renderer)
+    {
+        MAP_FPRINTF("Error: Failed to create renderer for Map View mode\n");
+        return 1;
+    }
+
+    MAP_PRINTF("\n🗺️  Map View Mode\n");
+    MAP_PRINTF("   View center: %.6f, %.6f\n", (double)state->view_lat, (double)state->view_lon);
+    MAP_PRINTF("   View radius: %.0f m\n", (double)config->gps_view_radius);
+    MAP_PRINTF("   Controls: Arrow keys to pan, +/- to zoom, M to switch mode\n");
+    MAP_PRINTF("✓ Map View mode initialized\n");
+
+#ifndef _WIN32
+    /* Initialize MCU GPIO keys */
+    mcu_gpio_keys_init();
+#endif
+
+    return 0;
+}
+
+/**
+ * @brief Render Map View frame
+ * @param state Map view state
+ * @return 0 on success
+ */
+static int render_map_view_frame(map_view_state_t *state)
+{
+    renderer_t *r = state->renderer;
+
+    /* Clear canvas */
+    renderer_clear(r, 0xFFFFFFFF);
+
+    /* Set viewport centered on view position */
+    float effective_radius = state->config.gps_view_radius * state->zoom_factor;
+
+    /* Calculate view center including any active pan offset */
+    float view_center_lat = state->view_lat;
+    float view_center_lon = state->view_lon;
+#ifndef _WIN32
+    /* Apply touch pan offset during drag */
+    view_center_lat += state->pan_offset_lat;
+    view_center_lon += state->pan_offset_lon;
+#endif
+    set_viewport_around_point(r, view_center_lat, view_center_lon, effective_radius);
+
+    /* Render map with theme */
+    map_theme_t theme = MAP_THEME_GOOGLE;
+    render_options_t opts;
+    setup_render_options(&opts, r);
+    render_map_with_options(r, state->map, &theme, &opts);
+
+    /* Draw mode indicator and zoom info */
+    char info[128];
+    snprintf(info, sizeof(info), "Map View | Zoom: %.0f%%", (double)(100.0f / state->zoom_factor));
+    render_text(r, 10.0f, 10.0f, info, 16.0f, 0x333333FF);
+
+    /* Draw crosshair at center */
+    float center_x = state->config.width / 2.0f;
+    float center_y = state->config.height / 2.0f;
+    render_text(r, center_x - 5, center_y - 10, "+", 20.0f, 0x666666FF);
+
+    /* Save frame */
+    char filename[256];
+    snprintf(filename, sizeof(filename), "frames/screen.png");
+    render_save_png(r, filename);
+
+    state->frame_count++;
+
+    return 0;
+}
+
+/**
+ * @brief Handle keyboard input for Map View mode
+ * @param state Map view state
+ * @return 0=continue, 1=quit, 2=mode switch
+ */
+static int map_view_handle_keyboard(map_view_state_t *state)
+{
+    /* Calculate pan amount based on current zoom */
+    float pan_amount = 0.001f * state->zoom_factor;
+
+#ifdef _WIN32
+    /* PC Keyboard Controls */
+    if (!_kbhit())
+    {
+        return 0;
+    }
+
+    int ch = _getch();
+
+    /* Handle arrow keys (they come as 0 or 0xE0 followed by actual code) */
+    if (ch == 0 || ch == 0xE0)
+    {
+        ch = _getch();
+        switch (ch)
+        {
+            case 72:  /* Up arrow */
+                state->view_lat += pan_amount;
+                state->needs_redraw = 1;
+                break;
+            case 80:  /* Down arrow */
+                state->view_lat -= pan_amount;
+                state->needs_redraw = 1;
+                break;
+            case 75:  /* Left arrow */
+                state->view_lon -= pan_amount;
+                state->needs_redraw = 1;
+                break;
+            case 77:  /* Right arrow */
+                state->view_lon += pan_amount;
+                state->needs_redraw = 1;
+                break;
+        }
+        return 0;
+    }
+
+    switch (ch)
+    {
+        case 'w':
+        case 'W':
+            state->view_lat += pan_amount;
+            state->needs_redraw = 1;
+            break;
+
+        case 's':
+        case 'S':
+            state->view_lat -= pan_amount;
+            state->needs_redraw = 1;
+            break;
+
+        case 'a':
+        case 'A':
+            state->view_lon -= pan_amount;
+            state->needs_redraw = 1;
+            break;
+
+        case 'd':
+        case 'D':
+            state->view_lon += pan_amount;
+            state->needs_redraw = 1;
+            break;
+
+        case '+':
+        case '=':
+            /* Zoom in */
+            if (state->zoom_factor > 0.1f)
+            {
+                state->zoom_factor *= 0.8f;
+                state->needs_redraw = 1;
+                MAP_PRINTF("Zoom: %.0f%%\n", (double)(100.0f / state->zoom_factor));
+            }
+            break;
+
+        case '-':
+        case '_':
+            /* Zoom out */
+            if (state->zoom_factor < 10.0f)
+            {
+                state->zoom_factor *= 1.25f;
+                state->needs_redraw = 1;
+                MAP_PRINTF("Zoom: %.0f%%\n", (double)(100.0f / state->zoom_factor));
+            }
+            break;
+
+        case 'm':
+        case 'M':  /* M - cycle to next mode */
+            app_request_mode_switch(APP_MODE_MAP_VIEW, -1);
+            return 2;
+
+        case '1':  /* 1 - switch to GPS Init mode */
+            app_request_mode_switch(APP_MODE_MAP_VIEW, APP_MODE_GPS_INIT);
+            return 2;
+
+        case '2':  /* 2 - switch to GPS Track mode */
+            app_request_mode_switch(APP_MODE_MAP_VIEW, APP_MODE_GPS_TRACK_RECORD);
+            return 2;
+
+        case '3':  /* 3 - switch to Nav Setup mode */
+            app_request_mode_switch(APP_MODE_MAP_VIEW, APP_MODE_GPS_MAP);
+            return 2;
+
+        case '4':  /* 4 - switch to Navigation mode */
+            app_request_mode_switch(APP_MODE_MAP_VIEW, APP_MODE_NAVIGATION);
+            return 2;
+
+        case 'q':
+        case 'Q':
+        case 27:   /* ESC */
+            MAP_PRINTF("Exiting...\n");
+            return 1;
+    }
+#else
+    /* MCU GPIO Key Handling for Map View Mode */
+
+    /* KEY1 (P3_0): Zoom out */
+    if (g_key1_pressed)
+    {
+        g_key1_pressed = 0;
+        if (state->zoom_factor < 10.0f)
+        {
+            state->zoom_factor *= 1.25f;
+            state->needs_redraw = 1;
+            MAP_PRINTF("KEY1: Zoom out - %.0f%%\n", (double)(100.0f / state->zoom_factor));
+        }
+    }
+
+    /* KEY2 (ADC_0): Zoom in */
+    if (g_key2_pressed)
+    {
+        g_key2_pressed = 0;
+        if (state->zoom_factor > 0.1f)
+        {
+            state->zoom_factor *= 0.8f;
+            state->needs_redraw = 1;
+            MAP_PRINTF("KEY2: Zoom in - %.0f%%\n", (double)(100.0f / state->zoom_factor));
+        }
+    }
+
+    /* KEY3 (P3_1): Cycle to next application mode */
+    if (g_key3_pressed)
+    {
+        g_key3_pressed = 0;
+        MAP_PRINTF("KEY3: Switch application mode\n");
+        app_request_mode_switch(APP_MODE_MAP_VIEW, -1);
+        return 2;
+    }
+#endif
+
+    return 0;
+}
+
+/**
+ * @brief Run one iteration of Map View mode loop
+ * @param state Map view state
+ * @return 0=continue, 1=quit, 2=mode switch requested
+ */
+static int map_view_loop(map_view_state_t *state)
+{
+    /* Handle keyboard input */
+    int kb_result = map_view_handle_keyboard(state);
+    if (kb_result != 0)
+    {
+        return kb_result;
+    }
+
+    /* Render the map frame */
+    render_map_view_frame(state);
+
+    return 0;
+}
+
+/**
+ * @brief Cleanup Map View mode resources
+ * @param state Map view state
+ */
+static void map_view_cleanup(map_view_state_t *state)
+{
+    MAP_PRINTF("Cleaning up Map View mode...\n");
+
+    if (state->renderer)
+    {
+        renderer_destroy(state->renderer);
+        state->renderer = NULL;
+    }
+}
+
 /**
  * @brief Run GPS init mode main loop
  * @param state GPS init state
@@ -4419,7 +4786,8 @@ static int parse_arguments(app_config_t *config, int argc, char *argv[])
  */
 static int app_initialize(app_config_t *config, map_t **map_out,
                           app_state_t *nav_app, gps_map_state_t *gps_state,
-                          gps_track_state_t *track_state, gps_init_state_t *init_state)
+                          gps_track_state_t *track_state, gps_init_state_t *init_state,
+                          map_view_state_t *view_state)
 {
     MAP_PRINTF("=== TrMap Navigation Simulator ===\n\n");
 
@@ -4453,7 +4821,21 @@ static int app_initialize(app_config_t *config, map_t **map_out,
         MAP_PRINTF("Using default end from map: %.6f, %.6f\n", (double)config->end_lat, (double)config->end_lon);
     }
     *map_out = map;    /* Initialize mode-specific state */
-    if (config->app_mode == APP_MODE_GPS_INIT)
+    if (config->app_mode == APP_MODE_MAP_VIEW)
+    {
+        /* Map View Mode */
+        if (map_view_init(view_state, map, config) != 0)
+        {
+            map_free(map);
+            *map_out = NULL;
+            return 1;
+        }
+        /* Initialize loop state */
+        view_state->running = 1;
+        view_state->frame_count = 0;
+        view_state->needs_redraw = 1;
+    }
+    else if (config->app_mode == APP_MODE_GPS_INIT)
     {
         /* GPS Initialization Mode */
         if (gps_init_init(init_state, map, config) != 0)
@@ -4667,10 +5049,18 @@ static int app_gps_track_run_loop(gps_track_state_t *state)
  */
 static void app_cleanup(app_config_t *config, map_t *map,
                         app_state_t *nav_app, gps_map_state_t *gps_state,
-                        gps_track_state_t *track_state, gps_init_state_t *init_state)
+                        gps_track_state_t *track_state, gps_init_state_t *init_state,
+                        map_view_state_t *view_state)
 {
     /* Cleanup mode-specific resources */
-    if (config->app_mode == APP_MODE_GPS_INIT)
+    if (config->app_mode == APP_MODE_MAP_VIEW)
+    {
+        if (view_state)
+        {
+            map_view_cleanup(view_state);
+        }
+    }
+    else if (config->app_mode == APP_MODE_GPS_INIT)
     {
         if (init_state)
         {
@@ -4717,6 +5107,7 @@ static    app_state_t nav_app = {0};
 static    gps_map_state_t gps_state = {0};
 static    gps_track_state_t gps_track_state = {0};
 static    gps_init_state_t gps_init_state = {0};
+static    map_view_state_t map_view_state = {0};
 
 /* ============================================================================
  * Mode Switch Functions (defined after globals)
@@ -4731,7 +5122,18 @@ static    gps_init_state_t gps_init_state = {0};
 static int app_init_mode(app_mode_t target_mode)
 {
     MAP_PRINTF("\n🔄 Initializing %s mode...\n", app_mode_to_string(target_mode));
-    if (target_mode == APP_MODE_GPS_INIT)
+    if (target_mode == APP_MODE_MAP_VIEW)
+    {
+        if (map_view_init(&map_view_state, map, &config) != 0)
+        {
+            MAP_FPRINTF("Error: Failed to initialize Map View mode\n");
+            return 1;
+        }
+        map_view_state.running = 1;
+        map_view_state.frame_count = 0;
+        map_view_state.needs_redraw = 1;
+    }
+    else if (target_mode == APP_MODE_GPS_INIT)
     {
         if (gps_init_init(&gps_init_state, map, &config) != 0)
         {
@@ -4787,7 +5189,11 @@ static void app_cleanup_mode(app_mode_t current_mode)
 {
     MAP_PRINTF("🧹 Cleaning up %s mode...\n", app_mode_to_string(current_mode));
 
-    if (current_mode == APP_MODE_GPS_INIT)
+    if (current_mode == APP_MODE_MAP_VIEW)
+    {
+        map_view_cleanup(&map_view_state);
+    }
+    else if (current_mode == APP_MODE_GPS_INIT)
     {
         gps_init_cleanup(&gps_init_state);
     }
@@ -4922,14 +5328,26 @@ int app_main(int argc, char *argv[])
     }
 
     /* 2. Initialize application (includes mode-specific init) */
-    if (app_initialize(&config, &map, &nav_app, &gps_state, &gps_track_state, &gps_init_state) != 0)
+    if (app_initialize(&config, &map, &nav_app, &gps_state, &gps_track_state, &gps_init_state, &map_view_state) != 0)
     {
         return 1;
     }    /* 3. Run main application loop with mode switching support */
     while (1)
     {
         /* Run current mode loop */
-        if (config.app_mode == APP_MODE_GPS_INIT)
+        if (config.app_mode == APP_MODE_MAP_VIEW)
+        {
+            /* Map View mode runs in the main loop (no separate run_loop function needed) */
+            while (map_view_state.running)
+            {
+                result = map_view_loop(&map_view_state);
+                if (result != 0)
+                {
+                    break;
+                }
+            }
+        }
+        else if (config.app_mode == APP_MODE_GPS_INIT)
         {
             result = app_gps_init_run_loop(&gps_init_state);
         }
@@ -4969,7 +5387,7 @@ int app_main(int argc, char *argv[])
     }
 
     /* 4. Cleanup resources (includes mode-specific cleanup) */
-    app_cleanup(&config, map, &nav_app, &gps_state, &gps_track_state, &gps_init_state);
+    app_cleanup(&config, map, &nav_app, &gps_state, &gps_track_state, &gps_init_state, &map_view_state);
 
     return result;
 }
@@ -4985,7 +5403,7 @@ int map_config(void)
 }
 int map_init(void)
 {
-    if (app_initialize(&config, &map, &nav_app, &gps_state, &gps_track_state, &gps_init_state) != 0)
+    if (app_initialize(&config, &map, &nav_app, &gps_state, &gps_track_state, &gps_init_state, &map_view_state) != 0)
     {
         return 1;
     }
@@ -5004,7 +5422,11 @@ int map_loop(void)
         }
         return 0;  /* Continue after mode switch */
     }    /* Run current mode loop */
-    if (config.app_mode == APP_MODE_GPS_INIT)
+    if (config.app_mode == APP_MODE_MAP_VIEW)
+    {
+        result = map_view_loop(&map_view_state);
+    }
+    else if (config.app_mode == APP_MODE_GPS_INIT)
     {
         result = gps_init_loop(&gps_init_state);
     }
@@ -5032,12 +5454,16 @@ int map_loop(void)
 }
 int map_exit(void)
 {
-    app_cleanup(&config, map, &nav_app, &gps_state, &gps_track_state, &gps_init_state);
+    app_cleanup(&config, map, &nav_app, &gps_state, &gps_track_state, &gps_init_state, &map_view_state);
     return 0;
 }
 const unsigned char *map_get_pixels(void)
 {
-    if (config.app_mode == APP_MODE_GPS_INIT)
+    if (config.app_mode == APP_MODE_MAP_VIEW)
+    {
+        return map_view_state.renderer->pixels;
+    }
+    else if (config.app_mode == APP_MODE_GPS_INIT)
     {
         return gps_init_state.renderer->pixels;
     }

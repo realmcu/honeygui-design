@@ -451,6 +451,7 @@ const componentDefinitions: ComponentDefinition[] = [
     properties: [
       { name: 'mapFile', label: 'Map File (.trmap)', type: 'string', defaultValue: '', group: 'data' },
       { name: 'fontFile', label: 'Font File (.ttf)', type: 'string', defaultValue: '', group: 'data' },
+      { name: 'pcSerialName', label: 'PC Serial Name', type: 'string', defaultValue: '', group: 'data' },
     ],
   },
 ];

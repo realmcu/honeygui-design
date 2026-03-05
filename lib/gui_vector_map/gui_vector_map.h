@@ -60,11 +60,11 @@ gui_vector_map_t *gui_vector_map_create_from_mem(void       *parent,
                                    size_t map_data_size,
                                    const uint8_t *ttf_font_data_addr,
                                     size_t ttf_font_data_size,
+                                    const char *pc_serial_name,
                                    int16_t     x,
                                    int16_t     y,
                                    int16_t     w,
                                    int16_t     h);
-
 
 
 #ifdef __cplusplus

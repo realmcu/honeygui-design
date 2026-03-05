@@ -63,17 +63,16 @@ gui_vector_map_t *gui_vector_map_create_from_mem(void       *parent,
                                    size_t map_data_size,
                                    const uint8_t *ttf_font_data_addr,
                                     size_t ttf_font_data_size,
+                                    const char *pc_serial_name_string,
                                    int16_t     x,
                                    int16_t     y,
                                    int16_t     w,
                                    int16_t     h)
 {
-    gui_log("map addr: %p, size: %zu\n", map_data_addr, map_data_size);
-    gui_log("ttf font addr: %p, size: %zu\n", ttf_font_data_addr, ttf_font_data_size);
     gui_log("RAM used before: %d bytes\n", gui_low_mem_used());
-    extern uint8_t *trmap_file_data_address; 
+    extern const uint8_t *trmap_file_data_address; 
     extern size_t trmap_file_data_size;  
-    extern uint8_t *ttf_font_file_data_address;  
+    extern const uint8_t *ttf_font_file_data_address;  
     extern size_t ttf_font_file_data_size;  
     trmap_file_data_address = map_data_addr;
     trmap_file_data_size = map_data_size;
@@ -83,6 +82,8 @@ gui_vector_map_t *gui_vector_map_create_from_mem(void       *parent,
     extern size_t map_defalut_height;
     map_defalut_width = w;
     map_defalut_height = h;
+    extern const char *pc_serial_name;
+    pc_serial_name = pc_serial_name_string;
 	map_config();
 	map_init();
     map_loop();
@@ -95,9 +96,8 @@ gui_vector_map_t *gui_vector_map_create_from_mem(void       *parent,
     gui_obj_start_timer(&(img->base));
 
     gui_log("RAM used : %d bytes\n", gui_low_mem_used());
-    return img;
+    return (void *)img;
 }
-
 
 
 
