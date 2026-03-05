@@ -14,7 +14,7 @@ interface FileItem {
     id: string;
     name: string;
     relativePath: string;
-    type: 'image' | 'video' | 'model' | 'font' | 'glass' | 'unknown';
+    type: 'image' | 'video' | 'model' | 'font' | 'glass' | 'trmap' | 'unknown';
     data: number[];
     settings?: any;
 }
@@ -65,13 +65,14 @@ export class ToolsPanel {
         ToolsPanel.currentPanel = new ToolsPanel(panel, extensionUri);
     }
 
-    private getFileType(fileName: string): 'image' | 'video' | 'model' | 'font' | 'glass' | 'unknown' {
+    private getFileType(fileName: string): 'image' | 'video' | 'model' | 'font' | 'glass' | 'trmap' | 'unknown' {
         const ext = path.extname(fileName).toLowerCase();
         if (['.png', '.jpg', '.jpeg', '.bmp', '.gif'].includes(ext)) return 'image';
         if (['.mp4', '.avi', '.mov', '.mkv', '.webm'].includes(ext)) return 'video';
         if (['.obj', '.gltf', '.mtl'].includes(ext)) return 'model';
         if (['.ttf', '.otf'].includes(ext)) return 'font';
         if (['.glass'].includes(ext)) return 'glass';
+        if (['.trmap'].includes(ext)) return 'trmap';
         
         // .bin 文件需要特殊处理：只有当存在同名 .gltf 文件时才识别为 model 类型
         if (ext === '.bin') {
@@ -790,9 +791,9 @@ export class ToolsPanel {
             // 1. 先转换图片（3D 模型的纹理依赖图片的 .bin 文件）
             // 2. 再转换视频
             // 3. 再转换 3D 模型（需要查找已转换的纹理 .bin）
-            // 4. 最后转换字体和玻璃效果
+            // 4. 最后转换字体、玻璃效果和 trmap 文件
             const filesByType: Map<string, FileItem[]> = new Map();
-            const typeOrder = ['image', 'video', 'model', 'font', 'glass'];
+            const typeOrder = ['image', 'video', 'model', 'font', 'glass', 'trmap'];
             
             for (const type of typeOrder) {
                 filesByType.set(type, []);
@@ -960,6 +961,12 @@ export class ToolsPanel {
                         blurRadius: settings.blurRadius || 50,
                         blurIntensity: settings.blurIntensity || 50
                     });
+                    break;
+                case 'trmap':
+                    // 直接拷贝 .trmap 文件到输出目录
+                    outputPath = path.join(outputSubDir, file.name);
+                    fs.copyFileSync(tempInput, outputPath);
+                    result = { success: true, outputPath, message: '文件已直接拷贝' };
                     break;
                 default:
                     result = { success: false, error: 'Unknown file type' };

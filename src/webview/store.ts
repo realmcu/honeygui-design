@@ -165,7 +165,7 @@ export interface DesignerStore extends DesignerState {
   setSimulationRunning: (running: boolean) => void;
 
   // Assets
-  setAssetCategory: (category: 'all' | 'images' | 'svgs' | 'videos' | 'models' | 'fonts' | 'glass' | 'lottie') => void;
+  setAssetCategory: (category: 'all' | 'images' | 'svgs' | 'videos' | 'models' | 'fonts' | 'glass' | 'lottie' | 'trmap') => void;
 
   // Drag and drop
   startDrag: (componentId: string, mousePos: { x: number; y: number }) => void;
@@ -332,7 +332,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   undoStack: [],
   redoStack: [],
   vscodeAPI: null,
-  assetCategory: 'all' as 'all' | 'images' | 'svgs' | 'videos' | 'models' | 'fonts' | 'glass' | 'lottie', // 资源面板分类
+  assetCategory: 'all' as 'all' | 'images' | 'svgs' | 'videos' | 'models' | 'fonts' | 'glass' | 'lottie' | 'trmap', // 资源面板分类
   clipboard: null, // 剪贴板
   clipboardMultiple: [], // 多选剪贴板
   isSimulationRunning: false, // 仿真运行状态

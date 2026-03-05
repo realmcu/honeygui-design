@@ -443,6 +443,16 @@ const componentDefinitions: ComponentDefinition[] = [
       },
     ],
   },
+  {
+    type: 'hg_map',
+    name: 'Vector Map',
+    icon: '🗺️',
+    defaultSize: { width: 200, height: 300 },
+    properties: [
+      { name: 'mapFile', label: 'Map File (.trmap)', type: 'string', defaultValue: '', group: 'data' },
+      { name: 'fontFile', label: 'Font File (.ttf)', type: 'string', defaultValue: '', group: 'data' },
+    ],
+  },
 ];
 
 // Component categories - hg_time_label 不在组件库中直接显示，只能通过右键标签控件创建
@@ -450,7 +460,7 @@ const componentCategories = [
   { name: 'Containers', types: ['hg_view', 'hg_window', 'hg_canvas', 'hg_list'] },
   { name: 'Basic Controls', types: ['hg_button', 'hg_label', 'hg_image'] },
   { name: 'Input Controls', types: ['hg_input', 'hg_checkbox', 'hg_radio'] },
-  { name: 'Graphics', types: ['hg_arc', 'hg_circle', 'hg_rect', 'hg_svg', 'hg_glass', 'hg_particle'] },
+  { name: 'Graphics', types: ['hg_arc', 'hg_circle', 'hg_rect', 'hg_svg', 'hg_glass', 'hg_particle', 'hg_map'] },
   { name: 'Multimedia', types: ['hg_video', 'hg_3d', 'hg_lottie'] }
 ];
 

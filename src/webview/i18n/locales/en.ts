@@ -611,6 +611,7 @@ const en = {
   'Enable Dither': 'Enable Dither',
   'ditherHint': 'Reduces color banding using error diffusion (Recommended for RGB565)',
   'Font files do not require conversion settings': 'Font files do not require conversion settings',
+  'Copy only (no format conversion)': 'Copy only (no format conversion)',
 
   // Collaboration
   'Collaboration': 'Collaboration',
@@ -719,6 +720,7 @@ const en = {
   // Misc
   'Current File': 'Current File',
   'No font files, please upload to assets directory': 'No font files, please upload to assets directory',
+  'No map files, please upload to assets directory': 'No map files, please upload to assets directory',
   'Columns': 'Columns',
 
   // GeometryProperties - Additional
@@ -731,6 +733,11 @@ const en = {
   'Radial gradient from center (position 0) to edge (position 1)': 'Radial gradient from center (position 0) to edge (position 1)',
   'Angular gradient along circumference, from start angle to end angle': 'Angular gradient along circumference, from start angle to end angle',
   'Linear gradient from start to end in selected direction': 'Linear gradient from start to end in selected direction',
+
+  // Vector Map
+  'Vector Map': 'Vector Map',
+  'Map File (.trmap)': 'Map File (.trmap)',
+  'Font File (.ttf)': 'Font File (.ttf)',
 };
 
 export default en;

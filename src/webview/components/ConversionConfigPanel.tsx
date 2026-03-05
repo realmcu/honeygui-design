@@ -511,6 +511,20 @@ const ConversionConfigPanel: React.FC<ConversionConfigPanelProps> = () => {
     [selectedAsset, currentSettings, updateAssetConfig]
   );
 
+  // 处理字体"直接拷贝"变更
+  const handleFontCopyOnlyChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!selectedAsset) return;
+      const newValue = e.target.checked;
+      const assetPath = selectedAsset.relativePath || selectedAsset.name;
+      updateAssetConfig(assetPath, {
+        ...currentSettings,
+        fontCopyOnly: newValue,
+      });
+    },
+    [selectedAsset, currentSettings, updateAssetConfig]
+  );
+
   // 如果没有选中资源，显示提示
   if (!selectedAsset) {
     return (
@@ -759,9 +773,23 @@ const ConversionConfigPanel: React.FC<ConversionConfigPanelProps> = () => {
           /* 视频文件：只显示视频设置 */
           renderVideoSettings()
         ) : isFont ? (
-          /* 字体文件：不显示转换设置 */
-          <div className="no-conversion-needed">
-            <p>{t('Font files do not require conversion settings')}</p>
+          /* 字体文件：显示"直接拷贝"选项 */
+          <div className="config-section">
+            <div className="config-row">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={currentSettings.fontCopyOnly ?? false}
+                  onChange={handleFontCopyOnlyChange}
+                />
+                <span>{t('Copy only (no format conversion)')}</span>
+              </label>
+            </div>
+            {!(currentSettings.fontCopyOnly) && (
+              <div className="config-hint">
+                {t('Font files do not require conversion settings')}
+              </div>
+            )}
           </div>
         ) : (
           /* 图片文件：只显示图片设置 */

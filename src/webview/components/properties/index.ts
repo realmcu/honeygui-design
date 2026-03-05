@@ -37,6 +37,7 @@ export const propertyPanelRegistry: Record<ComponentType, React.FC<PropertyPanel
   hg_lottie: DefaultProperties,
   hg_glass: DefaultProperties,
   hg_particle: HgParticleProperties,
+  hg_map: DefaultProperties,
 };
 
 export { HgViewProperties } from './HgViewProperties';

@@ -16,6 +16,7 @@ export interface AlwaysConvertConfig {
     images?: string[];   // 图片资源路径或 glob 模式，如 "icons/**/*.png" 或 "icon1.png"
     videos?: string[];   // 视频资源路径或 glob 模式
     models?: string[];   // 3D 模型资源路径或 glob 模式
+    fonts?: string[];    // 字体资源路径或 glob 模式，如 "fonts/my.ttf"
 }
 
 export interface ProjectConfig {

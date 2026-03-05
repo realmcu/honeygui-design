@@ -41,7 +41,8 @@ export type ComponentType =
   | 'hg_svg'
   | 'hg_lottie'
   | 'hg_glass'
-  | 'hg_particle';
+  | 'hg_particle'
+  | 'hg_map';
 
 export interface ComponentDefinition {
   type: ComponentType;
@@ -96,7 +97,7 @@ export interface DesignerState {
   undoStack: any[];
   redoStack: any[];
   projectConfig?: any; // Project configuration (resolution, etc.)
-  assetCategory: 'all' | 'images' | 'svgs' | 'videos' | 'models' | 'fonts' | 'glass' | 'lottie'; // 资源面板分类
+  assetCategory: 'all' | 'images' | 'svgs' | 'videos' | 'models' | 'fonts' | 'glass' | 'lottie' | 'trmap'; // 资源面板分类
   isSimulationRunning: boolean; // 仿真运行状态
 }
 
@@ -214,6 +215,8 @@ export interface ItemSettings {
   yuvParams?: YuvParams;
   /** 是否启用抖动（减少色彩损失） */
   dither?: boolean;
+  /** 字体：不转换格式，直接拷贝原文件 */
+  fontCopyOnly?: boolean;
 }
 
 /**

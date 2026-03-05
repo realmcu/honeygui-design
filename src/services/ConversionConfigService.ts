@@ -66,8 +66,8 @@ export interface ItemSettings {
   /** 抖动处理 */
   dither?: boolean;
   /** YUV 压缩参数 */
-  yuvParams?: YuvParams;
-}
+  yuvParams?: YuvParams;  /** 字体：不转换格式，直接拷贝原文件 */
+  fontCopyOnly?: boolean;}
 
 /**
  * 完整配置文件结构

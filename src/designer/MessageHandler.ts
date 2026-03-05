@@ -223,6 +223,14 @@ export class MessageHandler {
                 this._assetManager.handleSelectGlassPath(message.componentId, this._fileManager.currentFilePath);
                 break;
 
+            case 'selectFontPath':
+                this._assetManager.handleSelectFontPath(message.componentId, this._fileManager.currentFilePath);
+                break;
+
+            case 'selectMapPath':
+                this._assetManager.handleSelectMapPath(message.componentId, this._fileManager.currentFilePath);
+                break;
+
             case 'preview':
                 this._handlePreview(message.content);
                 break;
@@ -247,6 +255,10 @@ export class MessageHandler {
 
             case 'getFontFiles':
                 this._assetManager.handleGetFontFiles(this._fileManager.currentFilePath);
+                break;
+
+            case 'getMapFiles':
+                this._assetManager.handleGetMapFiles(this._fileManager.currentFilePath);
                 break;
 
             case 'getFontMetrics':
@@ -852,7 +864,8 @@ export class MessageHandler {
                 projectConfig.alwaysConvert = {
                     images: [],
                     videos: [],
-                    models: []
+                    models: [],
+                    fonts: []
                 };
             }
 
@@ -861,14 +874,17 @@ export class MessageHandler {
             const imageExts = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.svg'];
             const videoExts = ['.mp4', '.avi', '.mov', '.mkv', '.webm'];
             const modelExts = ['.gltf', '.glb', '.obj'];
+            const fontExts = ['.ttf', '.otf', '.woff', '.woff2'];
 
-            let category: 'images' | 'videos' | 'models' | null = null;
+            let category: 'images' | 'videos' | 'models' | 'fonts' | null = null;
             if (imageExts.includes(ext)) {
                 category = 'images';
             } else if (videoExts.includes(ext)) {
                 category = 'videos';
             } else if (modelExts.includes(ext)) {
                 category = 'models';
+            } else if (fontExts.includes(ext)) {
+                category = 'fonts';
             }
 
             if (!category) {

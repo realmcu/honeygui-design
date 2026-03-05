@@ -229,6 +229,15 @@ export class HoneyGuiApiMapper {
       eventHandlers: [],
       includeHeader: 'gui_glass.h'
     });
+
+    // 矢量地图
+    this.mappings.set('hg_map', {
+      componentType: 'hg_map',
+      createFunction: 'gui_vector_map_create_from_mem',
+      propertySetters: [],
+      eventHandlers: [],
+      includeHeader: 'gui_vector_map.h'
+    });
   }
 
   /**

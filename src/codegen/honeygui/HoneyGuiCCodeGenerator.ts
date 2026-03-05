@@ -113,6 +113,13 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       SConscriptGenerator.generate(srcDir);
       files.push(path.join(srcDir, 'SConscript'));
 
+      // 如果有地图组件，拷贝 gui_vector_map 库
+      const hasMapComponent = this.components.some(c => c.type === 'hg_map');
+      if (hasMapComponent) {
+        const copiedFiles = this.copyVectorMapLibrary(srcDir);
+        files.push(...copiedFiles);
+      }
+
       return { success: true, files };
     } catch (error) {
       return {
@@ -133,6 +140,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
     const hasView = componentTypes.includes('hg_view');
     const hasWindow = componentTypes.includes('hg_window');
     const has3D = componentTypes.includes('hg_3d');
+    const hasMap = componentTypes.includes('hg_map');
     const hasLabel = componentTypes.includes('hg_label');
     const hasArc = componentTypes.includes('hg_arc');
     
@@ -188,6 +196,14 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       if (hasTouchRotation) {
         code += `#include "tp_algo.h"\n`;
       }
+    }
+
+    // 矢量地图组件需要 VFS 和 vector_map 头文件
+    if (hasMap) {
+      if (!has3D) {  // 避免重复包含 gui_vfs.h
+        code += `#include "gui_vfs.h"\n`;
+      }
+      code += `#include "gui_vector_map.h"\n`;
     }
     
     // 如果有 arc group，添加头文件
@@ -954,9 +970,73 @@ static void ${component.id}_breath_anim_cb(void *p)
         return 'gui_canvas_t';
       case 'hg_particle':
         return 'gui_particle_widget_t';
+      case 'hg_map':
+        return 'gui_vector_map_t';
       default:
         // 其他未实现的组件使用 gui_obj_t
         return 'gui_obj_t';
+    }
+  }
+
+  /**
+   * 拷贝 gui_vector_map 库到生成的代码目录
+   * @param srcDir 源代码目录
+   * @returns 拷贝的文件列表
+   */
+  private copyVectorMapLibrary(srcDir: string): string[] {
+    const files: string[] = [];
+    
+    // 获取插件安装目录
+    // __dirname = out/src/codegen/honeygui，向上四级到项目根目录
+    const extensionPath = path.join(__dirname, '..', '..', '..', '..');
+    const sourceLibDir = path.join(extensionPath, 'lib', 'gui_vector_map');
+    const targetLibDir = path.join(srcDir, 'gui_vector_map');
+
+    console.log(`[MapGenerator] __dirname: ${__dirname}`);
+    console.log(`[MapGenerator] extensionPath: ${extensionPath}`);
+    console.log(`[MapGenerator] sourceLibDir: ${sourceLibDir}`);
+    console.log(`[MapGenerator] targetLibDir: ${targetLibDir}`);
+
+    // 检查源目录是否存在
+    if (!fs.existsSync(sourceLibDir)) {
+      console.warn(`[MapGenerator] gui_vector_map library not found at: ${sourceLibDir}`);
+      return files;
+    }
+
+    console.log(`[MapGenerator] Source directory exists, copying files...`);
+
+    // 创建目标目录
+    if (!fs.existsSync(targetLibDir)) {
+      fs.mkdirSync(targetLibDir, { recursive: true });
+    }
+
+    // 递归拷贝目录
+    this.copyDirRecursive(sourceLibDir, targetLibDir, files);
+
+    console.log(`[MapGenerator] Copied ${files.length} files to ${targetLibDir}`);
+
+    return files;
+  }
+
+  /**
+   * 递归拷贝目录
+   */
+  private copyDirRecursive(src: string, dest: string, files: string[]): void {
+    const entries = fs.readdirSync(src, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const srcPath = path.join(src, entry.name);
+      const destPath = path.join(dest, entry.name);
+
+      if (entry.isDirectory()) {
+        if (!fs.existsSync(destPath)) {
+          fs.mkdirSync(destPath, { recursive: true });
+        }
+        this.copyDirRecursive(srcPath, destPath, files);
+      } else {
+        fs.copyFileSync(srcPath, destPath);
+        files.push(destPath);
+      }
     }
   }
 }

@@ -611,6 +611,7 @@ const zhCN = {
   'Enable Dither': '启用抖动 (Dither)',
   'ditherHint': '使用误差扩散减少色彩损失带来的色带（推荐用于 RGB565）',
   'Font files do not require conversion settings': '字体文件无需转换设置',
+  'Copy only (no format conversion)': '直接拷贝（不进行格式转换）',
 
   // Collaboration
   'Collaboration': '多人协作',
@@ -719,6 +720,7 @@ const zhCN = {
   // Misc
   'Current File': '当前文件',
   'No font files, please upload to assets directory': '暂无字体文件，请先上传到 assets 目录',
+  'No map files, please upload to assets directory': '暂无地图文件，请先上传到 assets 目录',
   'Columns': '列数',
 
   // GeometryProperties - Additional
@@ -733,6 +735,11 @@ const zhCN = {
   'Linear gradient from start to end in selected direction': '线性渐变按选定方向从起点到终点',
   'Pressed Opacity': '按下透明度',
   'Released Opacity': '松开透明度',
+
+  // Vector Map
+  'Vector Map': '矢量地图',
+  'Map File (.trmap)': '地图文件 (.trmap)',
+  'Font File (.ttf)': '字体文件 (.ttf)',
 };
 
 export default zhCN;

@@ -188,6 +188,18 @@ Return('objs')
         const svgCount = this.copySvgAssets(assetsDir, outputDir);
         this.logger.log(`SVG 拷贝完成: ${svgCount} 个`);
 
+        // 拷贝 TRMAP 资源（不需要转换）
+        this.logger.log('拷贝 TRMAP 资源...');
+        const trmapCount = this.copyTrmapAssets(assetsDir, outputDir);
+        this.logger.log(`TRMAP 拷贝完成: ${trmapCount} 个`);
+
+        // 拷贝向量地图（hg_map）引用的字体文件（直接拷贝，不转换格式）
+        this.logger.log('拷贝向量地图字体资源...');
+        const mapFontCount = this.copyMapFonts(assetsDir, outputDir, usedAssets.mapFonts);
+        if (mapFontCount > 0) {
+            this.logger.log(`向量地图字体拷贝完成: ${mapFontCount} 个`);
+        }
+
         // 转换视频资源（只转换使用的）
         this.logger.log(vscode.l10n.t('Checking video assets...'));
         const videoConverter = new VideoConverterService((msg) => {
@@ -245,7 +257,7 @@ Return('objs')
 
         // 转换字体资源
         this.logger.log('转换字体资源...');
-        const fontResults = await this.convertFontsWithLabelConfig(assetsDir, outputDir);
+        const fontResults = await this.convertFontsWithLabelConfig(assetsDir, outputDir, usedAssets.fonts);
         const fontFailed = fontResults.filter(r => !r.success);
         if (fontFailed.length > 0) {
             for (const f of fontFailed) {
@@ -499,10 +511,14 @@ Return('objs')
         images: Set<string>;
         videos: Set<string>;
         models: Set<string>;
+        fonts: Set<string>;
+        mapFonts: Set<string>;
     }> {
         const images = new Set<string>();
         const videos = new Set<string>();
         const models = new Set<string>();
+        const fonts = new Set<string>();
+        const mapFonts = new Set<string>();
 
         const uiDir = path.join(this.projectRoot, 'ui');
         if (fs.existsSync(uiDir)) {
@@ -516,7 +532,7 @@ Return('objs')
                     } else if (entry.name.endsWith('.hml')) {
                         try {
                             const content = fs.readFileSync(fullPath, 'utf-8');
-                            this.extractAssetReferences(content, images, videos, models);
+                            this.extractAssetReferences(content, images, videos, models, mapFonts);
                         } catch (error) {
                             this.logger.log(`读取 HML 文件失败: ${fullPath} - ${error}`, true);
                         }
@@ -528,7 +544,7 @@ Return('objs')
         }
 
         // 添加 alwaysConvert 配置中的资源
-        this.addAlwaysConvertAssets(images, videos, models);
+        this.addAlwaysConvertAssets(images, videos, models, fonts);
 
         // 扫描 3D 模型中引用的纹理图片
         const assetsDir = path.join(this.projectRoot, 'assets');
@@ -536,16 +552,13 @@ Return('objs')
             this.scanModelTextures(assetsDir, models, images);
         }
 
-        return { images, videos, models };
+        return { images, videos, models, fonts, mapFonts };
     }
-
-    /**
-     * 添加 alwaysConvert 配置中标记的资源（支持精确路径和 glob 模式）
-     */
     private addAlwaysConvertAssets(
         images: Set<string>,
         videos: Set<string>,
-        models: Set<string>
+        models: Set<string>,
+        fonts: Set<string>
     ): void {
         const alwaysConvert = this.projectConfig.alwaysConvert;
         if (!alwaysConvert) {
@@ -619,6 +632,21 @@ Return('objs')
                 }
             }
         }
+
+        // 匹配字体
+        if (alwaysConvert.fonts && Array.isArray(alwaysConvert.fonts)) {
+            for (const pattern of alwaysConvert.fonts) {
+                if (allFiles.includes(pattern)) {
+                    fonts.add(pattern);
+                } else {
+                    for (const file of allFiles) {
+                        if (minimatch(file, pattern)) {
+                            fonts.add(file);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -628,7 +656,8 @@ Return('objs')
         hmlContent: string,
         images: Set<string>,
         videos: Set<string>,
-        models: Set<string>
+        models: Set<string>,
+        mapFonts: Set<string>
     ): void {
         // 定义图片、视频、模型的扩展名
         const imageExts = ['.png', '.jpg', '.jpeg', '.bmp', '.gif', '.svg'];
@@ -664,7 +693,19 @@ Return('objs')
             processAssetPath(assetPath);
         }
 
-        // 特殊处理：fontFile 属性（字体文件已经在 convertFontsWithLabelConfig 中处理）
+        // 特殊处理：hg_map 组件的 fontFile 属性（字体文件需要直接拷贝，不进行格式转换）
+        const fontFileRegex = /fontFile\s*=\s*["']([^"']+)["']/g;
+        let fontMatch;
+        while ((fontMatch = fontFileRegex.exec(hmlContent)) !== null) {
+            let fontPath = fontMatch[1];
+            if (fontPath.startsWith('assets/')) {
+                fontPath = fontPath.substring(7);
+            }
+            if (fontPath) {
+                mapFonts.add(fontPath);
+            }
+        }
+
         // 特殊处理：hg_glass 的 src（玻璃效果文件已经在 convertGlassWithComponentConfig 中处理）
     }
 
@@ -1419,6 +1460,60 @@ Return('objs')
     }
 
     /**
+     * 拷贝 TRMAP 资源（不需要转换，直接拷贝）
+     */
+    protected copyTrmapAssets(assetsDir: string, outputDir: string): number {
+        let count = 0;
+        
+        const scanDir = (dir: string) => {
+            if (!fs.existsSync(dir)) return;
+            
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+                const fullPath = path.join(dir, entry.name);
+                if (entry.isDirectory()) {
+                    scanDir(fullPath);
+                } else if (entry.name.toLowerCase().endsWith('.trmap')) {
+                    const relativePath = path.relative(assetsDir, fullPath);
+                    const destPath = path.join(outputDir, relativePath);
+                    const destDir = path.dirname(destPath);
+                    
+                    if (!fs.existsSync(destDir)) {
+                        fs.mkdirSync(destDir, { recursive: true });
+                    }
+                    fs.copyFileSync(fullPath, destPath);
+                    count++;
+                }
+            }
+        };
+        
+        scanDir(assetsDir);
+        return count;
+    }
+
+    /**
+     * 拷贝向量地图（hg_map）组件引用的字体文件
+     * 这些字体通过 VFS 文件系统直接加载，无需格式转换
+     */
+    protected copyMapFonts(assetsDir: string, outputDir: string, mapFonts: Set<string>): number {
+        let count = 0;
+        for (const fontRelPath of mapFonts) {
+            const srcPath = path.join(assetsDir, fontRelPath);
+            if (!fs.existsSync(srcPath)) {
+                this.logger.log(`向量地图字体文件不存在，跳过: ${fontRelPath}`, true);
+                continue;
+            }
+            const destPath = path.join(outputDir, fontRelPath);
+            const destDir = path.dirname(destPath);
+            if (!fs.existsSync(destDir)) {
+                fs.mkdirSync(destDir, { recursive: true });
+            }
+            fs.copyFileSync(srcPath, destPath);
+            count++;
+        }
+        return count;
+    }
+
+    /**
      * 根据 Label 组件配置转换字体资源
      * 
      * 从 HML 文件中提取所有 hg_label 组件的字体配置，
@@ -1426,21 +1521,27 @@ Return('objs')
      */
     private async convertFontsWithLabelConfig(
         assetsDir: string,
-        outputDir: string
+        outputDir: string,
+        alwaysConvertFonts: Set<string> = new Set()
     ): Promise<any[]> {
         // 获取项目中所有 Label 组件的字体配置
         const labelConfigs = await this.getLabelFontConfigs();
         
-        if (labelConfigs.length === 0) {
+        const results: any[] = [];
+
+        if (labelConfigs.length === 0 && alwaysConvertFonts.size === 0) {
             this.logger.log('未找到需要转换的字体配置');
-            return [];
+            return results;
         }
+
+        // 加载 conversion.json 以获取每个字体的 fontCopyOnly 设置
+        const conversionConfigService = ConversionConfigService.getInstance();
+        const conversionConfig = conversionConfigService.loadConfig(this.projectRoot);
 
         // 按字体文件+配置分组，合并相同配置的字符集
         const fontGroups = this.groupLabelConfigsByFont(labelConfigs);
         
         const fontConverter = new FontConverterService();
-        const results: any[] = [];
 
         for (const group of fontGroups) {
             const fontPath = path.join(assetsDir, group.fontFile);
@@ -1460,6 +1561,18 @@ Return('objs')
             // 确定输出目录（保持原始目录结构）
             const fontDir = path.dirname(group.fontFile);
             const fontOutputDir = fontDir ? path.join(outputDir, fontDir) : outputDir;
+
+            // 检查是否设置了"直接拷贝"
+            const fontItemSettings = conversionConfig.items[group.fontFile.replace(/\\/g, '/')];
+            if (fontItemSettings?.fontCopyOnly) {
+                if (!fs.existsSync(fontOutputDir)) {
+                    fs.mkdirSync(fontOutputDir, { recursive: true });
+                }
+                const destPath = path.join(fontOutputDir, path.basename(fontPath));
+                fs.copyFileSync(fontPath, destPath);
+                results.push({ success: true, outputPath: destPath, message: '字体文件已直接拷贝' });
+                continue;
+            }
 
             // 构建转换选项
             const options: FontConvertOptions = {
@@ -1537,6 +1650,54 @@ Return('objs')
                     error: error.message
                 });
                 this.logger.log(`  ✗ 异常: ${error.message}`, true);
+            }
+        }
+
+        // 处理 alwaysConvert 中的字体（未被 HML 引用但标记为强制转换的）
+        const convertedFontFiles = new Set(fontGroups.map(g => g.fontFile));
+        for (const fontRelPath of alwaysConvertFonts) {
+            if (convertedFontFiles.has(fontRelPath)) {
+                continue; // 已经通过 HML 配置处理过了
+            }
+
+            const fontPath = path.join(assetsDir, fontRelPath);
+            if (!fs.existsSync(fontPath)) {
+                this.logger.log(`强制转换字体文件不存在: ${fontRelPath}`, true);
+                continue;
+            }
+
+            const fontDir = path.dirname(fontRelPath);
+            const fontOutputDir = fontDir ? path.join(outputDir, fontDir) : outputDir;
+
+            // 检查是否设置了"直接拷贝"
+            const fontItemSettings = conversionConfig.items[fontRelPath.replace(/\\/g, '/')];
+            if (fontItemSettings?.fontCopyOnly) {
+                if (!fs.existsSync(fontOutputDir)) {
+                    fs.mkdirSync(fontOutputDir, { recursive: true });
+                }
+                const destPath = path.join(fontOutputDir, path.basename(fontPath));
+                fs.copyFileSync(fontPath, destPath);
+                results.push({ success: true, outputPath: destPath, message: '字体文件已直接拷贝' });
+                continue;
+            }
+
+            // 使用默认转换选项：bitmap, size=32, ASCII 字符集
+            const options: FontConvertOptions = {
+                fontSize: 32,
+                renderMode: 4,
+                outputFormat: 'bitmap',
+                characterSets: [{ type: 'range', value: '0x20-0x7E' }]
+            };
+
+            try {
+                const result = await fontConverter.convert(fontPath, fontOutputDir, options);
+                results.push(result);
+                if (!result.success) {
+                    this.logger.log(`强制转换字体失败: ${fontRelPath} - ${result.error}`, true);
+                }
+            } catch (error: any) {
+                results.push({ success: false, inputPath: fontPath, outputPath: fontOutputDir, error: error.message });
+                this.logger.log(`强制转换字体异常: ${fontRelPath} - ${error.message}`, true);
             }
         }
 

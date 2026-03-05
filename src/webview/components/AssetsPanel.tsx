@@ -18,9 +18,10 @@ const MODEL_EXTS = ['gltf', 'glb', 'obj'];  // 3D 模型主文件
 const FONT_EXTS = ['ttf', 'otf', 'woff', 'woff2'];  // 字体文件
 const GLASS_EXTS = ['glass'];  // 玻璃效果文件
 const LOTTIE_EXTS = ['json', 'lottie']; // Lottie 动画文件
+const TRMAP_EXTS = ['trmap']; // 纹理映射文件
 const MODEL_DEP_EXTS = ['mtl', 'bin'];  // 3D 模型依赖文件（材质文件、二进制数据）
 
-type AssetCategory = 'all' | 'images' | 'svgs' | 'videos' | 'models' | 'fonts' | 'glass' | 'lottie';
+type AssetCategory = 'all' | 'images' | 'svgs' | 'videos' | 'models' | 'fonts' | 'glass' | 'lottie' | 'trmap';
 
 // 视频预览组件
 const VideoPreview: React.FC<{ videoPath: string }> = ({ videoPath }) => {
@@ -403,6 +404,7 @@ const getAssetCategory = (name: string): AssetCategory | null => {
   if (FONT_EXTS.includes(ext)) return 'fonts';
   if (GLASS_EXTS.includes(ext)) return 'glass';
   if (LOTTIE_EXTS.includes(ext)) return 'lottie';
+  if (TRMAP_EXTS.includes(ext)) return 'trmap';
   return null;
 };
 
@@ -459,7 +461,8 @@ const AssetsPanel: React.FC = () => {
       models: [],
       fonts: [],
       glass: [],
-      lottie: []
+      lottie: [],
+      trmap: []
     };
     
     // 递归扁平化所有文件，用于统计各分类数量
@@ -509,7 +512,8 @@ const AssetsPanel: React.FC = () => {
                      categorizedAssets.models.length + 
                      categorizedAssets.fonts.length + 
                      categorizedAssets.glass.length + 
-                     categorizedAssets.lottie.length;
+                     categorizedAssets.lottie.length +
+                     categorizedAssets.trmap.length;
     
     return {
       all: allCount,
@@ -519,7 +523,8 @@ const AssetsPanel: React.FC = () => {
       models: categorizedAssets.models.length,
       fonts: categorizedAssets.fonts.length,
       glass: categorizedAssets.glass.length,
-      lottie: categorizedAssets.lottie.length
+      lottie: categorizedAssets.lottie.length,
+      trmap: categorizedAssets.trmap.length
     };
   }, [categorizedAssets]);
 
@@ -532,11 +537,12 @@ const AssetsPanel: React.FC = () => {
         setAssets(message.assets || []);
       } else if (message.command === 'alwaysConvertUpdated') {
         // 更新强制转换资源列表
-        const alwaysConvert = message.alwaysConvert || { images: [], videos: [], models: [] };
+        const alwaysConvert = message.alwaysConvert || { images: [], videos: [], models: [], fonts: [] };
         const allAssets = new Set<string>([
           ...(alwaysConvert.images || []),
           ...(alwaysConvert.videos || []),
-          ...(alwaysConvert.models || [])
+          ...(alwaysConvert.models || []),
+          ...(alwaysConvert.fonts || [])
         ]);
         setAlwaysConvertAssets(allAssets);
       }
@@ -637,6 +643,7 @@ const AssetsPanel: React.FC = () => {
     const isFont = FONT_EXTS.includes(ext);
     const isGlass = GLASS_EXTS.includes(ext);  // 玻璃效果文件
     const isLottie = LOTTIE_EXTS.includes(ext); // Lottie 动画文件
+    const isTrmap = TRMAP_EXTS.includes(ext); // 纹理映射文件
     const isModelDep = MODEL_DEP_EXTS.includes(ext);  // 模型依赖文件（.mtl, .bin）
     const isSelected = selectedAsset?.path === asset.path;
     const isMarkedAlwaysConvert = asset.relativePath ? isAlwaysConvert(asset.relativePath) : false;
@@ -681,6 +688,7 @@ const AssetsPanel: React.FC = () => {
           {isModel && <Model3DPreview modelPath={asset.path} />}
           {isVideo && <VideoPreview videoPath={asset.path} />}
           {isLottie && <LottiePreview lottiePath={asset.path} />}
+          {isTrmap && <div className="file-icon" style={{ fontSize: '48px' }}>🗺️</div>}
           {isFont && <div className="file-icon" style={{ fontSize: '48px' }}>🔤</div>}
           {isModelDep && <div className="file-icon" style={{ fontSize: '48px' }}>📄</div>}
         </div>
