@@ -138,7 +138,7 @@ export const ListWidget: React.FC<WidgetProps> = ({ component, style, handlers, 
           const newChildren = [...currentChildren];
           
           for (let i = currentCount; i < noteNum; i++) {
-            const itemId = `${component.id}_item_${i + 1}`;
+            const itemId = `${component.id}_item_${i}`;  // 使用与 syncListItems 一致的格式
             
             // 调试日志
             console.log(`[ListWidget] Creating item ${i}: itemHeight=${itemHeight}, space=${space}, index=${i}`);
@@ -173,20 +173,19 @@ export const ListWidget: React.FC<WidgetProps> = ({ component, style, handlers, 
         // 数量减少：删除多余的 list_item
         if (currentCount > noteNum) {
           const { removeComponent } = getState();
-          const itemsToKeep: string[] = [];
-          const itemsToDelete: string[] = [];
           
-          for (let i = 0; i < currentCount; i++) {
-            const itemId = `${component.id}_item_${i + 1}`;
-            if (i < noteNum) {
-              itemsToKeep.push(itemId);
-            } else {
-              itemsToDelete.push(itemId);
-            }
-          }
+          // 直接使用现有的 list_item 组件，按 index 排序后删除多余的
+          const sortedItems = existingListItems.sort((a, b) => {
+            const indexA = (a.data?.index as number) ?? 0;
+            const indexB = (b.data?.index as number) ?? 0;
+            return indexA - indexB;
+          });
           
-          itemsToDelete.forEach(id => {
-            removeComponent(id);
+          const itemsToKeep = sortedItems.slice(0, noteNum);
+          const itemsToDelete = sortedItems.slice(noteNum);
+          
+          itemsToDelete.forEach(item => {
+            removeComponent(item.id, true); // 传递 fromListSync = true
           });
           
           // 保留其他类型的子组件
@@ -196,7 +195,7 @@ export const ListWidget: React.FC<WidgetProps> = ({ component, style, handlers, 
           });
           
           updateComponent(component.id, { 
-            children: [...itemsToKeep, ...otherChildren] 
+            children: [...itemsToKeep.map(item => item.id), ...otherChildren] 
           });
         }
         
@@ -213,7 +212,7 @@ export const ListWidget: React.FC<WidgetProps> = ({ component, style, handlers, 
       const targetChildren: string[] = [];
       
       for (let i = 0; i < noteNum; i++) {
-        const itemId = `${component.id}_item_${i + 1}`;
+        const itemId = `${component.id}_item_${i}`;  // 使用与 syncListItems 一致的格式
         targetChildren.push(itemId);
         
         const position = calculateItemPosition(

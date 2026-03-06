@@ -132,7 +132,7 @@ export interface DesignerStore extends DesignerState {
   addComponent: (component: Component, options?: { save?: boolean }) => void;
   updateComponent: (id: string, updates: Partial<Component>) => void;
   renameComponent: (oldId: string, newId: string) => boolean;
-  removeComponent: (id: string) => void;
+  removeComponent: (id: string, fromListSync?: boolean) => void;
   removeComponents: (ids: string[]) => void;
   selectComponent: (id: string | null) => void;
   setSelectedComponents: (ids: string[]) => void;
@@ -705,7 +705,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     return true;
   },
 
-  removeComponent: (id) => {
+  removeComponent: (id, fromListSync = false) => {
     const state = get();
     const component = state.components.find((c) => c.id === id);
     if (!component) return;
@@ -719,8 +719,8 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       return;
     }
 
-    // 禁止删除列表项
-    if (component.type === 'hg_list_item') {
+    // 禁止删除列表项（除非是从 list 控件内部同步调用）
+    if (component.type === 'hg_list_item' && !fromListSync) {
       if (vscodeAPI) {
         vscodeAPI.postMessage({
           command: 'showInfo',
