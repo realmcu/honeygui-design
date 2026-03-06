@@ -101,13 +101,35 @@ function floydSteinbergDither(pixels: RGBA[], width: number): RGBA[] {
     return dithered;
 }
 
+/**
+ * 对不带 Alpha 通道的目标格式，将半透明像素与黑色背景混合
+ * 公式: outColor = srcColor * alpha / 255
+ */
+function premultiplyAlphaBlack(pixels: RGBA[]): RGBA[] {
+    return pixels.map(p => {
+        if (p.a === 0xFF) {
+            return p; // 完全不透明，无需处理
+        }
+        const alpha = p.a / 255;
+        return {
+            r: clamp(p.r * alpha),
+            g: clamp(p.g * alpha),
+            b: clamp(p.b * alpha),
+            a: 0xFF
+        };
+    });
+}
+
 export function convertPixels(pixels: RGBA[], width: number, format: PixelFormat, options?: ConvertOptions): Buffer {
     const buffers: Buffer[] = [];
     
+    // 对不带 Alpha 的格式（RGB565, RGB888），先做透明度预混合（与黑色背景混合）
+    const isOpaqueFormat = (format === PixelFormat.RGB565 || format === PixelFormat.RGB888);
+    let processedPixels = isOpaqueFormat ? premultiplyAlphaBlack(pixels) : pixels;
+
     // Apply dithering if enabled and target format is 16-bit
-    let processedPixels = pixels;
     if (options?.dither && (format === PixelFormat.RGB565 || format === PixelFormat.ARGB8565)) {
-        processedPixels = floydSteinbergDither(pixels, width);
+        processedPixels = floydSteinbergDither(processedPixels, width);
     }
 
     switch (format) {
