@@ -314,6 +314,17 @@ const componentDefinitions: ComponentDefinition[] = [
     ],
   },
   {
+    type: 'hg_gif',
+    name: 'GIF Animation',
+    icon: '🎞️',
+    defaultSize: { width: 150, height: 150 },
+    properties: [
+      { name: 'src', label: 'GIF Path', type: 'string', group: 'data' },
+      { name: 'visible', label: 'Visible', type: 'boolean', defaultValue: true, group: 'general' },
+      { name: 'highQuality', label: 'High Quality', type: 'boolean', defaultValue: false, group: 'general' },
+    ],
+  },
+  {
     type: 'hg_3d',
     name: '3D Model',
     icon: '🧊',
@@ -464,7 +475,7 @@ const componentCategories = [
   { name: 'Basic Controls', types: ['hg_button', 'hg_label', 'hg_image'] },
   { name: 'Input Controls', types: ['hg_input', 'hg_checkbox', 'hg_radio'] },
   { name: 'Graphics', types: ['hg_arc', 'hg_circle', 'hg_rect', 'hg_svg', 'hg_glass', 'hg_particle', 'hg_map'] },
-  { name: 'Multimedia', types: ['hg_video', 'hg_3d', 'hg_lottie'] }
+  { name: 'Multimedia', types: ['hg_video', 'hg_gif', 'hg_3d', 'hg_lottie'] }
 ];
 
 /**

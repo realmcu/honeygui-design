@@ -15,7 +15,7 @@ export class ImageGenerator implements ComponentCodeGenerator {
 
     const src = component.data?.src || '';
     // 将图片扩展名替换为 .bin
-    let binSrc = src.replace(/\.(png|jpe?g|bmp|gif|tiff?|webp)$/i, '.bin');
+    let binSrc = src.replace(/\.(png|jpe?g|bmp|tiff?|webp)$/i, '.bin');
     // 去掉 assets/ 前缀
     binSrc = binSrc.replace(/^assets\//, '');
     // 确保路径以 / 开头
@@ -64,7 +64,9 @@ export class ImageGenerator implements ComponentCodeGenerator {
     const hasRotation = transform?.rotation !== undefined && transform.rotation !== 0;
     const hasExplicitScale = (transform?.scaleX !== undefined && transform.scaleX !== 1.0) || 
                              (transform?.scaleY !== undefined && transform.scaleY !== 1.0);
-    const hasFocusSet = transform?.focusX !== undefined && transform?.focusY !== undefined;
+    const hasFocusX = transform?.focusX !== undefined;
+    const hasFocusY = transform?.focusY !== undefined;
+    const hasFocusSet = hasFocusX || hasFocusY;
     
     // 检查是否需要自动缩放（显示尺寸与原始图片尺寸不同）
     let autoScaleX: number | undefined;
@@ -78,31 +80,37 @@ export class ImageGenerator implements ComponentCodeGenerator {
     
     const needScale = hasExplicitScale || (autoScaleX !== undefined && autoScaleY !== undefined);
     
-    // 只有当有旋转时才需要设置 focus（缩放不需要 focus）
-    if (hasRotation || hasFocusSet) {
-      // 1. 先平移（用于围绕中心旋转的补偿）
-      // 当有旋转时，必须添加平移到图片中心，这是实现中心旋转的技术要求
-      if (hasRotation) {
-        // 如果同时有缩放，需要调整平移值来补偿缩放的影响
-        // 因为底层矩阵变换顺序是：translate(t) -> rotate -> scale -> translate(-f)
-        // scale 会影响 translate(-f) 的效果，所以需要乘以缩放系数来补偿
-        let translateCode = '';
-        if (needScale) {
-          const scaleX = transform?.scaleX ?? autoScaleX ?? 1.0;
-          const scaleY = transform?.scaleY ?? autoScaleY ?? 1.0;
-          // 补偿缩放影响：translate_actual = translate_desired * scale
-          translateCode = `${indentStr}gui_img_translate((gui_img_t *)${component.id}, gui_img_get_width((gui_img_t *)${component.id}) / 2.0f * ${scaleX.toFixed(6)}f, gui_img_get_height((gui_img_t *)${component.id}) / 2.0f * ${scaleY.toFixed(6)}f);\n`;
-        } else {
-          // 没有缩放，直接平移到图片中心
-          translateCode = `${indentStr}gui_img_translate((gui_img_t *)${component.id}, gui_img_get_width((gui_img_t *)${component.id}) / 2.0f, gui_img_get_height((gui_img_t *)${component.id}) / 2.0f);\n`;
-        }
-        code += translateCode;
+    // 只有当有旋转时才需要 focus 相关处理（单独设置 focus 没有意义）
+    if (hasRotation) {
+      // 确定 focus 点
+      const { width, height } = component.position;
+      const focusX = hasFocusX ? transform.focusX! : width / 2;
+      const focusY = hasFocusY ? transform.focusY! : height / 2;
+      
+      // 1. 先平移（补偿 focus 导致的偏移）
+      // 无论是否显式设置 focus，只要有旋转或设置了 focus，都需要补偿平移
+      let translateCode = '';
+      if (needScale) {
+        const scaleX = transform?.scaleX ?? autoScaleX ?? 1.0;
+        const scaleY = transform?.scaleY ?? autoScaleY ?? 1.0;
+        // 补偿缩放影响：translate_actual = focus * scale
+        translateCode = `${indentStr}gui_img_translate((gui_img_t *)${component.id}, ${focusX.toFixed(1)}f * ${scaleX.toFixed(6)}f, ${focusY.toFixed(1)}f * ${scaleY.toFixed(6)}f);\n`;
+      } else {
+        // 没有缩放，直接平移 focus 的距离
+        translateCode = `${indentStr}gui_img_translate((gui_img_t *)${component.id}, ${focusX.toFixed(1)}f, ${focusY.toFixed(1)}f);\n`;
       }
+      code += translateCode;
 
       // 2. 设置变换中心点（focus）
       if (hasFocusSet) {
-        // 用户显式设置了变换中心
-        code += `${indentStr}gui_img_set_focus((gui_img_t *)${component.id}, ${transform.focusX!.toFixed(1)}f, ${transform.focusY!.toFixed(1)}f);\n`;
+        // 用户设置了变换中心（至少一个轴）
+        const focusXValue = hasFocusX 
+          ? `${transform.focusX!.toFixed(1)}f` 
+          : 'gui_img_get_width((gui_img_t *)' + component.id + ') / 2.0f';
+        const focusYValue = hasFocusY 
+          ? `${transform.focusY!.toFixed(1)}f` 
+          : 'gui_img_get_height((gui_img_t *)' + component.id + ') / 2.0f';
+        code += `${indentStr}gui_img_set_focus((gui_img_t *)${component.id}, ${focusXValue}, ${focusYValue});\n`;
       } else if (hasRotation) {
         // 有旋转但没有设置 focus，自动设置为图片中心
         code += `${indentStr}gui_img_set_focus((gui_img_t *)${component.id}, gui_img_get_width((gui_img_t *)${component.id}) / 2.0f, gui_img_get_height((gui_img_t *)${component.id}) / 2.0f);\n`;
@@ -133,11 +141,20 @@ export class ImageGenerator implements ComponentCodeGenerator {
         }
       }
     } else if (needScale) {
-      // 只有缩放，不需要 focus
+      // 只有缩放（可能还有平移），不需要 focus
       const scaleX = transform?.scaleX ?? autoScaleX ?? 1.0;
       const scaleY = transform?.scaleY ?? autoScaleY ?? 1.0;
       if (scaleX !== 1.0 || scaleY !== 1.0) {
         code += `${indentStr}gui_img_scale((gui_img_t *)${component.id}, ${scaleX.toFixed(6)}f, ${scaleY.toFixed(6)}f);\n`;
+      }
+      
+      // 如果还有平移，也要生成
+      if (transform?.translateX !== undefined || transform?.translateY !== undefined) {
+        const tx = transform.translateX ?? 0;
+        const ty = transform.translateY ?? 0;
+        if (tx !== 0 || ty !== 0) {
+          code += `${indentStr}gui_img_translate((gui_img_t *)${component.id}, ${tx.toFixed(1)}f, ${ty.toFixed(1)}f);\n`;
+        }
       }
     } else if (transform?.translateX !== undefined || transform?.translateY !== undefined) {
       // 只有平移，没有旋转和缩放
@@ -278,7 +295,7 @@ void ${component.id}_button_release_cb(void *obj, gui_event_t *e)
     if (!src) return '';
     
     // 将图片扩展名替换为 .bin
-    let binSrc = src.replace(/\.(png|jpe?g|bmp|gif|tiff?|webp)$/i, '.bin');
+    let binSrc = src.replace(/\.(png|jpe?g|bmp|tiff?|webp)$/i, '.bin');
     // 去掉 assets/ 前缀
     binSrc = binSrc.replace(/^assets\//, '');
     // 确保路径以 / 开头

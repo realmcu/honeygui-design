@@ -364,9 +364,13 @@ export class CallbackFileGenerator {
     
     while ((funcMatch = funcRegex.exec(protectedContent)) !== null) {
       const declaration = funcMatch[1].trim();
-      // 移除 static 关键字（头文件中不需要）
-      const cleanDeclaration = declaration.replace(/^static\s+/, '');
-      declarations.push(cleanDeclaration);
+      
+      // 跳过 static 函数（静态函数不需要在头文件中声明）
+      if (declaration.startsWith('static ')) {
+        continue;
+      }
+      
+      declarations.push(declaration);
     }
     
     return declarations;

@@ -14,7 +14,7 @@ import { CanvasEditorModal } from './components/CanvasEditorModal';
 import { Component, ComponentType } from './types';
 import useKeyboardShortcuts from './utils/keyboardShortcuts';
 import { getAbsolutePosition, findComponentAtPosition, isDropTargetType, isContainerType } from './utils/componentUtils';
-import { createImageComponentAtPosition, create3DComponentAtPosition, createVideoComponentAtPosition, createSvgComponentAtPosition, createGlassComponentAtPosition, createLottieComponentAtPosition } from './services/messageHandler';
+import { createImageComponentAtPosition, create3DComponentAtPosition, createVideoComponentAtPosition, createSvgComponentAtPosition, createGlassComponentAtPosition, createLottieComponentAtPosition, createGifComponentAtPosition } from './services/messageHandler';
 import { processImageFiles } from './utils/fileUtils';
 import { parseObjDependencies, parseMtlDependencies, findDependencyFiles } from './utils/objDependencyParser';
 import { setLocale, t } from './i18n';
@@ -443,6 +443,20 @@ const App: React.FC = () => {
             const store = useDesignerStore.getState();
             createImageComponentAtPosition(
               message.imagePath,
+              message.dropPosition,
+              message.targetContainerId,
+              store.components,
+              store.addComponent,
+              message.imageSize
+            );
+          }
+          break;
+
+        case 'createGifComponent':
+          if (message.gifPath && message.targetContainerId && message.dropPosition) {
+            const store = useDesignerStore.getState();
+            createGifComponentAtPosition(
+              message.gifPath,
               message.dropPosition,
               message.targetContainerId,
               store.components,
@@ -1063,6 +1077,7 @@ const App: React.FC = () => {
         const isSvg = ext === 'svg';
         const isGlass = ext === 'glass';  // .glass 文件作为 SVG 处理
         const isLottie = ext && ['json', 'lottie'].includes(ext);
+        const isGif = ext === 'gif';  // GIF 动画
         
         if (is3DModel) {
           // 3D 模型：直接创建组件
@@ -1101,6 +1116,14 @@ const App: React.FC = () => {
           api.postMessage({
             command: 'createGlassComponent',
             glassPath: `assets/${assetPath}`,
+            dropPosition: { x, y },
+            targetContainerId: targetContainer.id
+          });
+        } else if (isGif) {
+          // GIF 动画：获取尺寸后创建 GIF 组件
+          api.postMessage({
+            command: 'getGifSize',
+            gifPath: `assets/${assetPath}`,
             dropPosition: { x, y },
             targetContainerId: targetContainer.id
           });

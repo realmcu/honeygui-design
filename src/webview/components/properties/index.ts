@@ -4,6 +4,7 @@ import { HgWindowProperties } from './HgWindowProperties';
 import { Hg3DProperties } from './Hg3DProperties';
 import { HgVideoProperties } from './HgVideoProperties';
 import { HgImageProperties } from './HgImageProperties';
+import { HgGifProperties } from './HgGifProperties';
 import { HgListProperties } from './HgListProperties';
 import { ListItemProperties } from './ListItemProperties';
 import { GeometryProperties } from './GeometryProperties';
@@ -24,6 +25,7 @@ export const propertyPanelRegistry: Record<ComponentType, React.FC<PropertyPanel
   hg_switch: DefaultProperties,
   hg_slider: DefaultProperties,
   hg_image: HgImageProperties,
+  hg_gif: HgGifProperties,
   hg_window: HgWindowProperties,
   hg_canvas: DefaultProperties,
   hg_list: HgListProperties,
@@ -45,6 +47,7 @@ export { HgWindowProperties } from './HgWindowProperties';
 export { Hg3DProperties } from './Hg3DProperties';
 export { HgVideoProperties } from './HgVideoProperties';
 export { HgImageProperties } from './HgImageProperties';
+export { HgGifProperties } from './HgGifProperties';
 export { HgListProperties } from './HgListProperties';
 export { ListItemProperties } from './ListItemProperties';
 export { GeometryProperties } from './GeometryProperties';

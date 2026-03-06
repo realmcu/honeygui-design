@@ -86,38 +86,93 @@ export const calculateComponentStyle = (
 
   // 图像变换（仅用于预览，实际效果由 SDK 实现）
   let transformValue: string | undefined;
-  if (component.type === 'hg_image' && component.style?.transform) {
+  if ((component.type === 'hg_image' || component.type === 'hg_gif') && component.style?.transform) {
     const t = component.style.transform;
     const transforms: string[] = [];
     
-    // 平移（需要减去变换中心点的偏移）
-    if (t.translateX !== undefined || t.translateY !== undefined) {
-      const tx = t.translateX ?? 0;
-      const ty = t.translateY ?? 0;
-      const focusX = t.focusX ?? 0;
-      const focusY = t.focusY ?? 0;
-      // 实际平移量 = 用户设置的平移量 - 变换中心点偏移
-      transforms.push(`translate(${tx - focusX}px, ${ty - focusY}px)`);
-    }
+    const hasRotation = t.rotation !== undefined && t.rotation !== 0;
+    const hasScale = (t.scaleX !== undefined && t.scaleX !== 1.0) || (t.scaleY !== undefined && t.scaleY !== 1.0);
+    const hasSkew = (t.skewX !== undefined && t.skewX !== 0) || (t.skewY !== undefined && t.skewY !== 0);
+    const hasFocusX = t.focusX !== undefined;
+    const hasFocusY = t.focusY !== undefined;
+    const hasFocus = hasFocusX || hasFocusY;
     
-    // 缩放
-    if (t.scaleX !== undefined || t.scaleY !== undefined) {
-      const sx = t.scaleX ?? 1.0;
-      const sy = t.scaleY ?? 1.0;
-      transforms.push(`scale(${sx}, ${sy})`);
-    }
+    // 预览逻辑：
+    // 1. 预览时图片保持在原位置（通过补偿 translate 实现）
+    // 2. 代码生成时会添加 translate 来补偿 focus 的偏移
+    // 3. 单独缩放不需要 focus，以左上角为基准
+    // 4. 只有在有旋转时才应用 focus（单独设置 focus 没有意义）
     
-    // 旋转
-    if (t.rotation !== undefined && t.rotation !== 0) {
-      transforms.push(`rotate(${t.rotation}deg)`);
-    }
+    const { width, height } = component.position;
     
-    // 倾斜
-    if (t.skewX !== undefined && t.skewX !== 0) {
-      transforms.push(`skewX(${t.skewX}deg)`);
-    }
-    if (t.skewY !== undefined && t.skewY !== 0) {
-      transforms.push(`skewY(${t.skewY}deg)`);
+    // 判断是否需要应用 focus（只有旋转或倾斜时才需要）
+    const needFocus = hasRotation || hasSkew;
+    
+    if (needFocus) {
+      // 有 focus 设置或有旋转/倾斜
+      const focusX = hasFocusX ? t.focusX! : width / 2;
+      const focusY = hasFocusY ? t.focusY! : height / 2;
+      
+      // CSS transform 从右到左执行，所以顺序是：
+      
+      // 最后：补偿平移 + 用户平移
+      // 补偿平移用于抵消 focus 导致的偏移，让预览时图片保持在原位
+      let totalTx = focusX; // 补偿 focus 的偏移
+      let totalTy = focusY;
+      
+      // 如果有缩放，补偿值需要乘以缩放系数
+      if (hasScale) {
+        const scaleX = t.scaleX ?? 1.0;
+        const scaleY = t.scaleY ?? 1.0;
+        totalTx = focusX * scaleX;
+        totalTy = focusY * scaleY;
+      }
+      
+      // 加上用户的平移
+      if (t.translateX !== undefined || t.translateY !== undefined) {
+        totalTx += (t.translateX ?? 0);
+        totalTy += (t.translateY ?? 0);
+      }
+      
+      transforms.push(`translate(${totalTx}px, ${totalTy}px)`);
+      
+      // 倾斜
+      if (hasSkew) {
+        const skewX = t.skewX ?? 0;
+        const skewY = t.skewY ?? 0;
+        transforms.push(`skew(${skewX}deg, ${skewY}deg)`);
+      }
+      
+      // 旋转
+      if (hasRotation) {
+        transforms.push(`rotate(${t.rotation}deg)`);
+      }
+      
+      // 缩放
+      if (hasScale) {
+        const scaleX = t.scaleX ?? 1.0;
+        const scaleY = t.scaleY ?? 1.0;
+        transforms.push(`scale(${scaleX}, ${scaleY})`);
+      }
+      
+      // 最先：focus 导致的偏移（向左上角偏移）
+      transforms.push(`translate(${-focusX}px, ${-focusY}px)`);
+    } else {
+      // 没有 focus 设置，也没有旋转/倾斜，只有缩放和/或平移
+      
+      // 缩放（以左上角为基准，不产生偏移）
+      if (hasScale) {
+        const scaleX = t.scaleX ?? 1.0;
+        const scaleY = t.scaleY ?? 1.0;
+        transforms.push(`scale(${scaleX}, ${scaleY})`);
+      }
+      
+      // 平移
+      if (t.translateX !== undefined || t.translateY !== undefined) {
+        const tx = t.translateX ?? 0;
+        const ty = t.translateY ?? 0;
+        transforms.push(`translate(${tx}px, ${ty}px)`);
+      }
     }
     
     if (transforms.length > 0) {
@@ -127,26 +182,10 @@ export const calculateComponentStyle = (
 
   // 变换中心点
   let transformOriginValue: string | undefined;
-  if (component.type === 'hg_image' && component.style?.transform) {
-    const t = component.style.transform;
-    if (t.focusX !== undefined && t.focusY !== undefined) {
-      // 用户显式设置了变换中心
-      transformOriginValue = `${t.focusX}px ${t.focusY}px`;
-    } else {
-      // 默认行为：
-      // - 如果只有旋转，使用中心点（模拟 SDK 的 gui_img_rotation 行为）
-      // - 如果有缩放，使用左上角（模拟 SDK 的 gui_img_scale 行为）
-      const hasScale = (t.scaleX !== undefined && t.scaleX !== 1.0) || (t.scaleY !== undefined && t.scaleY !== 1.0);
-      const hasRotation = t.rotation !== undefined && t.rotation !== 0;
-      
-      if (hasRotation && !hasScale) {
-        // 只有旋转：使用中心点
-        transformOriginValue = 'center center';
-      } else if (hasScale) {
-        // 有缩放：使用左上角（SDK 默认行为）
-        transformOriginValue = 'top left';
-      }
-    }
+  if ((component.type === 'hg_image' || component.type === 'hg_gif') && component.style?.transform) {
+    // 固件端的 focus 会导致图片偏移，所以我们使用 translate 来模拟
+    // transformOrigin 始终保持在左上角（默认值）
+    transformOriginValue = 'top left';
   }
 
   return {

@@ -38,6 +38,7 @@ const zhCN = {
   'Rectangle': '矩形',
   'SVG': 'SVG',
   'Lottie Animation': 'Lottie动画',
+  'GIF Animation': 'GIF动画',
   'Glass Effect': '玻璃效果',
 
   // Property labels
@@ -87,8 +88,10 @@ const zhCN = {
   'Render Mode': '渲染模式',
   'Placeholder': '占位符',
   'Image Path': '图片路径',
+  'GIF Path': 'GIF路径',
   'Select Image File': '选择图片文件',
   'Visible': '可见',
+  'High Quality': '高质量渲染',
   'Checked': '选中',
   'Entry View': '入口视图',
   'Show Background': '显示背景',

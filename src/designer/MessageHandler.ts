@@ -320,6 +320,15 @@ export class MessageHandler {
                 );
                 break;
 
+            case 'getGifSize':
+                this._assetManager.handleGetGifSize(
+                    message.gifPath,
+                    message.dropPosition,
+                    message.targetContainerId,
+                    this._fileManager.currentFilePath
+                );
+                break;
+
             case 'getImageSizeForComponent':
                 this._assetManager.handleGetImageSizeForComponent(
                     message.componentId,

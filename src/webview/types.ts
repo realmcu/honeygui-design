@@ -28,6 +28,7 @@ export type ComponentType =
   | 'hg_switch'
   | 'hg_slider'
   | 'hg_image'
+  | 'hg_gif'
   | 'hg_view'
   | 'hg_window'
   | 'hg_canvas'

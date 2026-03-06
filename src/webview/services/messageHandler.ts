@@ -51,6 +51,46 @@ export const createImageComponentAtPosition = (
 };
 
 /**
+ * 创建 GIF 组件的统一函数
+ */
+export const createGifComponentAtPosition = (
+  gifPath: string,
+  dropPosition: { x: number; y: number },
+  targetContainerId: string,
+  components: Component[],
+  addComponent: (component: Component) => void,
+  imageSize?: { width: number; height: number }
+): void => {
+  const targetContainer = components.find(c => c.id === targetContainerId);
+  if (!targetContainer) return;
+
+  const targetAbsPos = getAbsolutePosition(targetContainer, components);
+  const relativeX = Math.max(0, dropPosition.x - targetAbsPos.x);
+  const relativeY = Math.max(0, dropPosition.y - targetAbsPos.y);
+
+  const width = imageSize?.width || 150;
+  const height = imageSize?.height || 150;
+  const zIndex = getNextZIndex(components, targetContainerId);
+
+  const gifComponent: Component = {
+    id: `hg_gif_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+    type: 'hg_gif',
+    name: `gif_${Date.now().toString().substr(-4)}`,
+    position: { x: relativeX, y: relativeY, width, height },
+    visible: true,
+    enabled: true,
+    locked: false,
+    zIndex,
+    children: [],
+    parent: targetContainerId,
+    style: {},
+    data: { src: gifPath },
+  };
+
+  addComponent(gifComponent);
+};
+
+/**
  * 创建3D组件的统一函数
  */
 export const create3DComponentAtPosition = (

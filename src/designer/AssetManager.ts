@@ -1091,6 +1091,40 @@ export class AssetManager extends EventEmitter {
     }
 
     /**
+     * 处理获取 GIF 尺寸请求
+     */
+    public handleGetGifSize(
+        gifPath: string,
+        dropPosition: { x: number; y: number },
+        targetContainerId: string,
+        currentFilePath: string | undefined
+    ): void {
+        try {
+            if (!currentFilePath) {
+                return;
+            }
+
+            const projectRoot = ProjectUtils.findProjectRoot(currentFilePath);
+            if (!projectRoot) {
+                return;
+            }
+
+            const absolutePath = path.join(projectRoot, gifPath);
+            const imageSize = this.getImageSize(absolutePath);
+
+            this._panel.webview.postMessage({
+                command: 'createGifComponent',
+                gifPath,
+                dropPosition,
+                targetContainerId,
+                imageSize
+            });
+        } catch (error) {
+            logger.error(`[AssetManager] 获取 GIF 尺寸失败: ${error}`);
+        }
+    }
+
+    /**
      * 处理获取图片尺寸并更新现有组件
      */
     public handleGetImageSizeForComponent(

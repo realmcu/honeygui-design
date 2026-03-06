@@ -961,6 +961,8 @@ static void ${component.id}_breath_anim_cb(void *p)
         return enableScroll ? 'gui_scroll_text_t' : 'gui_text_t';
       case 'hg_image':
         return 'gui_img_t';
+      case 'hg_gif':
+        return 'gui_gif_t';
       case 'hg_window':
         return 'gui_win_t';
       case 'hg_list':

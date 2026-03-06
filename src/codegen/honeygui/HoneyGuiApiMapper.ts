@@ -108,6 +108,15 @@ export class HoneyGuiApiMapper {
       includeHeader: 'gui_img.h'
     });
 
+    // GIF 动画
+    this.mappings.set('hg_gif', {
+      componentType: 'hg_gif',
+      createFunction: 'gui_gif_create_from_fs',
+      propertySetters: [],
+      eventHandlers: [],
+      includeHeader: 'gui_gif.h'
+    });
+
     // 输入框
     this.mappings.set('hg_input', {
       componentType: 'hg_input',

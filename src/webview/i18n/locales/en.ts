@@ -38,6 +38,7 @@ const en = {
   'Rectangle': 'Rectangle',
   'SVG': 'SVG',
   'Lottie Animation': 'Lottie Animation',
+  'GIF Animation': 'GIF Animation',
   'Glass Effect': 'Glass Effect',
 
   // Property labels
@@ -87,8 +88,10 @@ const en = {
   'Render Mode': 'Render Mode',
   'Placeholder': 'Placeholder',
   'Image Path': 'Image Path',
+  'GIF Path': 'GIF Path',
   'Select Image File': 'Select Image File',
   'Visible': 'Visible',
+  'High Quality': 'High Quality',
   'Checked': 'Checked',
   'Entry View': 'Entry View',
   'Show Background': 'Show Background',

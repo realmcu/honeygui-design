@@ -11,6 +11,7 @@ import { ProgressBarWidget } from './ProgressBarWidget';
 import { SliderWidget } from './SliderWidget';
 import { ContainerWidget } from './ContainerWidget';
 import { ImageWidget } from './ImageWidget';
+import { GifWidget } from './GifWidget';
 import { ListWidget } from './ListWidget';
 import { ListItemWidget } from './ListItemWidget';
 import { VideoWidget } from './VideoWidget';
@@ -42,6 +43,7 @@ export const widgetRegistry: Record<string, React.FC<WidgetProps>> = {
   hg_view: ContainerWidget,
   hg_window: ContainerWidget,
   hg_image: ImageWidget,
+  hg_gif: GifWidget,
   hg_canvas: CanvasWidget,
   hg_list: ListWidget,
   hg_list_item: ListItemWidget,
