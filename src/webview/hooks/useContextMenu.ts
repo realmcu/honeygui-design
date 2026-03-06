@@ -27,6 +27,7 @@ export function useContextMenu() {
     e.preventDefault();
     e.stopPropagation();
     
+    // 直接使用鼠标位置，让 ContextMenu 组件来处理位置调整
     setMenuState({
       visible: true,
       x: e.clientX,
