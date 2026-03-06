@@ -625,7 +625,7 @@ export class HmlParser {
       // 窗口属性
       'showBackground',
       // 列表属性
-      'itemWidth', 'itemHeight', 'direction', 'style', 'space', 'cardStackLocation',
+      'itemWidth', 'itemHeight', 'direction', 'style', 'space', 'cardStackLocation', 'circleRadius',
       // 图像变换属性
       'transform',
       // 文本样式属性

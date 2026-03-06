@@ -26,6 +26,9 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
   const offset = (component.data as any)?.offset ?? 0;
   const outScope = (component.data as any)?.outScope ?? 0;
   const cardStackLocation = (component.style as any)?.cardStackLocation ?? 0;
+  // 圆环半径：默认值根据方向决定（纵向=宽度，横向=高度）
+  const defaultCircleRadius = direction === 'VERTICAL' ? component.position.width : component.position.height;
+  const circleRadius = (component.style as any)?.circleRadius ?? defaultCircleRadius;
 
   // 屏幕尺寸限制
   const maxWidth = canvasSize.width;
@@ -57,6 +60,10 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
         ...component.style,
         itemWidth: newPosition.width,
       };
+      // 如果当前样式是 LIST_CIRCLE 且圆环半径未自定义，则重置为 undefined 让其使用新的默认值
+      if (style === 'LIST_CIRCLE' && (component.style as any)?.circleRadius === undefined) {
+        finalUpdates.style.circleRadius = undefined;
+      }
     }
 
     // 水平方向时，列表高度改变需要同步项高度
@@ -65,6 +72,10 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
         ...component.style,
         itemHeight: newPosition.height,
       };
+      // 如果当前样式是 LIST_CIRCLE 且圆环半径未自定义，则重置为 undefined 让其使用新的默认值
+      if (style === 'LIST_CIRCLE' && (component.style as any)?.circleRadius === undefined) {
+        finalUpdates.style.circleRadius = undefined;
+      }
     }
 
     onUpdate(finalUpdates);
@@ -83,9 +94,17 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
       if (value === 'VERTICAL') {
         // 切换到垂直方向，项宽度与列表宽度一致
         updates.style.itemWidth = component.position.width;
+        // 如果当前样式是 LIST_CIRCLE 且圆环半径未自定义，则重置为 undefined 让其使用新的默认值
+        if (style === 'LIST_CIRCLE' && (component.style as any)?.circleRadius === undefined) {
+          updates.style.circleRadius = undefined;
+        }
       } else {
         // 切换到水平方向，项高度与列表高度一致
         updates.style.itemHeight = component.position.height;
+        // 如果当前样式是 LIST_CIRCLE 且圆环半径未自定义，则重置为 undefined 让其使用新的默认值
+        if (style === 'LIST_CIRCLE' && (component.style as any)?.circleRadius === undefined) {
+          updates.style.circleRadius = undefined;
+        }
       }
     }
 
@@ -352,6 +371,21 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
                   />
                   <div style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '4px' }}>
                     {t('Card stack distance from')}{direction === 'VERTICAL' ? t('bottom') : t('right')}
+                  </div>
+                </div>
+              )}
+
+              {/* LIST_CIRCLE 样式特有属性：圆环半径 */}
+              {style === 'LIST_CIRCLE' && (
+                <div className="property-item">
+                  <label>{t('Circle Radius')}</label>
+                  <PropertyEditor
+                    type="number"
+                    value={circleRadius}
+                    onChange={(value) => handleStyleChange('circleRadius', value)}
+                  />
+                  <div style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '4px' }}>
+                    {t('Default')}: {defaultCircleRadius} ({direction === 'VERTICAL' ? t('Width') : t('Height')})
                   </div>
                 </div>
               )}

@@ -105,6 +105,8 @@ const en = {
   'Direction': 'Direction',
   'Style': 'Style',
   'Stack Location Distance': 'Stack Location Distance',
+  'Circle Radius': 'Circle Radius',
+  'Default': 'Default',
   'Item Count': 'Item Count',
   'Auto Align': 'Auto Align',
   'Inertia Scroll': 'Inertia Scroll',

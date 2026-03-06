@@ -103,6 +103,10 @@ export class ListGenerator implements ComponentCodeGenerator {
       const outScope = component.data?.outScope ?? 0;
       const style = component.style?.style ?? 'LIST_CLASSIC';
       const cardStackLocation = component.style?.cardStackLocation ?? 0;
+      // 圆环半径：默认值根据方向决定（纵向=宽度，横向=高度）
+      const direction = component.style?.direction ?? 'VERTICAL';
+      const defaultCircleRadius = direction === 'VERTICAL' ? component.position.width : component.position.height;
+      const circleRadius = component.style?.circleRadius ?? defaultCircleRadius;
       const enableAreaDisplay = component.data?.enableAreaDisplay ?? false;
 
       // 1. 条件生成 gui_list_set_auto_align()（仅当 autoAlign 为 true）
@@ -137,7 +141,12 @@ export class ListGenerator implements ComponentCodeGenerator {
         code += `${indentStr}gui_list_set_card_stack_location(${component.id}, ${cardStackLocation});\n`;
       }
 
-      // 7. 条件生成 gui_list_enable_area_display()（仅当 enableAreaDisplay 为 true）
+      // 7. LIST_CIRCLE 样式特有：设置圆环半径（总是调用，使用默认值或用户设置值）
+      if (style === 'LIST_CIRCLE') {
+        code += `${indentStr}gui_list_set_circle_radius(${component.id}, ${circleRadius});\n`;
+      }
+
+      // 8. 条件生成 gui_list_enable_area_display()（仅当 enableAreaDisplay 为 true）
       if (enableAreaDisplay === true) {
         code += `${indentStr}gui_list_enable_area_display(${component.id}, true);\n`;
       }

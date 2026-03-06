@@ -105,6 +105,8 @@ const zhCN = {
   'Direction': '方向',
   'Style': '样式',
   'Stack Location Distance': '堆叠位置距离',
+  'Circle Radius': '圆环半径',
+  'Default': '默认',
   'Item Count': '项数量',
   'Auto Align': '自动对齐',
   'Inertia Scroll': '惯性滚动',
