@@ -1608,6 +1608,12 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       const [moved] = reordered.splice(currentIndex, 1);
       reordered.splice(newIndex, 0, moved);
       
+      // 更新重排后的同级组件的 zIndex（按新顺序分配 zIndex）
+      const reorderedWithZIndex = reordered.map((sibling, index) => ({
+        ...sibling,
+        zIndex: index
+      }));
+      
       // 重建整个 components 数组，保持新的顺序
       const siblingIds = new Set(siblings.map(s => s.id));
       const newComponents: typeof state.components = [];
@@ -1615,9 +1621,9 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       
       for (const comp of state.components) {
         if (siblingIds.has(comp.id)) {
-          // 遇到第一个同级组件时，插入所有重排后的同级组件
+          // 遇到第一个同级组件时，插入所有重排后的同级组件（已更新 zIndex）
           if (!siblingsInserted) {
-            newComponents.push(...reordered);
+            newComponents.push(...reorderedWithZIndex);
             siblingsInserted = true;
           }
           // 跳过原来的同级组件（已在上面插入）
@@ -1626,7 +1632,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
           if (comp.id === parentId) {
             newComponents.push({
               ...comp,
-              children: reordered.map(c => c.id)
+              children: reorderedWithZIndex.map(c => c.id)
             });
           } else {
             newComponents.push(comp);
