@@ -196,57 +196,105 @@ export class VectorFontGenerator extends FontGenerator {
    * @param outline - Glyph outline from font parser
    * @returns Vector glyph data
    */
-  private async convertOutlineToVectorData(outline: GlyphOutline): Promise<VectorGlyphData> {
-    const { boundingBox, advanceWidth, contours } = outline;
-    
-    // Apply Y-axis flip to match C++ stbtt_GetGlyphBitmapBox behavior
-    // C++: iy0 = floor(-y1), iy1 = ceil(-y0)
-    const sx0 = Math.floor(boundingBox.x1);
-    const sy0 = Math.floor(-boundingBox.y2);  // Negate y2 (top)
-    const sx1 = Math.ceil(boundingBox.x2);
-    const sy1 = Math.ceil(-boundingBox.y1);   // Negate y1 (bottom)
-    
-    // Step 1: Flatten curves to line segments
-    const flattenedContours = contours.map(contour => this.flattenContour(contour));
-    
-    // Filter out invalid contours (less than 3 points)
-    const processedContours = flattenedContours.filter(c => c.length >= 3);
-    
-    // Prepare winding data
-    const windingCount = processedContours.length;
-    const windingLengths: number[] = [];
-    const windings: number[] = [];
-    
-    // Process each contour (winding)
-    for (const contour of processedContours) {
-      windingLengths.push(contour.length);
-      
-      // Add all points from this contour
-      for (const point of contour) {
-        windings.push(point.x);
-        windings.push(point.y);
+  /**
+     * Convert glyph outline to vector glyph data format
+     * 
+     * IMPORTANT: C++ uses stbtt_GetGlyphBitmapBox which flips Y axis:
+     * - iy0 = floor(-y1)  (negate and swap)
+     * - iy1 = ceil(-y0)
+     * 
+     * Process:
+     * 1. Flatten Bezier curves to line segments
+     * 2. Remove overlapping contours (for fonts with overlapping outlines)
+     * 3. Convert to binary format
+     * 
+     * @param outline - Glyph outline from font parser
+     * @returns Vector glyph data
+     */
+    private async convertOutlineToVectorData(outline: GlyphOutline): Promise<VectorGlyphData> {
+      const { boundingBox, advanceWidth, contours } = outline;
+
+      // Apply Y-axis flip to match C++ stbtt_GetGlyphBitmapBox behavior
+      // C++: iy0 = floor(-y1), iy1 = ceil(-y0)
+      const sx0 = Math.floor(boundingBox.x1);
+      const sy0 = Math.floor(-boundingBox.y2);  // Negate y2 (top)
+      const sx1 = Math.ceil(boundingBox.x2);
+      const sy1 = Math.ceil(-boundingBox.y1);   // Negate y1 (bottom)
+
+      // Calculate flatness tolerance to match C++ stbtt_FlattenCurves behavior
+      // C++: flatness = 1.0f / (scale * renderMode)
+      // where scale = stbtt_ScaleForPixelHeight = fontSize / (ascent - descent)
+      const flatness = this.calculateFlatness();
+
+      // Step 1: Flatten curves to line segments
+      const flattenedContours = contours.map(contour => this.flattenContour(contour, flatness));
+
+      // Filter out invalid contours (less than 3 points)
+      const processedContours = flattenedContours.filter(c => c.length >= 3);
+
+      // Prepare winding data
+      const windingCount = processedContours.length;
+      const windingLengths: number[] = [];
+      const windings: number[] = [];
+
+      // Process each contour (winding)
+      for (const contour of processedContours) {
+        windingLengths.push(contour.length);
+
+        // Add all points from this contour
+        for (const point of contour) {
+          windings.push(point.x);
+          windings.push(point.y);
+        }
       }
+
+      return {
+        sx0,
+        sy0,
+        sx1,
+        sy1,
+        advance: advanceWidth,
+        windingCount,
+        windingLengths,
+        windings
+      };
+    }
+
+  /**
+   * Calculate flatness tolerance to match C++ stbtt_FlattenCurves behavior
+   * 
+   * C++ uses: flatness = 1.0f / (scale * renderMode)
+   * where scale = stbtt_ScaleForPixelHeight = fontSize / (ascent - descent)
+   * 
+   * Since vector fonts store coordinates in original font units (no scaling),
+   * the flatness must account for the font's coordinate space.
+   * A larger flatness value means fewer line segments (coarser approximation).
+   * 
+   * @returns Flatness tolerance value
+   */
+  private calculateFlatness(): number {
+    if (!this.parsedFont) {
+      return 1.0; // Fallback
     }
     
-    return {
-      sx0,
-      sy0,
-      sx1,
-      sy1,
-      advance: advanceWidth,
-      windingCount,
-      windingLengths,
-      windings
-    };
+    const { ascent, descent } = this.parsedFont.metrics;
+    const fontSize = this.config.fontSize;
+    const renderMode = this.config.renderMode;
+    
+    // C++: scale = stbtt_ScaleForPixelHeight = fontSize / (ascent - descent)
+    const scale = fontSize / (ascent - descent);
+    
+    // C++: flatness = 1.0f / (scale * renderMode)
+    return 1.0 / (scale * renderMode);
   }
-  
+
   /**
    * Flatten a contour with Bezier curves to line segments
    * 
    * @param contour - Contour with on-curve and off-curve points
    * @returns Flattened contour with only line segment endpoints
    */
-  private flattenContour(contour: ContourPoint[]): Array<{x: number, y: number}> {
+  private flattenContour(contour: ContourPoint[], tolerance: number = 1.0): Array<{x: number, y: number}> {
     if (contour.length < 2) {
       return contour.map(p => ({ x: p.x, y: p.y }));
     }
@@ -283,10 +331,10 @@ export class VectorFontGenerator extends FontGenerator {
         // Flatten the curve(s)
         if (controlPoints.length === 1) {
           // Quadratic Bezier
-          this.flattenQuadratic(start, controlPoints[0], end, result);
+          this.flattenQuadratic(start, controlPoints[0], end, result, tolerance);
         } else if (controlPoints.length === 2) {
           // Cubic Bezier
-          this.flattenCubic(start, controlPoints[0], controlPoints[1], end, result);
+          this.flattenCubic(start, controlPoints[0], controlPoints[1], end, result, tolerance);
         } else {
           // Multiple control points - split into quadratics with implied on-curve points
           let currentStart = start;
@@ -297,11 +345,11 @@ export class VectorFontGenerator extends FontGenerator {
               x: Math.round((cp.x + nextCp.x) / 2),
               y: Math.round((cp.y + nextCp.y) / 2)
             };
-            this.flattenQuadratic(currentStart, cp, impliedEnd, result);
+            this.flattenQuadratic(currentStart, cp, impliedEnd, result, tolerance);
             currentStart = impliedEnd;
           }
           // Last segment
-          this.flattenQuadratic(currentStart, controlPoints[controlPoints.length - 1], end, result);
+          this.flattenQuadratic(currentStart, controlPoints[controlPoints.length - 1], end, result, tolerance);
         }
         
         // Add end point if on-curve
