@@ -103,14 +103,10 @@ export class ImageGenerator implements ComponentCodeGenerator {
 
       // 2. 设置变换中心点（focus）
       if (hasFocusSet) {
-        // 用户设置了变换中心（至少一个轴）
-        const focusXValue = hasFocusX 
-          ? `${transform.focusX!.toFixed(1)}f` 
-          : 'gui_img_get_width((gui_img_t *)' + component.id + ') / 2.0f';
-        const focusYValue = hasFocusY 
-          ? `${transform.focusY!.toFixed(1)}f` 
-          : 'gui_img_get_height((gui_img_t *)' + component.id + ') / 2.0f';
-        code += `${indentStr}gui_img_set_focus((gui_img_t *)${component.id}, ${focusXValue}, ${focusYValue});\n`;
+        // 用户显式设置了变换中心
+        const focusX = transform.focusX!.toFixed(1);
+        const focusY = transform.focusY!.toFixed(1);
+        code += `${indentStr}gui_img_set_focus((gui_img_t *)${component.id}, ${focusX}f, ${focusY}f);\n`;
       } else if (hasRotation) {
         // 有旋转但没有设置 focus，自动设置为图片中心
         code += `${indentStr}gui_img_set_focus((gui_img_t *)${component.id}, gui_img_get_width((gui_img_t *)${component.id}) / 2.0f, gui_img_get_height((gui_img_t *)${component.id}) / 2.0f);\n`;
