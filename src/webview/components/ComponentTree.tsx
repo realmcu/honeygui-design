@@ -338,6 +338,7 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
+      data-component-id={componentId}
     >
       <div
         className="tree-node-content"
@@ -392,7 +393,8 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
 };
 
 const ComponentTree: React.FC<{ onContextMenu?: (e: React.MouseEvent, componentId: string) => void }> = ({ onContextMenu }) => {
-  const { components, allHmlFiles, currentFilePath, vscodeAPI } = useDesignerStore();
+  const { components, allHmlFiles, currentFilePath, vscodeAPI, selectedComponent } = useDesignerStore();
+  const treeContentRef = React.useRef<HTMLDivElement>(null);
 
   // 获取根组件并按 zIndex 排序（确保组件树显示顺序和层级一致）
   const rootComponents = components
@@ -413,6 +415,23 @@ const ComponentTree: React.FC<{ onContextMenu?: (e: React.MouseEvent, componentI
     }
   };
 
+  // 当选中组件变化时，滚动到对应的节点
+  React.useEffect(() => {
+    if (selectedComponent && treeContentRef.current) {
+      // 延迟执行，确保 DOM 已更新
+      setTimeout(() => {
+        const selectedNode = treeContentRef.current?.querySelector(`[data-component-id="${selectedComponent}"]`);
+        if (selectedNode) {
+          selectedNode.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest',
+            inline: 'nearest'
+          });
+        }
+      }, 100);
+    }
+  }, [selectedComponent]);
+
   return (
     <div className="component-tree">
       {allHmlFiles && allHmlFiles.length > 1 && (
@@ -430,7 +449,7 @@ const ComponentTree: React.FC<{ onContextMenu?: (e: React.MouseEvent, componentI
           </select>
         </div>
       )}
-      <div className="tree-content">
+      <div className="tree-content" ref={treeContentRef}>
         {rootComponents.length === 0 ? (
           <div className="tree-empty">
             {t('No components')}
