@@ -116,6 +116,7 @@ const en = {
   'Loop Scroll': 'Loop Scroll',
   'Show Scrollbar': 'Show Scrollbar',
   'Enable Area Display': 'Enable Area Display',
+  'Keep Note Alive': 'Keep Note Alive',
   'Initial Offset': 'Initial Offset',
   'Out of Scope': 'Out of Scope',
   'Video Path': 'Video Path',

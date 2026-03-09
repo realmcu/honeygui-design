@@ -151,6 +151,12 @@ export class ListGenerator implements ComponentCodeGenerator {
         code += `${indentStr}gui_list_enable_area_display(${component.id}, true);\n`;
       }
 
+      // 9. 条件生成 gui_list_keep_note_alive()（仅当 keepNoteAlive 为 true）
+      const keepNoteAlive = component.data?.keepNoteAlive ?? false;
+      if (keepNoteAlive === true) {
+        code += `${indentStr}gui_list_keep_note_alive(${component.id}, true);\n`;
+      }
+
       return code;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);

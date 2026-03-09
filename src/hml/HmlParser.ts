@@ -600,6 +600,7 @@ export class HmlParser {
     if (data.loop === undefined) data.loop = false;
     if (data.createBar === undefined) data.createBar = false;
     if (data.enableAreaDisplay === undefined) data.enableAreaDisplay = false;
+    if (data.keepNoteAlive === undefined) data.keepNoteAlive = false;
   }
 
   /**
@@ -649,7 +650,7 @@ export class HmlParser {
       // 列表数据属性
       'noteNum',
       // 列表通用属性
-      'autoAlign', 'inertia', 'loop', 'createBar', 'enableAreaDisplay', 'offset', 'outScope',
+      'autoAlign', 'inertia', 'loop', 'createBar', 'enableAreaDisplay', 'keepNoteAlive', 'offset', 'outScope',
       // 文本数据属性
       'fontFile', 'timeFormat',
       // 滚动文本属性
@@ -716,8 +717,8 @@ export class HmlParser {
         style[key] = value;
       } else if (dataProps.has(key)) {
         let value = attributes[key];
-        // 布尔值转换（loop, createBar, autoAlign, inertia, enableAreaDisplay, toggleMode, movable, click, timerEnabled, timerReload, timerStopOnComplete, enableScroll, scrollReverse, highQuality, needClip, isTimerLabel, timerAutoStart 等）
-        if (['loop', 'createBar', 'autoAlign', 'inertia', 'enableAreaDisplay', 'toggleMode', 'movable', 'click', 'timerEnabled', 'timerReload', 'timerStopOnComplete', 'enableScroll', 'scrollReverse', 'highQuality', 'needClip', 'isTimerLabel', 'timerAutoStart'].includes(key)) {
+        // 布尔值转换（loop, createBar, autoAlign, inertia, enableAreaDisplay, keepNoteAlive, toggleMode, movable, click, timerEnabled, timerReload, timerStopOnComplete, enableScroll, scrollReverse, highQuality, needClip, isTimerLabel, timerAutoStart 等）
+        if (['loop', 'createBar', 'autoAlign', 'inertia', 'enableAreaDisplay', 'keepNoteAlive', 'toggleMode', 'movable', 'click', 'timerEnabled', 'timerReload', 'timerStopOnComplete', 'enableScroll', 'scrollReverse', 'highQuality', 'needClip', 'isTimerLabel', 'timerAutoStart'].includes(key)) {
           value = value === 'true' || value === true;
         }
         // 数字类型属性转换（包括 opacity, timerInterval, timerDuration, timerInitialValue）

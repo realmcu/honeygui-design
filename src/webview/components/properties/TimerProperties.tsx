@@ -1342,7 +1342,7 @@ const TimerActionEditor: React.FC<{
               type="number"
               min="0"
               max="255"
-              value={action.from || 255}
+              value={action.from ?? 255}
               onChange={(e) => {
                 let val = Number(e.target.value);
                 if (isNaN(val)) val = 255;
@@ -1374,7 +1374,7 @@ const TimerActionEditor: React.FC<{
               type="number"
               min="0"
               max="255"
-              value={action.to || 128}
+              value={action.to ?? 128}
               onChange={(e) => {
                 let val = Number(e.target.value);
                 if (isNaN(val)) val = 128;

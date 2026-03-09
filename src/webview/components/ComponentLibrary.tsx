@@ -297,6 +297,7 @@ const componentDefinitions: ComponentDefinition[] = [
       { name: 'loop', label: 'Loop Scroll', type: 'boolean', defaultValue: false, group: 'general' },
       { name: 'createBar', label: 'Show Scrollbar', type: 'boolean', defaultValue: false, group: 'general' },
       { name: 'enableAreaDisplay', label: 'Enable Area Display', type: 'boolean', defaultValue: false, group: 'general' },
+      { name: 'keepNoteAlive', label: 'Keep Note Alive', type: 'boolean', defaultValue: false, group: 'general' },
       { name: 'offset', label: 'Initial Offset', type: 'number', defaultValue: 0, group: 'data' },
       { name: 'outScope', label: 'Out of Scope', type: 'number', defaultValue: 0, group: 'data' },
     ],

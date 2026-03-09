@@ -115,6 +115,7 @@ const zhCN = {
   'Inertia Scroll': '惯性滚动',
   'Loop Scroll': '循环滚动',
   'Enable Area Display': '启用区域显示',
+  'Keep Note Alive': '表格常驻内存',
   'Show Scrollbar': '显示滚动条',
   'Initial Offset': '初始偏移',
   'Out of Scope': '超出范围',

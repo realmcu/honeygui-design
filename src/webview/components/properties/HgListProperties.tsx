@@ -22,6 +22,7 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
   const inertia = (component.data as any)?.inertia ?? true;
   const loop = (component.data as any)?.loop ?? false;
   const enableAreaDisplay = (component.data as any)?.enableAreaDisplay ?? false;
+  const keepNoteAlive = (component.data as any)?.keepNoteAlive ?? false;
   const createBar = (component.data as any)?.createBar ?? false;
   const offset = (component.data as any)?.offset ?? 0;
   const outScope = (component.data as any)?.outScope ?? 0;
@@ -477,6 +478,16 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
                   type="boolean"
                   value={enableAreaDisplay}
                   onChange={(value) => handleDataChange('enableAreaDisplay', value)}
+                />
+              </div>
+
+              {/* 表格常驻内存 */}
+              <div className="property-item">
+                <label>{t('Keep Note Alive')}</label>
+                <PropertyEditor
+                  type="boolean"
+                  value={keepNoteAlive}
+                  onChange={(value) => handleDataChange('keepNoteAlive', value)}
                 />
               </div>
 
