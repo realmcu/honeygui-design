@@ -910,6 +910,8 @@ static void ${component.id}_breath_anim_cb(void *p)
     switch (timeFormat) {
       case 'HH:mm:ss': return 10;
       case 'HH:mm': return 10;
+      case 'HH': return 4;
+      case 'mm': return 4;
       case 'HH:mm-split': return 10;  // 拆分时间格式，需要访问 str+3，所以需要足够空间
       case 'YYYY-MM-DD': return 12;
       case 'YYYY-MM-DD HH:mm:ss': return 22;

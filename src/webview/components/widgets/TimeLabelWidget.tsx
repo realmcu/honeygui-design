@@ -26,6 +26,8 @@ export const TimeLabelWidget: React.FC<WidgetProps> = ({ component, style, handl
     switch (format) {
       case 'HH:mm:ss': return `${hour}:${minute}:${second}`;
       case 'HH:mm': return `${hour}:${minute}`;
+      case 'HH': return `${hour}`;
+      case 'mm': return `${minute}`;
       case 'HH:mm-split': return `${hour}:${minute}`;
       case 'YYYY-MM-DD': return `${year}-${month}-${day}`;
       case 'YYYY-MM-DD HH:mm:ss': return `${year}-${month}-${day} ${hour}:${minute}:${second}`;

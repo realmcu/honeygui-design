@@ -243,6 +243,9 @@ export class ViewGenerator implements ComponentCodeGenerator {
       case 'HH:mm':
       case 'MM-DD HH:mm':
         return 30000; // 只有时分：30秒
+      case 'HH':
+      case 'mm':
+        return 30000; // 只有小时或分钟：30秒
       case 'YYYY-MM-DD':
         return 60000; // 只有日期：60秒
       default:
@@ -265,6 +268,16 @@ export class ViewGenerator implements ComponentCodeGenerator {
         return {
           format: '%02d:%02d',
           args: 't->tm_hour, t->tm_min'
+        };
+      case 'HH':
+        return {
+          format: '%02d',
+          args: 't->tm_hour'
+        };
+      case 'mm':
+        return {
+          format: '%02d',
+          args: 't->tm_min'
         };
       case 'YYYY-MM-DD':
         return {

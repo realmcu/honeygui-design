@@ -1335,7 +1335,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                     type="select"
                     value={(component.data as any)?.timeFormat || 'HH:mm:ss'}
                     onChange={(value) => handleDataChange('timeFormat', value)}
-                    options={['HH:mm:ss', 'HH:mm', 'HH:mm-split', 'YYYY-MM-DD', 'YYYY-MM-DD HH:mm:ss', 'MM-DD HH:mm']}
+                    options={['HH:mm:ss', 'HH:mm', 'HH', 'mm', 'HH:mm-split', 'YYYY-MM-DD', 'YYYY-MM-DD HH:mm:ss', 'MM-DD HH:mm']}
                   />
                 </div>
               </div>

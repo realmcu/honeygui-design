@@ -1284,6 +1284,8 @@ void ${callback}(void *obj)\n{\n`;
     switch (timeFormat) {
       case 'HH:mm:ss': return 10;  // "HH:MM:SS\0" = 9
       case 'HH:mm': return 10;      // "HH:MM\0" = 6，留余量
+      case 'HH': return 4;           // "HH\0" = 3，留余量
+      case 'mm': return 4;           // "mm\0" = 3，留余量
       case 'HH:mm-split': return 10; // 拆分时间格式，与 HH:mm 相同，需要访问 str+3
       case 'YYYY-MM-DD': return 12; // "YYYY-MM-DD\0" = 11
       case 'YYYY-MM-DD HH:mm:ss': return 22; // "YYYY-MM-DD HH:MM:SS\0" = 20
@@ -1319,6 +1321,12 @@ void ${callback}(void *obj)\n{\n`;
       case 'HH:mm':
       case 'HH:mm-split':  // 拆分时间格式使用相同的格式字符串
         formatStr = '%02d:%02d';
+        break;
+      case 'HH':
+        formatStr = '%02d';
+        break;
+      case 'mm':
+        formatStr = '%02d';
         break;
       case 'YYYY-MM-DD':
         formatStr = '%04d-%02d-%02d';
@@ -1376,6 +1384,10 @@ void ${callback}(void *obj)\n{\n`;
         code += `    sprintf(${componentId}_time_str, "${formatStr}", t->tm_hour, t->tm_min, t->tm_sec);\n`;
       } else if (timeFormat === 'HH:mm') {
         code += `    sprintf(${componentId}_time_str, "${formatStr}", t->tm_hour, t->tm_min);\n`;
+      } else if (timeFormat === 'HH') {
+        code += `    sprintf(${componentId}_time_str, "${formatStr}", t->tm_hour);\n`;
+      } else if (timeFormat === 'mm') {
+        code += `    sprintf(${componentId}_time_str, "${formatStr}", t->tm_min);\n`;
       } else if (timeFormat === 'YYYY-MM-DD') {
         code += `    sprintf(${componentId}_time_str, "${formatStr}", t->tm_year + 1900, t->tm_mon + 1, t->tm_mday);\n`;
       } else if (timeFormat === 'YYYY-MM-DD HH:mm:ss') {
