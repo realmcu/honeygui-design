@@ -92,7 +92,6 @@ export const calculateComponentStyle = (
     
     const hasRotation = t.rotation !== undefined && t.rotation !== 0;
     const hasScale = (t.scaleX !== undefined && t.scaleX !== 1.0) || (t.scaleY !== undefined && t.scaleY !== 1.0);
-    const hasSkew = (t.skewX !== undefined && t.skewX !== 0) || (t.skewY !== undefined && t.skewY !== 0);
     const hasFocusX = t.focusX !== undefined;
     const hasFocusY = t.focusY !== undefined;
     const hasFocus = hasFocusX || hasFocusY;
@@ -105,43 +104,44 @@ export const calculateComponentStyle = (
     
     const { width, height } = component.position;
     
-    // 判断是否需要应用 focus（只有旋转或倾斜时才需要）
-    const needFocus = hasRotation || hasSkew;
+    // 判断是否需要应用 focus（有旋转或显式设置了 focus）
+    const needFocus = hasRotation || hasFocus;
     
     if (needFocus) {
-      // 有 focus 设置或有旋转/倾斜
+      // 有 focus 设置或有旋转
       const focusX = hasFocusX ? t.focusX! : width / 2;
       const focusY = hasFocusY ? t.focusY! : height / 2;
       
       // CSS transform 从右到左执行，所以顺序是：
       
-      // 最后：补偿平移 + 用户平移
-      // 补偿平移用于抵消 focus 导致的偏移，让预览时图片保持在原位
-      let totalTx = focusX; // 补偿 focus 的偏移
-      let totalTy = focusY;
+      // 最后：平移
+      // 如果用户设置了非零的 translate，使用用户值（替代补偿值）
+      // 否则，使用补偿值来抵消 focus 导致的偏移，让预览时图片保持在原位
+      let totalTx: number;
+      let totalTy: number;
       
-      // 如果有缩放，补偿值需要乘以缩放系数
-      if (hasScale) {
-        const scaleX = t.scaleX ?? 1.0;
-        const scaleY = t.scaleY ?? 1.0;
-        totalTx = focusX * scaleX;
-        totalTy = focusY * scaleY;
-      }
+      // 检查是否有非零的 translate（0 当作未设置）
+      const hasNonZeroTranslate = (t.translateX ?? 0) !== 0 || (t.translateY ?? 0) !== 0;
       
-      // 加上用户的平移
-      if (t.translateX !== undefined || t.translateY !== undefined) {
-        totalTx += (t.translateX ?? 0);
-        totalTy += (t.translateY ?? 0);
+      if (hasNonZeroTranslate) {
+        // 用户设置了非零的 translate，使用用户值
+        totalTx = t.translateX ?? 0;
+        totalTy = t.translateY ?? 0;
+      } else {
+        // 没有用户 translate（或为 0），使用补偿值
+        totalTx = focusX;
+        totalTy = focusY;
+        
+        // 如果有缩放，补偿值需要乘以缩放系数
+        if (hasScale) {
+          const scaleX = t.scaleX ?? 1.0;
+          const scaleY = t.scaleY ?? 1.0;
+          totalTx = focusX * scaleX;
+          totalTy = focusY * scaleY;
+        }
       }
       
       transforms.push(`translate(${totalTx}px, ${totalTy}px)`);
-      
-      // 倾斜
-      if (hasSkew) {
-        const skewX = t.skewX ?? 0;
-        const skewY = t.skewY ?? 0;
-        transforms.push(`skew(${skewX}deg, ${skewY}deg)`);
-      }
       
       // 旋转
       if (hasRotation) {
@@ -160,18 +160,20 @@ export const calculateComponentStyle = (
     } else {
       // 没有 focus 设置，也没有旋转/倾斜，只有缩放和/或平移
       
+      // 平移（先执行，这样不会被缩放影响）
+      // 只有非零的 translate 才生成（0 当作未设置）
+      const hasNonZeroTranslate = (t.translateX ?? 0) !== 0 || (t.translateY ?? 0) !== 0;
+      if (hasNonZeroTranslate) {
+        const tx = t.translateX ?? 0;
+        const ty = t.translateY ?? 0;
+        transforms.push(`translate(${tx}px, ${ty}px)`);
+      }
+      
       // 缩放（以左上角为基准，不产生偏移）
       if (hasScale) {
         const scaleX = t.scaleX ?? 1.0;
         const scaleY = t.scaleY ?? 1.0;
         transforms.push(`scale(${scaleX}, ${scaleY})`);
-      }
-      
-      // 平移
-      if (t.translateX !== undefined || t.translateY !== undefined) {
-        const tx = t.translateX ?? 0;
-        const ty = t.translateY ?? 0;
-        transforms.push(`translate(${tx}px, ${ty}px)`);
       }
     }
     
