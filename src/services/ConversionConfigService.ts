@@ -216,7 +216,7 @@ export class ConversionConfigService {
     
     for (let i = pathParts.length - 1; i >= 0; i--) {
       const parentPath = pathParts.slice(0, i).join('/');
-      const parentSettings = parentPath ? config.items[parentPath] : undefined;
+      const parentSettings = config.items[parentPath];
       
       if (parentSettings && parentSettings.format && parentSettings.format !== 'inherit') {
         inheritedSettings = parentSettings;

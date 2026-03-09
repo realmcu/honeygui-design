@@ -1033,19 +1033,7 @@ Return('objs')
             options.yuvFastlz = resolvedConfig.yuvParams.fastlzSecondary;
         }
         
-        // 如果配置为 adaptive 压缩，使用回退选项或默认不压缩
-        if (resolvedConfig.compression === 'adaptive') {
-            // TODO: 实现自适应压缩选择逻辑
-            // 目前先使用回退选项或不压缩
-            if (fallbackOptions?.compression) {
-                options.compression = fallbackOptions.compression;
-                options.yuvSampleMode = fallbackOptions.yuvSampleMode;
-                options.yuvBlurBits = fallbackOptions.yuvBlurBits;
-                options.yuvFastlz = fallbackOptions.yuvFastlz;
-            } else {
-                options.compression = 'none';
-            }
-        }
+        // adaptive 压缩直接传递，由 ImageConverterService.convert 自动比较 RLE/FastLZ 选最优
         
         return options;
     }
@@ -1221,7 +1209,7 @@ Return('objs')
         const pathParts = normalizedPath.split('/');
         for (let i = pathParts.length - 1; i >= 0; i--) {
             const parentPath = pathParts.slice(0, i).join('/');
-            const parentSettings = parentPath ? config.items[parentPath] : undefined;
+            const parentSettings = config.items[parentPath];
             
             if (parentSettings?.videoFormat && parentSettings.videoFormat !== 'inherit') {
                 return parentSettings.videoFormat.toLowerCase() as 'mjpeg' | 'avi' | 'h264';
@@ -1254,7 +1242,7 @@ Return('objs')
         const pathParts = normalizedPath.split('/');
         for (let i = pathParts.length - 1; i >= 0; i--) {
             const parentPath = pathParts.slice(0, i).join('/');
-            const parentSettings = parentPath ? config.items[parentPath] : undefined;
+            const parentSettings = config.items[parentPath];
             
             if (parentSettings?.videoQuality !== undefined) {
                 return parentSettings.videoQuality;
@@ -1287,7 +1275,7 @@ Return('objs')
         const pathParts = normalizedPath.split('/');
         for (let i = pathParts.length - 1; i >= 0; i--) {
             const parentPath = pathParts.slice(0, i).join('/');
-            const parentSettings = parentPath ? config.items[parentPath] : undefined;
+            const parentSettings = config.items[parentPath];
             
             if (parentSettings?.videoFrameRate !== undefined) {
                 return parentSettings.videoFrameRate;

@@ -5,7 +5,7 @@ import { PixelFormat } from '../../tools/image-converter/types';
 import { RLECompression, FastLzCompression, YUVCompression } from '../../tools/image-converter/compress';
 import { ConversionConfigService, ConversionConfig, TargetFormat, CompressionMethod, YuvBlur } from './ConversionConfigService';
 
-export type CompressionType = 'none' | 'rle' | 'fastlz' | 'yuv';
+export type CompressionType = 'none' | 'rle' | 'fastlz' | 'yuv' | 'adaptive';
 export type YuvSampleMode = 'yuv444' | 'yuv422' | 'yuv411';
 export type YuvBlurBits = 0 | 1 | 2 | 4;
 
@@ -84,6 +84,11 @@ export class ImageConverterService {
                 pixelFormat = mappedFormat !== undefined ? mappedFormat : 'auto';
             }
 
+            // 自适应压缩：分别用 RLE 和 FastLZ 转换，比较文件大小，保留更小的
+            if (opts.compression === 'adaptive') {
+                return await this.convertWithAdaptiveCompression(inputPath, outputPath, pixelFormat, opts);
+            }
+
             // 设置压缩算法
             if (opts.compression && opts.compression !== 'none') {
                 switch (opts.compression) {
@@ -110,6 +115,69 @@ export class ImageConverterService {
         } catch (error: any) {
             return { success: false, inputPath, outputPath, error: error.message };
         }
+    }
+
+    /**
+     * 自适应压缩：分别用 RLE 和 FastLZ 压缩，比较输出文件大小，保留更小的结果
+     * 如果压缩后反而更大，则使用不压缩的版本
+     */
+    private async convertWithAdaptiveCompression(
+        inputPath: string,
+        outputPath: string,
+        pixelFormat: PixelFormat | 'auto',
+        opts: ImageConvertOptions
+    ): Promise<ConvertResult> {
+        const dither = opts.dither;
+        const candidates: { name: string; compressor: any }[] = [
+            { name: 'rle', compressor: new RLECompression() },
+            { name: 'fastlz', compressor: new FastLzCompression() },
+        ];
+
+        // 先生成不压缩的版本作为基准
+        const noCompressPath = outputPath + '.nocompress.tmp';
+        this.converter.setCompressor(undefined);
+        await this.converter.convert(inputPath, noCompressPath, pixelFormat, { dither });
+        let bestPath = noCompressPath;
+        let bestSize = fs.statSync(noCompressPath).size;
+        let bestName = 'none';
+
+        // 依次尝试每种压缩算法
+        for (const candidate of candidates) {
+            const tmpPath = outputPath + `.${candidate.name}.tmp`;
+            try {
+                this.converter.setCompressor(candidate.compressor);
+                await this.converter.convert(inputPath, tmpPath, pixelFormat, { dither });
+                const size = fs.statSync(tmpPath).size;
+                if (size < bestSize) {
+                    // 删除之前的最优临时文件
+                    if (bestPath !== tmpPath && fs.existsSync(bestPath)) {
+                        fs.unlinkSync(bestPath);
+                    }
+                    bestSize = size;
+                    bestPath = tmpPath;
+                    bestName = candidate.name;
+                } else {
+                    // 这个候选不是最优，删除
+                    fs.unlinkSync(tmpPath);
+                }
+            } catch {
+                // 压缩失败，跳过该算法，清理临时文件
+                if (fs.existsSync(tmpPath)) {
+                    fs.unlinkSync(tmpPath);
+                }
+            }
+        }
+
+        // 将最优结果重命名为目标路径
+        if (fs.existsSync(outputPath)) {
+            fs.unlinkSync(outputPath);
+        }
+        fs.renameSync(bestPath, outputPath);
+
+        // 清理可能残留的临时文件
+        this.converter.setCompressor(undefined);
+
+        return { success: true, inputPath, outputPath };
     }
 
     /**
@@ -216,20 +284,7 @@ export class ImageConverterService {
             options.yuvFastlz = resolvedConfig.yuvParams.fastlzSecondary;
         }
         
-        // 如果配置为 adaptive 压缩，使用回退选项或默认不压缩
-        if (resolvedConfig.compression === 'adaptive') {
-            // TODO: 实现自适应压缩选择逻辑
-            // 目前先使用回退选项或不压缩
-            if (fallbackOptions?.compression) {
-                options.compression = fallbackOptions.compression;
-                options.yuvSampleMode = fallbackOptions.yuvSampleMode;
-                options.yuvBlurBits = fallbackOptions.yuvBlurBits;
-                options.yuvFastlz = fallbackOptions.yuvFastlz;
-                options.dither = resolvedConfig.dither !== undefined ? resolvedConfig.dither : fallbackOptions.dither;
-            } else {
-                options.compression = 'none';
-            }
-        }
+        // adaptive 压缩直接传递，由 convert 方法中自动比较 RLE/FastLZ 选最优
         
         return options;
     }
