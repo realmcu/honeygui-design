@@ -24,6 +24,7 @@ import { GlassWidget } from './GlassWidget';
 import { LottieWidget } from './LottieWidget';
 import { CanvasWidget } from './CanvasWidget';
 import { ParticleWidget } from './ParticleWidget';
+import { MapWidget } from './MapWidget';
 
 export { WidgetProps } from './types';
 
@@ -56,4 +57,5 @@ export const widgetRegistry: Record<string, React.FC<WidgetProps>> = {
   hg_glass: GlassWidget,
   hg_lottie: LottieWidget,
   hg_particle: ParticleWidget,
+  hg_map: MapWidget,
 };
