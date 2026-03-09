@@ -300,41 +300,23 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
               <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)' }}>X</label>
-                  <input
+                  <PropertyEditor
                     type="number"
-                    step="0.1"
                     value={transform.scaleX ?? 1.0}
-                    onChange={(e) => {
-                      const val = e.target.value === '' ? 1.0 : parseFloat(e.target.value);
-                      handleTransformChange('scaleX', isNaN(val) ? 1.0 : val);
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '4px 6px',
-                      backgroundColor: 'var(--vscode-input-background)',
-                      color: 'var(--vscode-input-foreground)',
-                      border: '1px solid var(--vscode-input-border)',
-                      borderRadius: '2px',
+                    onChange={(val) => {
+                      const value = val === '' ? 1.0 : parseFloat(val);
+                      handleTransformChange('scaleX', isNaN(value) ? 1.0 : value);
                     }}
                   />
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)' }}>Y</label>
-                  <input
+                  <PropertyEditor
                     type="number"
-                    step="0.1"
                     value={transform.scaleY ?? 1.0}
-                    onChange={(e) => {
-                      const val = e.target.value === '' ? 1.0 : parseFloat(e.target.value);
-                      handleTransformChange('scaleY', isNaN(val) ? 1.0 : val);
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '4px 6px',
-                      backgroundColor: 'var(--vscode-input-background)',
-                      color: 'var(--vscode-input-foreground)',
-                      border: '1px solid var(--vscode-input-border)',
-                      borderRadius: '2px',
+                    onChange={(val) => {
+                      const value = val === '' ? 1.0 : parseFloat(val);
+                      handleTransformChange('scaleY', isNaN(value) ? 1.0 : value);
                     }}
                   />
                 </div>
@@ -344,20 +326,10 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
             {/* 旋转 */}
             <div className="property-item">
               <label>{t('Rotation Angle (°)')}</label>
-              <input
+              <PropertyEditor
                 type="number"
-                step="1"
                 value={transform.rotation ?? 0}
-                onChange={(e) => handleTransformChange('rotation', parseFloat(e.target.value) || 0)}
-                style={{
-                  width: '100%',
-                  padding: '4px 6px',
-                  marginTop: '4px',
-                  backgroundColor: 'var(--vscode-input-background)',
-                  color: 'var(--vscode-input-foreground)',
-                  border: '1px solid var(--vscode-input-border)',
-                  borderRadius: '2px',
-                }}
+                onChange={(value) => handleTransformChange('rotation', parseFloat(value) || 0)}
               />
             </div>
 
@@ -367,36 +339,18 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
               <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)' }}>X</label>
-                  <input
+                  <PropertyEditor
                     type="number"
-                    step="1"
                     value={transform.translateX ?? 0}
-                    onChange={(e) => handleTransformChange('translateX', parseFloat(e.target.value) || 0)}
-                    style={{
-                      width: '100%',
-                      padding: '4px 6px',
-                      backgroundColor: 'var(--vscode-input-background)',
-                      color: 'var(--vscode-input-foreground)',
-                      border: '1px solid var(--vscode-input-border)',
-                      borderRadius: '2px',
-                    }}
+                    onChange={(value) => handleTransformChange('translateX', parseFloat(value) || 0)}
                   />
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)' }}>Y</label>
-                  <input
+                  <PropertyEditor
                     type="number"
-                    step="1"
                     value={transform.translateY ?? 0}
-                    onChange={(e) => handleTransformChange('translateY', parseFloat(e.target.value) || 0)}
-                    style={{
-                      width: '100%',
-                      padding: '4px 6px',
-                      backgroundColor: 'var(--vscode-input-background)',
-                      color: 'var(--vscode-input-foreground)',
-                      border: '1px solid var(--vscode-input-border)',
-                      borderRadius: '2px',
-                    }}
+                    onChange={(value) => handleTransformChange('translateY', parseFloat(value) || 0)}
                   />
                 </div>
               </div>
@@ -408,36 +362,18 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
               <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)' }}>X</label>
-                  <input
+                  <PropertyEditor
                     type="number"
-                    step="1"
                     value={transform.skewX ?? 0}
-                    onChange={(e) => handleTransformChange('skewX', parseFloat(e.target.value) || 0)}
-                    style={{
-                      width: '100%',
-                      padding: '4px 6px',
-                      backgroundColor: 'var(--vscode-input-background)',
-                      color: 'var(--vscode-input-foreground)',
-                      border: '1px solid var(--vscode-input-border)',
-                      borderRadius: '2px',
-                    }}
+                    onChange={(value) => handleTransformChange('skewX', parseFloat(value) || 0)}
                   />
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)' }}>Y</label>
-                  <input
+                  <PropertyEditor
                     type="number"
-                    step="1"
                     value={transform.skewY ?? 0}
-                    onChange={(e) => handleTransformChange('skewY', parseFloat(e.target.value) || 0)}
-                    style={{
-                      width: '100%',
-                      padding: '4px 6px',
-                      backgroundColor: 'var(--vscode-input-background)',
-                      color: 'var(--vscode-input-foreground)',
-                      border: '1px solid var(--vscode-input-border)',
-                      borderRadius: '2px',
-                    }}
+                    onChange={(value) => handleTransformChange('skewY', parseFloat(value) || 0)}
                   />
                 </div>
               </div>
@@ -449,38 +385,18 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
               <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)' }}>X</label>
-                  <input
+                  <PropertyEditor
                     type="number"
-                    step="1"
                     value={transform.focusX ?? ''}
-                    placeholder="auto"
-                    onChange={(e) => handleTransformChange('focusX', e.target.value ? parseFloat(e.target.value) : undefined)}
-                    style={{
-                      width: '100%',
-                      padding: '4px 6px',
-                      backgroundColor: 'var(--vscode-input-background)',
-                      color: 'var(--vscode-input-foreground)',
-                      border: '1px solid var(--vscode-input-border)',
-                      borderRadius: '2px',
-                    }}
+                    onChange={(value) => handleTransformChange('focusX', value ? parseFloat(value) : undefined)}
                   />
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)' }}>Y</label>
-                  <input
+                  <PropertyEditor
                     type="number"
-                    step="1"
                     value={transform.focusY ?? ''}
-                    placeholder="auto"
-                    onChange={(e) => handleTransformChange('focusY', e.target.value ? parseFloat(e.target.value) : undefined)}
-                    style={{
-                      width: '100%',
-                      padding: '4px 6px',
-                      backgroundColor: 'var(--vscode-input-background)',
-                      color: 'var(--vscode-input-foreground)',
-                      border: '1px solid var(--vscode-input-border)',
-                      borderRadius: '2px',
-                    }}
+                    onChange={(value) => handleTransformChange('focusY', value ? parseFloat(value) : undefined)}
                   />
                 </div>
               </div>
@@ -508,42 +424,25 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
                     flex: 1,
                   }}
                 />
-                <input
-                  type="number"
-                  min="0"
-                  max="255"
-                  value={transform.opacity ?? 255}
-                  onChange={(e) => {
-                    let val = parseInt(e.target.value);
-                    if (isNaN(val)) {
-                      val = 255;
-                    } else if (val < 0) {
-                      val = 0;
-                    } else if (val > 255) {
-                      val = 255;
-                    }
-                    handleTransformChange('opacity', val);
-                  }}
-                  onBlur={(e) => {
-                    let val = parseInt(e.target.value);
-                    if (isNaN(val) || e.target.value === '') {
-                      val = 255;
-                    } else if (val < 0) {
-                      val = 0;
-                    } else if (val > 255) {
-                      val = 255;
-                    }
-                    handleTransformChange('opacity', val);
-                  }}
-                  style={{
-                    width: '60px',
-                    padding: '4px 6px',
-                    backgroundColor: 'var(--vscode-input-background)',
-                    color: 'var(--vscode-input-foreground)',
-                    border: '1px solid var(--vscode-input-border)',
-                    borderRadius: '2px',
-                  }}
-                />
+                <div style={{ width: '60px' }}>
+                  <PropertyEditor
+                    type="number"
+                    value={transform.opacity ?? 255}
+                    min={0}
+                    max={255}
+                    onChange={(value) => {
+                      let val = parseInt(value);
+                      if (isNaN(val)) {
+                        val = 255;
+                      } else if (val < 0) {
+                        val = 0;
+                      } else if (val > 255) {
+                        val = 255;
+                      }
+                      handleTransformChange('opacity', val);
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </div>
