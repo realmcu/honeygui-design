@@ -174,7 +174,8 @@ export type CompressionMethod =
   | 'rle'
   | 'fastlz'
   | 'yuv'
-  | 'adaptive';
+  | 'adaptive'
+  | 'inherit';
 
 /**
  * YUV 采样方式

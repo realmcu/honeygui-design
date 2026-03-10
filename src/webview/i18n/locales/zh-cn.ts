@@ -608,6 +608,7 @@ const zhCN = {
   'compressionFastLZ': 'FastLZ',
   'compressionYUV': 'YUV（有损）',
   'compressionAdaptive': '无损自适应',
+  'compressionInherit': '继承',
   'adaptiveCompressionHint': '比较 FastLZ、RLE 和不压缩，选择最小的结果',
   'YUV Parameters': 'YUV 参数',
   'Sampling': '采样方式',

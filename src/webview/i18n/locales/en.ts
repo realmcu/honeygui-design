@@ -608,6 +608,7 @@ const en = {
   'compressionFastLZ': 'FastLZ',
   'compressionYUV': 'YUV (lossy)',
   'compressionAdaptive': 'Adaptive (lossless)',
+  'compressionInherit': 'Inherit',
   'adaptiveCompressionHint': 'Compares FastLZ, RLE, and no compression, selects smallest',
   'YUV Parameters': 'YUV Parameters',
   'Sampling': 'Sampling',

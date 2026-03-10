@@ -28,7 +28,8 @@ export type CompressionMethod =
   | 'rle'
   | 'fastlz'
   | 'yuv'
-  | 'adaptive';
+  | 'adaptive'
+  | 'inherit';
 
 /**
  * YUV 采样方式
@@ -84,7 +85,7 @@ export interface ConversionConfig {
  */
 export interface ResolvedConfig {
   format: Exclude<TargetFormat, 'inherit' | 'adaptive16' | 'adaptive24'>;
-  compression: CompressionMethod;
+  compression: Exclude<CompressionMethod, 'inherit'>;
   yuvParams?: YuvParams;
   dither?: boolean;
   isInherited: boolean;
@@ -204,9 +205,13 @@ export class ConversionConfigService {
     const normalizedPath = assetPath.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
     const itemSettings = config.items[normalizedPath];
     
-    // 如果有明确配置且不是 inherit，直接使用
-    if (itemSettings && itemSettings.format && itemSettings.format !== 'inherit') {
-      return this.buildResolvedConfig(itemSettings, false);
+    // 判断 format 和 compression 是否需要继承
+    const formatNeedsInherit = !itemSettings || !itemSettings.format || itemSettings.format === 'inherit';
+    const compressionNeedsInherit = !itemSettings || !itemSettings.compression || itemSettings.compression === 'inherit';
+    
+    // 如果两者都不需要继承，直接使用当前配置
+    if (!formatNeedsInherit && !compressionNeedsInherit) {
+      return this.buildResolvedConfig(itemSettings!, false);
     }
     
     // 需要继承：查找父级配置
@@ -218,7 +223,10 @@ export class ConversionConfigService {
       const parentPath = pathParts.slice(0, i).join('/');
       const parentSettings = config.items[parentPath];
       
-      if (parentSettings && parentSettings.format && parentSettings.format !== 'inherit') {
+      // 父级有任何有效配置（format 或 compression 不是 inherit）就匹配
+      const parentHasFormat = parentSettings?.format && parentSettings.format !== 'inherit';
+      const parentHasCompression = parentSettings?.compression && parentSettings.compression !== 'inherit';
+      if (parentSettings && (parentHasFormat || parentHasCompression)) {
         inheritedSettings = parentSettings;
         inheritedFrom = parentPath || 'root';
         break;
@@ -231,11 +239,12 @@ export class ConversionConfigService {
       inheritedFrom = 'default';
     }
     
-    // 合并当前项的部分配置（如果有）
+    // 合并配置：对需要继承的字段使用父级值，否则使用自身值
     const mergedSettings: ItemSettings = {
       ...inheritedSettings,
       ...itemSettings,
-      format: inheritedSettings.format
+      format: formatNeedsInherit ? inheritedSettings.format : itemSettings!.format,
+      compression: compressionNeedsInherit ? inheritedSettings.compression : itemSettings!.compression,
     };
     
     return this.buildResolvedConfig(mergedSettings, true, inheritedFrom);
@@ -273,7 +282,9 @@ export class ConversionConfigService {
     inheritedFrom?: string
   ): ResolvedConfig {
     const format = settings.format || 'RGB565';
-    const compression = settings.compression || 'none';
+    const compression = settings.compression || 'adaptive';
+    // inherit 不应该出现在这里（已在 resolveEffectiveConfig 中处理），防御性处理
+    const resolvedCompression = compression === 'inherit' ? 'adaptive' : compression;
     const dither = settings.dither;
     
     let resolvedFormat: Exclude<TargetFormat, 'inherit' | 'adaptive16' | 'adaptive24'>;
@@ -285,7 +296,7 @@ export class ConversionConfigService {
     
     const result: ResolvedConfig = {
       format: resolvedFormat,
-      compression,
+      compression: resolvedCompression,
       dither,
       isInherited
     };
@@ -294,9 +305,9 @@ export class ConversionConfigService {
       result.inheritedFrom = inheritedFrom;
     }
     
-    if (compression === 'yuv' && settings.yuvParams) {
+    if (resolvedCompression === 'yuv' && settings.yuvParams) {
       result.yuvParams = { ...settings.yuvParams };
-    } else if (compression === 'yuv') {
+    } else if (resolvedCompression === 'yuv') {
       result.yuvParams = { ...DEFAULT_YUV_PARAMS };
     }
     

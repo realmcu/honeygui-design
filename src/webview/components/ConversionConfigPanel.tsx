@@ -60,8 +60,19 @@ const VIDEO_FORMAT_OPTIONS: { value: VideoFormat; label: string }[] = [
   { value: 'H264', label: 'H264' },
 ];
 
-// 压缩方式选项
+// 压缩方式选项（文件夹用，含继承）
+const FOLDER_COMPRESSION_OPTIONS: { value: CompressionMethod; label: string }[] = [
+  { value: 'inherit', label: 'compressionInherit' },
+  { value: 'none', label: 'compressionNone' },
+  { value: 'rle', label: 'compressionRLE' },
+  { value: 'fastlz', label: 'compressionFastLZ' },
+  { value: 'yuv', label: 'compressionYUV' },
+  { value: 'adaptive', label: 'compressionAdaptive' },
+];
+
+// 压缩方式选项（图片用，含继承）
 const COMPRESSION_OPTIONS: { value: CompressionMethod; label: string }[] = [
+  { value: 'inherit', label: 'compressionInherit' },
   { value: 'none', label: 'compressionNone' },
   { value: 'rle', label: 'compressionRLE' },
   { value: 'fastlz', label: 'compressionFastLZ' },
@@ -116,6 +127,8 @@ const getCompressionLabel = (compression: CompressionMethod): string => {
       return t('compressionYUV');
     case 'adaptive':
       return t('compressionAdaptive');
+    case 'inherit':
+      return t('compressionInherit');
     default:
       return compression;
   }
@@ -175,9 +188,12 @@ const ConversionConfigPanel: React.FC<ConversionConfigPanelProps> = () => {
     const assetPath = (selectedAsset.relativePath || selectedAsset.name).replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
     const itemSettings = conversionConfig.items[assetPath];
 
-    // 如果有明确配置且不是 inherit，直接使用
-    if (itemSettings && itemSettings.format && itemSettings.format !== 'inherit') {
-      return { settings: itemSettings, isInherited: false };
+    const formatNeedsInherit = !itemSettings || !itemSettings.format || itemSettings.format === 'inherit';
+    const compressionNeedsInherit = !itemSettings || !itemSettings.compression || itemSettings.compression === 'inherit';
+
+    // 如果两者都不需要继承，直接使用
+    if (!formatNeedsInherit && !compressionNeedsInherit) {
+      return { settings: itemSettings!, isInherited: false };
     }
 
     // 需要继承：查找父级配置
@@ -186,9 +202,18 @@ const ConversionConfigPanel: React.FC<ConversionConfigPanelProps> = () => {
       const parentPath = pathParts.slice(0, i).join('/');
       const parentSettings = parentPath ? conversionConfig.items[parentPath] : undefined;
 
-      if (parentSettings && parentSettings.format && parentSettings.format !== 'inherit') {
+      // 父级有任何有效配置（format 或 compression 不是 inherit）就匹配
+      const parentHasFormat = parentSettings?.format && parentSettings.format !== 'inherit';
+      const parentHasCompression = parentSettings?.compression && parentSettings.compression !== 'inherit';
+      if (parentSettings && (parentHasFormat || parentHasCompression)) {
+        const merged = {
+          ...parentSettings,
+          ...itemSettings,
+          format: formatNeedsInherit && parentHasFormat ? parentSettings.format : (formatNeedsInherit ? undefined : itemSettings!.format),
+          compression: compressionNeedsInherit && parentHasCompression ? parentSettings.compression : (compressionNeedsInherit ? undefined : itemSettings!.compression),
+        };
         return {
-          settings: { ...parentSettings, ...itemSettings, format: parentSettings.format },
+          settings: merged,
           isInherited: true,
           inheritedFrom: parentPath || t('Root'),
         };
@@ -196,8 +221,14 @@ const ConversionConfigPanel: React.FC<ConversionConfigPanelProps> = () => {
     }
 
     // 使用默认配置
+    const merged = {
+      ...conversionConfig.defaultSettings,
+      ...itemSettings,
+      format: formatNeedsInherit ? conversionConfig.defaultSettings.format : itemSettings!.format,
+      compression: compressionNeedsInherit ? conversionConfig.defaultSettings.compression : itemSettings!.compression,
+    };
     return {
-      settings: { ...conversionConfig.defaultSettings, ...itemSettings },
+      settings: merged,
       isInherited: true,
       inheritedFrom: t('defaultSettings'),
     };
@@ -543,7 +574,7 @@ const ConversionConfigPanel: React.FC<ConversionConfigPanelProps> = () => {
   const videoFormatOptions = isFolder ? FOLDER_VIDEO_FORMAT_OPTIONS : VIDEO_FORMAT_OPTIONS;
   const currentFormat = currentSettings.format || (isFolder ? 'adaptive16' : 'inherit');
   const currentVideoFormat = currentSettings.videoFormat || (isFolder ? 'MJPEG' : 'inherit');
-  const currentCompression = currentSettings.compression || 'adaptive';
+  const currentCompression = currentSettings.compression || 'inherit';
   const showYuvParams = currentCompression === 'yuv' || effectiveSettings.settings.compression === 'yuv';
 
   // 渲染图片设置区域
@@ -575,12 +606,22 @@ const ConversionConfigPanel: React.FC<ConversionConfigPanelProps> = () => {
       <div className="config-item">
         <label>{t('Compression Method')}</label>
         <select value={currentCompression} onChange={handleCompressionChange}>
-          {COMPRESSION_OPTIONS.map((option) => (
+          {(isFolder ? FOLDER_COMPRESSION_OPTIONS : COMPRESSION_OPTIONS).map((option) => (
             <option key={option.value} value={option.value}>
               {t(option.label as any)}
             </option>
           ))}
         </select>
+        {/* 压缩方式继承状态指示器 */}
+        {currentCompression === 'inherit' && effectiveSettings.isInherited && (
+          <div className="inherited-indicator">
+            <span className="icon">↩️</span>
+            <span>
+              {t('inheritedFrom')}: {effectiveSettings.inheritedFrom} (
+              {getCompressionLabel(effectiveSettings.settings.compression || 'adaptive')})
+            </span>
+          </div>
+        )}
         {currentCompression === 'adaptive' && (
           <div className="config-hint">{t('adaptiveCompressionHint')}</div>
         )}
