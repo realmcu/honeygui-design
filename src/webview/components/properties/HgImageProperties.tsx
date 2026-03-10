@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { PropertyPanelProps } from './types';
 import { PropertyEditor } from './PropertyEditor';
 import { BaseProperties } from './BaseProperties';
@@ -8,22 +8,22 @@ import { t } from '../../i18n';
 export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onUpdate, components }) => {
   const [activeTab, setActiveTab] = useState<'properties' | 'events'>('properties');
   
+  // 本地状态用于处理输入中间状态（如负号）
+  const [translateXInput, setTranslateXInput] = useState<string>('');
+  const [translateYInput, setTranslateYInput] = useState<string>('');
+  const [rotationInput, setRotationInput] = useState<string>('');
+  
   // 保存当前正在编辑的组件 ID（用于 onBlur 时确保操作应用到正确的组件）
   const componentIdRef = React.useRef(component.id);
   
-  // 组件切换时更新 ref
+  // 组件切换时更新 ref 和输入状态
   React.useEffect(() => {
     componentIdRef.current = component.id;
-  }, [component.id]);
-
-  const handleStyleChange = (property: string, value: any) => {
-    onUpdate({
-      style: {
-        ...component.style,
-        [property]: value,
-      },
-    });
-  };
+    const transform = component.style?.transform || {};
+    setTranslateXInput(String(transform.translateX ?? 0));
+    setTranslateYInput(String(transform.translateY ?? 0));
+    setRotationInput(String(transform.rotation ?? 0));
+  }, [component.id, component.style?.transform?.translateX, component.style?.transform?.translateY, component.style?.transform?.rotation]);
 
   const handleDataChange = (property: string, value: any) => {
     onUpdate({
@@ -32,19 +32,6 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
         [property]: value,
       },
     });
-  };
-
-  // 当图片路径变更时，请求后端获取图片尺寸并更新组件
-  const handleImageSrcChange = (value: string) => {
-    handleDataChange('src', value);
-    // 如果路径有效，请求后端获取尺寸
-    if (value && value.startsWith('assets/')) {
-      window.vscodeAPI?.postMessage({
-        command: 'getImageSizeForComponent',
-        componentId: component.id,
-        imagePath: value
-      });
-    }
   };
 
   const handleTransformChange = (property: string, value: any) => {
@@ -302,10 +289,13 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
                   <label style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)' }}>X</label>
                   <PropertyEditor
                     type="number"
+                    min={0}
                     value={transform.scaleX ?? 1.0}
                     onChange={(val) => {
                       const value = val === '' ? 1.0 : parseFloat(val);
-                      handleTransformChange('scaleX', isNaN(value) ? 1.0 : value);
+                      // 确保值大于等于 0
+                      const finalVal = isNaN(value) ? 1.0 : Math.max(0, value);
+                      handleTransformChange('scaleX', finalVal);
                     }}
                   />
                 </div>
@@ -313,10 +303,13 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
                   <label style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)' }}>Y</label>
                   <PropertyEditor
                     type="number"
+                    min={0}
                     value={transform.scaleY ?? 1.0}
                     onChange={(val) => {
                       const value = val === '' ? 1.0 : parseFloat(val);
-                      handleTransformChange('scaleY', isNaN(value) ? 1.0 : value);
+                      // 确保值大于等于 0
+                      const finalVal = isNaN(value) ? 1.0 : Math.max(0, value);
+                      handleTransformChange('scaleY', finalVal);
                     }}
                   />
                 </div>
@@ -328,8 +321,15 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
               <label>{t('Rotation Angle (°)')}</label>
               <PropertyEditor
                 type="number"
-                value={transform.rotation ?? 0}
-                onChange={(value) => handleTransformChange('rotation', parseFloat(value) || 0)}
+                value={rotationInput}
+                onChange={(val) => {
+                  const strVal = String(val);
+                  setRotationInput(strVal);
+                  const num = parseFloat(strVal);
+                  if (!isNaN(num)) {
+                    handleTransformChange('rotation', num);
+                  }
+                }}
               />
             </div>
 
@@ -341,39 +341,30 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
                   <label style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)' }}>X</label>
                   <PropertyEditor
                     type="number"
-                    value={transform.translateX ?? 0}
-                    onChange={(value) => handleTransformChange('translateX', parseFloat(value) || 0)}
+                    value={translateXInput}
+                    onChange={(val) => {
+                      const strVal = String(val);
+                      setTranslateXInput(strVal);
+                      const num = parseFloat(strVal);
+                      if (!isNaN(num)) {
+                        handleTransformChange('translateX', num);
+                      }
+                    }}
                   />
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)' }}>Y</label>
                   <PropertyEditor
                     type="number"
-                    value={transform.translateY ?? 0}
-                    onChange={(value) => handleTransformChange('translateY', parseFloat(value) || 0)}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* 倾斜 */}
-            <div className="property-item">
-              <label>{t('Skew Angle (°)')}</label>
-              <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)' }}>X</label>
-                  <PropertyEditor
-                    type="number"
-                    value={transform.skewX ?? 0}
-                    onChange={(value) => handleTransformChange('skewX', parseFloat(value) || 0)}
-                  />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)' }}>Y</label>
-                  <PropertyEditor
-                    type="number"
-                    value={transform.skewY ?? 0}
-                    onChange={(value) => handleTransformChange('skewY', parseFloat(value) || 0)}
+                    value={translateYInput}
+                    onChange={(val) => {
+                      const strVal = String(val);
+                      setTranslateYInput(strVal);
+                      const num = parseFloat(strVal);
+                      if (!isNaN(num)) {
+                        handleTransformChange('translateY', num);
+                      }
+                    }}
                   />
                 </div>
               </div>
@@ -388,6 +379,7 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
                   <PropertyEditor
                     type="number"
                     value={transform.focusX ?? ''}
+                    placeholder="auto"
                     onChange={(value) => handleTransformChange('focusX', value ? parseFloat(value) : undefined)}
                   />
                 </div>
@@ -396,6 +388,7 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
                   <PropertyEditor
                     type="number"
                     value={transform.focusY ?? ''}
+                    placeholder="auto"
                     onChange={(value) => handleTransformChange('focusY', value ? parseFloat(value) : undefined)}
                   />
                 </div>

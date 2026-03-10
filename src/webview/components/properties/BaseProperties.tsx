@@ -260,6 +260,7 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
                 onChange={(value) => handlePositionChange('width', value)}
                 disabled={disableSize}
                 title={sizeTooltip}
+                min={0}
               />
             </div>
             <div>
@@ -270,6 +271,7 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
                 onChange={(value) => handlePositionChange('height', value)}
                 disabled={disableSize}
                 title={sizeTooltip}
+                min={0}
               />
             </div>
           </div>

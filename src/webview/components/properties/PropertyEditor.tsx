@@ -20,7 +20,8 @@ export const PropertyEditor: React.FC<PropertyEditorProps> = ({
   title,
   hint,
   min,
-  max
+  max,
+  placeholder
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const colorTextRef = useRef<HTMLInputElement>(null);
@@ -93,6 +94,7 @@ export const PropertyEditor: React.FC<PropertyEditorProps> = ({
           value={value ?? ''}
           min={min}
           max={max}
+          placeholder={placeholder}
           onChange={(e) => {
             const val = e.target.value;
             if (val === '' || val === '-') {
@@ -220,6 +222,7 @@ export const PropertyEditor: React.FC<PropertyEditorProps> = ({
           ref={inputRef}
           type="text"
           value={value || ''}
+          placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
           title={title}

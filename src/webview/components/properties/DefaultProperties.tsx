@@ -1122,8 +1122,9 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                   <label>{t('Font Size')}</label>
                   <PropertyEditor
                     type="number"
-                    value={(component.data as any)?.fontSize || 16}
+                    value={(component.data as any)?.fontSize ?? 16}
                     onChange={(value) => handleDataChange('fontSize', value)}
+                    min={1}
                   />
                 </div>
                 {/* 字体类型 */}
