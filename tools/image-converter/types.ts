@@ -71,7 +71,7 @@ export enum PixelBytes {
 
 export const FORMAT_TO_PIXEL_BYTES: Record<number, PixelBytes> = {
     [PixelFormat.RGB565]: PixelBytes.BYTES_2,
-    [PixelFormat.ARGB8565]: PixelBytes.BYTES_2,
+    [PixelFormat.ARGB8565]: PixelBytes.BYTES_3,
     [PixelFormat.RGB888]: PixelBytes.BYTES_3,
     [PixelFormat.ARGB8888]: PixelBytes.BYTES_4,
     [PixelFormat.XRGB8888]: PixelBytes.BYTES_4,
