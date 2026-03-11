@@ -30,6 +30,8 @@ const FOLDER_FORMAT_OPTIONS: { value: TargetFormat; label: string }[] = [
   { value: 'RGB888', label: 'RGB888' },
   { value: 'ARGB8565', label: 'ARGB8565' },
   { value: 'ARGB8888', label: 'ARGB8888' },
+  { value: 'I8', label: 'I8' },
+  { value: 'A8', label: 'A8' },
   { value: 'adaptive16', label: 'formatAdaptive16' },
   { value: 'adaptive24', label: 'formatAdaptive24' },
 ];
