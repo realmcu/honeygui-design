@@ -1029,9 +1029,15 @@ void ${callback}(void *obj)\n{\n`;
         code += `        // 无动作，仅等待\n`;
         code += `    }\n`;
       } else {
-        // 检查是否所有动作都不需要段内计数器（跳转界面、更换图片、设置可见性、切换定时动画、设置焦点等）
+        // 检查是否所有动作都不需要段内计数器（跳转界面、更换图片、设置可见性、切换定时动画、设置焦点、无初始值的颜色设置等）
         const allNoSegCounter = actions.every((action: any) => 
-          action.type === 'switchView' || action.type === 'changeImage' || action.type === 'visibility' || action.type === 'switchTimer' || action.type === 'setFocus'
+          action.type === 'switchView' || 
+          action.type === 'changeImage' || 
+          action.type === 'visibility' || 
+          action.type === 'switchTimer' || 
+          action.type === 'setFocus' ||
+          (action.type === 'fgColor' && !action.fgColorFrom) ||
+          (action.type === 'bgColor' && !action.bgColorFrom)
         );
         
         // 有动作的段
@@ -1254,6 +1260,64 @@ void ${callback}(void *obj)\n{\n`;
       code += `    float zoom_x_cur = zoom_x_origin + (zoom_x_target - zoom_x_origin) * ${progressExpr};\n`;
       code += `    float zoom_y_cur = zoom_y_origin + (zoom_y_target - zoom_y_origin) * ${progressExpr};\n`;
       code += `    gui_img_scale((gui_img_t *)target, zoom_x_cur, zoom_y_cur);\n`;
+      code += `    \n`;
+    } else if (action.type === 'fgColor') {
+      // 调整前景色动作（仅支持 hg_image）
+      if (action.fgColorFrom) {
+        // 有初始值，需要计算渐变
+        code += `    // 调整前景色: ${action.fgColorFrom} -> ${action.fgColorTo}\n`;
+        code += `    const uint32_t fg_color_from = ${action.fgColorFrom};\n`;
+        code += `    const uint32_t fg_color_to = ${action.fgColorTo};\n`;
+        code += `    // 分离 ARGB 通道\n`;
+        code += `    uint8_t a_from = (fg_color_from >> 24) & 0xFF;\n`;
+        code += `    uint8_t r_from = (fg_color_from >> 16) & 0xFF;\n`;
+        code += `    uint8_t g_from = (fg_color_from >> 8) & 0xFF;\n`;
+        code += `    uint8_t b_from = fg_color_from & 0xFF;\n`;
+        code += `    uint8_t a_to = (fg_color_to >> 24) & 0xFF;\n`;
+        code += `    uint8_t r_to = (fg_color_to >> 16) & 0xFF;\n`;
+        code += `    uint8_t g_to = (fg_color_to >> 8) & 0xFF;\n`;
+        code += `    uint8_t b_to = fg_color_to & 0xFF;\n`;
+        code += `    // 计算当前颜色\n`;
+        code += `    uint8_t a_cur = a_from + (a_to - a_from) * ${progressExpr};\n`;
+        code += `    uint8_t r_cur = r_from + (r_to - r_from) * ${progressExpr};\n`;
+        code += `    uint8_t g_cur = g_from + (g_to - g_from) * ${progressExpr};\n`;
+        code += `    uint8_t b_cur = b_from + (b_to - b_from) * ${progressExpr};\n`;
+        code += `    uint32_t fg_color_cur = (a_cur << 24) | (r_cur << 16) | (g_cur << 8) | b_cur;\n`;
+        code += `    gui_img_a8_recolor((gui_img_t *)target, fg_color_cur);\n`;
+      } else {
+        // 没有初始值，直接设置目标值
+        code += `    // 设置前景色: ${action.fgColorTo}\n`;
+        code += `    gui_img_a8_recolor((gui_img_t *)target, ${action.fgColorTo});\n`;
+      }
+      code += `    \n`;
+    } else if (action.type === 'bgColor') {
+      // 调整背景色动作（仅支持 hg_image）
+      if (action.bgColorFrom) {
+        // 有初始值，需要计算渐变
+        code += `    // 调整背景色: ${action.bgColorFrom} -> ${action.bgColorTo}\n`;
+        code += `    const uint32_t bg_color_from = ${action.bgColorFrom};\n`;
+        code += `    const uint32_t bg_color_to = ${action.bgColorTo};\n`;
+        code += `    // 分离 ARGB 通道\n`;
+        code += `    uint8_t a_from = (bg_color_from >> 24) & 0xFF;\n`;
+        code += `    uint8_t r_from = (bg_color_from >> 16) & 0xFF;\n`;
+        code += `    uint8_t g_from = (bg_color_from >> 8) & 0xFF;\n`;
+        code += `    uint8_t b_from = bg_color_from & 0xFF;\n`;
+        code += `    uint8_t a_to = (bg_color_to >> 24) & 0xFF;\n`;
+        code += `    uint8_t r_to = (bg_color_to >> 16) & 0xFF;\n`;
+        code += `    uint8_t g_to = (bg_color_to >> 8) & 0xFF;\n`;
+        code += `    uint8_t b_to = bg_color_to & 0xFF;\n`;
+        code += `    // 计算当前颜色\n`;
+        code += `    uint8_t a_cur = a_from + (a_to - a_from) * ${progressExpr};\n`;
+        code += `    uint8_t r_cur = r_from + (r_to - r_from) * ${progressExpr};\n`;
+        code += `    uint8_t g_cur = g_from + (g_to - g_from) * ${progressExpr};\n`;
+        code += `    uint8_t b_cur = b_from + (b_to - b_from) * ${progressExpr};\n`;
+        code += `    uint32_t bg_color_cur = (a_cur << 24) | (r_cur << 16) | (g_cur << 8) | b_cur;\n`;
+        code += `    gui_img_a8_fix_bg((gui_img_t *)target, bg_color_cur);\n`;
+      } else {
+        // 没有初始值，直接设置目标值
+        code += `    // 设置背景色: ${action.bgColorTo}\n`;
+        code += `    gui_img_a8_fix_bg((gui_img_t *)target, ${action.bgColorTo});\n`;
+      }
       code += `    \n`;
     } else if (action.type === 'setFocus') {
       // 设置焦点动作（适配所有组件）

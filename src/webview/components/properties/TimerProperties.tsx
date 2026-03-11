@@ -720,7 +720,7 @@ const TimerActionEditor: React.FC<{
         <select
           value={action.type}
           onChange={(e) => {
-            const newType = e.target.value as 'size' | 'position' | 'opacity' | 'rotation' | 'scale' | 'switchView' | 'changeImage' | 'imageSequence' | 'visibility' | 'switchTimer' | 'setFocus';
+            const newType = e.target.value as 'size' | 'position' | 'opacity' | 'rotation' | 'scale' | 'switchView' | 'changeImage' | 'imageSequence' | 'visibility' | 'switchTimer' | 'setFocus' | 'fgColor' | 'bgColor';
             const newAction: TimerAction = { type: newType };
             if (newType === 'size') {
               newAction.fromW = 0;
@@ -755,6 +755,10 @@ const TimerActionEditor: React.FC<{
               newAction.visible = true;
             } else if (newType === 'switchTimer') {
               newAction.timerId = '';
+            } else if (newType === 'fgColor') {
+              newAction.fgColorTo = '0xFFFFFFFF';
+            } else if (newType === 'bgColor') {
+              newAction.bgColorTo = '0xFFFFFFFF';
             }
             // setFocus 不需要额外参数
             onUpdate(newAction);
@@ -773,6 +777,8 @@ const TimerActionEditor: React.FC<{
           <option value="opacity">{t('Adjust Opacity')}</option>
           {componentType === 'hg_image' && <option value="rotation">{t('Adjust Rotation')}</option>}
           {componentType === 'hg_image' && <option value="scale">{t('Adjust Scale')}</option>}
+          {componentType === 'hg_image' && <option value="fgColor">{t('Adjust Foreground Color')}</option>}
+          {componentType === 'hg_image' && <option value="bgColor">{t('Adjust Background Color')}</option>}
           {componentType === 'hg_image' && <option value="changeImage">{t('Change Image')}</option>}
           {componentType === 'hg_image' && <option value="imageSequence">{t('Image Sequence')}</option>}
           <option value="switchView">{t('Switch View')}</option>
@@ -1515,6 +1521,178 @@ const TimerActionEditor: React.FC<{
                 fontSize: '11px',
               }}
             />
+          </div>
+        </div>
+      )}
+
+      {action.type === 'fgColor' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {/* 初始前景色（可选） */}
+          <div>
+            <label style={{ fontSize: '10px', display: 'block', marginBottom: '4px' }}>
+              {t('From Color')} ({t('Optional')})
+            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input
+                type="color"
+                value={action.fgColorFrom ? `#${action.fgColorFrom.substring(4)}` : '#FFFFFF'}
+                onChange={(e) => {
+                  const hex = e.target.value.substring(1);
+                  onUpdate({ fgColorFrom: `0xFF${hex.toUpperCase()}` });
+                }}
+                disabled={!action.fgColorFrom}
+                style={{ width: '30px', height: '30px', padding: 0, border: 'none' }}
+              />
+              <input
+                type="text"
+                value={action.fgColorFrom || ''}
+                onChange={(e) => onUpdate({ fgColorFrom: e.target.value })}
+                placeholder={t('Leave empty to skip animation')}
+                style={{
+                  flex: 1,
+                  padding: '4px 6px',
+                  backgroundColor: 'var(--vscode-input-background)',
+                  color: 'var(--vscode-input-foreground)',
+                  border: '1px solid var(--vscode-input-border)',
+                  borderRadius: '2px',
+                  fontSize: '11px',
+                }}
+              />
+              <button
+                onClick={() => onUpdate({ fgColorFrom: action.fgColorFrom ? undefined : '0xFFFFFFFF' })}
+                style={{
+                  padding: '4px 8px',
+                  backgroundColor: 'var(--vscode-button-secondaryBackground)',
+                  color: 'var(--vscode-button-secondaryForeground)',
+                  border: 'none',
+                  borderRadius: '2px',
+                  cursor: 'pointer',
+                  fontSize: '10px',
+                }}
+                title={action.fgColorFrom ? t('Clear') : t('Set')}
+              >
+                {action.fgColorFrom ? '✕' : '+'}
+              </button>
+            </div>
+          </div>
+
+          {/* 目标前景色（必填） */}
+          <div>
+            <label style={{ fontSize: '10px', display: 'block', marginBottom: '4px' }}>
+              {t('To Color')}
+            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input
+                type="color"
+                value={action.fgColorTo ? `#${action.fgColorTo.substring(4)}` : '#FFFFFF'}
+                onChange={(e) => {
+                  const hex = e.target.value.substring(1);
+                  onUpdate({ fgColorTo: `0xFF${hex.toUpperCase()}` });
+                }}
+                style={{ width: '30px', height: '30px', padding: 0, border: 'none' }}
+              />
+              <input
+                type="text"
+                value={action.fgColorTo || '0xFFFFFFFF'}
+                onChange={(e) => onUpdate({ fgColorTo: e.target.value })}
+                placeholder="0xFFRRGGBB"
+                style={{
+                  flex: 1,
+                  padding: '4px 6px',
+                  backgroundColor: 'var(--vscode-input-background)',
+                  color: 'var(--vscode-input-foreground)',
+                  border: '1px solid var(--vscode-input-border)',
+                  borderRadius: '2px',
+                  fontSize: '11px',
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {action.type === 'bgColor' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {/* 初始背景色（可选） */}
+          <div>
+            <label style={{ fontSize: '10px', display: 'block', marginBottom: '4px' }}>
+              {t('From Color')} ({t('Optional')})
+            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input
+                type="color"
+                value={action.bgColorFrom ? `#${action.bgColorFrom.substring(4)}` : '#FFFFFF'}
+                onChange={(e) => {
+                  const hex = e.target.value.substring(1);
+                  onUpdate({ bgColorFrom: `0xFF${hex.toUpperCase()}` });
+                }}
+                disabled={!action.bgColorFrom}
+                style={{ width: '30px', height: '30px', padding: 0, border: 'none' }}
+              />
+              <input
+                type="text"
+                value={action.bgColorFrom || ''}
+                onChange={(e) => onUpdate({ bgColorFrom: e.target.value })}
+                placeholder={t('Leave empty to skip animation')}
+                style={{
+                  flex: 1,
+                  padding: '4px 6px',
+                  backgroundColor: 'var(--vscode-input-background)',
+                  color: 'var(--vscode-input-foreground)',
+                  border: '1px solid var(--vscode-input-border)',
+                  borderRadius: '2px',
+                  fontSize: '11px',
+                }}
+              />
+              <button
+                onClick={() => onUpdate({ bgColorFrom: action.bgColorFrom ? undefined : '0xFFFFFFFF' })}
+                style={{
+                  padding: '4px 8px',
+                  backgroundColor: 'var(--vscode-button-secondaryBackground)',
+                  color: 'var(--vscode-button-secondaryForeground)',
+                  border: 'none',
+                  borderRadius: '2px',
+                  cursor: 'pointer',
+                  fontSize: '10px',
+                }}
+                title={action.bgColorFrom ? t('Clear') : t('Set')}
+              >
+                {action.bgColorFrom ? '✕' : '+'}
+              </button>
+            </div>
+          </div>
+
+          {/* 目标背景色（必填） */}
+          <div>
+            <label style={{ fontSize: '10px', display: 'block', marginBottom: '4px' }}>
+              {t('To Color')}
+            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input
+                type="color"
+                value={action.bgColorTo ? `#${action.bgColorTo.substring(4)}` : '#FFFFFF'}
+                onChange={(e) => {
+                  const hex = e.target.value.substring(1);
+                  onUpdate({ bgColorTo: `0xFF${hex.toUpperCase()}` });
+                }}
+                style={{ width: '30px', height: '30px', padding: 0, border: 'none' }}
+              />
+              <input
+                type="text"
+                value={action.bgColorTo || '0xFFFFFFFF'}
+                onChange={(e) => onUpdate({ bgColorTo: e.target.value })}
+                placeholder="0xFFRRGGBB"
+                style={{
+                  flex: 1,
+                  padding: '4px 6px',
+                  backgroundColor: 'var(--vscode-input-background)',
+                  color: 'var(--vscode-input-foreground)',
+                  border: '1px solid var(--vscode-input-border)',
+                  borderRadius: '2px',
+                  fontSize: '11px',
+                }}
+              />
+            </div>
           </div>
         </div>
       )}
