@@ -31,11 +31,18 @@ def pad_to_alignment(data, alignment):
 
 
 def pad_string_to_alignment(string, alignment):
-    """Pad string to specified alignment with null bytes."""
+    """Pad string with null terminator to specified alignment.
+    
+    Always appends at least one \\0 byte (null terminator) before aligning,
+    so that C string functions (strcmp, strlen, etc.) work correctly even when
+    the raw string length is already a multiple of the alignment.
+    """
     data = string.encode('utf-8') if isinstance(string, str) else string
+    # Ensure at least one \0 terminator before alignment padding
+    data = data + b'\0'
     remainder = len(data) % alignment
     if remainder != 0:
-        return data + b'\0' * (alignment - remainder)
+        data = data + b'\0' * (alignment - remainder)
     return data
 
 
