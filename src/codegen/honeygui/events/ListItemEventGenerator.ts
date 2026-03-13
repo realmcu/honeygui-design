@@ -147,4 +147,19 @@ ${body}}`);
   getControlTimerCallbackImpl(component: Component, componentMap: Map<string, Component>): string[] {
     return generateControlTimerCallbackImpl(component, componentMap);
   }
+
+  /**
+   * 生成统一的事件回调实现（除 onMessage 外的所有事件）
+   */
+  getEventCallbackImpl(component: Component, componentMap: Map<string, Component>): string[] {
+    const impls: string[] = [];
+    
+    // 生成 switchView 回调
+    impls.push(...this.getSwitchViewCallbackImpl(component, componentMap));
+    
+    // 生成 controlTimer 回调
+    impls.push(...generateControlTimerCallbackImpl(component, componentMap));
+    
+    return impls;
+  }
 }

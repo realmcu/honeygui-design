@@ -459,6 +459,10 @@ export class MessageHandler {
             case 'leaveSession':
                 this._handleLeaveSession();
                 break;
+
+            case 'getUserFunctions':
+                this._handleGetUserFunctions();
+                break;
                 
             default:
                 logger.warn(`[MessageHandler] 未知消息命令: ${message.command}`);
@@ -1112,6 +1116,86 @@ export class MessageHandler {
                 error: null
             }
         });
+    }
+
+    /**
+     * 处理获取用户自定义函数列表
+     * 解析 src/user/**_user.h 文件，提取函数声明
+     */
+    private _handleGetUserFunctions(): void {
+        try {
+            const currentFile = this._fileManager.currentFilePath;
+            if (!currentFile) {
+                logger.warn('[MessageHandler] 无法获取用户函数：当前文件路径为空');
+                this._panel.webview.postMessage({
+                    command: 'userFunctionsLoaded',
+                    functions: []
+                });
+                return;
+            }
+
+            const projectRoot = ProjectUtils.findProjectRoot(currentFile);
+            if (!projectRoot) {
+                logger.warn('[MessageHandler] 无法获取用户函数：未找到项目根目录');
+                this._panel.webview.postMessage({
+                    command: 'userFunctionsLoaded',
+                    functions: []
+                });
+                return;
+            }
+
+            // 获取设计稿名称（从HML文件名提取，不含扩展名）
+            const designName = path.basename(currentFile, '.hml');
+
+            // 构建 user.h 文件路径
+            const userHeaderPath = path.join(projectRoot, 'src', 'user', `${designName}_user.h`);
+
+            if (!fs.existsSync(userHeaderPath)) {
+                logger.info(`[MessageHandler] user.h 文件不存在: ${userHeaderPath}`);
+                this._panel.webview.postMessage({
+                    command: 'userFunctionsLoaded',
+                    functions: []
+                });
+                return;
+            }
+
+            // 读取文件内容
+            const content = fs.readFileSync(userHeaderPath, 'utf-8');
+
+            // 解析函数声明
+            // 匹配模式：void function_name(void *obj, gui_event_t *e) 或 void function_name(gui_obj_t *obj, const char *topic, void *data, uint16_t len)
+            const eventFuncPattern = /void\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(\s*void\s*\*\s*obj\s*,\s*gui_event_t\s*\*\s*e\s*\)/g;
+            const msgFuncPattern = /void\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(\s*gui_obj_t\s*\*\s*obj\s*,\s*const\s+char\s*\*\s*topic\s*,\s*void\s*\*\s*data\s*,\s*uint16_t\s+len\s*\)/g;
+
+            const functions: Array<{ name: string; type: 'event' | 'message' }> = [];
+
+            // 提取事件函数
+            let match;
+            while ((match = eventFuncPattern.exec(content)) !== null) {
+                functions.push({ name: match[1], type: 'event' });
+            }
+
+            // 提取消息函数
+            while ((match = msgFuncPattern.exec(content)) !== null) {
+                functions.push({ name: match[1], type: 'message' });
+            }
+
+            logger.info(`[MessageHandler] 找到 ${functions.length} 个用户自定义函数`);
+
+            // 发送到前端
+            this._panel.webview.postMessage({
+                command: 'userFunctionsLoaded',
+                functions
+            });
+
+        } catch (error) {
+            logger.error(`[MessageHandler] 获取用户函数失败: ${error}`);
+            this._panel.webview.postMessage({
+                command: 'userFunctionsLoaded',
+                functions: [],
+                error: error instanceof Error ? error.message : String(error)
+            });
+        }
     }
 
     /**

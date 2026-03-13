@@ -2,7 +2,7 @@
  * 默认事件代码生成器（通用组件）
  */
 import { Component } from '../../../hml/types';
-import { EventCodeGenerator, EVENT_TYPE_TO_GUI_EVENT, generateMessageCallbackImpl, generateControlTimerCallbackImpl, generateKeyEventCallbackImpl, getMessageCallbackName, generateEventCallbackName } from './EventCodeGenerator';
+import { EventCodeGenerator, EVENT_TYPE_TO_GUI_EVENT, EVENT_TYPE_TO_CALLBACK_SUFFIX, generateMessageCallbackImpl, getMessageCallbackName } from './EventCodeGenerator';
 
 export class DefaultEventGenerator implements EventCodeGenerator {
 
@@ -14,8 +14,7 @@ export class DefaultEventGenerator implements EventCodeGenerator {
     let code = '';
     const indentStr = '    '.repeat(indent);
     let msgIndex = 0;
-    const eventTypeIndexMap = new Map<string, number>();
-    const keyEventTypeMap = new Map<string, boolean>(); // 记录每种按键事件类型是否已绑定
+    const eventTypeMap = new Map<string, boolean>(); // 记录每种事件类型是否已绑定
 
     component.eventConfigs.forEach((eventConfig) => {
       // 处理 onMessage 事件（消息订阅）
@@ -27,37 +26,16 @@ export class DefaultEventGenerator implements EventCodeGenerator {
         return;
       }
 
-      // 处理按键事件（同一类型只绑定一次）
-      if ((eventConfig.type === 'onKeyShortPress' || eventConfig.type === 'onKeyLongPress') && eventConfig.keyName) {
-        const guiEvent = EVENT_TYPE_TO_GUI_EVENT[eventConfig.type];
-        if (guiEvent && !keyEventTypeMap.has(eventConfig.type)) {
-          const keyEventIndex = keyEventTypeMap.size;
-          const callbackName = `${component.id}_key_${keyEventIndex}_cb`;
-          keyEventTypeMap.set(eventConfig.type, true);
-          code += `${indentStr}gui_obj_add_event_cb(${component.id}, (gui_event_cb_t)${callbackName}, ${guiEvent}, NULL);\n`;
-        }
-        return;
-      }
-
-      // 处理其他事件
+      // 处理其他事件：统一使用 gui_obj_add_event_cb 绑定到对应的回调函数
       const guiEvent = EVENT_TYPE_TO_GUI_EVENT[eventConfig.type];
       if (!guiEvent) return;
 
-      eventConfig.actions.forEach((action) => {
-        if (action.type === 'callFunction' && action.functionName) {
-          code += `${indentStr}gui_obj_add_event_cb(${component.id}, (gui_event_cb_t)${action.functionName}, ${guiEvent}, NULL);\n`;
-        } else if (action.type === 'switchView' && action.target) {
-          const targetComponent = componentMap.get(action.target);
-          const targetName = targetComponent?.name || action.target;
-          code += `${indentStr}gui_obj_event_set(${component.id}, ${guiEvent});\n`;
-          code += `${indentStr}gui_obj_click(${component.id}, (gui_event_cb_t)gui_switch_app, (void *)"${targetName}");\n`;
-        } else if (action.type === 'controlTimer' && action.timerTargets && action.timerTargets.length > 0) {
-          const currentIndex = eventTypeIndexMap.get(eventConfig.type) || 0;
-          const callbackName = generateEventCallbackName(component.id, eventConfig.type, currentIndex);
-          eventTypeIndexMap.set(eventConfig.type, currentIndex + 1);
-          code += `${indentStr}gui_obj_add_event_cb(${component.id}, (gui_event_cb_t)${callbackName}, ${guiEvent}, NULL);\n`;
-        }
-      });
+      // 每种事件类型只绑定一次回调函数
+      if (!eventTypeMap.has(eventConfig.type)) {
+        const callbackName = this.getEventCallbackName(component.id, eventConfig.type);
+        code += `${indentStr}gui_obj_add_event_cb(${component.id}, (gui_event_cb_t)${callbackName}, ${guiEvent}, NULL);\n`;
+        eventTypeMap.set(eventConfig.type, true);
+      }
     });
 
     return code;
@@ -68,8 +46,7 @@ export class DefaultEventGenerator implements EventCodeGenerator {
     if (!component.eventConfigs) return functions;
 
     let msgIndex = 0;
-    const eventTypeIndexMap = new Map<string, number>();
-    const keyEventTypeMap = new Map<string, boolean>(); // 记录每种按键事件类型是否已收集
+    const eventTypeMap = new Map<string, boolean>(); // 记录每种事件类型是否已收集
     
     component.eventConfigs.forEach(eventConfig => {
       if (eventConfig.type === 'onMessage' && eventConfig.message) {
@@ -80,28 +57,89 @@ export class DefaultEventGenerator implements EventCodeGenerator {
           functions.push(getMessageCallbackName(component, eventConfig, msgIndex));
         }
         msgIndex++;
-      } else if ((eventConfig.type === 'onKeyShortPress' || eventConfig.type === 'onKeyLongPress') && eventConfig.keyName) {
-        // 收集按键事件回调函数名（同一类型只收集一次）
-        if (!keyEventTypeMap.has(eventConfig.type)) {
-          const keyEventIndex = keyEventTypeMap.size;
-          functions.push(`${component.id}_key_${keyEventIndex}_cb`);
-          keyEventTypeMap.set(eventConfig.type, true);
-        }
       } else {
-        eventConfig.actions.forEach(action => {
-          if (action.type === 'callFunction' && action.functionName) {
-            functions.push(action.functionName);
-          } else if (action.type === 'controlTimer' && action.timerTargets && action.timerTargets.length > 0) {
-            const currentIndex = eventTypeIndexMap.get(eventConfig.type) || 0;
-            const callbackName = generateEventCallbackName(component.id, eventConfig.type, currentIndex);
-            functions.push(callbackName);
-            eventTypeIndexMap.set(eventConfig.type, currentIndex + 1);
-          }
-        });
+        // 其他事件：每种事件类型只收集一次回调函数名
+        if (!eventTypeMap.has(eventConfig.type)) {
+          const callbackName = this.getEventCallbackName(component.id, eventConfig.type);
+          functions.push(callbackName);
+          eventTypeMap.set(eventConfig.type, true);
+        }
       }
     });
 
     return functions;
+  }
+
+  /**
+   * 生成统一的事件回调实现（除 onMessage 外的所有事件）
+   */
+  getEventCallbackImpl(component: Component, componentMap: Map<string, Component>): string[] {
+    const impls: string[] = [];
+    if (!component.eventConfigs) return impls;
+
+    // 按事件类型分组
+    const eventGroups = new Map<string, typeof component.eventConfigs>();
+    
+    component.eventConfigs.forEach(eventConfig => {
+      if (eventConfig.type === 'onMessage') return; // onMessage 单独处理
+      
+      if (!eventGroups.has(eventConfig.type)) {
+        eventGroups.set(eventConfig.type, []);
+      }
+      eventGroups.get(eventConfig.type)!.push(eventConfig);
+    });
+
+    // 为每种事件类型生成一个回调函数
+    eventGroups.forEach((eventConfigs, eventType) => {
+      const callbackName = this.getEventCallbackName(component.id, eventType);
+      let callbackBody = '';
+
+      // 如果是按键事件，需要通过 strcmp 区分不同按键
+      const isKeyEvent = eventType === 'onKeyShortPress' || eventType === 'onKeyLongPress';
+      
+      if (isKeyEvent) {
+        // 按键事件：通过 strcmp 区分不同按键
+        eventConfigs.forEach((eventConfig, index) => {
+          const isFirst = index === 0;
+          const keyName = eventConfig.keyName || 'unknown';
+          
+          if (isFirst) {
+            callbackBody += `    // 检查按键名\n`;
+            callbackBody += `    if (strcmp(e->indev_name, "${keyName}") == 0)\n    {\n`;
+          } else {
+            callbackBody += `    else if (strcmp(e->indev_name, "${keyName}") == 0)\n    {\n`;
+          }
+          
+          // 生成动作代码（一个按键可能有多个动作）
+          callbackBody += this.generateActionsCode(eventConfig, componentMap, '        ');
+          callbackBody += `    }\n`;
+        });
+      } else {
+        // 非按键事件：合并所有 eventConfig 的 actions，按顺序执行
+        // 注意：同一事件类型可能有多个 eventConfig（虽然不常见），每个 eventConfig 可能有多个 action
+        eventConfigs.forEach(eventConfig => {
+          // 为每个 action 生成代码
+          if (eventConfig.actions && eventConfig.actions.length > 0) {
+            eventConfig.actions.forEach((action: any) => {
+              callbackBody += this.generateSingleActionCode(action, componentMap, '    ');
+            });
+          }
+        });
+      }
+
+      // 如果没有动作，生成 TODO 注释
+      if (!callbackBody.trim()) {
+        callbackBody = `    // TODO: 实现事件处理逻辑\n`;
+      }
+
+      impls.push(`void ${callbackName}(void *obj, gui_event_t *e)
+{
+    GUI_UNUSED(obj);
+    GUI_UNUSED(e);
+${callbackBody}}`);
+    });
+
+    return impls;
   }
 
   /**
@@ -112,16 +150,93 @@ export class DefaultEventGenerator implements EventCodeGenerator {
   }
 
   /**
-   * 生成 controlTimer 回调实现
+   * 生成事件动作代码（遍历所有 actions）
    */
-  getControlTimerCallbackImpl(component: Component, componentMap: Map<string, Component>): string[] {
-    return generateControlTimerCallbackImpl(component, componentMap);
+  private generateActionsCode(eventConfig: any, componentMap: Map<string, Component>, indent: string): string {
+    let code = '';
+    
+    if (!eventConfig.actions || eventConfig.actions.length === 0) {
+      return code;
+    }
+
+    eventConfig.actions.forEach((action: any) => {
+      code += this.generateSingleActionCode(action, componentMap, indent);
+    });
+
+    return code;
   }
 
   /**
-   * 生成按键事件回调实现
+   * 生成单个动作的代码
    */
-  getKeyEventCallbackImpl(component: Component, componentMap: Map<string, Component>): string[] {
-    return generateKeyEventCallbackImpl(component, componentMap);
+  private generateSingleActionCode(action: any, componentMap: Map<string, Component>, indent: string): string {
+    let code = '';
+
+    if (action.type === 'callFunction' && action.functionName) {
+      // 调用函数
+      code += `${indent}${action.functionName}(obj, e);\n`;
+    } else if (action.type === 'switchView' && action.target) {
+      // 跳转界面
+      const targetComponent = componentMap.get(action.target);
+      const targetName = targetComponent?.name || action.target;
+      const switchOutStyle = action.switchOutStyle || 'SWITCH_OUT_TO_LEFT_USE_TRANSLATION';
+      const switchInStyle = action.switchInStyle || 'SWITCH_IN_FROM_RIGHT_USE_TRANSLATION';
+      code += `${indent}gui_view_switch_direct(gui_view_get_current(), "${targetName}", ${switchOutStyle}, ${switchInStyle});\n`;
+    } else if (action.type === 'sendMessage' && action.message) {
+      // 发送消息
+      code += `${indent}gui_msg_publish("${action.message}", NULL, 0);\n`;
+    } else if (action.type === 'controlTimer' && action.timerTargets && action.timerTargets.length > 0) {
+      // 控制定时器
+      action.timerTargets.forEach((target: any) => {
+        const targetComp = componentMap.get(target.componentId);
+        if (!targetComp) return;
+
+        // 检查是否是计时标签
+        const isTimerLabel = targetComp.type === 'hg_timer_label';
+
+        if (isTimerLabel) {
+          // 计时标签的启停控制（使用生成的控制函数）
+          if (target.action === 'start') {
+            code += `${indent}${target.componentId}_start();\n`;
+          } else if (target.action === 'stop') {
+            code += `${indent}${target.componentId}_stop();\n`;
+          } else if (target.action === 'reset') {
+            code += `${indent}${target.componentId}_reset();\n`;
+          }
+        } else {
+          // 普通定时器的启停控制
+          const timers = targetComp.data?.timers;
+          if (!timers || !Array.isArray(timers)) return;
+
+          const timer = timers[target.timerIndex || 0];
+          if (!timer) return;
+
+          if (target.action === 'start') {
+            // 开启定时器
+            const callback = timer.mode === 'preset' 
+              ? `${target.componentId}_${timer.id}_cb`
+              : (timer.callback || `${target.componentId}_timer_cb`);
+            code += `${indent}${target.componentId}_timer_cnt = 0; // 清零计数器\n`;
+            code += `${indent}gui_obj_create_timer(GUI_BASE(${target.componentId}), ${timer.interval}, ${timer.reload ? 'true' : 'false'}, ${callback});\n`;
+            code += `${indent}gui_obj_start_timer(GUI_BASE(${target.componentId}));\n`;
+          } else if (target.action === 'stop') {
+            // 关闭定时器
+            code += `${indent}if (GUI_BASE(${target.componentId})->timer) {\n`;
+            code += `${indent}    gui_obj_stop_timer(GUI_BASE(${target.componentId}));\n`;
+            code += `${indent}}\n`;
+          }
+        }
+      });
+    }
+
+    return code;
+  }
+
+  /**
+   * 根据事件类型生成回调函数名
+   */
+  private getEventCallbackName(componentId: string, eventType: string): string {
+    const suffix = EVENT_TYPE_TO_CALLBACK_SUFFIX[eventType] || 'event';
+    return `${componentId}_${suffix}_cb`;
   }
 }

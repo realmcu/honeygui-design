@@ -737,19 +737,10 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
 
 `;
 
-    // 收集 switchView 回调实现
-    const switchViewImpls = this.collectSwitchViewCallbackImpls();
-    switchViewImpls.forEach(impl => {
-      code += impl + '\n\n';
-    });
-
-    // 生成普通回调函数模板（排除已生成的 switchView 回调）
+    // 生成普通回调函数模板
     const callbackFunctions = this.collectCallbackFunctions();
-    const switchViewFuncNames = new Set(this.collectSwitchViewCallbackNames());
     
     callbackFunctions.forEach(funcName => {
-      if (switchViewFuncNames.has(funcName)) return; // 跳过已生成的
-      
       code += `void ${funcName}(void *obj, gui_event_t *e)\n`;
       code += `{\n`;
       code += `    GUI_UNUSED(obj);\n`;
@@ -765,44 +756,6 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
 `;
 
     return code;
-  }
-
-  /**
-   * 收集所有 switchView 回调实现
-   */
-  private collectSwitchViewCallbackImpls(): string[] {
-    const impls: string[] = [];
-
-    this.components.forEach(component => {
-      const generator = EventGeneratorFactory.getGenerator(component.type);
-      if (generator.getSwitchViewCallbackImpl) {
-        generator.getSwitchViewCallbackImpl(component, this.componentMap).forEach(impl => {
-          impls.push(impl);
-        });
-      }
-    });
-
-    return impls;
-  }
-
-  /**
-   * 收集所有 switchView 回调函数名
-   */
-  private collectSwitchViewCallbackNames(): string[] {
-    const names: string[] = [];
-
-    this.components.forEach(component => {
-      if (!component.eventConfigs) return;
-      component.eventConfigs.forEach(eventConfig => {
-        eventConfig.actions.forEach(action => {
-          if (action.type === 'switchView' && action.target) {
-            names.push(`${component.id}_switch_view_cb`);
-          }
-        });
-      });
-    });
-
-    return names;
   }
 
   /**

@@ -16,19 +16,14 @@ export interface EventCodeGenerator {
   collectCallbackFunctions(component: Component): string[];
 
   /**
-   * 获取 switchView 回调的实现代码（可选）
+   * 获取统一的事件回调实现代码（除 onMessage 外的所有事件）
    */
-  getSwitchViewCallbackImpl?(component: Component, componentMap: Map<string, Component>): string[];
+  getEventCallbackImpl?(component: Component, componentMap: Map<string, Component>): string[];
 
   /**
    * 获取 onMessage 回调的实现代码（可选）
    */
   getMessageCallbackImpl?(component: Component, componentMap: Map<string, Component>): string[];
-
-  /**
-   * 获取 controlTimer 回调的实现代码（可选）
-   */
-  getControlTimerCallbackImpl?(component: Component, componentMap: Map<string, Component>): string[];
 
   /**
    * 获取按键事件回调的实现代码（可选）

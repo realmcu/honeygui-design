@@ -79,22 +79,27 @@ export class ViewEventGenerator implements EventCodeGenerator {
         return;
       }
 
-      // 处理 controlTimer 事件
+      // 处理其他事件（controlTimer、callFunction 等）
       const guiEvent = EVENT_TYPE_TO_GUI_EVENT[eventConfig.type];
       if (guiEvent) {
-        const controlTimerActions = eventConfig.actions.filter(a => 
-          a.type === 'controlTimer' && a.timerTargets && a.timerTargets.length > 0
+        // 检查是否有需要生成回调的动作（controlTimer、sendMessage）
+        const needsCallback = eventConfig.actions.some(a => 
+          a.type === 'controlTimer' || a.type === 'sendMessage'
         );
         
-        if (controlTimerActions.length > 0) {
+        if (needsCallback) {
+          // 生成统一的回调函数
           const currentIndex = eventTypeIndexMap.get(eventConfig.type) || 0;
-          
-          controlTimerActions.forEach((_, actionIndex) => {
-            const callbackName = generateEventCallbackName(component.id, eventConfig.type, currentIndex + actionIndex);
-            code += `${indentStr}gui_obj_add_event_cb(${targetRef}, (gui_event_cb_t)${callbackName}, ${guiEvent}, NULL);\n`;
+          const callbackName = generateEventCallbackName(component.id, eventConfig.type, currentIndex);
+          eventTypeIndexMap.set(eventConfig.type, currentIndex + 1);
+          code += `${indentStr}gui_obj_add_event_cb(${targetRef}, (gui_event_cb_t)${callbackName}, ${guiEvent}, NULL);\n`;
+        } else {
+          // 只有 callFunction 的情况，直接绑定
+          eventConfig.actions.forEach(action => {
+            if (action.type === 'callFunction' && action.functionName) {
+              code += `${indentStr}gui_obj_add_event_cb(${targetRef}, ${action.functionName}, ${guiEvent}, NULL);\n`;
+            }
           });
-          
-          eventTypeIndexMap.set(eventConfig.type, currentIndex + controlTimerActions.length);
         }
       }
     });
@@ -132,21 +137,28 @@ export class ViewEventGenerator implements EventCodeGenerator {
           }
         }
 
-        // 收集 controlTimer 回调函数名
-        const controlTimerActions = eventConfig.actions.filter(a => 
-          a.type === 'controlTimer' && a.timerTargets && a.timerTargets.length > 0
-        );
-        
-        if (controlTimerActions.length > 0) {
-          const currentIndex = eventTypeIndexMap.get(eventConfig.type) || 0;
+        // 收集其他事件的回调函数名
+        eventConfig.actions.forEach(action => {
+          // 检查是否有需要生成回调的动作
+          const needsCallback = eventConfig.actions.some(a => 
+            a.type === 'controlTimer' || a.type === 'sendMessage'
+          );
           
-          controlTimerActions.forEach((_, actionIndex) => {
-            const callbackName = generateEventCallbackName(component.id, eventConfig.type, currentIndex + actionIndex);
-            functions.push(callbackName);
-          });
-          
-          eventTypeIndexMap.set(eventConfig.type, currentIndex + controlTimerActions.length);
-        }
+          if (needsCallback) {
+            // 只收集一次回调函数名
+            const currentIndex = eventTypeIndexMap.get(eventConfig.type) || 0;
+            if (currentIndex === 0 || action === eventConfig.actions[0]) {
+              const callbackName = generateEventCallbackName(component.id, eventConfig.type, currentIndex);
+              if (!functions.includes(callbackName)) {
+                functions.push(callbackName);
+                eventTypeIndexMap.set(eventConfig.type, currentIndex + 1);
+              }
+            }
+          } else if (action.type === 'callFunction' && action.functionName) {
+            // 只有 callFunction 的情况
+            functions.push(action.functionName);
+          }
+        });
       });
     }
     
@@ -166,5 +178,127 @@ export class ViewEventGenerator implements EventCodeGenerator {
    */
   getKeyEventCallbackImpl(component: Component, componentMap: Map<string, Component>): string[] {
     return generateKeyEventCallbackImpl(component, componentMap);
+  }
+
+  /**
+   * 生成统一的事件回调实现（除 onMessage 外的所有事件）
+   * hg_view 的 switchView 事件在 switch_in 函数中使用 gui_view_switch_on_event 处理
+   * 其他事件（如 controlTimer、sendMessage）使用 gui_obj_add_event_cb 绑定回调函数
+   */
+  getEventCallbackImpl(component: Component, componentMap: Map<string, Component>): string[] {
+    const impls: string[] = [];
+    if (!component.eventConfigs) return impls;
+
+    // 按事件类型分组
+    const eventGroups = new Map<string, typeof component.eventConfigs>();
+    
+    component.eventConfigs.forEach(eventConfig => {
+      if (eventConfig.type === 'onMessage') return; // onMessage 单独处理
+      
+      // 跳过按键事件（按键事件在 getKeyEventCallbackImpl 中处理）
+      if ((eventConfig.type === 'onKeyShortPress' || eventConfig.type === 'onKeyLongPress') && eventConfig.keyName) {
+        return;
+      }
+      
+      // 只处理有 controlTimer 或 sendMessage 动作的事件
+      const needsCallback = eventConfig.actions.some(a => 
+        a.type === 'controlTimer' || a.type === 'sendMessage'
+      );
+      
+      if (needsCallback) {
+        if (!eventGroups.has(eventConfig.type)) {
+          eventGroups.set(eventConfig.type, []);
+        }
+        eventGroups.get(eventConfig.type)!.push(eventConfig);
+      }
+    });
+
+    // 为每种事件类型生成一个回调函数
+    eventGroups.forEach((eventConfigs, eventType) => {
+      // 为每个 eventConfig 生成独立的回调函数
+      eventConfigs.forEach((eventConfig, index) => {
+        const callbackName = generateEventCallbackName(component.id, eventType, index);
+        let callbackBody = '';
+
+        // 生成动作代码
+        if (eventConfig.actions && eventConfig.actions.length > 0) {
+          eventConfig.actions.forEach((action: any) => {
+            callbackBody += this.generateSingleActionCode(action, componentMap, '    ');
+          });
+        }
+
+        // 如果没有动作，生成 TODO 注释
+        if (!callbackBody.trim()) {
+          callbackBody = `    // TODO: 实现事件处理逻辑\n`;
+        }
+
+        impls.push(`void ${callbackName}(void *obj, gui_event_t *e)
+{
+    GUI_UNUSED(obj);
+    GUI_UNUSED(e);
+${callbackBody}}`);
+      });
+    });
+
+    return impls;
+  }
+
+  /**
+   * 生成单个动作的代码
+   */
+  private generateSingleActionCode(action: any, componentMap: Map<string, Component>, indent: string): string {
+    let code = '';
+
+    if (action.type === 'callFunction' && action.functionName) {
+      // 调用函数
+      code += `${indent}${action.functionName}(obj, e);\n`;
+    } else if (action.type === 'sendMessage' && action.message) {
+      // 发送消息
+      code += `${indent}gui_msg_publish("${action.message}", NULL, 0);\n`;
+    } else if (action.type === 'controlTimer' && action.timerTargets && action.timerTargets.length > 0) {
+      // 控制定时器
+      action.timerTargets.forEach((target: any) => {
+        const targetComp = componentMap.get(target.componentId);
+        if (!targetComp) return;
+
+        // 检查是否是计时标签
+        const isTimerLabel = targetComp.type === 'hg_timer_label';
+
+        if (isTimerLabel) {
+          // 计时标签的启停控制（使用生成的控制函数）
+          if (target.action === 'start') {
+            code += `${indent}${target.componentId}_start();\n`;
+          } else if (target.action === 'stop') {
+            code += `${indent}${target.componentId}_stop();\n`;
+          } else if (target.action === 'reset') {
+            code += `${indent}${target.componentId}_reset();\n`;
+          }
+        } else {
+          // 普通定时器的启停控制
+          const timers = targetComp.data?.timers;
+          if (!timers || !Array.isArray(timers)) return;
+
+          const timer = timers[target.timerIndex || 0];
+          if (!timer) return;
+
+          if (target.action === 'start') {
+            // 开启定时器
+            const callback = timer.mode === 'preset' 
+              ? `${target.componentId}_${timer.id}_cb`
+              : (timer.callback || `${target.componentId}_timer_cb`);
+            code += `${indent}${target.componentId}_timer_cnt = 0; // 清零计数器\n`;
+            code += `${indent}gui_obj_create_timer(GUI_BASE(${target.componentId}), ${timer.interval}, ${timer.reload ? 'true' : 'false'}, ${callback});\n`;
+            code += `${indent}gui_obj_start_timer(GUI_BASE(${target.componentId}));\n`;
+          } else if (target.action === 'stop') {
+            // 关闭定时器
+            code += `${indent}if (GUI_BASE(${target.componentId})->timer) {\n`;
+            code += `${indent}    gui_obj_stop_timer(GUI_BASE(${target.componentId}));\n`;
+            code += `${indent}}\n`;
+          }
+        }
+      });
+    }
+
+    return code;
   }
 }

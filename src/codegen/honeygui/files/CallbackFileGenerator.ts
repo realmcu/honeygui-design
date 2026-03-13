@@ -175,6 +175,7 @@ export class CallbackFileGenerator {
     
     let code = `#include "${baseName}_callbacks.h"
 #include "../ui/${baseName}_ui.h"
+#include "../user/${baseName}_user.h"
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -231,27 +232,15 @@ export class CallbackFileGenerator {
 
     code += `// 事件回调函数实现\n\n`;
 
-    // 收集 switchView 回调实现
-    const switchViewImpls = this.collectSwitchViewCallbackImpls();
-    switchViewImpls.forEach(impl => {
+    // 收集统一的事件回调实现（除 onMessage 外的所有事件）
+    const eventCallbackImpls = this.collectEventCallbackImpls(existingFunctions);
+    eventCallbackImpls.forEach(impl => {
       code += impl + '\n\n';
     });
 
     // 收集 onMessage 回调实现（跳过已存在的）
     const messageImpls = this.collectMessageCallbackImpls(existingFunctions);
     messageImpls.forEach(impl => {
-      code += impl + '\n\n';
-    });
-
-    // 收集 controlTimer 回调实现（跳过已存在的）
-    const controlTimerImpls = this.collectControlTimerCallbackImpls(existingFunctions);
-    controlTimerImpls.forEach(impl => {
-      code += impl + '\n\n';
-    });
-
-    // 收集按键事件回调实现（跳过已存在的）
-    const keyEventImpls = this.collectKeyEventCallbackImpls(existingFunctions);
-    keyEventImpls.forEach(impl => {
       code += impl + '\n\n';
     });
 
@@ -278,34 +267,6 @@ export class CallbackFileGenerator {
         code += impl + '\n';
       });
     }
-
-    // 生成普通回调函数模板（跳过已存在的）
-    const callbackFunctions = this.collectCallbackFunctions();
-    const switchViewFuncNames = new Set(this.collectSwitchViewCallbackNames());
-    const timeUpdateFuncNames = new Set(this.collectTimeUpdateCallbackNames());
-    const timerCallbackNames = new Set(this.collectTimerCallbackNames());
-    const msgCallbackNames = new Set(this.collectMessageCallbackNames());
-    const controlTimerCallbackNames = new Set(this.collectControlTimerCallbackNames());
-    const keyEventCallbackNames = new Set(this.collectKeyEventCallbackNames());
-    
-    callbackFunctions.forEach(funcName => {
-      // 跳过特殊类型的回调（它们有专门的生成逻辑）
-      if (switchViewFuncNames.has(funcName) || timeUpdateFuncNames.has(funcName) || timerCallbackNames.has(funcName) || msgCallbackNames.has(funcName) || controlTimerCallbackNames.has(funcName) || keyEventCallbackNames.has(funcName)) return;
-      
-      // 跳过已存在于 custom_functions 保护区的函数
-      if (existingFunctions.has(funcName)) {
-        // 函数已存在，不生成模板
-        return;
-      }
-      
-      code += `void ${funcName}(void *obj, gui_event_t *e)\n`;
-      code += `{\n`;
-      code += `    GUI_UNUSED(obj);\n`;
-      code += `    GUI_UNUSED(e);\n`;
-      code += `    // TODO: 实现事件处理逻辑\n`;
-      code += `    printf("${funcName} triggered\\n");\n`;
-      code += `}\n\n`;
-    });
 
     code += `/* @protected start custom_functions */
 // 自定义函数
@@ -392,47 +353,47 @@ export class CallbackFileGenerator {
   }
 
   /**
-   * 收集所有 switchView 回调实现
+   * 收集所有统一的事件回调实现（除 onMessage 外的所有事件）
+   * @param existingFunctions 已存在的函数名集合（从 custom_functions 保护区提取）
    */
-  private collectSwitchViewCallbackImpls(): string[] {
+  private collectEventCallbackImpls(existingFunctions: Set<string> = new Set()): string[] {
     const impls = new Map<string, string>(); // 使用 Map 去重，key 为函数名
 
     this.allComponents.forEach(component => {
       const generator = EventGeneratorFactory.getGenerator(component.type);
-      if (generator.getSwitchViewCallbackImpl) {
-        generator.getSwitchViewCallbackImpl(component, this.componentMap).forEach(impl => {
+      
+      // 收集普通事件回调实现
+      if (generator.getEventCallbackImpl) {
+        generator.getEventCallbackImpl(component, this.componentMap).forEach(impl => {
           // 提取函数名作为 key
           const match = impl.match(/void\s+(\w+)\s*\(/);
           if (match) {
             const funcName = match[1];
-            impls.set(funcName, impl);
+            // 跳过已存在于 custom_functions 保护区的函数
+            if (!existingFunctions.has(funcName)) {
+              impls.set(funcName, impl);
+            }
+          }
+        });
+      }
+      
+      // 收集按键事件回调实现
+      if (generator.getKeyEventCallbackImpl) {
+        generator.getKeyEventCallbackImpl(component, this.componentMap).forEach(impl => {
+          // 提取函数名作为 key
+          const match = impl.match(/void\s+(\w+)\s*\(/);
+          if (match) {
+            const funcName = match[1];
+            // 跳过已存在于 custom_functions 保护区的函数
+            if (!existingFunctions.has(funcName)) {
+              impls.set(funcName, impl);
+            }
           }
         });
       }
     });
 
     return Array.from(impls.values());
-  }
-
-  /**
-   * 收集所有 switchView 回调函数名
-   */
-  private collectSwitchViewCallbackNames(): string[] {
-    const names: string[] = [];
-
-    this.allComponents.forEach(component => {
-      if (!component.eventConfigs) return;
-      component.eventConfigs.forEach(eventConfig => {
-        if (eventConfig.type === 'onMessage') return; // onMessage 单独处理
-        eventConfig.actions.forEach(action => {
-          if (action.type === 'switchView' && action.target) {
-            names.push(`${component.id}_switch_view_cb`);
-          }
-        });
-      });
-    });
-
-    return names;
   }
 
   /**
@@ -463,33 +424,6 @@ export class CallbackFileGenerator {
   }
 
   /**
-   * 收集所有 controlTimer 回调实现
-   * @param existingFunctions 已存在的函数名集合（从 custom_functions 保护区提取）
-   */
-  private collectControlTimerCallbackImpls(existingFunctions: Set<string> = new Set()): string[] {
-    const impls = new Map<string, string>(); // 使用 Map 去重，key 为函数名
-
-    this.allComponents.forEach(component => {
-      const generator = EventGeneratorFactory.getGenerator(component.type);
-      if (generator.getControlTimerCallbackImpl) {
-        generator.getControlTimerCallbackImpl(component, this.componentMap).forEach(impl => {
-          // 提取函数名作为 key
-          const match = impl.match(/void\s+(\w+)\s*\(/);
-          if (match) {
-            const funcName = match[1];
-            // 跳过已存在于 custom_functions 保护区的函数
-            if (!existingFunctions.has(funcName)) {
-              impls.set(funcName, impl);
-            }
-          }
-        });
-      }
-    });
-
-    return Array.from(impls.values());
-  }
-
-  /**
    * 收集所有 onMessage 回调函数名
    */
   private collectMessageCallbackNames(): string[] {
@@ -502,93 +436,6 @@ export class CallbackFileGenerator {
         if (eventConfig.type === 'onMessage' && eventConfig.message) {
           names.push(getMessageCallbackName(component, eventConfig, msgIndex));
           msgIndex++;
-        }
-      });
-    });
-
-    return names;
-  }
-
-  /**
-   * 收集所有 controlTimer 回调函数名
-   */
-  private collectControlTimerCallbackNames(): string[] {
-    const names: string[] = [];
-
-    this.allComponents.forEach(component => {
-      if (!component.eventConfigs) return;
-      
-      // 为每个事件类型维护独立的索引
-      const eventTypeIndexMap = new Map<string, number>();
-      
-      component.eventConfigs.forEach(eventConfig => {
-        if (eventConfig.type === 'onMessage') return;
-        
-        // 跳过按键事件（按键事件的 controlTimer 在按键回调中处理）
-        if ((eventConfig.type === 'onKeyShortPress' || eventConfig.type === 'onKeyLongPress') && eventConfig.keyName) {
-          return;
-        }
-        
-        const controlTimerActions = eventConfig.actions.filter(a => 
-          a.type === 'controlTimer' && a.timerTargets && a.timerTargets.length > 0
-        );
-        
-        if (controlTimerActions.length > 0) {
-          const currentIndex = eventTypeIndexMap.get(eventConfig.type) || 0;
-          
-          controlTimerActions.forEach((_, actionIndex) => {
-            const callbackName = generateEventCallbackName(component.id, eventConfig.type, currentIndex + actionIndex);
-            names.push(callbackName);
-          });
-          
-          eventTypeIndexMap.set(eventConfig.type, currentIndex + controlTimerActions.length);
-        }
-      });
-    });
-
-    return names;
-  }
-
-  /**
-   * 收集所有按键事件回调实现
-   * @param existingFunctions 已存在的函数名集合（从 custom_functions 保护区提取）
-   */
-  private collectKeyEventCallbackImpls(existingFunctions: Set<string> = new Set()): string[] {
-    const impls = new Map<string, string>(); // 使用 Map 去重，key 为函数名
-
-    this.allComponents.forEach(component => {
-      const generator = EventGeneratorFactory.getGenerator(component.type);
-      if (generator.getKeyEventCallbackImpl) {
-        generator.getKeyEventCallbackImpl(component, this.componentMap).forEach(impl => {
-          // 提取函数名作为 key
-          const match = impl.match(/void\s+(\w+)\s*\(/);
-          if (match) {
-            const funcName = match[1];
-            // 跳过已存在于 custom_functions 保护区的函数
-            if (!existingFunctions.has(funcName)) {
-              impls.set(funcName, impl);
-            }
-          }
-        });
-      }
-    });
-
-    return Array.from(impls.values());
-  }
-
-  /**
-   * 收集所有按键事件回调函数名
-   */
-  private collectKeyEventCallbackNames(): string[] {
-    const names: string[] = [];
-
-    this.allComponents.forEach(component => {
-      if (!component.eventConfigs) return;
-      let keyEventIndex = 0;
-      component.eventConfigs.forEach(eventConfig => {
-        if ((eventConfig.type === 'onKeyShortPress' || eventConfig.type === 'onKeyLongPress') && eventConfig.keyName) {
-          names.push(`${component.id}_key_${keyEventIndex}_cb`);
-          keyEventIndex++;
         }
       });
     });

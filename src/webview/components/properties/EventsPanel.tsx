@@ -1,7 +1,7 @@
 /**
  * 事件面板组件 - Event-Action 配置
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Component } from '../../types';
 import { useDesignerStore } from '../../store';
 import {
@@ -28,11 +28,29 @@ interface EventsPanelProps {
 export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate }) => {
   const [expandedEvents, setExpandedEvents] = useState<Set<number>>(new Set([0]));
   const [timerExpanded, setTimerExpanded] = useState<boolean>(false);
+  const [userFunctions, setUserFunctions] = useState<Array<{ name: string; type: 'event' | 'message' }>>([]);
   const components = useDesignerStore((state) => state.components);
   const allViews = useDesignerStore((state) => state.allViews || []);
 
   const eventConfigs = component.eventConfigs || [];
   const supportedEvents = getSupportedEvents(component.type);
+
+  // 加载用户自定义函数列表
+  useEffect(() => {
+    // 请求后端加载用户函数
+    window.vscodeAPI?.postMessage({ command: 'getUserFunctions' });
+
+    // 监听后端返回的用户函数列表
+    const handleMessage = (event: MessageEvent) => {
+      const message = event.data;
+      if (message.command === 'userFunctionsLoaded') {
+        setUserFunctions(message.functions || []);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
 
   // 获取可用的视图列表（当前文件 + 其他文件）
   const getAvailableViews = () => {
@@ -285,7 +303,7 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
               跳转界面
             </option>
             <option value="sendMessage">发送消息</option>
-            <option value="callFunction">调用函数</option>
+            <option value="callFunction">调用自定义函数</option>
             <option value="controlTimer">自定义动画集</option>
           </select>
           <button
@@ -353,16 +371,37 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
             </div>
           )}
 
-          {/* callFunction - 调用函数 */}
+          {/* callFunction - 调用自定义函数 */}
           {action.type === 'callFunction' && (
             <div className="param-row">
-              <label>{t('Function Name')}</label>
-              <input
-                type="text"
-                value={action.functionName || ''}
-                onChange={(e) => handleActionUpdate(eventIndex, actionIndex, { functionName: e.target.value })}
-                placeholder="on_button_click"
-              />
+              <label>{t('Custom Function')}</label>
+              {userFunctions.length === 0 ? (
+                <div style={{ fontSize: '12px', color: 'var(--vscode-descriptionForeground)' }}>
+                  未找到用户自定义函数，请在 src/user/**_user.h 中声明函数
+                </div>
+              ) : (
+                <select
+                  value={action.functionName || ''}
+                  onChange={(e) => handleActionUpdate(eventIndex, actionIndex, { functionName: e.target.value })}
+                >
+                  <option value="">-- {t('Select')} --</option>
+                  {userFunctions
+                    .filter(func => {
+                      // 根据事件类型过滤函数
+                      const eventConfig = eventConfigs[eventIndex];
+                      if (eventConfig.type === 'onMessage') {
+                        return func.type === 'message';
+                      } else {
+                        return func.type === 'event';
+                      }
+                    })
+                    .map(func => (
+                      <option key={func.name} value={func.name}>
+                        {func.name}
+                      </option>
+                    ))}
+                </select>
+              )}
             </div>
           )}
 
