@@ -668,6 +668,9 @@ const zhCN = {
 
   // Animation Types
   'No Animation (Initial)': '无动画（初始状态）',
+  'Out: Still (Initial State)': '静止（初始状态）',
+  'Out: No Animation': '无动画',
+  'Out: Fade Out': '淡出',
   'Slide Left': '向左平移',
   'Slide Right': '向右平移',
   'Slide Up': '向上平移',

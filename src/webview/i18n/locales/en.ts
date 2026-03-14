@@ -668,6 +668,9 @@ const en = {
 
   // Animation Types
   'No Animation (Initial)': 'No Animation (Initial)',
+  'Out: Still (Initial State)': 'Still (Initial State)',
+  'Out: No Animation': 'No Animation',
+  'Out: Fade Out': 'Fade Out',
   'Slide Left': 'Slide Left',
   'Slide Right': 'Slide Right',
   'Slide Up': 'Slide Up',

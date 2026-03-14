@@ -134,7 +134,8 @@ export const KEY_NAMES = [
 
 // 动画类型的翻译键映射
 const ANIMATION_LABEL_KEYS: Record<string, string> = {
-  'SWITCH_INIT_STATE': 'No Animation (Initial)',
+  'SWITCH_INIT_STATE': 'Out: Still (Initial State)',
+  'SWITCH_OUT_NONE_ANIMATION': 'Out: No Animation',
   'SWITCH_OUT_TO_LEFT_USE_TRANSLATION': 'Slide Left',
   'SWITCH_OUT_TO_RIGHT_USE_TRANSLATION': 'Slide Right',
   'SWITCH_OUT_TO_TOP_USE_TRANSLATION': 'Slide Up',
@@ -152,11 +153,13 @@ const ANIMATION_LABEL_KEYS: Record<string, string> = {
   'SWITCH_OUT_TO_TOP_USE_REDUCTION': 'Reduce Up',
   'SWITCH_OUT_TO_BOTTOM_USE_REDUCTION': 'Reduce Down',
   'SWITCH_OUT_STILL_USE_BLUR': 'Blur (Still)',
+  'SWITCH_OUT_ANIMATION_FADE': 'Out: Fade Out',
 };
 
 // 导出静态选项（用于 Webview，使用翻译键）
 export const SWITCH_OUT_STYLES = [
-  { value: 'SWITCH_INIT_STATE', labelKey: 'No Animation (Initial)' },
+  { value: 'SWITCH_INIT_STATE', labelKey: 'Out: Still (Initial State)' },
+  { value: 'SWITCH_OUT_NONE_ANIMATION', labelKey: 'Out: No Animation' },
   { value: 'SWITCH_OUT_TO_LEFT_USE_TRANSLATION', labelKey: 'Slide Left' },
   { value: 'SWITCH_OUT_TO_RIGHT_USE_TRANSLATION', labelKey: 'Slide Right' },
   { value: 'SWITCH_OUT_TO_TOP_USE_TRANSLATION', labelKey: 'Slide Up' },
@@ -174,6 +177,7 @@ export const SWITCH_OUT_STYLES = [
   { value: 'SWITCH_OUT_TO_TOP_USE_REDUCTION', labelKey: 'Reduce Up' },
   { value: 'SWITCH_OUT_TO_BOTTOM_USE_REDUCTION', labelKey: 'Reduce Down' },
   { value: 'SWITCH_OUT_STILL_USE_BLUR', labelKey: 'Blur (Still)' },
+  { value: 'SWITCH_OUT_ANIMATION_FADE', labelKey: 'Out: Fade Out' },
 ];
 
 export const SWITCH_IN_STYLES = [
