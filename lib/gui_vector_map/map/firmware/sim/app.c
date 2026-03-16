@@ -9,8 +9,13 @@
 #include <math.h>
 #include <time.h>
 #include "map_types.h"
-#ifdef _WIN32
-#include <conio.h>  /* For _kbhit() and _getch() - keyboard input */
+
+/* For _kbhit() and _getch() - keyboard input */
+#ifdef  USE_HONEY_GUI
+#include "kb_algo.h"
+#include "tp_algo.h"
+#elif defined(_WIN32)
+#include <conio.h>  
 #else
 /* MCU GPIO Key includes */
 #include "trace.h"
@@ -32,7 +37,7 @@
  * MFB:  Multi-Function Button - Reserved (uses mfb_api.h for low-power wake)
  * ============================================================================
  */
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(USE_HONEY_GUI)
 #define MCU_KEY1_PIN                  P3_0   /* Toggle recording/replay mode */
 #define MCU_KEY2_PIN                  P3_5   /* Reset zoom and pan */
 #define MCU_KEY3_PIN                  P3_1   /* Cycle application mode */
@@ -143,6 +148,102 @@ void mcu_gpio_keys_init(void)
     MAP_PRINTF("  KEY3(P3_1): Reserved");
     MAP_PRINTF("  MFB: Reserved");
 }
+#elif defined(USE_HONEY_GUI)
+static void mcu_gpio_keys_init(void)
+{
+}
+
+typedef struct
+{
+    const char *name;
+    uint32_t last_press_timestamp;
+} trmap_honey_gui_key_state_t;
+
+static trmap_honey_gui_key_state_t g_trmap_honey_gui_keys[] =
+{
+    {"Home", 0},
+    {"Back", 0},
+    {"Menu", 0},
+    {"Power", 0},
+};
+
+static int trmap_honey_gui_touch_active(const touch_info_t *tp)
+{
+    return (tp != NULL) && (tp->pressed || tp->pressing);
+}
+
+static int trmap_honey_gui_touch_released(const touch_info_t *tp)
+{
+    return (tp != NULL) && (tp->released != 0);
+}
+
+static trmap_honey_gui_key_state_t *trmap_honey_gui_find_key_state(const char *name)
+{
+    uint32_t i;
+
+    if (name == NULL)
+    {
+        return NULL;
+    }
+
+    for (i = 0; i < (sizeof(g_trmap_honey_gui_keys) / sizeof(g_trmap_honey_gui_keys[0])); i++)
+    {
+        if (strcmp(g_trmap_honey_gui_keys[i].name, name) == 0)
+        {
+            return &g_trmap_honey_gui_keys[i];
+        }
+    }
+
+    return NULL;
+}
+
+static int trmap_honey_gui_consume_key_press(const char *name)
+{
+    gui_obj_t *kb_root;
+    gui_node_list_t *node;
+    trmap_honey_gui_key_state_t *key_state;
+
+    key_state = trmap_honey_gui_find_key_state(name);
+    if (key_state == NULL)
+    {
+        return 0;
+    }
+
+    kb_root = gui_obj_get_kb_root();
+    if (kb_root == NULL)
+    {
+        return 0;
+    }
+
+    gui_list_for_each(node, &kb_root->child_list)
+    {
+        gui_obj_t *obj = gui_list_entry(node, gui_obj_t, brother_list);
+        gui_indev_kb_t *kb = (gui_indev_kb_t *)obj;
+        uint32_t press_timestamp;
+
+        if (obj->name == NULL || strcmp(obj->name, name) != 0)
+        {
+            continue;
+        }
+
+        if (kb->state == NULL || kb->timestamp_ms_press == NULL)
+        {
+            return 0;
+        }
+
+        press_timestamp = *(kb->timestamp_ms_press);
+        if (*(kb->state) == true && press_timestamp != 0 &&
+            press_timestamp != key_state->last_press_timestamp)
+        {
+            key_state->last_press_timestamp = press_timestamp;
+            return 1;
+        }
+
+        return 0;
+    }
+
+    return 0;
+}
 #endif
 
 
@@ -154,6 +255,7 @@ void mcu_gpio_keys_init(void)
 #include "gps_simulator.h"
 #include "gps_provider.h"
 #include "gps_driver.h"
+#include "map_control.h"
 
 /* Default settings */
 size_t map_defalut_width = 410;
@@ -171,6 +273,7 @@ size_t map_defalut_height = 502;
 
 /* GPS Map / Nav Setup Mode constants */
 #define GPS_MAP_VIEW_RADIUS     100.0f  /* Map display radius (meters) */
+#define MAP_VIEW_UPDATE_INTERVAL_MS 100 /* Map view update interval (ms) */
 #define GPS_MAP_UPDATE_INTERVAL_MS  100 /* GPS map update interval (ms) */
 #define NAV_SETUP_PAN_STEP     0.0005f  /* Pan step per key press (degrees, ~55m) */
 
@@ -204,6 +307,18 @@ typedef enum
 /* Mode switch request (set by keyboard handler, processed by main loop) */
 static volatile int g_mode_switch_requested = 0;
 static volatile app_mode_t g_mode_switch_target = APP_MODE_MAP_VIEW;
+
+typedef enum
+{
+    TRMAP_MAP_CONTROL_PAN_NORTH,
+    TRMAP_MAP_CONTROL_PAN_SOUTH,
+    TRMAP_MAP_CONTROL_PAN_WEST,
+    TRMAP_MAP_CONTROL_PAN_EAST
+} trmap_map_control_pan_direction_t;
+
+static int trmap_map_control_pan_internal(trmap_map_control_pan_direction_t direction);
+static trmap_app_mode_t trmap_public_mode_from_internal(app_mode_t mode);
+static int trmap_internal_mode_from_public(trmap_app_mode_t mode, app_mode_t *out_mode);
 
 /* ============================================================================
  * GPS Position Structure (Legacy - now uses gps_simulator.h)
@@ -281,16 +396,17 @@ typedef struct
     guidance_state_t guidance_state;    /* Lane guidance state */
     guidance_style_t guidance_style;    /* Lane guidance style */
     lane_display_style_t lane_style;    /* Multi-lane display style (Phase 2) */
-#ifndef _WIN32
+    /* Map control state */
+    float pan_offset_lat;       /* Pan offset in latitude (degrees) */
+    float pan_offset_lon;       /* Pan offset in longitude (degrees) */
+    float zoom_factor;          /* Zoom factor (1.0 = default) */
+#if !defined(_WIN32) || defined(USE_HONEY_GUI)
     /* Touch pan and zoom control */
     int touch_active;           /* Touch is currently active */
     uint16_t touch_start_x;     /* Touch start X coordinate */
     uint16_t touch_start_y;     /* Touch start Y coordinate */
     uint16_t touch_last_x;      /* Last touch X coordinate */
     uint16_t touch_last_y;      /* Last touch Y coordinate */
-    float pan_offset_lat;       /* Pan offset in latitude (degrees) */
-    float pan_offset_lon;       /* Pan offset in longitude (degrees) */
-    float zoom_factor;          /* Zoom factor (1.0 = default) */
     /* Double-tap detection */
     uint32_t last_tap_time;     /* Timestamp of last tap (ms) */
     uint16_t last_tap_x;        /* X coordinate of last tap */
@@ -423,6 +539,59 @@ static const char *app_mode_to_string(app_mode_t mode)
             return "Navigation";
         default:
             return "Unknown";
+    }
+}
+
+static trmap_app_mode_t trmap_public_mode_from_internal(app_mode_t mode)
+{
+    switch (mode)
+    {
+        case APP_MODE_MAP_VIEW:
+            return TRMAP_APP_MODE_MAP_VIEW;
+        case APP_MODE_GPS_INIT:
+            return TRMAP_APP_MODE_GPS_INIT;
+        case APP_MODE_GPS_TRACK_RECORD:
+            return TRMAP_APP_MODE_GPS_TRACK_RECORD;
+        case APP_MODE_GPS_TRACK_REPLAY:
+            return TRMAP_APP_MODE_GPS_TRACK_REPLAY;
+        case APP_MODE_GPS_MAP:
+            return TRMAP_APP_MODE_GPS_MAP;
+        case APP_MODE_NAVIGATION:
+            return TRMAP_APP_MODE_NAVIGATION;
+        default:
+            return TRMAP_APP_MODE_MAP_VIEW;
+    }
+}
+
+static int trmap_internal_mode_from_public(trmap_app_mode_t mode, app_mode_t *out_mode)
+{
+    if (!out_mode)
+    {
+        return 0;
+    }
+
+    switch (mode)
+    {
+        case TRMAP_APP_MODE_MAP_VIEW:
+            *out_mode = APP_MODE_MAP_VIEW;
+            return 1;
+        case TRMAP_APP_MODE_GPS_INIT:
+            *out_mode = APP_MODE_GPS_INIT;
+            return 1;
+        case TRMAP_APP_MODE_GPS_TRACK_RECORD:
+            *out_mode = APP_MODE_GPS_TRACK_RECORD;
+            return 1;
+        case TRMAP_APP_MODE_GPS_TRACK_REPLAY:
+            *out_mode = APP_MODE_GPS_TRACK_REPLAY;
+            return 1;
+        case TRMAP_APP_MODE_GPS_MAP:
+            *out_mode = APP_MODE_GPS_MAP;
+            return 1;
+        case TRMAP_APP_MODE_NAVIGATION:
+            *out_mode = APP_MODE_NAVIGATION;
+            return 1;
+        default:
+            return 0;
     }
 }
 
@@ -1033,8 +1202,7 @@ static int render_nav_frame(app_state_t *app)
         renderer_fit_path(r, app->nav.current_path, 0.15f);
     }
 
-#ifndef _WIN32
-    /* Apply touch pan and zoom adjustments to viewport */
+    /* Apply map pan and zoom adjustments to viewport */
     if (app->zoom_factor != 1.0f || app->pan_offset_lat != 0.0f || app->pan_offset_lon != 0.0f)
     {
         /* Get current viewport directly from renderer struct */
@@ -1064,7 +1232,6 @@ static int render_nav_frame(app_state_t *app)
                               center_lat + lat_range / 2.0f,
                               center_lon + lon_range / 2.0f);
     }
-#endif
 
     /* Render map with theme */
     map_theme_t theme = MAP_THEME_GOOGLE;
@@ -1396,8 +1563,8 @@ static int render_nav_frame(app_state_t *app)
         render_text(r, app->config.width - 140.0f - 8.0f, 20.0f, "✓ ARRIVED!", 28.0f, 0xFF0000FF);
     }    /* Controls help */
 #ifdef _WIN32
-    snprintf(info, sizeof(info), "[M] Mode | [1/2/3/4] Switch | [Q] Quit");
-    render_text(r, 50.0f, app->config.height - 25.0f, info, 14.0f, 0x666666FF);
+    snprintf(info, sizeof(info), "[WASD/Arrows] Pan | [Z/X] Zoom | [0] Reset | [M] Mode | [1/2/3/4] Switch | [Q] Quit");
+    render_text(r, 10.0f, app->config.height - 25.0f, info, 14.0f, 0x666666FF);
 #else
     snprintf(info, sizeof(info), "[KEY1-] [MFB+] Zoom | Tap Reset | [KEY3] Mode | Slide Pan");
     /* Center the text */
@@ -1638,21 +1805,21 @@ static int nav_init(app_state_t *app, map_t *map, app_config_t *config)
     app->nav.current_segment = 0;
     app->nav.off_route = 0;
     app->needs_redraw = 1;
+    app->pan_offset_lat = 0.0f;
+    app->pan_offset_lon = 0.0f;
+    app->zoom_factor = 1.0f;
 
     /* Initialize guidance styles */
     guidance_style_init_preset(&app->guidance_style, GUIDANCE_STYLE_GOOGLE);
     lane_display_style_init_preset(&app->lane_style, GUIDANCE_STYLE_GOOGLE);
 
-#ifndef _WIN32
+#if !defined(_WIN32) || defined(USE_HONEY_GUI)
     /* Initialize touch pan and zoom control */
     app->touch_active = 0;
     app->touch_start_x = 0;
     app->touch_start_y = 0;
     app->touch_last_x = 0;
     app->touch_last_y = 0;
-    app->pan_offset_lat = 0.0f;
-    app->pan_offset_lon = 0.0f;
-    app->zoom_factor = 1.0f;
     /* Initialize double-tap detection */
     app->last_tap_time = 0;
     app->last_tap_x = 0;
@@ -1670,10 +1837,103 @@ static int nav_init(app_state_t *app, map_t *map, app_config_t *config)
  * @param app Navigation app state
  * @return 0=continue, 1=quit, 2=mode switch
  */
-static int nav_handle_keyboard(app_state_t *app)
+#ifdef USE_HONEY_GUI
+static int nav_handle_keyboard_honey(app_state_t *app)
+{
+    touch_info_t *tp = tp_get_info();
+
+    if (trmap_honey_gui_consume_key_press("Home"))
+    {
+        (void)trmap_map_control_zoom_out();
+        MAP_PRINTF("Home: Zoom out %.1fx", app->zoom_factor);
+    }
+
+    if (trmap_honey_gui_consume_key_press("Back"))
+    {
+        (void)trmap_map_control_reset();
+        MAP_PRINTF("Back: Reset zoom and pan");
+    }
+
+    if (trmap_honey_gui_consume_key_press("Menu"))
+    {
+        MAP_PRINTF("Menu: Switch application mode");
+        (void)trmap_request_next_mode_switch();
+        return 2;
+    }
+
+    if (trmap_honey_gui_consume_key_press("Power"))
+    {
+        (void)trmap_map_control_zoom_in();
+        MAP_PRINTF("Power: Zoom in %.1fx", app->zoom_factor);
+    }
+
+    if (trmap_honey_gui_touch_active(tp))
+    {
+        if (!app->touch_active || tp->pressed)
+        {
+            app->touch_active = 1;
+            app->touch_start_x = tp->x;
+            app->touch_start_y = tp->y;
+            app->touch_last_x = tp->deltaX;
+            app->touch_last_y = tp->deltaY;
+        }
+        else
+        {
+            int16_t dx = tp->deltaX - app->touch_last_x;
+            int16_t dy = tp->deltaY - app->touch_last_y;
+
+            if (dx != 0 || dy != 0)
+            {
+                float effective_radius = app->config.gps_view_radius * app->zoom_factor;
+                float meters_per_pixel_lat = (2.0f * effective_radius) / app->config.height;
+                float meters_per_pixel_lon = (2.0f * effective_radius) / app->config.width;
+
+                const gps_position_t *gps = gps_provider_get_position(app->gps_provider);
+                float current_lat = (gps && gps->valid) ? gps->lat : app->config.start_lat;
+                current_lat += app->pan_offset_lat;
+
+                float lat_deg_per_meter = 1.0f / 111000.0f;
+                float lon_deg_per_meter = 1.0f / (111000.0f * cosf(current_lat * 3.14159265f / 180.0f));
+
+                (void)trmap_map_control_pan_delta(
+                    dy * meters_per_pixel_lat * lat_deg_per_meter,
+                    -dx * meters_per_pixel_lon * lon_deg_per_meter);
+
+                app->touch_last_x = tp->deltaX;
+                app->touch_last_y = tp->deltaY;
+            }
+        }
+    }
+    else if (trmap_honey_gui_touch_released(tp) && app->touch_active)
+    {
+        int16_t dist_x;
+        int16_t dist_y;
+        uint32_t distance_sq;
+
+        app->touch_active = 0;
+        dist_x = tp->deltaX;
+        dist_y = tp->deltaY;
+        distance_sq = (uint32_t)(dist_x * dist_x + dist_y * dist_y);
+
+        if (distance_sq < (TOUCH_DOUBLE_TAP_DISTANCE * TOUCH_DOUBLE_TAP_DISTANCE))
+        {
+            (void)trmap_map_control_reset();
+            MAP_PRINTF("Tap: Reset zoom and pan");
+        }
+        else
+        {
+            (void)trmap_map_control_pan_finish();
+            MAP_PRINTF("Touch pan end: offset %.6f, %.6f", app->pan_offset_lat, app->pan_offset_lon);
+        }
+    }
+
+    return 0;
+}
+#elif defined (_WIN32)
+static int nav_handle_keyboard_pc(app_state_t *app)
 {
     (void)app;
-#ifdef _WIN32
+
     if (!_kbhit())
     {
         return 0;
@@ -1685,30 +1945,78 @@ static int nav_handle_keyboard(app_state_t *app)
     if (ch == 0 || ch == 0xE0)
     {
         ch = _getch();
-        /* Arrow keys not used in navigation mode currently */
+        switch (ch)
+        {
+            case 72:  /* Up arrow */
+                (void)trmap_map_control_pan_north();
+                break;
+            case 80:  /* Down arrow */
+                (void)trmap_map_control_pan_south();
+                break;
+            case 75:  /* Left arrow */
+                (void)trmap_map_control_pan_west();
+                break;
+            case 77:  /* Right arrow */
+                (void)trmap_map_control_pan_east();
+                break;
+        }
         return 0;
     }
     switch (ch)
     {
+        case 'w':
+        case 'W':
+            (void)trmap_map_control_pan_north();
+            break;
+
+        case 's':
+        case 'S':
+            (void)trmap_map_control_pan_south();
+            break;
+
+        case 'a':
+        case 'A':
+            (void)trmap_map_control_pan_west();
+            break;
+
+        case 'd':
+        case 'D':
+            (void)trmap_map_control_pan_east();
+            break;
+
+        case 'z':
+        case 'Z':
+            (void)trmap_map_control_zoom_in();
+            break;
+
+        case 'x':
+        case 'X':
+            (void)trmap_map_control_zoom_out();
+            break;
+
+        case '0':
+            (void)trmap_map_control_reset();
+            break;
+
         case 'm':
         case 'M':  /* M - cycle to next application mode */
-            app_request_mode_switch(APP_MODE_NAVIGATION, -1);
+            (void)trmap_request_next_mode_switch();
             return 2;
 
         case '1':  /* 1 - switch to Track Record mode */
-            app_request_mode_switch(APP_MODE_NAVIGATION, APP_MODE_GPS_TRACK_RECORD);
+            (void)trmap_request_mode_switch(TRMAP_APP_MODE_GPS_TRACK_RECORD);
             return 2;
 
         case '2':  /* 2 - switch to Track Replay mode */
-            app_request_mode_switch(APP_MODE_NAVIGATION, APP_MODE_GPS_TRACK_REPLAY);
+            (void)trmap_request_mode_switch(TRMAP_APP_MODE_GPS_TRACK_REPLAY);
             return 2;
 
         case '3':  /* 3 - switch to GPS Map mode */
-            app_request_mode_switch(APP_MODE_NAVIGATION, APP_MODE_GPS_MAP);
+            (void)trmap_request_mode_switch(TRMAP_APP_MODE_GPS_MAP);
             return 2;
 
         case '4':  /* 4 - switch to Navigation mode */
-            app_request_mode_switch(APP_MODE_NAVIGATION, APP_MODE_NAVIGATION);
+            (void)trmap_request_mode_switch(TRMAP_APP_MODE_NAVIGATION);
             return 2;
 
         case 'q':
@@ -1717,18 +2025,19 @@ static int nav_handle_keyboard(app_state_t *app)
             MAP_PRINTF("👋 Exiting...\n");
             return 1;
     }
+    return 0;
+}
+
 #else
+static int nav_handle_keyboard_mcu(app_state_t *app)
+{
     /* MCU GPIO Key Handling for Navigation Mode */
 
     /* KEY1 (P3_0): Zoom out (increase view radius) */
     if (g_key1_pressed)
     {
         g_key1_pressed = 0;
-        app->zoom_factor *= VIEWPORT_ZOOM_STEP;
-        if (app->zoom_factor > VIEWPORT_ZOOM_MAX)
-        {
-            app->zoom_factor = VIEWPORT_ZOOM_MAX;
-        }
+        (void)trmap_map_control_zoom_out();
         MAP_PRINTF("KEY1: Zoom out %.1fx", app->zoom_factor);
     }
 
@@ -1736,9 +2045,7 @@ static int nav_handle_keyboard(app_state_t *app)
     if (g_key2_pressed)
     {
         g_key2_pressed = 0;
-        app->zoom_factor = 1.0f;
-        app->pan_offset_lat = 0.0f;
-        app->pan_offset_lon = 0.0f;
+        (void)trmap_map_control_reset();
         MAP_PRINTF("KEY2: Reset zoom and pan");
     }
 
@@ -1747,7 +2054,7 @@ static int nav_handle_keyboard(app_state_t *app)
     {
         g_key3_pressed = 0;
         MAP_PRINTF("KEY3: Switch application mode");
-        app_request_mode_switch(APP_MODE_NAVIGATION, -1);
+        (void)trmap_request_next_mode_switch();
         return 2;
     }
 
@@ -1755,11 +2062,7 @@ static int nav_handle_keyboard(app_state_t *app)
     if (g_mfb_pressed)
     {
         g_mfb_pressed = 0;
-        app->zoom_factor /= VIEWPORT_ZOOM_STEP;
-        if (app->zoom_factor < VIEWPORT_ZOOM_MIN)
-        {
-            app->zoom_factor = VIEWPORT_ZOOM_MIN;
-        }
+        (void)trmap_map_control_zoom_in();
         MAP_PRINTF("MFB: Zoom in %.1fx", app->zoom_factor);
     }
 
@@ -1803,8 +2106,9 @@ static int nav_handle_keyboard(app_state_t *app)
                     float lon_deg_per_meter = 1.0f / (111000.0f * cosf(current_lat * 3.14159265f / 180.0f));
 
                     /* Pan in opposite direction of drag (map follows finger) */
-                    app->pan_offset_lat += dy * meters_per_pixel_lat * lat_deg_per_meter;
-                    app->pan_offset_lon -= dx * meters_per_pixel_lon * lon_deg_per_meter;
+                    (void)trmap_map_control_pan_delta(
+                        dy * meters_per_pixel_lat * lat_deg_per_meter,
+                        -dx * meters_per_pixel_lon * lon_deg_per_meter);
 
                     app->touch_last_x = touch_data.x;
                     app->touch_last_y = touch_data.y;
@@ -1827,21 +2131,32 @@ static int nav_handle_keyboard(app_state_t *app)
                 if (distance_sq < (TOUCH_DOUBLE_TAP_DISTANCE * TOUCH_DOUBLE_TAP_DISTANCE))
                 {
                     /* Single tap detected - reset zoom and pan to default */
-                    app->zoom_factor = 1.0f;
-                    app->pan_offset_lat = 0.0f;
-                    app->pan_offset_lon = 0.0f;
+                    (void)trmap_map_control_reset();
                     MAP_PRINTF("Tap: Reset zoom and pan");
                 }
                 else
                 {
+                    (void)trmap_map_control_pan_finish();
                     /* Touch was a pan gesture */
                     MAP_PRINTF("Touch pan end: offset %.6f, %.6f", app->pan_offset_lat, app->pan_offset_lon);
                 }
             }
         }
     }
-#endif
     return 0;
+}
+#endif
+
+static int nav_handle_keyboard(app_state_t *app)
+{
+
+#ifdef USE_HONEY_GUI
+    return nav_handle_keyboard_honey(app);
+#elif defined _WIN32
+    return nav_handle_keyboard_pc(app);
+#else
+    return nav_handle_keyboard_mcu(app);
+#endif
 }
 
 /**
@@ -2037,7 +2352,7 @@ typedef struct
     int nav_requested;          /* Navigation was requested (dest confirmed) */
     /* Zoom control */
     float zoom_factor;          /* Zoom factor (1.0 = default, <1 = zoom in, >1 = zoom out) */
-#ifndef _WIN32
+#if !defined(_WIN32) || defined(USE_HONEY_GUI)
     /* Touch pan control */
     int touch_active;           /* Touch is currently active */
     uint16_t touch_start_x;     /* Touch start X coordinate */
@@ -2092,7 +2407,7 @@ typedef struct
     float manual_zoom;          /* Manual zoom factor (1.0 = normal) */
     float pan_offset_lat;       /* Pan offset in latitude (degrees) */
     float pan_offset_lon;       /* Pan offset in longitude (degrees) */
-#ifndef _WIN32
+#if !defined(_WIN32) || defined(USE_HONEY_GUI)
     /* Touch pan control */
     int touch_active;           /* Touch is currently active */
     uint16_t touch_start_x;     /* Touch start X coordinate */
@@ -2141,7 +2456,7 @@ typedef struct
     float view_lat;               /* View center latitude */
     float view_lon;               /* View center longitude */
     float zoom_factor;            /* Zoom factor (1.0 = default) */
-#ifndef _WIN32
+#if !defined(_WIN32) || defined(USE_HONEY_GUI)
     /* Touch pan control */
     int touch_active;             /* Touch is active */
     int16_t touch_start_x;        /* Touch start X */
@@ -2211,7 +2526,7 @@ static int render_gps_map_frame(gps_map_state_t *state)
     /* Calculate view center including any active pan offset */
     float view_center_lat = state->dest_lat;
     float view_center_lon = state->dest_lon;
-#ifndef _WIN32
+#if !defined(_WIN32) || defined(USE_HONEY_GUI)
     /* Apply touch pan offset during drag */
     view_center_lat += state->pan_offset_lat;
     view_center_lon += state->pan_offset_lon;
@@ -2317,7 +2632,7 @@ static int render_gps_map_frame(gps_map_state_t *state)
     }
     render_text(r, 10.0f, 105.0f, info, 14.0f, 0x999999FF);    /* Controls help */
 #ifdef _WIN32
-    snprintf(info, sizeof(info), "[WASD] Move | [Enter] Navigate | [M] Mode | [Q] Quit");
+    snprintf(info, sizeof(info), "[WASD/Arrows] Move | [Z/X] Zoom | [0] Reset | [Enter] Navigate | [M] Mode | [Q] Quit");
     render_text(r, 10.0f, state->config.height - 25.0f, info, 14.0f, 0x666666FF);
 #else
     snprintf(info, sizeof(info), "[KEY1-] [MFB+] Zoom | Tap Reset | [KEY3] Mode | Slide Pan");
@@ -2353,7 +2668,7 @@ static int gps_map_init(gps_map_state_t *state, map_t *map, app_config_t *config
     state->dest_initialized = 0;    /* Initialize zoom control */
     state->zoom_factor = 1.0f;  /* Default zoom (1.0 = 100%) */
 
-#ifndef _WIN32
+#if !defined(_WIN32) || defined(USE_HONEY_GUI)
     /* Initialize touch pan control */
     state->touch_active = 0;
     state->touch_start_x = 0;
@@ -2449,12 +2764,107 @@ static int gps_map_init(gps_map_state_t *state, map_t *map, app_config_t *config
  * @param state GPS map state
  * @return 0=continue, 1=quit, 2=mode switch
  */
-static int gps_map_handle_keyboard(gps_map_state_t *state)
+#ifdef  USE_HONEY_GUI
+static int gps_map_handle_keyboard_honey(gps_map_state_t *state)
 {
-    /* Pan step: adjust based on view radius for consistent feel */
-    float pan_step = NAV_SETUP_PAN_STEP * (state->config.gps_view_radius / GPS_MAP_VIEW_RADIUS);
+    touch_info_t *tp = tp_get_info();
 
-#ifdef _WIN32
+    if (trmap_honey_gui_consume_key_press("Home"))
+    {
+        (void)trmap_map_control_zoom_out();
+        MAP_PRINTF("Home: Zoom out %.1fx", state->zoom_factor);
+    }
+
+    if (trmap_honey_gui_consume_key_press("Back"))
+    {
+        (void)trmap_map_control_reset();
+        MAP_PRINTF("Back: Reset to %.6f, %.6f, Zoom 1x", state->dest_lat, state->dest_lon);
+    }
+
+    if (trmap_honey_gui_consume_key_press("Menu"))
+    {
+        const gps_position_t *gps = gps_provider_get_position(state->gps_provider);
+
+        if (gps && gps->valid)
+        {
+            state->nav_start_lat = gps->lat;
+            state->nav_start_lon = gps->lon;
+            state->nav_requested = 1;
+            MAP_PRINTF("Menu: Start navigation to %.6f, %.6f", state->dest_lat, state->dest_lon);
+            (void)trmap_request_mode_switch(TRMAP_APP_MODE_NAVIGATION);
+            return 2;
+        }
+
+        MAP_PRINTF("Menu: Cannot navigate - No GPS fix");
+    }
+
+    if (trmap_honey_gui_consume_key_press("Power"))
+    {
+        (void)trmap_map_control_zoom_in();
+        MAP_PRINTF("Power: Zoom in %.1fx", state->zoom_factor);
+    }
+
+    if (trmap_honey_gui_touch_active(tp))
+    {
+        if (!state->touch_active || tp->pressed)
+        {
+            state->touch_active = 1;
+            state->touch_start_x = tp->x;
+            state->touch_start_y = tp->y;
+            state->touch_last_x = tp->deltaX;
+            state->touch_last_y = tp->deltaY;
+        }
+        else
+        {
+            int16_t dx = tp->deltaX - state->touch_last_x;
+            int16_t dy = tp->deltaY - state->touch_last_y;
+
+            if (dx != 0 || dy != 0)
+            {
+                float effective_radius = state->config.gps_view_radius * state->zoom_factor;
+                float meters_per_pixel_lat = (2.0f * effective_radius) / state->config.height;
+                float meters_per_pixel_lon = (2.0f * effective_radius) / state->config.width;
+                float current_lat = state->dest_lat + state->pan_offset_lat;
+                float lat_deg_per_meter = 1.0f / 111000.0f;
+                float lon_deg_per_meter = 1.0f / (111000.0f * cosf(current_lat * 3.14159265f / 180.0f));
+
+                (void)trmap_map_control_pan_delta(
+                    dy * meters_per_pixel_lat * lat_deg_per_meter,
+                    -dx * meters_per_pixel_lon * lon_deg_per_meter);
+
+                state->touch_last_x = tp->deltaX;
+                state->touch_last_y = tp->deltaY;
+            }
+        }
+    }
+    else if (trmap_honey_gui_touch_released(tp) && state->touch_active)
+    {
+        int16_t dist_x;
+        int16_t dist_y;
+        uint32_t distance_sq;
+
+        state->touch_active = 0;
+        dist_x = tp->deltaX;
+        dist_y = tp->deltaY;
+        distance_sq = (uint32_t)(dist_x * dist_x + dist_y * dist_y);
+
+        if (distance_sq < (TOUCH_DOUBLE_TAP_DISTANCE * TOUCH_DOUBLE_TAP_DISTANCE))
+        {
+            (void)trmap_map_control_reset();
+            MAP_PRINTF("Tap: Reset to %.6f, %.6f, Zoom 1x", state->dest_lat, state->dest_lon);
+        }
+        else
+        {
+            (void)trmap_map_control_pan_finish();
+            MAP_PRINTF("Touch pan end: offset %.6f, %.6f", state->pan_offset_lat, state->pan_offset_lon);
+        }
+    }
+
+    return 0;
+}
+#elif defined (_WIN32)
+static int gps_map_handle_keyboard_pc(gps_map_state_t *state)
+{
     if (!_kbhit())
     {
         return 0;
@@ -2469,20 +2879,16 @@ static int gps_map_handle_keyboard(gps_map_state_t *state)
         switch (ch)
         {
             case 72:  /* Up arrow - move destination north */
-                state->dest_lat += pan_step;
-                MAP_PRINTF("⬆️  Dest north: %.6f, %.6f\n", (double)state->dest_lat, (double)state->dest_lon);
+                (void)trmap_map_control_pan_north();
                 break;
             case 80:  /* Down arrow - move destination south */
-                state->dest_lat -= pan_step;
-                MAP_PRINTF("⬇️  Dest south: %.6f, %.6f\n", (double)state->dest_lat, (double)state->dest_lon);
+                (void)trmap_map_control_pan_south();
                 break;
             case 75:  /* Left arrow - move destination west */
-                state->dest_lon -= pan_step;
-                MAP_PRINTF("⬅️  Dest west: %.6f, %.6f\n", (double)state->dest_lat, (double)state->dest_lon);
+                (void)trmap_map_control_pan_west();
                 break;
             case 77:  /* Right arrow - move destination east */
-                state->dest_lon += pan_step;
-                MAP_PRINTF("➡️  Dest east: %.6f, %.6f\n", (double)state->dest_lat, (double)state->dest_lon);
+                (void)trmap_map_control_pan_east();
                 break;
         }
         return 0;
@@ -2493,26 +2899,36 @@ static int gps_map_handle_keyboard(gps_map_state_t *state)
         /* WASD keys for destination movement */
         case 'w':
         case 'W':  /* W - move destination north */
-            state->dest_lat += pan_step;
-            MAP_PRINTF("⬆️  Dest north: %.6f, %.6f\n", (double)state->dest_lat, (double)state->dest_lon);
+            (void)trmap_map_control_pan_north();
             break;
 
         case 's':
         case 'S':  /* S - move destination south */
-            state->dest_lat -= pan_step;
-            MAP_PRINTF("⬇️  Dest south: %.6f, %.6f\n", (double)state->dest_lat, (double)state->dest_lon);
+            (void)trmap_map_control_pan_south();
             break;
 
         case 'a':
         case 'A':  /* A - move destination west */
-            state->dest_lon -= pan_step;
-            MAP_PRINTF("⬅️  Dest west: %.6f, %.6f\n", (double)state->dest_lat, (double)state->dest_lon);
+            (void)trmap_map_control_pan_west();
             break;
 
         case 'd':
         case 'D':  /* D - move destination east */
-            state->dest_lon += pan_step;
-            MAP_PRINTF("➡️  Dest east: %.6f, %.6f\n", (double)state->dest_lat, (double)state->dest_lon);
+            (void)trmap_map_control_pan_east();
+            break;
+
+        case 'z':
+        case 'Z':
+            (void)trmap_map_control_zoom_in();
+            break;
+
+        case 'x':
+        case 'X':
+            (void)trmap_map_control_zoom_out();
+            break;
+
+        case '0':
+            (void)trmap_map_control_reset();
             break;
         case 13:  /* Enter - confirm destination and start navigation */
             {
@@ -2525,7 +2941,7 @@ static int gps_map_handle_keyboard(gps_map_state_t *state)
                     state->nav_requested = 1;
                     MAP_PRINTF("\n🎯 Destination confirmed: %.6f, %.6f\n", (double)state->dest_lat, (double)state->dest_lon);
                     MAP_PRINTF("   Starting navigation from GPS position: %.6f, %.6f\n", (double)gps->lat, (double)gps->lon);
-                    app_request_mode_switch(APP_MODE_GPS_MAP, APP_MODE_NAVIGATION);
+                    (void)trmap_request_mode_switch(TRMAP_APP_MODE_NAVIGATION);
                     return 2;
                 }
                 else
@@ -2537,14 +2953,14 @@ static int gps_map_handle_keyboard(gps_map_state_t *state)
 
         case 'm':
         case 'M':  /* M - cycle to next application mode */
-            app_request_mode_switch(APP_MODE_GPS_MAP, -1);
+            (void)trmap_request_next_mode_switch();
             return 2;
         case '1':  /* 1 - switch to Track Record mode */
-            app_request_mode_switch(APP_MODE_GPS_MAP, APP_MODE_GPS_TRACK_RECORD);
+            (void)trmap_request_mode_switch(TRMAP_APP_MODE_GPS_TRACK_RECORD);
             return 2;
 
         case '2':  /* 2 - switch to Track Replay mode */
-            app_request_mode_switch(APP_MODE_GPS_MAP, APP_MODE_GPS_TRACK_REPLAY);
+            (void)trmap_request_mode_switch(TRMAP_APP_MODE_GPS_TRACK_REPLAY);
             return 2;
 
         case '3':  /* 3 - stay in GPS Map mode (no-op) */
@@ -2559,7 +2975,7 @@ static int gps_map_handle_keyboard(gps_map_state_t *state)
                     state->nav_start_lon = gps->lon;
                     state->nav_requested = 1;
                     MAP_PRINTF("\n🎯 Destination confirmed: %.6f, %.6f\n", (double)state->dest_lat, (double)state->dest_lon);
-                    app_request_mode_switch(APP_MODE_GPS_MAP, APP_MODE_NAVIGATION);
+                    (void)trmap_request_mode_switch(TRMAP_APP_MODE_NAVIGATION);
                 }
                 else
                 {
@@ -2574,18 +2990,19 @@ static int gps_map_handle_keyboard(gps_map_state_t *state)
             MAP_PRINTF("👋 Exiting...\n");
             return 1;
     }
+    return 0;
+}
+
 #else
+static int gps_map_handle_keyboard_mcu(gps_map_state_t *state)
+{
     /* MCU GPIO Key Handling */
 
     /* KEY1 (P3_0): Zoom out (increase view radius) */
     if (g_key1_pressed)
     {
         g_key1_pressed = 0;
-        state->zoom_factor *= VIEWPORT_ZOOM_STEP;
-        if (state->zoom_factor > VIEWPORT_ZOOM_MAX)
-        {
-            state->zoom_factor = VIEWPORT_ZOOM_MAX;
-        }
+        (void)trmap_map_control_zoom_out();
         MAP_PRINTF("KEY1: Zoom out %.1fx", state->zoom_factor);
     }
 
@@ -2593,19 +3010,8 @@ static int gps_map_handle_keyboard(gps_map_state_t *state)
     if (g_key2_pressed)
     {
         g_key2_pressed = 0;
-        state->zoom_factor = 1.0f;
-        /* Reset destination to current GPS position */
-        const gps_position_t *gps = gps_provider_get_position(state->gps_provider);
-        if (gps && gps->valid)
-        {
-            state->dest_lat = gps->lat;
-            state->dest_lon = gps->lon;
-            MAP_PRINTF("KEY2: Reset to GPS %.6f, %.6f, Zoom 1x", state->dest_lat, state->dest_lon);
-        }
-        else
-        {
-            MAP_PRINTF("KEY2: Reset Zoom 1x");
-        }
+        (void)trmap_map_control_reset();
+        MAP_PRINTF("KEY2: Reset to %.6f, %.6f, Zoom 1x", state->dest_lat, state->dest_lon);
     }
 
     /* KEY3 (P3_1): Confirm destination and start navigation */
@@ -2620,7 +3026,7 @@ static int gps_map_handle_keyboard(gps_map_state_t *state)
             state->nav_start_lon = gps->lon;
             state->nav_requested = 1;
             MAP_PRINTF("KEY3: Start navigation to %.6f, %.6f", state->dest_lat, state->dest_lon);
-            app_request_mode_switch(APP_MODE_GPS_MAP, APP_MODE_NAVIGATION);
+            (void)trmap_request_mode_switch(TRMAP_APP_MODE_NAVIGATION);
             return 2;
         }
         else
@@ -2631,11 +3037,7 @@ static int gps_map_handle_keyboard(gps_map_state_t *state)
     if (g_mfb_pressed)
     {
         g_mfb_pressed = 0;
-        state->zoom_factor /= VIEWPORT_ZOOM_STEP;
-        if (state->zoom_factor < VIEWPORT_ZOOM_MIN)
-        {
-            state->zoom_factor = VIEWPORT_ZOOM_MIN;
-        }
+        (void)trmap_map_control_zoom_in();
         MAP_PRINTF("MFB: Zoom in %.1fx", state->zoom_factor);
     }
 
@@ -2684,8 +3086,9 @@ static int gps_map_handle_keyboard(gps_map_state_t *state)
                     float lon_deg_per_meter = 1.0f / (111000.0f * cosf(current_lat * 3.14159265f / 180.0f));
 
                     /* Pan in opposite direction of drag (map follows finger) */
-                    state->pan_offset_lat += dy * meters_per_pixel_lat * lat_deg_per_meter;
-                    state->pan_offset_lon -= dx * meters_per_pixel_lon * lon_deg_per_meter;
+                    (void)trmap_map_control_pan_delta(
+                        dy * meters_per_pixel_lat * lat_deg_per_meter,
+                        -dx * meters_per_pixel_lon * lon_deg_per_meter);
 
                     state->touch_last_x = touch_data.x;
                     state->touch_last_y = touch_data.y;
@@ -2707,36 +3110,32 @@ static int gps_map_handle_keyboard(gps_map_state_t *state)
                 if (distance_sq < (TOUCH_DOUBLE_TAP_DISTANCE * TOUCH_DOUBLE_TAP_DISTANCE))
                 {
                     /* Single tap detected - reset zoom, pan and destination to default */
-                    state->zoom_factor = 1.0f;
-                    state->pan_offset_lat = 0.0f;
-                    state->pan_offset_lon = 0.0f;
-                    /* Reset destination to current GPS position */
-                    const gps_position_t *gps = gps_provider_get_position(state->gps_provider);
-                    if (gps && gps->valid)
-                    {
-                        state->dest_lat = gps->lat;
-                        state->dest_lon = gps->lon;
-                        MAP_PRINTF("Tap: Reset to GPS %.6f, %.6f, Zoom 1x", state->dest_lat, state->dest_lon);
-                    }
-                    else
-                    {
-                        MAP_PRINTF("Tap: Reset zoom and pan (no GPS fix)");
-                    }
+                    (void)trmap_map_control_reset();
+                    MAP_PRINTF("Tap: Reset to GPS %.6f, %.6f, Zoom 1x", state->dest_lat, state->dest_lon);
                 }
                 else
                 {
                     /* Touch was a pan gesture - apply pan offset */
-                    state->dest_lat += state->pan_offset_lat;
-                    state->dest_lon += state->pan_offset_lon;
-                    state->pan_offset_lat = 0.0f;
-                    state->pan_offset_lon = 0.0f;
+                    (void)trmap_map_control_pan_finish();
                     MAP_PRINTF("Touch pan end: Dest %.6f, %.6f", state->dest_lat, state->dest_lon);
                 }
             }
         }
     }
-#endif
     return 0;
+}
+#endif
+
+static int gps_map_handle_keyboard(gps_map_state_t *state)
+{
+#ifdef USE_HONEY_GUI
+    return gps_map_handle_keyboard_honey(state);
+#elif defined (_WIN32)
+    return gps_map_handle_keyboard_pc(state);
+
+#else
+    return gps_map_handle_keyboard_mcu(state);
+#endif
 }
 
 /**
@@ -3298,19 +3697,110 @@ static int render_gps_track_replay_frame(gps_track_state_t *state, uint32_t repl
  * @param state GPS track state
  * @return 0=continue, 1=quit
  */
-static int gps_track_handle_keyboard(gps_track_state_t *state)
+#ifdef USE_HONEY_GUI
+static int gps_track_handle_keyboard_honey(gps_track_state_t *state)
 {
-#ifdef _WIN32
+    touch_info_t *tp = tp_get_info();
+
+    if (trmap_honey_gui_consume_key_press("Home"))
+    {
+        (void)trmap_map_control_zoom_out();
+        MAP_PRINTF("Home: Zoom out %.1fx", 1.0f / state->manual_zoom);
+    }
+
+    if (trmap_honey_gui_consume_key_press("Back"))
+    {
+        (void)trmap_map_control_reset();
+        MAP_PRINTF("Back: Reset to auto viewport");
+    }
+
+    if (trmap_honey_gui_consume_key_press("Menu"))
+    {
+        MAP_PRINTF("Menu: Switch application mode");
+        (void)trmap_request_next_mode_switch();
+        return 2;
+    }
+
+    if (trmap_honey_gui_consume_key_press("Power"))
+    {
+        (void)trmap_map_control_zoom_in();
+        MAP_PRINTF("Power: Zoom in %.1fx", 1.0f / state->manual_zoom);
+    }
+
+    if (trmap_honey_gui_touch_active(tp))
+    {
+        if (!state->touch_active || tp->pressed)
+        {
+            state->touch_active = 1;
+            state->touch_start_x = tp->x;
+            state->touch_start_y = tp->y;
+            state->touch_last_x = tp->deltaX;
+            state->touch_last_y = tp->deltaY;
+        }
+        else
+        {
+            int16_t dx = tp->deltaX - state->touch_last_x;
+            int16_t dy = tp->deltaY - state->touch_last_y;
+
+            if (dx != 0 || dy != 0)
+            {
+                state->manual_view = 1;
+
+                float effective_radius = state->current_radius * state->manual_zoom;
+                float meters_per_pixel_lat = (2.0f * effective_radius) / state->config.height;
+                float meters_per_pixel_lon = (2.0f * effective_radius) / state->config.width;
+
+                const gps_position_t *gps = gps_provider_get_position(state->gps_provider);
+                float current_lat = (gps && gps->valid) ? gps->lat : state->start_lat;
+                current_lat += state->pan_offset_lat;
+
+                float lat_deg_per_meter = 1.0f / 111000.0f;
+                float lon_deg_per_meter = 1.0f / (111000.0f * cosf(current_lat * 3.14159265f / 180.0f));
+
+                (void)trmap_map_control_pan_delta(
+                    dy * meters_per_pixel_lat * lat_deg_per_meter,
+                    -dx * meters_per_pixel_lon * lon_deg_per_meter);
+
+                state->touch_last_x = tp->deltaX;
+                state->touch_last_y = tp->deltaY;
+            }
+        }
+    }
+    else if (trmap_honey_gui_touch_released(tp) && state->touch_active)
+    {
+        int16_t dist_x;
+        int16_t dist_y;
+        uint32_t distance_sq;
+
+        state->touch_active = 0;
+        dist_x = tp->deltaX;
+        dist_y = tp->deltaY;
+        distance_sq = (uint32_t)(dist_x * dist_x + dist_y * dist_y);
+
+        if (distance_sq < (TOUCH_DOUBLE_TAP_DISTANCE * TOUCH_DOUBLE_TAP_DISTANCE))
+        {
+            (void)trmap_map_control_reset();
+            MAP_PRINTF("Tap: Reset to auto viewport");
+        }
+        else
+        {
+            (void)trmap_map_control_pan_finish();
+            MAP_PRINTF("Touch pan end: offset %.6f, %.6f", state->pan_offset_lat, state->pan_offset_lon);
+        }
+    }
+
+    return 0;
+}
+
+#elif defined (_WIN32)
+static int gps_track_handle_keyboard_pc(gps_track_state_t *state)
+{
     if (!_kbhit())
     {
         return 0;
     }
 
     int ch = _getch();
-
-    /* Calculate pan step based on current view extent */
-    float pan_step_lat = state->current_radius / 111000.0f * VIEWPORT_PAN_STEP * state->manual_zoom;
-    float pan_step_lon = state->current_radius / (111000.0f * 0.7f) * VIEWPORT_PAN_STEP * state->manual_zoom;
 
     /* Handle arrow keys (they come as 0 or 0xE0 followed by actual code) */
     if (ch == 0 || ch == 0xE0)
@@ -3403,61 +3893,44 @@ static int gps_track_handle_keyboard(gps_track_state_t *state)
         /* Map zoom controls */
         case 'z':
         case 'Z':  /* Z - zoom in (decrease zoom factor) */
-            state->manual_view = 1;
-            state->manual_zoom /= VIEWPORT_ZOOM_STEP;
-            if (state->manual_zoom < VIEWPORT_ZOOM_MIN)
-            {
-                state->manual_zoom = VIEWPORT_ZOOM_MIN;
-            }
+            (void)trmap_map_control_zoom_in();
             MAP_PRINTF("🔍 Zoom in: %.1fx\n", (double)(1.0f / state->manual_zoom));
             break;
 
         case 'x':
         case 'X':  /* X - zoom out (increase zoom factor) */
-            state->manual_view = 1;
-            state->manual_zoom *= VIEWPORT_ZOOM_STEP;
-            if (state->manual_zoom > VIEWPORT_ZOOM_MAX)
-            {
-                state->manual_zoom = VIEWPORT_ZOOM_MAX;
-            }
+            (void)trmap_map_control_zoom_out();
             MAP_PRINTF("🔍 Zoom out: %.1fx\n", (double)(1.0f / state->manual_zoom));
             break;
 
         /* Map pan controls (WASD) */
         case 'w':
         case 'W':  /* W - pan up (north) */
-            state->manual_view = 1;
-            state->pan_offset_lat += pan_step_lat;
+            (void)trmap_map_control_pan_north();
             MAP_PRINTF("⬆️  Pan north\n");
             break;
 
         case 's':
         case 'S':  /* S - pan down (south) */
-            state->manual_view = 1;
-            state->pan_offset_lat -= pan_step_lat;
+            (void)trmap_map_control_pan_south();
             MAP_PRINTF("⬇️  Pan south\n");
             break;
 
         case 'a':
         case 'A':  /* A - pan left (west) */
-            state->manual_view = 1;
-            state->pan_offset_lon -= pan_step_lon;
+            (void)trmap_map_control_pan_west();
             MAP_PRINTF("⬅️  Pan west\n");
             break;
 
         case 'd':
         case 'D':  /* D - pan right (east) */
-            state->manual_view = 1;
-            state->pan_offset_lon += pan_step_lon;
+            (void)trmap_map_control_pan_east();
             MAP_PRINTF("➡️  Pan east\n");
             break;
 
         /* Reset viewport */
         case '0':  /* 0 - reset viewport to auto mode */
-            state->manual_view = 0;
-            state->manual_zoom = 1.0f;
-            state->pan_offset_lat = 0.0f;
-            state->pan_offset_lon = 0.0f;
+            (void)trmap_map_control_reset();
             MAP_PRINTF("🏠 Viewport reset to auto mode\n");
             break;
 
@@ -3515,36 +3988,31 @@ static int gps_track_handle_keyboard(gps_track_state_t *state)
         case 'm':
         case 'M':  /* M - cycle to next application mode */
             {
-                app_mode_t current = state->replay_mode ? APP_MODE_GPS_TRACK_REPLAY : APP_MODE_GPS_TRACK_RECORD;
-                app_request_mode_switch(current, -1);  /* -1 means cycle to next mode */
+                (void)trmap_request_next_mode_switch();
             }
             return 2;  /* Return 2 to signal mode switch */
 
         case '1':  /* 1 - switch to Track Record mode */
             {
-                app_mode_t current = state->replay_mode ? APP_MODE_GPS_TRACK_REPLAY : APP_MODE_GPS_TRACK_RECORD;
-                app_request_mode_switch(current, APP_MODE_GPS_TRACK_RECORD);
+                (void)trmap_request_mode_switch(TRMAP_APP_MODE_GPS_TRACK_RECORD);
             }
             return 2;
 
         case '2':  /* 2 - switch to Track Replay mode */
             {
-                app_mode_t current = state->replay_mode ? APP_MODE_GPS_TRACK_REPLAY : APP_MODE_GPS_TRACK_RECORD;
-                app_request_mode_switch(current, APP_MODE_GPS_TRACK_REPLAY);
+                (void)trmap_request_mode_switch(TRMAP_APP_MODE_GPS_TRACK_REPLAY);
             }
             return 2;
 
         case '3':  /* 3 - switch to GPS Map mode */
             {
-                app_mode_t current = state->replay_mode ? APP_MODE_GPS_TRACK_REPLAY : APP_MODE_GPS_TRACK_RECORD;
-                app_request_mode_switch(current, APP_MODE_GPS_MAP);
+                (void)trmap_request_mode_switch(TRMAP_APP_MODE_GPS_MAP);
             }
             return 2;
 
         case '4':  /* 4 - switch to Navigation mode */
             {
-                app_mode_t current = state->replay_mode ? APP_MODE_GPS_TRACK_REPLAY : APP_MODE_GPS_TRACK_RECORD;
-                app_request_mode_switch(current, APP_MODE_NAVIGATION);
+                (void)trmap_request_mode_switch(TRMAP_APP_MODE_NAVIGATION);
             }
             return 2;
 
@@ -3554,28 +4022,26 @@ static int gps_track_handle_keyboard(gps_track_state_t *state)
             MAP_PRINTF("👋 Exiting...\n");
             return 1;
     }
+    return 0;
+}
+
+
 #else
+static int gps_track_handle_keyboard_mcu(gps_track_state_t *state)
+{
     /* MCU GPIO Key Handling for GPS Track Mode */
 
     /* KEY1 (P3_0): Zoom out (increase zoom factor) */
     if (g_key1_pressed)
     {
         g_key1_pressed = 0;
-        state->manual_view = 1;
-        state->manual_zoom *= VIEWPORT_ZOOM_STEP;
-        if (state->manual_zoom > VIEWPORT_ZOOM_MAX)
-        {
-            state->manual_zoom = VIEWPORT_ZOOM_MAX;
-        }
+        (void)trmap_map_control_zoom_out();
         MAP_PRINTF("KEY1: Zoom out %.1fx", 1.0f / state->manual_zoom);
     }    /* KEY2 (ADC_0): Reset zoom and pan to default (auto mode) */
     if (g_key2_pressed)
     {
         g_key2_pressed = 0;
-        state->manual_view = 0;
-        state->manual_zoom = 1.0f;
-        state->pan_offset_lat = 0.0f;
-        state->pan_offset_lon = 0.0f;
+        (void)trmap_map_control_reset();
         MAP_PRINTF("KEY2: Reset to auto viewport");
     }
 
@@ -3583,9 +4049,8 @@ static int gps_track_handle_keyboard(gps_track_state_t *state)
     if (g_key3_pressed)
     {
         g_key3_pressed = 0;
-        app_mode_t current = state->replay_mode ? APP_MODE_GPS_TRACK_REPLAY : APP_MODE_GPS_TRACK_RECORD;
         MAP_PRINTF("KEY3: Switch application mode");
-        app_request_mode_switch(current, -1);
+        (void)trmap_request_next_mode_switch();
         return 2;
     }
 
@@ -3593,12 +4058,7 @@ static int gps_track_handle_keyboard(gps_track_state_t *state)
     if (g_mfb_pressed)
     {
         g_mfb_pressed = 0;
-        state->manual_view = 1;
-        state->manual_zoom /= VIEWPORT_ZOOM_STEP;
-        if (state->manual_zoom < VIEWPORT_ZOOM_MIN)
-        {
-            state->manual_zoom = VIEWPORT_ZOOM_MIN;
-        }
+        (void)trmap_map_control_zoom_in();
         MAP_PRINTF("MFB: Zoom in %.1fx", 1.0f / state->manual_zoom);
     }
 
@@ -3645,8 +4105,9 @@ static int gps_track_handle_keyboard(gps_track_state_t *state)
                     float lon_deg_per_meter = 1.0f / (111000.0f * cosf(current_lat * 3.14159265f / 180.0f));
 
                     /* Pan in opposite direction of drag (map follows finger) */
-                    state->pan_offset_lat += dy * meters_per_pixel_lat * lat_deg_per_meter;
-                    state->pan_offset_lon -= dx * meters_per_pixel_lon * lon_deg_per_meter;
+                    (void)trmap_map_control_pan_delta(
+                        dy * meters_per_pixel_lat * lat_deg_per_meter,
+                        -dx * meters_per_pixel_lon * lon_deg_per_meter);
 
                     state->touch_last_x = touch_data.x;
                     state->touch_last_y = touch_data.y;
@@ -3668,22 +4129,31 @@ static int gps_track_handle_keyboard(gps_track_state_t *state)
                 if (distance_sq < (TOUCH_DOUBLE_TAP_DISTANCE * TOUCH_DOUBLE_TAP_DISTANCE))
                 {
                     /* Single tap detected - reset zoom and pan to default (auto mode) */
-                    state->manual_view = 0;
-                    state->manual_zoom = 1.0f;
-                    state->pan_offset_lat = 0.0f;
-                    state->pan_offset_lon = 0.0f;
+                    (void)trmap_map_control_reset();
                     MAP_PRINTF("Tap: Reset to auto viewport");
                 }
                 else
                 {
+                    (void)trmap_map_control_pan_finish();
                     /* Touch was a pan gesture */
                     MAP_PRINTF("Touch pan end: offset %.6f, %.6f", state->pan_offset_lat, state->pan_offset_lon);
                 }
             }
         }
     }
-#endif
     return 0;
+}
+#endif
+
+static int gps_track_handle_keyboard(gps_track_state_t *state)
+{
+#ifdef  USE_HONEY_GUI
+    return gps_track_handle_keyboard_honey(state);
+#elif defined (_WIN32)
+    return gps_track_handle_keyboard_pc(state);
+#else
+    return gps_track_handle_keyboard_mcu(state);
+#endif
 }
 
 /**
@@ -3857,7 +4327,7 @@ static int gps_track_init(gps_track_state_t *state, map_t *map, app_config_t *co
     state->pan_offset_lat = 0.0f;
     state->pan_offset_lon = 0.0f;
 
-#ifndef _WIN32
+#if !defined(_WIN32) || defined(USE_HONEY_GUI)
     /* Initialize touch pan control */
     state->touch_active = 0;
     state->touch_start_x = 0;
@@ -3910,7 +4380,7 @@ static int gps_track_init(gps_track_state_t *state, map_t *map, app_config_t *co
 
     MAP_PRINTF("✓ GPS track mode initialized\n");
 
-#ifndef _WIN32
+#if !defined(_WIN32) || defined(USE_HONEY_GUI)
     /* Initialize MCU GPIO keys */
     mcu_gpio_keys_init();
 #endif
@@ -4116,7 +4586,7 @@ static int gps_init_init(gps_init_state_t *state, map_t *map, app_config_t *conf
 
     MAP_PRINTF("✓ GPS init mode initialized - Waiting for GPS signal...\n");
 
-#ifndef _WIN32
+#if !defined(_WIN32) || defined(USE_HONEY_GUI)
     /* Initialize MCU GPIO keys */
     mcu_gpio_keys_init();
 #endif
@@ -4260,10 +4730,28 @@ static int render_gps_init_frame(gps_init_state_t *state)
  * @param state GPS init state
  * @return 0=continue, 1=quit, 2=mode switch
  */
-static int gps_init_handle_keyboard(gps_init_state_t *state)
+#ifdef USE_HONEY_GUI
+static int gps_init_handle_keyboard_honey(gps_init_state_t *state)
+{
+    touch_info_t *tp = tp_get_info();
+
+    (void)state;
+    (void)tp;
+
+    if (trmap_honey_gui_consume_key_press("Menu"))
+    {
+        MAP_PRINTF("Menu: Switch application mode");
+        (void)trmap_request_next_mode_switch();
+        return 2;
+    }
+
+    return 0;
+}
+#elif defined (_WIN32)
+static int gps_init_handle_keyboard_pc(gps_init_state_t *state)
 {
     (void)state;
-#ifdef _WIN32
+
     if (!_kbhit())
     {
         return 0;
@@ -4282,22 +4770,22 @@ static int gps_init_handle_keyboard(gps_init_state_t *state)
     {
         case 'm':
         case 'M':  /* M - cycle to next application mode */
-            app_request_mode_switch(APP_MODE_GPS_INIT, -1);
+            (void)trmap_request_next_mode_switch();
             return 2;
 
         case '1':  /* 1 - switch to GPS Init mode (stay) */
             return 0;
 
         case '2':  /* 2 - switch to Track Record mode */
-            app_request_mode_switch(APP_MODE_GPS_INIT, APP_MODE_GPS_TRACK_RECORD);
+            (void)trmap_request_mode_switch(TRMAP_APP_MODE_GPS_TRACK_RECORD);
             return 2;
 
         case '3':  /* 3 - switch to GPS Map mode */
-            app_request_mode_switch(APP_MODE_GPS_INIT, APP_MODE_GPS_MAP);
+            (void)trmap_request_mode_switch(TRMAP_APP_MODE_GPS_MAP);
             return 2;
 
         case '4':  /* 4 - switch to Navigation mode */
-            app_request_mode_switch(APP_MODE_GPS_INIT, APP_MODE_NAVIGATION);
+            (void)trmap_request_mode_switch(TRMAP_APP_MODE_NAVIGATION);
             return 2;
 
         case 'q':
@@ -4306,7 +4794,14 @@ static int gps_init_handle_keyboard(gps_init_state_t *state)
             MAP_PRINTF("Exiting...\n");
             return 1;
     }
+    return 0;
+}
+
 #else
+static int gps_init_handle_keyboard_mcu(gps_init_state_t *state)
+{
+    (void)state;
+
     /* MCU GPIO Key Handling for GPS Init Mode */
 
     /* KEY3 (P3_1): Cycle to next application mode */
@@ -4314,12 +4809,23 @@ static int gps_init_handle_keyboard(gps_init_state_t *state)
     {
         g_key3_pressed = 0;
         MAP_PRINTF("KEY3: Switch application mode");
-        app_request_mode_switch(APP_MODE_GPS_INIT, -1);
+        (void)trmap_request_next_mode_switch();
         return 2;
     }
+    return 0;
+}
 #endif
 
-    return 0;
+static int gps_init_handle_keyboard(gps_init_state_t *state)
+{
+#ifdef USE_HONEY_GUI
+    return gps_init_handle_keyboard_honey(state);
+#elif defined (_WIN32)
+    return gps_init_handle_keyboard_pc(state);
+
+#else
+    return gps_init_handle_keyboard_mcu(state);
+#endif
 }
 
 /**
@@ -4426,7 +4932,7 @@ static int map_view_init(map_view_state_t *state, map_t *map, app_config_t *conf
     state->zoom_factor = 1.0f;
     state->needs_redraw = 1;
 
-#ifndef _WIN32
+#if !defined(_WIN32) || defined(USE_HONEY_GUI)
     /* Initialize touch pan control */
     state->touch_active = 0;
     state->touch_start_x = 0;
@@ -4452,10 +4958,10 @@ static int map_view_init(map_view_state_t *state, map_t *map, app_config_t *conf
     MAP_PRINTF("\n🗺️  Map View Mode\n");
     MAP_PRINTF("   View center: %.6f, %.6f\n", (double)state->view_lat, (double)state->view_lon);
     MAP_PRINTF("   View radius: %.0f m\n", (double)config->gps_view_radius);
-    MAP_PRINTF("   Controls: Arrow keys to pan, +/- to zoom, M to switch mode\n");
+    MAP_PRINTF("   Controls: [WASD]/Arrow pan | [Z/X] zoom (also +/-) | [0] reset | [M] mode | [1/2/3/4] switch | [Q] quit\n");
     MAP_PRINTF("✓ Map View mode initialized\n");
 
-#ifndef _WIN32
+#if !defined(_WIN32) || defined(USE_HONEY_GUI)
     /* Initialize MCU GPIO keys */
     mcu_gpio_keys_init();
 #endif
@@ -4481,7 +4987,7 @@ static int render_map_view_frame(map_view_state_t *state)
     /* Calculate view center including any active pan offset */
     float view_center_lat = state->view_lat;
     float view_center_lon = state->view_lon;
-#ifndef _WIN32
+#if !defined(_WIN32) || defined(USE_HONEY_GUI)
     /* Apply touch pan offset during drag */
     view_center_lat += state->pan_offset_lat;
     view_center_lon += state->pan_offset_lon;
@@ -4504,11 +5010,24 @@ static int render_map_view_frame(map_view_state_t *state)
     float center_y = state->config.height / 2.0f;
     render_text(r, center_x - 5, center_y - 10, "+", 20.0f, 0x666666FF);
 
+    /* Controls help */
+#ifdef _WIN32
+    snprintf(info, sizeof(info), "[WASD/Arrows] Pan | [Z/X] Zoom | [0] Reset | [M] Mode | [1/2/3/4] Switch | [Q] Quit");
+    render_text(r, 10.0f, state->config.height - 25.0f, info, 14.0f, 0x666666FF);
+#else
+    snprintf(info, sizeof(info), "[KEY1-] Zoom Out | [KEY2+] Zoom In | Tap Reset | [KEY3] Mode | Slide Pan");
+    {
+        float text_x = (state->config.width - strlen(info) * 5.0f) / 2.0f;
+        render_text(r, text_x, state->config.height - 25.0f, info, 14.0f, 0x666666FF);
+    }
+#endif
+
     /* Save frame */
     char filename[256];
     snprintf(filename, sizeof(filename), "frames/screen.png");
     render_save_png(r, filename);
 
+    state->needs_redraw = 0;
     state->frame_count++;
 
     return 0;
@@ -4519,12 +5038,99 @@ static int render_map_view_frame(map_view_state_t *state)
  * @param state Map view state
  * @return 0=continue, 1=quit, 2=mode switch
  */
-static int map_view_handle_keyboard(map_view_state_t *state)
+#ifdef USE_HONEY_GUI
+static int map_view_handle_keyboard_honey(map_view_state_t *state)
 {
-    /* Calculate pan amount based on current zoom */
-    float pan_amount = 0.001f * state->zoom_factor;
+    touch_info_t *tp = tp_get_info();
 
-#ifdef _WIN32
+    if (trmap_honey_gui_consume_key_press("Home"))
+    {
+        (void)trmap_map_control_zoom_out();
+        MAP_PRINTF("Home: Zoom out - %.0f%%\n", (double)(100.0f / state->zoom_factor));
+    }
+
+    if (trmap_honey_gui_consume_key_press("Back"))
+    {
+        (void)trmap_map_control_zoom_in();
+        MAP_PRINTF("Back: Zoom in - %.0f%%\n", (double)(100.0f / state->zoom_factor));
+    }
+
+    if (trmap_honey_gui_consume_key_press("Menu"))
+    {
+        MAP_PRINTF("Menu: Switch application mode\n");
+        (void)trmap_request_next_mode_switch();
+        return 2;
+    }
+
+    if (trmap_honey_gui_consume_key_press("Power"))
+    {
+        (void)trmap_map_control_reset();
+        MAP_PRINTF("Power: Map View reset: %.6f, %.6f | Zoom: 100%%\n",
+                   (double)state->view_lat, (double)state->view_lon);
+    }
+
+    if (trmap_honey_gui_touch_active(tp))
+    {
+        if (!state->touch_active || tp->pressed)
+        {
+            state->touch_active = 1;
+            state->touch_start_x = tp->x;
+            state->touch_start_y = tp->y;
+            state->touch_last_x = tp->deltaX;
+            state->touch_last_y = tp->deltaY;
+        }
+        else
+        {
+            int16_t dx = tp->deltaX - state->touch_last_x;
+            int16_t dy = tp->deltaY - state->touch_last_y;
+
+            if (dx != 0 || dy != 0)
+            {
+                float effective_radius = state->config.gps_view_radius * state->zoom_factor;
+                float meters_per_pixel_lat = (2.0f * effective_radius) / state->config.height;
+                float meters_per_pixel_lon = (2.0f * effective_radius) / state->config.width;
+                float current_lat = state->view_lat + state->pan_offset_lat;
+                float lat_deg_per_meter = 1.0f / 111000.0f;
+                float lon_deg_per_meter = 1.0f / (111000.0f * cosf(current_lat * 3.14159265f / 180.0f));
+
+                (void)trmap_map_control_pan_delta(
+                    dy * meters_per_pixel_lat * lat_deg_per_meter,
+                    -dx * meters_per_pixel_lon * lon_deg_per_meter);
+
+                state->touch_last_x = tp->deltaX;
+                state->touch_last_y = tp->deltaY;
+            }
+        }
+    }
+    else if (trmap_honey_gui_touch_released(tp) && state->touch_active)
+    {
+        int16_t dist_x;
+        int16_t dist_y;
+        uint32_t distance_sq;
+
+        state->touch_active = 0;
+        dist_x = tp->deltaX;
+        dist_y = tp->deltaY;
+        distance_sq = (uint32_t)(dist_x * dist_x + dist_y * dist_y);
+
+        if (distance_sq < (TOUCH_DOUBLE_TAP_DISTANCE * TOUCH_DOUBLE_TAP_DISTANCE))
+        {
+            (void)trmap_map_control_reset();
+            MAP_PRINTF("Tap: Reset map view\n");
+        }
+        else
+        {
+            (void)trmap_map_control_pan_finish();
+            MAP_PRINTF("Touch pan end: center %.6f, %.6f\n",
+                       (double)state->view_lat, (double)state->view_lon);
+        }
+    }
+
+    return 0;
+}
+#elif defined (_WIN32)
+static int map_view_handle_keyboard_pc(map_view_state_t *state)
+{
     /* PC Keyboard Controls */
     if (!_kbhit())
     {
@@ -4540,20 +5146,16 @@ static int map_view_handle_keyboard(map_view_state_t *state)
         switch (ch)
         {
             case 72:  /* Up arrow */
-                state->view_lat += pan_amount;
-                state->needs_redraw = 1;
+                (void)trmap_map_control_pan_north();
                 break;
             case 80:  /* Down arrow */
-                state->view_lat -= pan_amount;
-                state->needs_redraw = 1;
+                (void)trmap_map_control_pan_south();
                 break;
             case 75:  /* Left arrow */
-                state->view_lon -= pan_amount;
-                state->needs_redraw = 1;
+                (void)trmap_map_control_pan_west();
                 break;
             case 77:  /* Right arrow */
-                state->view_lon += pan_amount;
-                state->needs_redraw = 1;
+                (void)trmap_map_control_pan_east();
                 break;
         }
         return 0;
@@ -4563,69 +5165,65 @@ static int map_view_handle_keyboard(map_view_state_t *state)
     {
         case 'w':
         case 'W':
-            state->view_lat += pan_amount;
-            state->needs_redraw = 1;
+            (void)trmap_map_control_pan_north();
             break;
 
         case 's':
         case 'S':
-            state->view_lat -= pan_amount;
-            state->needs_redraw = 1;
+            (void)trmap_map_control_pan_south();
             break;
 
         case 'a':
         case 'A':
-            state->view_lon -= pan_amount;
-            state->needs_redraw = 1;
+            (void)trmap_map_control_pan_west();
             break;
 
         case 'd':
         case 'D':
-            state->view_lon += pan_amount;
-            state->needs_redraw = 1;
+            (void)trmap_map_control_pan_east();
             break;
 
+        case 'z':
+        case 'Z':
         case '+':
         case '=':
-            /* Zoom in */
-            if (state->zoom_factor > 0.1f)
-            {
-                state->zoom_factor *= 0.8f;
-                state->needs_redraw = 1;
-                MAP_PRINTF("Zoom: %.0f%%\n", (double)(100.0f / state->zoom_factor));
-            }
+            (void)trmap_map_control_zoom_in();
+            MAP_PRINTF("Zoom: %.0f%%\n", (double)(100.0f / state->zoom_factor));
             break;
 
+        case 'x':
+        case 'X':
         case '-':
         case '_':
-            /* Zoom out */
-            if (state->zoom_factor < 10.0f)
-            {
-                state->zoom_factor *= 1.25f;
-                state->needs_redraw = 1;
-                MAP_PRINTF("Zoom: %.0f%%\n", (double)(100.0f / state->zoom_factor));
-            }
+            (void)trmap_map_control_zoom_out();
+            MAP_PRINTF("Zoom: %.0f%%\n", (double)(100.0f / state->zoom_factor));
+            break;
+
+        case '0':
+            (void)trmap_map_control_reset();
+            MAP_PRINTF("Map View reset: %.6f, %.6f | Zoom: 100%%\n",
+                       (double)state->view_lat, (double)state->view_lon);
             break;
 
         case 'm':
         case 'M':  /* M - cycle to next mode */
-            app_request_mode_switch(APP_MODE_MAP_VIEW, -1);
+            (void)trmap_request_next_mode_switch();
             return 2;
 
         case '1':  /* 1 - switch to GPS Init mode */
-            app_request_mode_switch(APP_MODE_MAP_VIEW, APP_MODE_GPS_INIT);
+            (void)trmap_request_mode_switch(TRMAP_APP_MODE_GPS_INIT);
             return 2;
 
         case '2':  /* 2 - switch to GPS Track mode */
-            app_request_mode_switch(APP_MODE_MAP_VIEW, APP_MODE_GPS_TRACK_RECORD);
+            (void)trmap_request_mode_switch(TRMAP_APP_MODE_GPS_TRACK_RECORD);
             return 2;
 
         case '3':  /* 3 - switch to Nav Setup mode */
-            app_request_mode_switch(APP_MODE_MAP_VIEW, APP_MODE_GPS_MAP);
+            (void)trmap_request_mode_switch(TRMAP_APP_MODE_GPS_MAP);
             return 2;
 
         case '4':  /* 4 - switch to Navigation mode */
-            app_request_mode_switch(APP_MODE_MAP_VIEW, APP_MODE_NAVIGATION);
+            (void)trmap_request_mode_switch(TRMAP_APP_MODE_NAVIGATION);
             return 2;
 
         case 'q':
@@ -4634,31 +5232,28 @@ static int map_view_handle_keyboard(map_view_state_t *state)
             MAP_PRINTF("Exiting...\n");
             return 1;
     }
+    return 0;
+}
+
 #else
+static int map_view_handle_keyboard_mcu(map_view_state_t *state)
+{
     /* MCU GPIO Key Handling for Map View Mode */
 
     /* KEY1 (P3_0): Zoom out */
     if (g_key1_pressed)
     {
         g_key1_pressed = 0;
-        if (state->zoom_factor < 10.0f)
-        {
-            state->zoom_factor *= 1.25f;
-            state->needs_redraw = 1;
-            MAP_PRINTF("KEY1: Zoom out - %.0f%%\n", (double)(100.0f / state->zoom_factor));
-        }
+        (void)trmap_map_control_zoom_out();
+        MAP_PRINTF("KEY1: Zoom out - %.0f%%\n", (double)(100.0f / state->zoom_factor));
     }
 
     /* KEY2 (ADC_0): Zoom in */
     if (g_key2_pressed)
     {
         g_key2_pressed = 0;
-        if (state->zoom_factor > 0.1f)
-        {
-            state->zoom_factor *= 0.8f;
-            state->needs_redraw = 1;
-            MAP_PRINTF("KEY2: Zoom in - %.0f%%\n", (double)(100.0f / state->zoom_factor));
-        }
+        (void)trmap_map_control_zoom_in();
+        MAP_PRINTF("KEY2: Zoom in - %.0f%%\n", (double)(100.0f / state->zoom_factor));
     }
 
     /* KEY3 (P3_1): Cycle to next application mode */
@@ -4666,12 +5261,88 @@ static int map_view_handle_keyboard(map_view_state_t *state)
     {
         g_key3_pressed = 0;
         MAP_PRINTF("KEY3: Switch application mode\n");
-        app_request_mode_switch(APP_MODE_MAP_VIEW, -1);
+        (void)trmap_request_next_mode_switch();
         return 2;
     }
+
+    /* Touch screen pan handling */
+    {
+        TOUCH_DATA touch_data;
+        uint32_t s = os_lock();
+        touch_data = get_raw_touch_data();
+        os_unlock(s);
+
+        if (touch_data.is_press)
+        {
+            if (!state->touch_active)
+            {
+                state->touch_active = 1;
+                state->touch_start_x = touch_data.x;
+                state->touch_start_y = touch_data.y;
+                state->touch_last_x = touch_data.x;
+                state->touch_last_y = touch_data.y;
+            }
+            else
+            {
+                int16_t dx = (int16_t)touch_data.x - state->touch_last_x;
+                int16_t dy = (int16_t)touch_data.y - state->touch_last_y;
+
+                if (dx != 0 || dy != 0)
+                {
+                    float effective_radius = state->config.gps_view_radius * state->zoom_factor;
+                    float meters_per_pixel_lat = (2.0f * effective_radius) / state->config.height;
+                    float meters_per_pixel_lon = (2.0f * effective_radius) / state->config.width;
+                    float current_lat = state->view_lat + state->pan_offset_lat;
+                    float lat_deg_per_meter = 1.0f / 111000.0f;
+                    float lon_deg_per_meter = 1.0f / (111000.0f * cosf(current_lat * 3.14159265f / 180.0f));
+
+                    (void)trmap_map_control_pan_delta(
+                        dy * meters_per_pixel_lat * lat_deg_per_meter,
+                        -dx * meters_per_pixel_lon * lon_deg_per_meter);
+
+                    state->touch_last_x = touch_data.x;
+                    state->touch_last_y = touch_data.y;
+                }
+            }
+        }
+        else if (state->touch_active)
+        {
+            int16_t dist_x;
+            int16_t dist_y;
+            uint32_t distance_sq;
+
+            state->touch_active = 0;
+            dist_x = (int16_t)touch_data.x - state->touch_start_x;
+            dist_y = (int16_t)touch_data.y - state->touch_start_y;
+            distance_sq = (uint32_t)(dist_x * dist_x + dist_y * dist_y);
+
+            if (distance_sq < (TOUCH_DOUBLE_TAP_DISTANCE * TOUCH_DOUBLE_TAP_DISTANCE))
+            {
+                (void)trmap_map_control_reset();
+                MAP_PRINTF("Tap: Reset map view\n");
+            }
+            else
+            {
+                (void)trmap_map_control_pan_finish();
+                MAP_PRINTF("Touch pan end: center %.6f, %.6f\n",
+                           (double)state->view_lat, (double)state->view_lon);
+            }
+        }
+    }
+    return 0;
+}
 #endif
 
-    return 0;
+static int map_view_handle_keyboard(map_view_state_t *state)
+{
+#ifdef  USE_HONEY_GUI
+    return map_view_handle_keyboard_honey(state);
+#elif defined(_WIN32)
+    return map_view_handle_keyboard_pc(state);
+
+#else
+    return map_view_handle_keyboard_mcu(state);
+#endif
 }
 
 /**
@@ -4688,8 +5359,11 @@ static int map_view_loop(map_view_state_t *state)
         return kb_result;
     }
 
-    /* Render the map frame */
-    render_map_view_frame(state);
+    /* Render only when view changed */
+    if (state->needs_redraw)
+    {
+        render_map_view_frame(state);
+    }
 
     return 0;
 }
@@ -4742,6 +5416,44 @@ static int app_gps_init_run_loop(gps_init_state_t *state)
         }
 
         sleep_ms(GPS_TRACK_UPDATE_INTERVAL_MS);
+    }
+
+    return result;
+}
+
+/**
+ * @brief Run the Map View mode main loop (pure loop, no init/cleanup)
+ * @param state Map view state (must be initialized)
+ * @return 0 on normal exit, 1 on error, 2 on mode switch request
+ */
+static int app_map_view_run_loop(map_view_state_t *state)
+{
+    int result = 0;
+
+    /* Main map view loop */
+    while (1)
+    {
+        int loop_result = map_view_loop(state);
+        if (loop_result != 0)
+        {
+            if (loop_result == 2)
+            {
+                return 2;  /* Signal mode switch to caller */
+            }
+            if (loop_result < 0)
+            {
+                result = 1;
+            }
+            break;
+        }
+
+        /* Check running flag */
+        if (!state->running)
+        {
+            break;
+        }
+
+        sleep_ms(MAP_VIEW_UPDATE_INTERVAL_MS);
     }
 
     return result;
@@ -4882,7 +5594,6 @@ static int app_initialize(app_config_t *config, map_t **map_out,
         if (nav_init(nav_app, map, config) != 0)
         {
             map_free(map);
-            *map_out = NULL;
             return 1;
         }
         /* Initialize loop state */
@@ -4910,6 +5621,7 @@ static int app_nav_run_loop(app_state_t *app)
 
     MAP_PRINTF("\n🚀 Starting continuous navigation mode...\n");
     MAP_PRINTF("   Max frames: %d (0=unlimited)\n", app->config.max_frames);
+    MAP_PRINTF("   Map controls: [WASD/Arrows] pan | [Z/X] zoom | [0] reset\n");
     MAP_PRINTF("   Press [M] to cycle modes, [1/2/3] for direct switch\n");
     MAP_PRINTF("   Press Ctrl+C to stop\n\n");
 
@@ -4956,7 +5668,7 @@ static int app_gps_map_run_loop(gps_map_state_t *state)
     MAP_PRINTF("\n🚀 Starting Navigation Setup mode...\n");
     MAP_PRINTF("   Max frames: %d (0=unlimited)\n", state->config.max_frames);
     MAP_PRINTF("   View radius: %.0f m\n", (double)state->config.gps_view_radius);
-    MAP_PRINTF("   Use [WASD]/Arrow keys to move destination\n");
+    MAP_PRINTF("   Map controls: [WASD/Arrows] move | [Z/X] zoom | [0] reset\n");
     MAP_PRINTF("   Press [Enter] to confirm and start navigation\n");
     MAP_PRINTF("   Press [M] to cycle modes, [Q] to quit\n\n");
 
@@ -5005,6 +5717,7 @@ static int app_gps_track_run_loop(gps_track_state_t *state)
     MAP_PRINTF("\n   Keyboard Controls:\n");
     MAP_PRINTF("   [P] Start replay | [R] Resume recording\n");
     MAP_PRINTF("   [SPACE] Pause/Resume | [←/→] Step | [↑/↓] Speed\n");
+    MAP_PRINTF("   [WASD] Pan | [Z/X] Zoom | [0] Reset\n");
     MAP_PRINTF("   [+/-] Speed | [Q/ESC] Quit\n");
     MAP_PRINTF("   [M] Cycle mode | [1/2/3/4] Switch mode\n\n");
 
@@ -5108,6 +5821,407 @@ static    gps_map_state_t gps_state = {0};
 static    gps_track_state_t gps_track_state = {0};
 static    gps_init_state_t gps_init_state = {0};
 static    map_view_state_t map_view_state = {0};
+
+/* ============================================================================
+ * Shared Map Control API
+ * ============================================================================
+ */
+
+static void app_map_control_get_map_center(const map_t *map_data, float *lat, float *lon)
+{
+    if (!map_data || !lat || !lon)
+    {
+        return;
+    }
+
+    *lat = (map_data->header.min_lat + map_data->header.max_lat) / 2.0f;
+    *lon = (map_data->header.min_lon + map_data->header.max_lon) / 2.0f;
+}
+
+static int trmap_map_control_pan_internal(trmap_map_control_pan_direction_t direction)
+{
+    switch (config.app_mode)
+    {
+        case APP_MODE_MAP_VIEW:
+        {
+            float pan_amount = 0.001f * map_view_state.zoom_factor;
+            switch (direction)
+            {
+                case TRMAP_MAP_CONTROL_PAN_NORTH:
+                    map_view_state.view_lat += pan_amount;
+                    break;
+                case TRMAP_MAP_CONTROL_PAN_SOUTH:
+                    map_view_state.view_lat -= pan_amount;
+                    break;
+                case TRMAP_MAP_CONTROL_PAN_WEST:
+                    map_view_state.view_lon -= pan_amount;
+                    break;
+                case TRMAP_MAP_CONTROL_PAN_EAST:
+                    map_view_state.view_lon += pan_amount;
+                    break;
+            }
+            map_view_state.needs_redraw = 1;
+            return 1;
+        }
+
+        case APP_MODE_GPS_MAP:
+        {
+            float pan_step = NAV_SETUP_PAN_STEP * (gps_state.config.gps_view_radius / GPS_MAP_VIEW_RADIUS);
+            switch (direction)
+            {
+                case TRMAP_MAP_CONTROL_PAN_NORTH:
+                    gps_state.dest_lat += pan_step;
+                    break;
+                case TRMAP_MAP_CONTROL_PAN_SOUTH:
+                    gps_state.dest_lat -= pan_step;
+                    break;
+                case TRMAP_MAP_CONTROL_PAN_WEST:
+                    gps_state.dest_lon -= pan_step;
+                    break;
+                case TRMAP_MAP_CONTROL_PAN_EAST:
+                    gps_state.dest_lon += pan_step;
+                    break;
+            }
+            return 1;
+        }
+
+        case APP_MODE_GPS_TRACK_RECORD:
+        case APP_MODE_GPS_TRACK_REPLAY:
+        {
+            float pan_step_lat = gps_track_state.current_radius / 111000.0f * VIEWPORT_PAN_STEP * gps_track_state.manual_zoom;
+            float pan_step_lon = gps_track_state.current_radius / (111000.0f * 0.7f) * VIEWPORT_PAN_STEP * gps_track_state.manual_zoom;
+            gps_track_state.manual_view = 1;
+
+            switch (direction)
+            {
+                case TRMAP_MAP_CONTROL_PAN_NORTH:
+                    gps_track_state.pan_offset_lat += pan_step_lat;
+                    break;
+                case TRMAP_MAP_CONTROL_PAN_SOUTH:
+                    gps_track_state.pan_offset_lat -= pan_step_lat;
+                    break;
+                case TRMAP_MAP_CONTROL_PAN_WEST:
+                    gps_track_state.pan_offset_lon -= pan_step_lon;
+                    break;
+                case TRMAP_MAP_CONTROL_PAN_EAST:
+                    gps_track_state.pan_offset_lon += pan_step_lon;
+                    break;
+            }
+            return 1;
+        }
+
+        case APP_MODE_NAVIGATION:
+        {
+            float lat_range;
+            float lon_range;
+            float center_lat = nav_app.config.start_lat;
+
+            if (nav_app.renderer)
+            {
+                lat_range = nav_app.renderer->view_max_lat - nav_app.renderer->view_min_lat;
+                lon_range = nav_app.renderer->view_max_lon - nav_app.renderer->view_min_lon;
+                center_lat = (nav_app.renderer->view_min_lat + nav_app.renderer->view_max_lat) / 2.0f;
+            }
+            else
+            {
+                float radius_m = nav_app.config.gps_view_radius * nav_app.zoom_factor;
+                lat_range = (radius_m / 111000.0f) * 2.0f;
+                lon_range = (radius_m / (111000.0f * cosf(center_lat * 3.14159265f / 180.0f))) * 2.0f;
+            }
+
+            switch (direction)
+            {
+                case TRMAP_MAP_CONTROL_PAN_NORTH:
+                    nav_app.pan_offset_lat += lat_range * VIEWPORT_PAN_STEP;
+                    break;
+                case TRMAP_MAP_CONTROL_PAN_SOUTH:
+                    nav_app.pan_offset_lat -= lat_range * VIEWPORT_PAN_STEP;
+                    break;
+                case TRMAP_MAP_CONTROL_PAN_WEST:
+                    nav_app.pan_offset_lon -= lon_range * VIEWPORT_PAN_STEP;
+                    break;
+                case TRMAP_MAP_CONTROL_PAN_EAST:
+                    nav_app.pan_offset_lon += lon_range * VIEWPORT_PAN_STEP;
+                    break;
+            }
+
+            nav_app.needs_redraw = 1;
+            return 1;
+        }
+
+        default:
+            return 0;
+    }
+}
+
+int trmap_map_control_pan_north(void)
+{
+    return trmap_map_control_pan_internal(TRMAP_MAP_CONTROL_PAN_NORTH);
+}
+
+trmap_app_mode_t trmap_get_current_mode(void)
+{
+    return trmap_public_mode_from_internal(config.app_mode);
+}
+
+int trmap_request_mode_switch(trmap_app_mode_t target_mode)
+{
+    app_mode_t internal_mode;
+
+    if (!trmap_internal_mode_from_public(target_mode, &internal_mode))
+    {
+        return 0;
+    }
+
+    app_request_mode_switch(config.app_mode, internal_mode);
+    return 1;
+}
+
+int trmap_request_next_mode_switch(void)
+{
+    app_request_mode_switch(config.app_mode, -1);
+    return 1;
+}
+
+int trmap_map_control_pan_south(void)
+{
+    return trmap_map_control_pan_internal(TRMAP_MAP_CONTROL_PAN_SOUTH);
+}
+
+int trmap_map_control_pan_west(void)
+{
+    return trmap_map_control_pan_internal(TRMAP_MAP_CONTROL_PAN_WEST);
+}
+
+int trmap_map_control_pan_east(void)
+{
+    return trmap_map_control_pan_internal(TRMAP_MAP_CONTROL_PAN_EAST);
+}
+
+int trmap_map_control_pan_delta(float delta_lat, float delta_lon)
+{
+    switch (config.app_mode)
+    {
+        case APP_MODE_MAP_VIEW:
+#if !defined(_WIN32) || defined(USE_HONEY_GUI)
+            map_view_state.pan_offset_lat += delta_lat;
+            map_view_state.pan_offset_lon += delta_lon;
+#else
+            map_view_state.view_lat += delta_lat;
+            map_view_state.view_lon += delta_lon;
+#endif
+            map_view_state.needs_redraw = 1;
+            return 1;
+
+        case APP_MODE_GPS_MAP:
+#if !defined(_WIN32) || defined(USE_HONEY_GUI)
+            gps_state.pan_offset_lat += delta_lat;
+            gps_state.pan_offset_lon += delta_lon;
+#else
+            gps_state.dest_lat += delta_lat;
+            gps_state.dest_lon += delta_lon;
+#endif
+            return 1;
+
+        case APP_MODE_GPS_TRACK_RECORD:
+        case APP_MODE_GPS_TRACK_REPLAY:
+            gps_track_state.manual_view = 1;
+            gps_track_state.pan_offset_lat += delta_lat;
+            gps_track_state.pan_offset_lon += delta_lon;
+            return 1;
+
+        case APP_MODE_NAVIGATION:
+            nav_app.pan_offset_lat += delta_lat;
+            nav_app.pan_offset_lon += delta_lon;
+            nav_app.needs_redraw = 1;
+            return 1;
+
+        default:
+            return 0;
+    }
+}
+
+int trmap_map_control_pan_finish(void)
+{
+    switch (config.app_mode)
+    {
+        case APP_MODE_MAP_VIEW:
+#if !defined(_WIN32) || defined(USE_HONEY_GUI)
+            map_view_state.view_lat += map_view_state.pan_offset_lat;
+            map_view_state.view_lon += map_view_state.pan_offset_lon;
+            map_view_state.pan_offset_lat = 0.0f;
+            map_view_state.pan_offset_lon = 0.0f;
+#endif
+            map_view_state.needs_redraw = 1;
+            return 1;
+
+        case APP_MODE_GPS_MAP:
+#if !defined(_WIN32) || defined(USE_HONEY_GUI)
+            gps_state.dest_lat += gps_state.pan_offset_lat;
+            gps_state.dest_lon += gps_state.pan_offset_lon;
+            gps_state.pan_offset_lat = 0.0f;
+            gps_state.pan_offset_lon = 0.0f;
+#endif
+            return 1;
+
+        case APP_MODE_GPS_TRACK_RECORD:
+        case APP_MODE_GPS_TRACK_REPLAY:
+        case APP_MODE_NAVIGATION:
+            return 1;
+
+        default:
+            return 0;
+    }
+}
+
+int trmap_map_control_zoom_in(void)
+{
+    switch (config.app_mode)
+    {
+        case APP_MODE_MAP_VIEW:
+            if (map_view_state.zoom_factor > 0.1f)
+            {
+                map_view_state.zoom_factor *= 0.8f;
+                map_view_state.needs_redraw = 1;
+            }
+            return 1;
+
+        case APP_MODE_GPS_MAP:
+            if (gps_state.zoom_factor > VIEWPORT_ZOOM_MIN)
+            {
+                gps_state.zoom_factor /= VIEWPORT_ZOOM_STEP;
+                if (gps_state.zoom_factor < VIEWPORT_ZOOM_MIN)
+                {
+                    gps_state.zoom_factor = VIEWPORT_ZOOM_MIN;
+                }
+            }
+            return 1;
+
+        case APP_MODE_GPS_TRACK_RECORD:
+        case APP_MODE_GPS_TRACK_REPLAY:
+            gps_track_state.manual_view = 1;
+            gps_track_state.manual_zoom /= VIEWPORT_ZOOM_STEP;
+            if (gps_track_state.manual_zoom < VIEWPORT_ZOOM_MIN)
+            {
+                gps_track_state.manual_zoom = VIEWPORT_ZOOM_MIN;
+            }
+            return 1;
+
+        case APP_MODE_NAVIGATION:
+            nav_app.zoom_factor /= VIEWPORT_ZOOM_STEP;
+            if (nav_app.zoom_factor < VIEWPORT_ZOOM_MIN)
+            {
+                nav_app.zoom_factor = VIEWPORT_ZOOM_MIN;
+            }
+            nav_app.needs_redraw = 1;
+            return 1;
+
+        default:
+            return 0;
+    }
+}
+
+int trmap_map_control_zoom_out(void)
+{
+    switch (config.app_mode)
+    {
+        case APP_MODE_MAP_VIEW:
+            if (map_view_state.zoom_factor < 10.0f)
+            {
+                map_view_state.zoom_factor *= 1.25f;
+                map_view_state.needs_redraw = 1;
+            }
+            return 1;
+
+        case APP_MODE_GPS_MAP:
+            if (gps_state.zoom_factor < VIEWPORT_ZOOM_MAX)
+            {
+                gps_state.zoom_factor *= VIEWPORT_ZOOM_STEP;
+                if (gps_state.zoom_factor > VIEWPORT_ZOOM_MAX)
+                {
+                    gps_state.zoom_factor = VIEWPORT_ZOOM_MAX;
+                }
+            }
+            return 1;
+
+        case APP_MODE_GPS_TRACK_RECORD:
+        case APP_MODE_GPS_TRACK_REPLAY:
+            gps_track_state.manual_view = 1;
+            gps_track_state.manual_zoom *= VIEWPORT_ZOOM_STEP;
+            if (gps_track_state.manual_zoom > VIEWPORT_ZOOM_MAX)
+            {
+                gps_track_state.manual_zoom = VIEWPORT_ZOOM_MAX;
+            }
+            return 1;
+
+        case APP_MODE_NAVIGATION:
+            nav_app.zoom_factor *= VIEWPORT_ZOOM_STEP;
+            if (nav_app.zoom_factor > VIEWPORT_ZOOM_MAX)
+            {
+                nav_app.zoom_factor = VIEWPORT_ZOOM_MAX;
+            }
+            nav_app.needs_redraw = 1;
+            return 1;
+
+        default:
+            return 0;
+    }
+}
+
+int trmap_map_control_reset(void)
+{
+    switch (config.app_mode)
+    {
+        case APP_MODE_MAP_VIEW:
+            app_map_control_get_map_center(map_view_state.map, &map_view_state.view_lat, &map_view_state.view_lon);
+            map_view_state.zoom_factor = 1.0f;
+#if !defined(_WIN32) || defined(USE_HONEY_GUI)
+            map_view_state.pan_offset_lat = 0.0f;
+            map_view_state.pan_offset_lon = 0.0f;
+#endif
+            map_view_state.needs_redraw = 1;
+            return 1;
+
+        case APP_MODE_GPS_MAP:
+        {
+            const gps_position_t *gps = gps_provider_get_position(gps_state.gps_provider);
+            gps_state.zoom_factor = 1.0f;
+#if !defined(_WIN32) || defined(USE_HONEY_GUI)
+            gps_state.pan_offset_lat = 0.0f;
+            gps_state.pan_offset_lon = 0.0f;
+#endif
+            if (gps && gps->valid)
+            {
+                gps_state.dest_lat = gps->lat;
+                gps_state.dest_lon = gps->lon;
+            }
+            else
+            {
+                gps_state.dest_lat = gps_state.config.start_lat;
+                gps_state.dest_lon = gps_state.config.start_lon;
+            }
+            return 1;
+        }
+
+        case APP_MODE_GPS_TRACK_RECORD:
+        case APP_MODE_GPS_TRACK_REPLAY:
+            gps_track_state.manual_view = 0;
+            gps_track_state.manual_zoom = 1.0f;
+            gps_track_state.pan_offset_lat = 0.0f;
+            gps_track_state.pan_offset_lon = 0.0f;
+            return 1;
+
+        case APP_MODE_NAVIGATION:
+            nav_app.zoom_factor = 1.0f;
+            nav_app.pan_offset_lat = 0.0f;
+            nav_app.pan_offset_lon = 0.0f;
+            nav_app.needs_redraw = 1;
+            return 1;
+
+        default:
+            return 0;
+    }
+}
 
 /* ============================================================================
  * Mode Switch Functions (defined after globals)
@@ -5257,13 +6371,26 @@ static int app_do_mode_switch(void)
         return 0;
     }
 
-    /* If switching from Nav Setup to Navigation with confirmed destination,
-     * update config with the destination coordinates before cleanup */
-    if (old_mode == APP_MODE_GPS_MAP && new_mode == APP_MODE_NAVIGATION
-            && gps_state.nav_requested)
+    /* If switching from Nav Setup to Navigation,
+     * always carry the currently configured destination into Navigation mode.
+     * When a valid GPS fix exists, also use the current GPS position as the
+     * navigation start point. This avoids falling back to the default config
+     * end coordinate when the user reaches Navigation via mode cycling. */
+    if (old_mode == APP_MODE_GPS_MAP && new_mode == APP_MODE_NAVIGATION)
     {
-        config.start_lat = gps_state.nav_start_lat;
-        config.start_lon = gps_state.nav_start_lon;
+        const gps_position_t *gps = gps_provider_get_position(gps_state.gps_provider);
+
+        if (gps_state.nav_requested)
+        {
+            config.start_lat = gps_state.nav_start_lat;
+            config.start_lon = gps_state.nav_start_lon;
+        }
+        else if (gps && gps->valid)
+        {
+            config.start_lat = gps->lat;
+            config.start_lon = gps->lon;
+        }
+
         config.end_lat = gps_state.dest_lat;
         config.end_lon = gps_state.dest_lon;
         config.has_start = 1;
@@ -5337,15 +6464,7 @@ int app_main(int argc, char *argv[])
         /* Run current mode loop */
         if (config.app_mode == APP_MODE_MAP_VIEW)
         {
-            /* Map View mode runs in the main loop (no separate run_loop function needed) */
-            while (map_view_state.running)
-            {
-                result = map_view_loop(&map_view_state);
-                if (result != 0)
-                {
-                    break;
-                }
-            }
+            result = app_map_view_run_loop(&map_view_state);
         }
         else if (config.app_mode == APP_MODE_GPS_INIT)
         {
