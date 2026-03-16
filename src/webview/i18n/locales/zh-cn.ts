@@ -17,6 +17,7 @@ const zhCN = {
   'Input Controls': '输入控件',
   'Graphics': '图形',
   'Multimedia': '多媒体',
+  'Mini App': '小程序',
 
   // Component names
   'Button': '按钮',

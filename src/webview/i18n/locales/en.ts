@@ -17,6 +17,7 @@ const en = {
   'Input Controls': 'Input Controls',
   'Graphics': 'Graphics',
   'Multimedia': 'Multimedia',
+  'Mini App': 'Mini App',
 
   // Component names
   'Button': 'Button',
