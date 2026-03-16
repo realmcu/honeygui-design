@@ -3,6 +3,7 @@ import { logger } from '../utils/Logger';
 import { CommandManager } from './CommandManager';
 import { HmlEditorProvider } from '../hml/HmlEditorProvider';
 import { EnvironmentViewProvider } from '../ui/EnvironmentViewProvider';
+import { StatusBarManager } from '../ui/StatusBarManager';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -38,6 +39,13 @@ export class ExtensionManager {
             this.registerViewProviders();
         } catch (error) {
             logger.error(`视图提供者注册失败: ${error instanceof Error ? error.message : String(error)}`);
+        }
+
+        // 初始化状态栏管理器
+        try {
+            StatusBarManager.getInstance(this.context);
+        } catch (error) {
+            logger.error(`状态栏管理器初始化失败: ${error instanceof Error ? error.message : String(error)}`);
         }
 
         try {

@@ -2,10 +2,23 @@ import * as vscode from 'vscode';
 
 export class StatusBarManager {
     private static instance: StatusBarManager | null = null;
+    private simulationStatusBarItem: vscode.StatusBarItem;
 
     private constructor(context: vscode.ExtensionContext) {
-        // 协同状态不再显示在状态栏
-        context.subscriptions.push();
+        // 创建仿真状态栏项（优先级 100，显示在右侧）
+        this.simulationStatusBarItem = vscode.window.createStatusBarItem(
+            vscode.StatusBarAlignment.Right,
+            100
+        );
+
+        // 设置初始状态
+        this.updateSimulationStatus(false);
+
+        // 显示状态栏项
+        this.simulationStatusBarItem.show();
+
+        // 注册到 context 以便自动清理
+        context.subscriptions.push(this.simulationStatusBarItem);
     }
 
     public static getInstance(context?: vscode.ExtensionContext): StatusBarManager {
@@ -20,5 +33,32 @@ export class StatusBarManager {
 
     public updateCollaborationStatus(role: 'Host' | 'Guest' | 'None', info?: string) {
         // 状态栏已移除，不再更新
+    }
+
+    /**
+     * 更新仿真状态显示
+     * @param isRunning 是否正在运行
+     */
+    public updateSimulationStatus(isRunning: boolean): void {
+        if (isRunning) {
+            // 运行中：显示停止按钮
+            this.simulationStatusBarItem.text = `$(debug-stop) ${vscode.l10n.t('Stop Simulation')}`;
+            this.simulationStatusBarItem.tooltip = vscode.l10n.t('Click to stop simulation (Ctrl+Shift+F5)');
+            this.simulationStatusBarItem.command = 'honeygui.simulation.stop';
+            this.simulationStatusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
+        } else {
+            // 未运行：显示启动按钮
+            this.simulationStatusBarItem.text = `$(rocket) ${vscode.l10n.t('Simulate')}`;
+            this.simulationStatusBarItem.tooltip = vscode.l10n.t('Click to compile and simulate');
+            this.simulationStatusBarItem.command = 'honeygui.simulation';
+            this.simulationStatusBarItem.backgroundColor = undefined;
+        }
+    }
+
+    /**
+     * 清理资源
+     */
+    public dispose(): void {
+        this.simulationStatusBarItem.dispose();
     }
 }

@@ -4,6 +4,7 @@ import * as os from 'os';
 import * as fs from 'fs';
 import { SimulationRunner } from './SimulationRunner';
 import { ProjectUtils } from '../utils/ProjectUtils';
+import { StatusBarManager } from '../ui/StatusBarManager';
 
 /**
  * 编译仿真服务
@@ -316,6 +317,12 @@ export class SimulationService {
      */
     private notifyStatusChange(isRunning: boolean): void {
         this.isRunning = isRunning;
+
+        // 更新状态栏显示
+        const statusBarManager = StatusBarManager.getInstance();
+        if (statusBarManager) {
+            statusBarManager.updateSimulationStatus(isRunning);
+        }
 
         // 通知所有打开的设计器 Webview
         vscode.commands.executeCommand('_honeygui.broadcastToWebviews', {
