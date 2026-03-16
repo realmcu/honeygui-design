@@ -277,6 +277,28 @@ export class MessageHandler {
                 );
                 break;
 
+            case 'confirmDeleteAsset':
+                {
+                    const isFolder = message.isFolder;
+                    const assetName = message.assetName;
+                    const confirmMsg = isFolder
+                        ? vscode.l10n.t('Confirm delete folder "{0}" and all its contents?', assetName)
+                        : vscode.l10n.t('Confirm delete "{0}"?', assetName);
+                    const deleteBtn = vscode.l10n.t('Delete');
+                    const cancelBtn = vscode.l10n.t('Cancel');
+                    
+                    const result = await vscode.window.showWarningMessage(
+                        confirmMsg,
+                        { modal: true },
+                        deleteBtn
+                    );
+                    
+                    if (result === deleteBtn) {
+                        this._assetManager.handleDeleteAsset(message.fileName, this._fileManager.currentFilePath);
+                    }
+                }
+                break;
+
             case 'deleteAsset':
                 this._assetManager.handleDeleteAsset(message.fileName, this._fileManager.currentFilePath);
                 break;

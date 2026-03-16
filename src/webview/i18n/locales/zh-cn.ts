@@ -221,6 +221,8 @@ const zhCN = {
   'Open Assets Folder': '打开资源文件夹',
   'Refresh': '刷新',
   'Delete': '删除',
+  'Confirm delete asset': '确认删除 "{name}" 吗？',
+  'Confirm delete folder': '确认删除文件夹 "{name}" 及其所有内容吗？',
   'Rename': '重命名',
   'Copy Path': '复制路径',
   'Upload files': '上传文件',

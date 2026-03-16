@@ -100,6 +100,9 @@
   "Failed to load HML file: {0}": "加载HML文件失败: {0}",
 
   "Asset file deleted": "资源文件已删除",
+  "Confirm delete \"{0}\"?": "确认删除 \"{0}\" 吗？",
+  "Confirm delete folder \"{0}\" and all its contents?": "确认删除文件夹 \"{0}\" 及其所有内容吗？",
+  "Delete": "删除",
   "Asset file does not exist": "资源文件不存在",
   "Failed to delete asset file": "删除资源文件失败",
   "File name already exists": "文件名已存在",

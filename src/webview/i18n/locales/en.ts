@@ -221,6 +221,8 @@ const en = {
   'Open Assets Folder': 'Open Assets Folder',
   'Refresh': 'Refresh',
   'Delete': 'Delete',
+  'Confirm delete asset': 'Are you sure you want to delete "{name}"?',
+  'Confirm delete folder': 'Are you sure you want to delete folder "{name}" and all its contents?',
   'Rename': 'Rename',
   'Copy Path': 'Copy Path',
   'Upload files': 'Upload files',

@@ -554,9 +554,12 @@ const AssetsPanel: React.FC = () => {
 
   const handleDelete = (asset: AssetFile) => {
     const fileName = asset.relativePath || asset.name;
+    // 发送确认删除请求到 Extension 端，由 Extension 端显示确认对话框
     window.vscodeAPI?.postMessage({
-      command: 'deleteAsset',
+      command: 'confirmDeleteAsset',
       fileName: fileName,
+      assetName: asset.name,
+      isFolder: asset.type === 'folder'
     });
   };
 
@@ -723,10 +726,10 @@ const AssetsPanel: React.FC = () => {
             >
               <Zap size={12} />
             </button>
-            <button onClick={() => handleRename(asset)} title={t('Rename')} className="action-btn">
+            <button onClick={(e) => { e.stopPropagation(); handleRename(asset); }} title={t('Rename')} className="action-btn">
               <Edit2 size={12} />
             </button>
-            <button onClick={() => handleDelete(asset)} title={t('Delete')} className="action-btn delete">
+            <button onClick={(e) => { e.stopPropagation(); handleDelete(asset); }} title={t('Delete')} className="action-btn delete">
               <Trash2 size={12} />
             </button>
           </div>
