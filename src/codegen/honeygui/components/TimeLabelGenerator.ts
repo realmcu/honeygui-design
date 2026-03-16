@@ -172,7 +172,7 @@ export class TimeLabelGenerator extends LabelGenerator {
     let code = '';
     
     // 生成小时 label
-    code += `${indentStr}// 拆分时间 - 小时\n`;
+    code += `${indentStr}// Split time - hour\n`;
     code += `${indentStr}${component.id}_hour = gui_text_create(${parentRef}, "${component.name}_hour", ${hourX}, ${hourY}, ${hourWidth}, ${height});\n`;
     code += `${indentStr}gui_text_set(${component.id}_hour, ${component.id}_time_str, ${fontType}, gui_rgb(${rgb.r}, ${rgb.g}, ${rgb.b}), 2, ${fontSize});\n`;
     if (fontFile) {
@@ -190,7 +190,7 @@ export class TimeLabelGenerator extends LabelGenerator {
     }
     
     // 生成冒号 label
-    code += `${indentStr}// 拆分时间 - 冒号（带呼吸灯）\n`;
+    code += `${indentStr}// Split time - colon (with breathing animation)\n`;
     code += `${indentStr}${component.id}_colon = gui_text_create(${parentRef}, "${component.name}_colon", ${colonX}, ${colonY}, ${colonWidth}, ${height});\n`;
     code += `${indentStr}gui_text_set(${component.id}_colon, ":", ${fontType}, gui_rgb(${rgb.r}, ${rgb.g}, ${rgb.b}), 1, ${fontSize});\n`;
     if (fontFile) {
@@ -199,7 +199,7 @@ export class TimeLabelGenerator extends LabelGenerator {
     code += `${indentStr}gui_text_mode_set(${component.id}_colon, CENTER);\n`;
     
     // 生成分钟 label
-    code += `${indentStr}// 拆分时间 - 分钟\n`;
+    code += `${indentStr}// Split time - minute\n`;
     code += `${indentStr}${component.id}_min = gui_text_create(${parentRef}, "${component.name}_min", ${minX}, ${minY}, ${minWidth}, ${height});\n`;
     code += `${indentStr}gui_text_set(${component.id}_min, ${component.id}_time_str + 3, ${fontType}, gui_rgb(${rgb.r}, ${rgb.g}, ${rgb.b}), 2, ${fontSize});\n`;
     if (fontFile) {
@@ -215,9 +215,9 @@ export class TimeLabelGenerator extends LabelGenerator {
     }
     
     // 创建定时器
-    code += `${indentStr}// 冒号呼吸灯动画定时器\n`;
+    code += `${indentStr}// Colon breathing animation timer\n`;
     code += `${indentStr}gui_obj_create_timer(GUI_BASE(${component.id}_colon), 50, true, ${component.id}_breath_anim_cb);\n`;
-    code += `${indentStr}// 时间更新定时器\n`;
+    code += `${indentStr}// Time update timer\n`;
     code += `${indentStr}gui_obj_create_timer(${parentRef}, 1000, true, ${component.id}_time_update_cb);\n`;
     code += `${indentStr}${component.id} = GUI_BASE(${component.id}_hour);\n`;
     
@@ -248,7 +248,7 @@ export class TimeLabelGenerator extends LabelGenerator {
     let code = '';
     
     // 生成小时 label
-    code += `${indentStr}// 拆分时间 - 小时\n`;
+    code += `${indentStr}// Split time - hour\n`;
     code += `${indentStr}${component.id}_hour = gui_text_create(${parentRef}, "${component.name}_hour", ${hourX}, ${hourY}, ${hourWidth}, ${height});\n`;
     code += `${indentStr}gui_text_set(${component.id}_hour, ${component.id}_time_str, ${fontType}, gui_rgb(${rgb.r}, ${rgb.g}, ${rgb.b}), 2, ${fontSize});\n`;
     if (fontFile) {
@@ -266,7 +266,7 @@ export class TimeLabelGenerator extends LabelGenerator {
     }
     
     // 生成冒号 label
-    code += `${indentStr}// 拆分时间 - 冒号（带呼吸灯）\n`;
+    code += `${indentStr}// Split time - colon (with breathing animation)\n`;
     code += `${indentStr}${component.id}_colon = gui_text_create(${parentRef}, "${component.name}_colon", ${colonX}, ${colonY}, ${colonWidth}, ${height});\n`;
     code += `${indentStr}gui_text_set(${component.id}_colon, ":", ${fontType}, gui_rgb(${rgb.r}, ${rgb.g}, ${rgb.b}), 1, ${fontSize});\n`;
     if (fontFile) {
@@ -275,7 +275,7 @@ export class TimeLabelGenerator extends LabelGenerator {
     code += `${indentStr}gui_text_mode_set(${component.id}_colon, LEFT);\n`;
     
     // 生成分钟 label
-    code += `${indentStr}// 拆分时间 - 分钟\n`;
+    code += `${indentStr}// Split time - minute\n`;
     code += `${indentStr}${component.id}_min = gui_text_create(${parentRef}, "${component.name}_min", ${minX}, ${minY}, ${minWidth}, ${height});\n`;
     code += `${indentStr}gui_text_set(${component.id}_min, ${component.id}_time_str + 3, ${fontType}, gui_rgb(${rgb.r}, ${rgb.g}, ${rgb.b}), 2, ${fontSize});\n`;
     if (fontFile) {
@@ -291,9 +291,9 @@ export class TimeLabelGenerator extends LabelGenerator {
     }
     
     // 创建定时器
-    code += `${indentStr}// 冒号呼吸灯动画定时器\n`;
+    code += `${indentStr}// Colon breathing animation timer\n`;
     code += `${indentStr}gui_obj_create_timer(GUI_BASE(${component.id}_colon), 50, true, ${component.id}_breath_anim_cb);\n`;
-    code += `${indentStr}// 时间更新定时器\n`;
+    code += `${indentStr}// Time update timer\n`;
     code += `${indentStr}gui_obj_create_timer(${parentRef}, 1000, true, ${component.id}_time_update_cb);\n`;
     code += `${indentStr}${component.id} = GUI_BASE(${component.id}_hour);\n`;
     

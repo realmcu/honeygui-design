@@ -43,7 +43,7 @@ export class Model3DGenerator implements ComponentCodeGenerator {
     
     // 如果启用了交互动画，生成静态变量和更新回调
     if (touchRotationEnabled || autoRotationEnabled) {
-      code += `// ${component.name} 动画状态\n`;
+      code += `// ${component.name} animation state\n`;
       code += `static float ${component.id}_rot_angle = 0.0f;\n\n`;
       
       // 生成更新回调
@@ -149,7 +149,7 @@ export class Model3DGenerator implements ComponentCodeGenerator {
         code += `${indentStr}gui_obj_create_timer(GUI_BASE(${component.id}), 10, true, ${updateCallbackName});\n`;
       }
     } else {
-      code += `${indentStr}// 警告: 不支持的3D模型格式: ${ext}\n`;
+      code += `${indentStr}// Warning: unsupported 3D model format: ${ext}\n`;
     }
 
     return code;

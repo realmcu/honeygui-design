@@ -31,7 +31,7 @@ export class ButtonGenerator implements ComponentCodeGenerator {
 
     // 普通模式：也使用 gui_img（SDK 没有 gui_button）
     // 如果有文本，可以考虑用 gui_text 叠加
-    return `${indentStr}// 普通按钮暂不支持，请使用双态模式\n${indentStr}// ${component.id} = gui_img_create_from_fs(${parentRef}, "${component.name}", "", ${x}, ${y}, ${width}, ${height});\n`;
+    return `${indentStr}// Normal button not supported, please use toggle mode\n${indentStr}// ${component.id} = gui_img_create_from_fs(${parentRef}, "${component.name}", "", ${x}, ${y}, ${width}, ${height});\n`;
   }
 
   generatePropertySetters(component: Component, indent: number, context: GeneratorContext): string {

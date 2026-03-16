@@ -67,7 +67,7 @@ export class RectGenerator implements ComponentCodeGenerator {
         
         const sdkDirection = directionMap[direction] || 'RECT_GRADIENT_HORIZONTAL';
         
-        code += `${indentStr}// 设置线性渐变\n`;
+        code += `${indentStr}// Set linear gradient\n`;
         code += `${indentStr}gui_rect_set_linear_gradient(${component.id}, ${sdkDirection});\n`;
         
         stops.forEach(stop => {

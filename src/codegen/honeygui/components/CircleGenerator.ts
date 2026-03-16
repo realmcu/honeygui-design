@@ -57,7 +57,7 @@ export class CircleGenerator implements ComponentCodeGenerator {
       if (stops.length >= 2) {
         const gradientType = component.style?.gradientType || 'radial';
         
-        code += `${indentStr}// 设置${gradientType === 'radial' ? '径向' : '角度'}渐变\n`;
+        code += `${indentStr}// Set ${gradientType === 'radial' ? 'radial' : 'angular'} gradient\n`;
         
         if (gradientType === 'radial') {
           code += `${indentStr}gui_circle_set_radial_gradient(${component.id});\n`;

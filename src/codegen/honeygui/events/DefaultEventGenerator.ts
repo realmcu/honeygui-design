@@ -104,7 +104,7 @@ export class DefaultEventGenerator implements EventCodeGenerator {
           const keyName = eventConfig.keyName || 'unknown';
           
           if (isFirst) {
-            callbackBody += `    // 检查按键名\n`;
+            callbackBody += `    // Check key name\n`;
             callbackBody += `    if (strcmp(e->indev_name, "${keyName}") == 0)\n    {\n`;
           } else {
             callbackBody += `    else if (strcmp(e->indev_name, "${keyName}") == 0)\n    {\n`;
@@ -129,7 +129,7 @@ export class DefaultEventGenerator implements EventCodeGenerator {
 
       // 如果没有动作，生成 TODO 注释
       if (!callbackBody.trim()) {
-        callbackBody = `    // TODO: 实现事件处理逻辑\n`;
+        callbackBody = `    // TODO: Implement event handling logic\n`;
       }
 
       impls.push(`void ${callbackName}(void *obj, gui_event_t *e)
@@ -216,7 +216,7 @@ ${callbackBody}}`);
             const callback = timer.mode === 'preset' 
               ? `${target.componentId}_${timer.id}_cb`
               : (timer.callback || `${target.componentId}_timer_cb`);
-            code += `${indent}${target.componentId}_timer_cnt = 0; // 清零计数器\n`;
+            code += `${indent}${target.componentId}_timer_cnt = 0; // Reset counter\n`;
             code += `${indent}gui_obj_create_timer(GUI_BASE(${target.componentId}), ${timer.interval}, ${timer.reload ? 'true' : 'false'}, ${callback});\n`;
             code += `${indent}gui_obj_start_timer(GUI_BASE(${target.componentId}));\n`;
           } else if (target.action === 'stop') {

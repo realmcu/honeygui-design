@@ -15,7 +15,7 @@ export class DefaultGenerator implements ComponentCodeGenerator {
     const mapping = this.apiMapper.getMapping(component.type);
 
     if (!mapping) {
-      return `${indentStr}// 警告: 未找到 ${component.type} 的API映射\n`;
+      return `${indentStr}// Warning: no API mapping found for ${component.type}\n`;
     }
 
     return `${indentStr}${component.id} = ${mapping.createFunction}(${parentRef}, "${component.name}", ${x}, ${y}, ${width}, ${height});\n`;

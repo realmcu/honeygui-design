@@ -70,7 +70,7 @@ export class CallbackFileGenerator {
     );
     
     if (splitTimeLabels.length > 0) {
-      code += `// 拆分时间组件全局变量（在 UI 文件中定义）\n`;
+      code += `// Split time component global variables (defined in UI file)\n`;
       splitTimeLabels.forEach(label => {
         code += `extern gui_text_t *${label.id}_hour;\n`;
         code += `extern gui_text_t *${label.id}_colon;\n`;
@@ -93,14 +93,14 @@ export class CallbackFileGenerator {
     });
 
     if (componentsWithTimers.length > 0) {
-      code += `// 定时动画计数器（在 callbacks.c 中定义）\n`;
+      code += `// Timer animation counters (defined in callbacks.c)\n`;
       componentsWithTimers.forEach(comp => {
         code += `extern uint16_t ${comp.id}_timer_cnt;\n`;
       });
       code += `\n`;
     }
 
-    code += `// 事件回调函数声明\n`;
+    code += `// Event callback function declarations\n`;
 
     const callbackFunctions = this.collectCallbackFunctions();
     const msgCallbackNames = new Set(this.collectMessageCallbackNames());
@@ -123,7 +123,7 @@ export class CallbackFileGenerator {
     // 添加用户配置的定时器回调声明
     const timerCallbackNames = this.collectTimerCallbackNames();
     if (timerCallbackNames.length > 0) {
-      code += `\n// 用户配置的定时器回调函数声明\n`;
+      code += `\n// User-configured timer callback function declarations\n`;
       timerCallbackNames.forEach(funcName => {
         code += `void ${funcName}(void *obj);\n`;
       });
@@ -132,7 +132,7 @@ export class CallbackFileGenerator {
     // 添加双态按钮状态回调声明
     const toggleButtonCallbacks = this.collectToggleButtonCallbackNames();
     if (toggleButtonCallbacks.length > 0) {
-      code += `\n// 双态按钮状态回调函数声明\n`;
+      code += `\n// Toggle button state callback function declarations\n`;
       toggleButtonCallbacks.forEach(({ onCallback, offCallback }) => {
         code += `void ${onCallback}(void);\n`;
         code += `void ${offCallback}(void);\n`;
@@ -143,7 +143,7 @@ export class CallbackFileGenerator {
     if (existingCallbacksC) {
       const customFunctions = this.extractCustomFunctionDeclarations(existingCallbacksC);
       if (customFunctions.length > 0) {
-        code += `\n// 自定义函数声明（从 callbacks.c 保护区自动提取）\n`;
+        code += `\n// Custom function declarations (auto-extracted from callbacks.c protected area)\n`;
         customFunctions.forEach(declaration => {
           code += `${declaration};\n`;
         });
@@ -190,7 +190,7 @@ export class CallbackFileGenerator {
 
     // 为每个时间标签声明外部全局变量（在 UI 文件中定义）
     if (timeLabels.length > 0) {
-      code += `// 时间字符串全局变量（在 UI 文件中定义）\n`;
+      code += `// Time string global variables (defined in UI file)\n`;
       timeLabels.forEach(label => {
         const bufferSize = this.getTimeBufferSize(label.data?.timeFormat);
         code += `extern char ${label.id}_time_str[${bufferSize}];\n`;
@@ -200,7 +200,7 @@ export class CallbackFileGenerator {
 
     // 为每个计时器标签声明外部全局变量（在 UI 文件中定义）
     if (timerLabels.length > 0) {
-      code += `// 计时器字符串全局变量（在 UI 文件中定义）\n`;
+      code += `// Timer string global variables (defined in UI file)\n`;
       timerLabels.forEach(label => {
         const bufferSize = this.getTimerBufferSize(label.data?.timerFormat);
         code += `extern char ${label.id}_timer_str[${bufferSize}];\n`;
@@ -223,14 +223,14 @@ export class CallbackFileGenerator {
     });
 
     if (componentsWithTimers.length > 0) {
-      code += `// 定时动画计数器\n`;
+      code += `// Timer animation counters\n`;
       componentsWithTimers.forEach(comp => {
         code += `uint16_t ${comp.id}_timer_cnt = 0;\n`;
       });
       code += `\n`;
     }
 
-    code += `// 事件回调函数实现\n\n`;
+    code += `// Event callback function implementations\n\n`;
 
     // 收集统一的事件回调实现（除 onMessage 外的所有事件）
     const eventCallbackImpls = this.collectEventCallbackImpls(existingFunctions);
@@ -253,7 +253,7 @@ export class CallbackFileGenerator {
     // 生成预设定时器回调实现（跳过已存在的）
     const timerCallbackImpls = this.collectTimerCallbackImpls(existingFunctions);
     if (timerCallbackImpls.length > 0) {
-      code += `// 预设定时器回调函数\n\n`;
+      code += `// Preset timer callback functions\n\n`;
       timerCallbackImpls.forEach(impl => {
         code += impl + '\n\n';
       });
@@ -262,14 +262,14 @@ export class CallbackFileGenerator {
     // 生成双态按钮状态回调
     const toggleButtonImpls = this.collectToggleButtonCallbackImpls();
     if (toggleButtonImpls.length > 0) {
-      code += `// 双态按钮状态回调函数\n\n`;
+      code += `// Toggle button state callback functions\n\n`;
       toggleButtonImpls.forEach(impl => {
         code += impl + '\n';
       });
     }
 
     code += `/* @protected start custom_functions */
-// 自定义函数
+// Custom functions
 /* @protected end custom_functions */
 `;
 
@@ -557,13 +557,13 @@ export class CallbackFileGenerator {
               const implFuncName = `${callback}_impl`;
               const impl = `/**
  * ${timerName}
- * 组件: ${component.id}
+ * Component: ${component.id}
  */
 void ${callback}(void *obj)
 {
     GUI_UNUSED(obj);
-    // 调用保护区中的实现函数（如果存在）
-    // 在 custom_functions 保护区中定义 ${implFuncName}() 来实现自定义逻辑
+    // Call the implementation function in protected area (if exists)
+    // Define ${implFuncName}() in custom_functions protected area for custom logic
 #ifdef __cplusplus
     extern "C" {
 #endif
@@ -575,8 +575,8 @@ void ${callback}(void *obj)
     if (${implFuncName}) {
         ${implFuncName}();
     } else {
-        // TODO: 实现定时器回调逻辑
-        // 或在 custom_functions 保护区中定义 ${implFuncName}() 函数
+        // TODO: Implement timer callback logic
+        // Or define ${implFuncName}() in custom_functions protected area
     }
 }`;
               impls.set(callback, impl);
@@ -604,8 +604,8 @@ void ${callback}(void *obj)
             const impl = `void ${callback}(void *obj)
 {
     GUI_UNUSED(obj);
-    // 调用保护区中的实现函数（如果存在）
-    // 在 custom_functions 保护区中定义 ${implFuncName}() 来实现自定义逻辑
+    // Call the implementation function in protected area (if exists)
+    // Define ${implFuncName}() in custom_functions protected area for custom logic
 #ifdef __cplusplus
     extern "C" {
 #endif
@@ -617,8 +617,8 @@ void ${callback}(void *obj)
     if (${implFuncName}) {
         ${implFuncName}();
     } else {
-        // TODO: 实现定时器回调逻辑
-        // 或在 custom_functions 保护区中定义 ${implFuncName}() 函数
+        // TODO: Implement timer callback logic
+        // Or define ${implFuncName}() in custom_functions protected area
     }
 }`;
             impls.set(callback, impl);
@@ -654,7 +654,7 @@ void ${callback}(void *obj)
     actions.forEach((action: any) => {
       if (action.type === 'position') {
         // 调整位置动作
-        code += `    // 调整位置: (${action.fromX}, ${action.fromY}) -> (${action.toX}, ${action.toY})\n`;
+        code += `    // Adjust position: (${action.fromX}, ${action.fromY}) -> (${action.toX}, ${action.toY})\n`;
         code += `    const int16_t x_origin = ${action.fromX};\n`;
         code += `    const int16_t y_origin = ${action.fromY};\n`;
         code += `    const int16_t x_target = ${action.toX};\n`;
@@ -665,7 +665,7 @@ void ${callback}(void *obj)
         code += `    \n`;
       } else if (action.type === 'size') {
         // 调整大小动作（仅支持 hg_window）
-        code += `    // 调整大小: (${action.fromW}, ${action.fromH}) -> (${action.toW}, ${action.toH})\n`;
+        code += `    // Adjust size: (${action.fromW}, ${action.fromH}) -> (${action.toW}, ${action.toH})\n`;
         code += `    const int16_t w_origin = ${action.fromW};\n`;
         code += `    const int16_t h_origin = ${action.fromH};\n`;
         code += `    const int16_t w_target = ${action.toW};\n`;
@@ -677,7 +677,7 @@ void ${callback}(void *obj)
         code += `    \n`;
       } else if (action.type === 'opacity') {
         // 调整透明度动作
-        code += `    // 调整透明度: ${action.from} -> ${action.to}\n`;
+        code += `    // Adjust opacity: ${action.from} -> ${action.to}\n`;
         code += `    const uint8_t opacity_origin = ${action.from};\n`;
         code += `    const uint8_t opacity_target = ${action.to};\n`;
         code += `    int16_t opacity_cur = opacity_origin + (opacity_target - opacity_origin) * ${cntVarName} / cnt_max;\n`;
@@ -690,7 +690,7 @@ void ${callback}(void *obj)
         code += `    \n`;
       } else if (action.type === 'rotation') {
         // 调整旋转动作（仅支持 hg_image）
-        code += `    // 调整旋转: ${action.angleOrigin}° -> ${action.angleTarget}°\n`;
+        code += `    // Adjust rotation: ${action.angleOrigin}° -> ${action.angleTarget}°\n`;
         code += `    const float angle_origin = ${action.angleOrigin};\n`;
         code += `    const float angle_target = ${action.angleTarget};\n`;
         code += `    float angle_cur = angle_origin + (angle_target - angle_origin) * ${cntVarName} / cnt_max;\n`;
@@ -698,7 +698,7 @@ void ${callback}(void *obj)
         code += `    \n`;
       } else if (action.type === 'scale') {
         // 调整缩放动作（仅支持 hg_image）
-        code += `    // 调整缩放: (${action.zoomXOrigin}, ${action.zoomYOrigin}) -> (${action.zoomXTarget}, ${action.zoomYTarget})\n`;
+        code += `    // Adjust scale: (${action.zoomXOrigin}, ${action.zoomYOrigin}) -> (${action.zoomXTarget}, ${action.zoomYTarget})\n`;
         code += `    const float zoom_x_origin = ${action.zoomXOrigin};\n`;
         code += `    const float zoom_x_target = ${action.zoomXTarget};\n`;
         code += `    const float zoom_y_origin = ${action.zoomYOrigin};\n`;
@@ -709,7 +709,7 @@ void ${callback}(void *obj)
         code += `    \n`;
       } else if (action.type === 'setFocus') {
         // 设置焦点动作（适配所有组件）
-        code += `    // 设置焦点\n`;
+        code += `    // Set focus\n`;
         code += `    gui_obj_focus_set(target);\n`;
         code += `    \n`;
       }
@@ -722,11 +722,11 @@ void ${callback}(void *obj)
     if (stopOnComplete) {
       code += `    if (${cntVarName} >= cnt_max) {\n`;
       code += `        gui_obj_stop_timer(target);\n`;
-      code += `        ${cntVarName} = 0; // 重置计数器\n`;
+      code += `        ${cntVarName} = 0; // Reset counter\n`;
       code += `    }\n`;
     } else {
       code += `    if (${cntVarName} >= cnt_max) {\n`;
-      code += `        ${cntVarName} = 0; // 重置计数器，继续循环\n`;
+      code += `        ${cntVarName} = 0; // Reset counter, continue loop\n`;
       code += `    }\n`;
     }
     
@@ -763,8 +763,8 @@ void ${callback}(void *obj)
     
     let code = `/**
  * ${timerName}
- * 组件: ${component.id}
- * 模式: 预设动作（单段）
+ * Component: ${component.id}
+ * Mode: Preset actions (single segment)
  */
 void ${callback}(void *obj)\n{\n`;
     code += `    gui_obj_t *target = (gui_obj_t *)obj;\n`;
@@ -772,9 +772,9 @@ void ${callback}(void *obj)\n{\n`;
     
     // 如果有延时启动，添加 cnt_wait
     if (delayStart > 0) {
-      code += `    const uint16_t cnt_wait = ${cntWait}; // 延时启动: ${delayStart}ms\n`;
+      code += `    const uint16_t cnt_wait = ${cntWait}; // Delay start: ${delayStart}ms\n`;
       code += `    \n`;
-      code += `    // 延时启动检查\n`;
+      code += `    // Delay start check\n`;
       code += `    if (${cntVarName} <= cnt_wait) {\n`;
       code += `        ${cntVarName}++;\n`;
       code += `        return;\n`;
@@ -802,11 +802,11 @@ void ${callback}(void *obj)\n{\n`;
     if (stopOnComplete) {
       code += `    if (${cntVarName} >= ${totalCnt}) {\n`;
       code += `        gui_obj_stop_timer(target);\n`;
-      code += `        ${cntVarName} = 0; // 重置计数器\n`;
+      code += `        ${cntVarName} = 0; // Reset counter\n`;
       code += `    }\n`;
     } else {
       code += `    if (${cntVarName} >= ${totalCnt}) {\n`;
-      code += `        ${cntVarName} = 0; // 重置计数器，继续循环\n`;
+      code += `        ${cntVarName} = 0; // Reset counter, continue loop\n`;
       code += `    }\n`;
     }
     
@@ -835,9 +835,9 @@ void ${callback}(void *obj)\n{\n`;
     
     let code = `/**
  * ${timerName}
- * 组件: ${component.id}
- * 模式: 预设动作（多段动画）
- * 段数: ${segments.length}
+ * Component: ${component.id}
+ * Mode: Preset actions (multi-segment animation)
+ * Segments: ${segments.length}
  */
 void ${callback}(void *obj)\n{\n`;
     code += `    gui_obj_t *target = (gui_obj_t *)obj;\n`;
@@ -871,9 +871,9 @@ void ${callback}(void *obj)\n{\n`;
       
       if (actions.length === 0) {
         // 空段（等待）
-        code += `    // 段 ${idx + 1}: 等待 ${seg.duration}ms\n`;
+        code += `    // Segment ${idx + 1}: Wait ${seg.duration}ms\n`;
         code += `    ${ifKeyword} (${cntVarName} > seg${idx}_start && ${cntVarName} <= seg${idx}_end) {\n`;
-        code += `        // 无动作，仅等待\n`;
+        code += `        // No action, just wait\n`;
         code += `    }\n`;
       } else {
         // 检查是否所有动作都不需要段内计数器（跳转界面、更换图片、设置可见性、切换定时动画、设置焦点、无初始值的颜色设置等）
@@ -888,7 +888,7 @@ void ${callback}(void *obj)\n{\n`;
         );
         
         // 有动作的段
-        code += `    // 段 ${idx + 1}: ${seg.duration}ms, ${actions.length} 个动作\n`;
+        code += `    // Segment ${idx + 1}: ${seg.duration}ms, ${actions.length} action(s)\n`;
         code += `    ${ifKeyword} (${cntVarName} > seg${idx}_start && ${cntVarName} <= seg${idx}_end) {\n`;
         
         // 只有在需要渐变计算时才生成段内计数器
@@ -916,11 +916,11 @@ void ${callback}(void *obj)\n{\n`;
     if (stopOnComplete) {
       code += `    if (${cntVarName} >= total_cnt_max) {\n`;
       code += `        gui_obj_stop_timer(target);\n`;
-      code += `        ${cntVarName} = 0; // 重置计数器\n`;
+      code += `        ${cntVarName} = 0; // Reset counter\n`;
       code += `    }\n`;
     } else {
       code += `    if (${cntVarName} >= total_cnt_max) {\n`;
-      code += `        ${cntVarName} = 0; // 重置计数器，继续循环\n`;
+      code += `        ${cntVarName} = 0; // Reset counter, continue loop\n`;
       code += `    }\n`;
     }
     
@@ -939,7 +939,7 @@ void ${callback}(void *obj)\n{\n`;
     if (action.type === 'visibility') {
       // 设置可见性动作
       const visible = action.visible !== false; // 默认为 true
-      code += `    // 设置可见性: ${visible ? '显示' : '隐藏'}\n`;
+      code += `    // Set visibility: ${visible ? 'show' : 'hide'}\n`;
       code += `    gui_obj_show(target, ${visible ? 'true' : 'false'});\n`;
       code += `    \n`;
     } else if (action.type === 'changeImage') {
@@ -953,7 +953,7 @@ void ${callback}(void *obj)\n{\n`;
       if (imagePath && !imagePath.endsWith('.bin')) {
         imagePath = imagePath.replace(/\.[^.]+$/, '.bin');
       }
-      code += `    // 更换图片: ${imagePath}\n`;
+      code += `    // Change image: ${imagePath}\n`;
       code += `    gui_img_set_src((gui_img_t *)target, "${imagePath}", IMG_SRC_FILESYS);\n`;
       code += `    gui_img_refresh_size((gui_img_t *)target);\n`;
       code += `    \n`;
@@ -973,7 +973,7 @@ void ${callback}(void *obj)\n{\n`;
           return processed;
         });
         
-        code += `    // 图片序列动画: ${processedPaths.length} 张图片\n`;
+        code += `    // Image sequence animation: ${processedPaths.length} images\n`;
         code += `    const void *img_data_array[${processedPaths.length}] = {\n`;
         processedPaths.forEach((path: string, idx: number) => {
           code += `        "${path}"${idx < processedPaths.length - 1 ? ',' : ''}\n`;
@@ -989,7 +989,7 @@ void ${callback}(void *obj)\n{\n`;
       const targetName = action.target || 'unknown_view';
       const switchOutStyle = action.switchOutStyle || 'SWITCH_OUT_TO_LEFT_USE_TRANSLATION';
       const switchInStyle = action.switchInStyle || 'SWITCH_IN_FROM_RIGHT_USE_TRANSLATION';
-      code += `    // 跳转界面: ${targetName}\n`;
+      code += `    // Switch view: ${targetName}\n`;
       code += `    gui_view_switch_direct(gui_view_get_current(), "${targetName}", ${switchOutStyle}, ${switchInStyle});\n`;
       code += `    \n`;
     } else if (action.type === 'switchTimer') {
@@ -1005,11 +1005,11 @@ void ${callback}(void *obj)\n{\n`;
       }
       
       if (timerTargets.length === 0) {
-        code += `    // 警告：未指定任何定时器控制\n`;
+        code += `    // Warning: No timer control specified\n`;
         return code;
       }
       
-      code += `    // 定时器控制\n`;
+      code += `    // Timer control\n`;
       
       for (const target of timerTargets) {
         const timerId = target.timerId;
@@ -1018,7 +1018,7 @@ void ${callback}(void *obj)\n{\n`;
         // 查找目标定时器配置
         const targetTimer = component?.data?.timers?.find((t: any) => t.id === timerId);
         if (!targetTimer) {
-          code += `    // 警告：未找到定时动画 ${timerId}\n`;
+          code += `    // Warning: Timer animation ${timerId} not found\n`;
           continue;
         }
         
@@ -1033,12 +1033,12 @@ void ${callback}(void *obj)\n{\n`;
           } else if (targetTimer.mode === 'custom' && targetTimer.callback) {
             callback = targetTimer.callback;
           } else {
-            code += `    // 警告：定时动画 ${timerId} 配置无效\n`;
+            code += `    // Warning: Timer animation ${timerId} configuration invalid\n`;
             continue;
           }
           
-          code += `    // 启动定时动画: ${timerName}\n`;
-          code += `    ${component?.id}_timer_cnt = 0; // 清零计数器\n`;
+          code += `    // Start timer animation: ${timerName}\n`;
+          code += `    ${component?.id}_timer_cnt = 0; // Reset counter\n`;
           code += `    gui_obj_create_timer(target, ${targetTimer.interval}, ${targetTimer.reload !== false ? 'true' : 'false'}, ${callback});\n`;
           // 如果目标定时器没有设置立即运行，则调用 gui_obj_start_timer
           if (!targetTimer.runImmediately) {
@@ -1046,16 +1046,16 @@ void ${callback}(void *obj)\n{\n`;
           }
         } else if (timerAction === 'stop') {
           // 停止定时器
-          code += `    // 停止定时动画: ${timerName}\n`;
+          code += `    // Stop timer animation: ${timerName}\n`;
           code += `    gui_obj_stop_timer(target);\n`;
         }
       }
       
-      code += `    return; // 定时器控制后立即返回\n`;
+      code += `    return; // Return immediately after timer control\n`;
       code += `    \n`;
     } else if (action.type === 'position') {
       // 调整位置动作
-      code += `    // 调整位置: (${action.fromX}, ${action.fromY}) -> (${action.toX}, ${action.toY})\n`;
+      code += `    // Adjust position: (${action.fromX}, ${action.fromY}) -> (${action.toX}, ${action.toY})\n`;
       code += `    const int16_t x_origin = ${action.fromX};\n`;
       code += `    const int16_t y_origin = ${action.fromY};\n`;
       code += `    const int16_t x_target = ${action.toX};\n`;
@@ -1066,7 +1066,7 @@ void ${callback}(void *obj)\n{\n`;
       code += `    \n`;
     } else if (action.type === 'size') {
       // 调整大小动作（仅支持 hg_window）
-      code += `    // 调整大小: (${action.fromW}, ${action.fromH}) -> (${action.toW}, ${action.toH})\n`;
+      code += `    // Adjust size: (${action.fromW}, ${action.fromH}) -> (${action.toW}, ${action.toH})\n`;
       code += `    const int16_t w_origin = ${action.fromW};\n`;
       code += `    const int16_t h_origin = ${action.fromH};\n`;
       code += `    const int16_t w_target = ${action.toW};\n`;
@@ -1078,7 +1078,7 @@ void ${callback}(void *obj)\n{\n`;
       code += `    \n`;
     } else if (action.type === 'opacity') {
       // 调整透明度动作
-      code += `    // 调整透明度: ${action.from} -> ${action.to}\n`;
+      code += `    // Adjust opacity: ${action.from} -> ${action.to}\n`;
       code += `    const uint8_t opacity_origin = ${action.from};\n`;
       code += `    const uint8_t opacity_target = ${action.to};\n`;
       code += `    int16_t opacity_cur = opacity_origin + (opacity_target - opacity_origin) * ${progressExpr};\n`;
@@ -1091,7 +1091,7 @@ void ${callback}(void *obj)\n{\n`;
       code += `    \n`;
     } else if (action.type === 'rotation') {
       // 调整旋转动作（仅支持 hg_image）
-      code += `    // 调整旋转: ${action.angleOrigin}° -> ${action.angleTarget}°\n`;
+      code += `    // Adjust rotation: ${action.angleOrigin}° -> ${action.angleTarget}°\n`;
       code += `    const float angle_origin = ${action.angleOrigin};\n`;
       code += `    const float angle_target = ${action.angleTarget};\n`;
       code += `    float angle_cur = angle_origin + (angle_target - angle_origin) * ${progressExpr};\n`;
@@ -1099,7 +1099,7 @@ void ${callback}(void *obj)\n{\n`;
       code += `    \n`;
     } else if (action.type === 'scale') {
       // 调整缩放动作（仅支持 hg_image）
-      code += `    // 调整缩放: (${action.zoomXOrigin}, ${action.zoomYOrigin}) -> (${action.zoomXTarget}, ${action.zoomYTarget})\n`;
+      code += `    // Adjust scale: (${action.zoomXOrigin}, ${action.zoomYOrigin}) -> (${action.zoomXTarget}, ${action.zoomYTarget})\n`;
       code += `    const float zoom_x_origin = ${action.zoomXOrigin};\n`;
       code += `    const float zoom_x_target = ${action.zoomXTarget};\n`;
       code += `    const float zoom_y_origin = ${action.zoomYOrigin};\n`;
@@ -1112,10 +1112,10 @@ void ${callback}(void *obj)\n{\n`;
       // 调整前景色动作（仅支持 hg_image）
       if (action.fgColorFrom) {
         // 有初始值，需要计算渐变
-        code += `    // 调整前景色: ${action.fgColorFrom} -> ${action.fgColorTo}\n`;
+        code += `    // Adjust foreground color: ${action.fgColorFrom} -> ${action.fgColorTo}\n`;
         code += `    const uint32_t fg_color_from = ${action.fgColorFrom};\n`;
         code += `    const uint32_t fg_color_to = ${action.fgColorTo};\n`;
-        code += `    // 分离 ARGB 通道\n`;
+        code += `    // Separate ARGB channels\n`;
         code += `    uint8_t a_from = (fg_color_from >> 24) & 0xFF;\n`;
         code += `    uint8_t r_from = (fg_color_from >> 16) & 0xFF;\n`;
         code += `    uint8_t g_from = (fg_color_from >> 8) & 0xFF;\n`;
@@ -1124,7 +1124,7 @@ void ${callback}(void *obj)\n{\n`;
         code += `    uint8_t r_to = (fg_color_to >> 16) & 0xFF;\n`;
         code += `    uint8_t g_to = (fg_color_to >> 8) & 0xFF;\n`;
         code += `    uint8_t b_to = fg_color_to & 0xFF;\n`;
-        code += `    // 计算当前颜色\n`;
+        code += `    // Calculate current color\n`;
         code += `    uint8_t a_cur = a_from + (a_to - a_from) * ${progressExpr};\n`;
         code += `    uint8_t r_cur = r_from + (r_to - r_from) * ${progressExpr};\n`;
         code += `    uint8_t g_cur = g_from + (g_to - g_from) * ${progressExpr};\n`;
@@ -1133,7 +1133,7 @@ void ${callback}(void *obj)\n{\n`;
         code += `    gui_img_a8_recolor((gui_img_t *)target, fg_color_cur);\n`;
       } else {
         // 没有初始值，直接设置目标值
-        code += `    // 设置前景色: ${action.fgColorTo}\n`;
+        code += `    // Set foreground color: ${action.fgColorTo}\n`;
         code += `    gui_img_a8_recolor((gui_img_t *)target, ${action.fgColorTo});\n`;
       }
       code += `    \n`;
@@ -1141,10 +1141,10 @@ void ${callback}(void *obj)\n{\n`;
       // 调整背景色动作（仅支持 hg_image）
       if (action.bgColorFrom) {
         // 有初始值，需要计算渐变
-        code += `    // 调整背景色: ${action.bgColorFrom} -> ${action.bgColorTo}\n`;
+        code += `    // Adjust background color: ${action.bgColorFrom} -> ${action.bgColorTo}\n`;
         code += `    const uint32_t bg_color_from = ${action.bgColorFrom};\n`;
         code += `    const uint32_t bg_color_to = ${action.bgColorTo};\n`;
-        code += `    // 分离 ARGB 通道\n`;
+        code += `    // Separate ARGB channels\n`;
         code += `    uint8_t a_from = (bg_color_from >> 24) & 0xFF;\n`;
         code += `    uint8_t r_from = (bg_color_from >> 16) & 0xFF;\n`;
         code += `    uint8_t g_from = (bg_color_from >> 8) & 0xFF;\n`;
@@ -1153,7 +1153,7 @@ void ${callback}(void *obj)\n{\n`;
         code += `    uint8_t r_to = (bg_color_to >> 16) & 0xFF;\n`;
         code += `    uint8_t g_to = (bg_color_to >> 8) & 0xFF;\n`;
         code += `    uint8_t b_to = bg_color_to & 0xFF;\n`;
-        code += `    // 计算当前颜色\n`;
+        code += `    // Calculate current color\n`;
         code += `    uint8_t a_cur = a_from + (a_to - a_from) * ${progressExpr};\n`;
         code += `    uint8_t r_cur = r_from + (r_to - r_from) * ${progressExpr};\n`;
         code += `    uint8_t g_cur = g_from + (g_to - g_from) * ${progressExpr};\n`;
@@ -1162,13 +1162,13 @@ void ${callback}(void *obj)\n{\n`;
         code += `    gui_img_a8_fix_bg((gui_img_t *)target, bg_color_cur);\n`;
       } else {
         // 没有初始值，直接设置目标值
-        code += `    // 设置背景色: ${action.bgColorTo}\n`;
+        code += `    // Set background color: ${action.bgColorTo}\n`;
         code += `    gui_img_a8_fix_bg((gui_img_t *)target, ${action.bgColorTo});\n`;
       }
       code += `    \n`;
     } else if (action.type === 'setFocus') {
       // 设置焦点动作（适配所有组件）
-      code += `    // 设置焦点\n`;
+      code += `    // Set focus\n`;
       code += `    gui_obj_focus_set(target);\n`;
       code += `    \n`;
     }
@@ -1266,15 +1266,15 @@ void ${callback}(void *obj)\n{\n`;
       code += `        return;\n`;
       code += `    }\n`;
       code += `    \n`;
-      code += `    // 更新时间字符串\n`;
+      code += `    // Update time string\n`;
       code += `    sprintf(${componentId}_time_str, "${formatStr}", t->tm_hour, t->tm_min);\n`;
       code += `    \n`;
-      code += `    // 更新小时组件（前2个字符）\n`;
+      code += `    // Update hour component (first 2 characters)\n`;
       code += `    if (${componentId}_hour) {\n`;
       code += `        gui_text_content_set(${componentId}_hour, ${componentId}_time_str, 2);\n`;
       code += `    }\n`;
       code += `    \n`;
-      code += `    // 更新分钟组件（后2个字符，跳过冒号）\n`;
+      code += `    // Update minute component (last 2 characters, skip colon)\n`;
       code += `    if (${componentId}_min) {\n`;
       code += `        gui_text_content_set(${componentId}_min, ${componentId}_time_str + 3, 2);\n`;
       code += `    }\n`;
@@ -1361,10 +1361,10 @@ void ${callback}(void *obj)\n{\n`;
     }
 
     let code = `/**\n`;
-    code += ` * 计时器更新回调函数\n`;
-    code += ` * 类型: ${timerType === 'stopwatch' ? '正计时（Stopwatch）' : '倒计时（Countdown）'}\n`;
-    code += ` * 格式: ${timerFormat}\n`;
-    code += ` * 注意: timer_value 以毫秒为单位，定时器间隔建议设置为 10-100ms\n`;
+    code += ` * Timer update callback function\n`;
+    code += ` * Type: ${timerType === 'stopwatch' ? 'Stopwatch (count up)' : 'Countdown (count down)'}\n`;
+    code += ` * Format: ${timerFormat}\n`;
+    code += ` * Note: timer_value is in milliseconds, timer interval should be set to 10-100ms\n`;
     code += ` */\n`;
     code += `void ${componentId}_timer_update_cb(void *p)\n`;
     code += `{\n`;
@@ -1373,25 +1373,25 @@ void ${callback}(void *obj)\n{\n`;
     
     if (timerType === 'stopwatch') {
       // 正计时：参考秒表实现
-      code += `    // 正计时：每次调用增加时间（假设定时器间隔为 10ms）\n`;
+      code += `    // Stopwatch: increment time on each call (assuming timer interval is 10ms)\n`;
       code += `    ${componentId}_timer_value += 10;\n`;
     } else {
       // 倒计时：每次调用减少时间
-      code += `    // 倒计时：每次调用减少时间（假设定时器间隔为 10ms）\n`;
+      code += `    // Countdown: decrement time on each call (assuming timer interval is 10ms)\n`;
       code += `    if (${componentId}_timer_value > 10) {\n`;
       code += `        ${componentId}_timer_value -= 10;\n`;
       code += `    } else {\n`;
       code += `        ${componentId}_timer_value = 0;\n`;
-      code += `        // 倒计时结束，可以在此处停止定时器\n`;
+      code += `        // Countdown finished, you can stop the timer here\n`;
       code += `        // gui_obj_stop_timer((gui_obj_t *)${componentId});\n`;
       code += `    }\n`;
     }
     
     code += `    \n`;
-    code += `    // 格式化计时器字符串\n`;
+    code += `    // Format timer string\n`;
     code += `    ${formatLogic}\n`;
     code += `    \n`;
-    code += `    // 更新显示\n`;
+    code += `    // Update display\n`;
     code += `    gui_text_content_set((gui_text_t *)${componentId}, ${componentId}_timer_str, strlen(${componentId}_timer_str));\n`;
     code += `}`;
 
@@ -1443,25 +1443,25 @@ void ${callback}(void *obj)\n{\n`;
               // 判断目标类型并生成相应的控制代码
               if (targetComp.type === 'hg_timer_label') {
                 // 计时器标签：使用生成的控制函数
-                onCallbackBody = `    // 启动计时器\n    ${targetComp.id}_start();`;
-                offCallbackBody = `    // 停止计时器\n    ${targetComp.id}_stop();`;
+                onCallbackBody = `    // Start timer\n    ${targetComp.id}_start();`;
+                offCallbackBody = `    // Stop timer\n    ${targetComp.id}_stop();`;
               } else if (targetComp.type === 'hg_label' && targetComp.data?.isTimerLabel === true) {
                 // 旧版计时器标签（向后兼容）：启动/停止计时器
-                onCallbackBody = `    // 启动计时器\n    gui_obj_start_timer((void *)${targetComp.id});`;
-                offCallbackBody = `    // 停止计时器\n    if (GUI_BASE(${targetComp.id})->timer) {\n        gui_obj_stop_timer((void *)${targetComp.id});\n    }`;
+                onCallbackBody = `    // Start timer\n    gui_obj_start_timer((void *)${targetComp.id});`;
+                offCallbackBody = `    // Stop timer\n    if (GUI_BASE(${targetComp.id})->timer) {\n        gui_obj_stop_timer((void *)${targetComp.id});\n    }`;
               } else if (targetComp.type === 'hg_video') {
                 // 视频播放器：播放/暂停
-                onCallbackBody = `    // 播放视频\n    // TODO: 实现视频播放逻辑\n    // gui_video_play(${targetComp.id});`;
-                offCallbackBody = `    // 暂停视频\n    // TODO: 实现视频暂停逻辑\n    // gui_video_pause(${targetComp.id});`;
+                onCallbackBody = `    // Play video\n    // TODO: Implement video play logic\n    // gui_video_play(${targetComp.id});`;
+                offCallbackBody = `    // Pause video\n    // TODO: Implement video pause logic\n    // gui_video_pause(${targetComp.id});`;
               } else {
                 // 其他组件：显示/隐藏控制
-                onCallbackBody = `    // 显示目标组件\n    gui_obj_show(${targetComp.id}, true);`;
-                offCallbackBody = `    // 隐藏目标组件\n    gui_obj_show(${targetComp.id}, false);`;
+                onCallbackBody = `    // Show target component\n    gui_obj_show(${targetComp.id}, true);`;
+                offCallbackBody = `    // Hide target component\n    gui_obj_show(${targetComp.id}, false);`;
               }
             } else {
               // 目标组件不存在
-              onCallbackBody = `    // 警告：控制目标 "${controlTarget}" 不存在\n    // TODO: 请检查 controlTarget 属性是否正确`;
-              offCallbackBody = `    // 警告：控制目标 "${controlTarget}" 不存在\n    // TODO: 请检查 controlTarget 属性是否正确`;
+              onCallbackBody = `    // Warning: Control target "${controlTarget}" does not exist\n    // TODO: Please check if controlTarget property is correct`;
+              offCallbackBody = `    // Warning: Control target "${controlTarget}" does not exist\n    // TODO: Please check if controlTarget property is correct`;
             }
           } else {
             // 如果没有指定控制目标，查找同一个 view 中所有 timerAutoStart=false 的计时标签
@@ -1472,29 +1472,29 @@ void ${callback}(void *obj)\n{\n`;
               // 找到了计时标签，生成计时器控制代码
               onCallbackBody = timerLabels.map(label => {
                 if (label.type === 'hg_timer_label') {
-                  return `    // 启动计时器\n    ${label.id}_start();`;
+                  return `    // Start timer\n    ${label.id}_start();`;
                 } else {
-                  return `    // 启动计时器\n    gui_obj_start_timer((void *)${label.id});`;
+                  return `    // Start timer\n    gui_obj_start_timer((void *)${label.id});`;
                 }
               }).join('\n');
               offCallbackBody = timerLabels.map(label => {
                 if (label.type === 'hg_timer_label') {
-                  return `    // 停止计时器\n    ${label.id}_stop();`;
+                  return `    // Stop timer\n    ${label.id}_stop();`;
                 } else {
-                  return `    // 停止计时器\n    if (GUI_BASE(${label.id})->timer) {\n        gui_obj_stop_timer((void *)${label.id});\n    }`;
+                  return `    // Stop timer\n    if (GUI_BASE(${label.id})->timer) {\n        gui_obj_stop_timer((void *)${label.id});\n    }`;
                 }
               }).join('\n');
             } else {
               // 没有找到任何控制目标，生成通用模板
-              onCallbackBody = `    // TODO: 实现开启状态的业务逻辑\n    // 提示：可以在按钮属性中设置 "Control Target" 来指定控制目标\n    // 例如：music_player_play();`;
-              offCallbackBody = `    // TODO: 实现关闭状态的业务逻辑\n    // 提示：可以在按钮属性中设置 "Control Target" 来指定控制目标\n    // 例如：music_player_pause();`;
+              onCallbackBody = `    // TODO: Implement ON state business logic\n    // Hint: Set "Control Target" in button properties to specify control target\n    // Example: music_player_play();`;
+              offCallbackBody = `    // TODO: Implement OFF state business logic\n    // Hint: Set "Control Target" in button properties to specify control target\n    // Example: music_player_pause();`;
             }
           }
           
           const impl = `/* USER CODE BEGIN ${component.id}_on_callback */
 /**
- * ${component.id} 开启状态回调
- * 当按钮切换到开启状态时调用
+ * ${component.id} ON state callback
+ * Called when button switches to ON state
  */
 void ${component.id}_on_callback(void)
 {
@@ -1504,8 +1504,8 @@ ${onCallbackBody}
 
 /* USER CODE BEGIN ${component.id}_off_callback */
 /**
- * ${component.id} 关闭状态回调
- * 当按钮切换到关闭状态时调用
+ * ${component.id} OFF state callback
+ * Called when button switches to OFF state
  */
 void ${component.id}_off_callback(void)
 {

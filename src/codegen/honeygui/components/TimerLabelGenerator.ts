@@ -121,7 +121,7 @@ export class TimerLabelGenerator extends LabelGenerator {
     }
 
     // 计时器模式：创建定时器（间隔 10ms，无限循环）
-    code += `${indentStr}// 创建计时器定时器（间隔 10ms，无限循环）\n`;
+    code += `${indentStr}// Create timer (interval 10ms, infinite loop)\n`;
     code += `${indentStr}gui_obj_create_timer((gui_obj_t *)${component.id}, 10, -1, ${component.id}_timer_cb);\n`;
     
     // 根据 autoStart 决定是否立即启动
@@ -150,13 +150,13 @@ export class TimerLabelGenerator extends LabelGenerator {
     const initialDisplay = this.formatTime(initialValue, displayFormat);
     
     // 全局变量：计时器状态
-    code += `// ${component.id} 计时器全局变量\n`;
-    code += `static uint32_t ${component.id}_time_count = ${initialValue}; // 毫秒\n`;
+    code += `// ${component.id} timer global variables\n`;
+    code += `static uint32_t ${component.id}_time_count = ${initialValue}; // milliseconds\n`;
     code += `static bool ${component.id}_timer_running = false;\n`;
     code += `static char ${varName}[16] = "${initialDisplay}";\n\n`;
     
     // 格式化函数：根据显示格式生成时间字符串
-    code += `// ${component.id} 格式化时间字符串\n`;
+    code += `// ${component.id} format time string\n`;
     code += `static void ${component.id}_format_time(void)\n`;
     code += `{\n`;
     
@@ -189,7 +189,7 @@ export class TimerLabelGenerator extends LabelGenerator {
     code += `}\n\n`;
     
     // 定时器回调函数：每 10ms 更新一次
-    code += `// ${component.id} 定时器回调（每 10ms 调用一次）\n`;
+    code += `// ${component.id} timer callback (called every 10ms)\n`;
     code += `static void ${component.id}_timer_cb(void *obj)\n`;
     code += `{\n`;
     code += `    if (!${component.id}_timer_running) {\n`;
@@ -198,7 +198,7 @@ export class TimerLabelGenerator extends LabelGenerator {
     
     if (timerType === 'countdown') {
       // 倒计时模式
-      code += `    // 倒计时模式\n`;
+      code += `    // Countdown mode\n`;
       code += `    if (${component.id}_time_count >= 10) {\n`;
       code += `        ${component.id}_time_count -= 10;\n`;
       code += `    } else {\n`;
@@ -208,7 +208,7 @@ export class TimerLabelGenerator extends LabelGenerator {
       code += `    }\n`;
     } else {
       // 正计时模式（stopwatch）
-      code += `    // 正计时模式\n`;
+      code += `    // Count-up mode\n`;
       code += `    ${component.id}_time_count += 10;\n`;
     }
     
@@ -218,7 +218,7 @@ export class TimerLabelGenerator extends LabelGenerator {
     code += `}\n\n`;
     
     // 控制函数：启动计时器
-    code += `// ${component.id} 启动计时器\n`;
+    code += `// ${component.id} start timer\n`;
     code += `void ${component.id}_start(void)\n`;
     code += `{\n`;
     code += `    ${component.id}_timer_running = true;\n`;
@@ -226,7 +226,7 @@ export class TimerLabelGenerator extends LabelGenerator {
     code += `}\n\n`;
     
     // 控制函数：停止计时器
-    code += `// ${component.id} 停止计时器\n`;
+    code += `// ${component.id} stop timer\n`;
     code += `void ${component.id}_stop(void)\n`;
     code += `{\n`;
     code += `    ${component.id}_timer_running = false;\n`;
@@ -234,7 +234,7 @@ export class TimerLabelGenerator extends LabelGenerator {
     code += `}\n\n`;
     
     // 控制函数：重置计时器
-    code += `// ${component.id} 重置计时器\n`;
+    code += `// ${component.id} reset timer\n`;
     code += `void ${component.id}_reset(void)\n`;
     code += `{\n`;
     code += `    ${component.id}_time_count = ${initialValue};\n`;
@@ -251,7 +251,7 @@ export class TimerLabelGenerator extends LabelGenerator {
    */
   generateTimerHeaders(component: Component): string {
     let code = '';
-    code += `// ${component.id} 计时器控制函数\n`;
+    code += `// ${component.id} timer control functions\n`;
     code += `void ${component.id}_start(void);\n`;
     code += `void ${component.id}_stop(void);\n`;
     code += `void ${component.id}_reset(void);\n\n`;

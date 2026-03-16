@@ -73,8 +73,8 @@ export class LvglCCodeGenerator implements ICodeGenerator {
   private generateHeader(designName: string): string {
     const guard = `${designName.toUpperCase()}_LVGL_UI_H`;
     let code = `/**\n`;
-    code += ` * ${designName} LVGL UI 定义（自动生成）\n`;
-    code += ` * 生成时间: ${new Date().toISOString()}\n`;
+    code += ` * ${designName} LVGL UI definitions (auto-generated)\n`;
+    code += ` * Generated at: ${new Date().toISOString()}\n`;
     code += ` */\n`;
     code += `#ifndef ${guard}\n`;
     code += `#define ${guard}\n\n`;
@@ -84,7 +84,7 @@ export class LvglCCodeGenerator implements ICodeGenerator {
     code += `extern "C" {\n`;
     code += `#endif\n\n`;
 
-    code += `// 组件句柄\n`;
+    code += `// Component handles\n`;
     this.getCreationOrder().forEach(component => {
       code += `extern lv_obj_t * ${component.id};\n`;
     });
@@ -102,13 +102,13 @@ export class LvglCCodeGenerator implements ICodeGenerator {
     const orderedComponents = this.getCreationOrder();
 
     let code = `/**\n`;
-    code += ` * ${designName} LVGL UI 实现（自动生成）\n`;
-    code += ` * 生成时间: ${new Date().toISOString()}\n`;
+    code += ` * ${designName} LVGL UI implementation (auto-generated)\n`;
+    code += ` * Generated at: ${new Date().toISOString()}\n`;
     code += ` */\n`;
     code += `#include "${designName}_lvgl_ui.h"\n\n`;
 
     if (this.builtinImageVars.length > 0) {
-      code += `// LVGL 内置图片资源声明\n`;
+      code += `// LVGL built-in image resource declarations\n`;
       this.builtinImageVars.forEach(varName => {
         code += `extern const lv_image_dsc_t ${varName};\n`;
       });
@@ -116,7 +116,7 @@ export class LvglCCodeGenerator implements ICodeGenerator {
     }
 
     if (this.builtinFontVars.length > 0) {
-      code += `// LVGL 内置字体资源声明\n`;
+      code += `// LVGL built-in font resource declarations\n`;
       this.builtinFontVars.forEach(varName => {
         code += `extern const lv_font_t ${varName};\n`;
       });
@@ -131,7 +131,7 @@ export class LvglCCodeGenerator implements ICodeGenerator {
     // 生成 radio 按钮样式（全局，同一父容器下的 radio 互斥）
     code += this.generateRadioStyleDefinitions(orderedComponents);
 
-    code += `// 组件句柄定义\n`;
+    code += `// Component handle definitions\n`;
     orderedComponents.forEach(component => {
       code += `lv_obj_t * ${component.id} = NULL;\n`;
     });
@@ -159,14 +159,14 @@ export class LvglCCodeGenerator implements ICodeGenerator {
       return '';
     }
 
-    let code = `// 按钮事件回调函数\n`;
+    let code = `// Button event callback functions\n`;
     for (const btn of buttons) {
       const cbName = `${btn.id}_event_cb`;
       code += `static void ${cbName}(lv_event_t * e)\n`;
       code += `{\n`;
       code += `    lv_event_code_t code = lv_event_get_code(e);\n`;
       code += `    lv_obj_t * obj = lv_event_get_target(e);\n`;
-      code += `    (void)obj; // 避免未使用警告\n\n`;
+      code += `    (void)obj; // Avoid unused warning\n\n`;
       code += `    switch(code) {\n`;
       code += `        case LV_EVENT_CLICKED:\n`;
       code += `            LV_LOG_USER("${btn.id} clicked");\n`;
@@ -193,8 +193,8 @@ export class LvglCCodeGenerator implements ICodeGenerator {
 
   private generateEntryHeader(): string {
     let code = `/**\n`;
-    code += ` * HoneyGUI LVGL 生成入口（自动生成）\n`;
-    code += ` * 生成时间: ${new Date().toISOString()}\n`;
+    code += ` * HoneyGUI LVGL generated entry (auto-generated)\n`;
+    code += ` * Generated at: ${new Date().toISOString()}\n`;
     code += ` */\n`;
     code += `#ifndef HONEYGUI_LVGL_GENERATED_UI_H\n`;
     code += `#define HONEYGUI_LVGL_GENERATED_UI_H\n\n`;
@@ -212,8 +212,8 @@ export class LvglCCodeGenerator implements ICodeGenerator {
 
   private generateEntrySource(designName: string): string {
     let code = `/**\n`;
-    code += ` * HoneyGUI LVGL 生成入口实现（自动生成）\n`;
-    code += ` * 生成时间: ${new Date().toISOString()}\n`;
+    code += ` * HoneyGUI LVGL generated entry implementation (auto-generated)\n`;
+    code += ` * Generated at: ${new Date().toISOString()}\n`;
     code += ` */\n`;
     code += `#include "lvgl_generated_ui.h"\n`;
     code += `#include "${designName}_lvgl_ui.h"\n\n`;
@@ -428,7 +428,7 @@ export class LvglCCodeGenerator implements ICodeGenerator {
         code += `    ${component.id} = lv_obj_create(${parentRef});\n`;
         code += `    lv_obj_set_pos(${component.id}, ${Math.round(x)}, ${Math.round(y)});\n`;
         code += `    lv_obj_set_size(${component.id}, ${Math.round(width)}, ${Math.round(height)});\n`;
-        code += `    /* TODO(lvgl): 未支持组件类型 ${component.type} 的专用映射，当前使用占位对象 */\n`;
+        code += `    /* TODO(lvgl): Unsupported component type ${component.type}, using placeholder object */\n`;
         break;
     }
 
@@ -511,23 +511,23 @@ export class LvglCCodeGenerator implements ICodeGenerator {
     }
 
     if (component.data?.blendMode) {
-      code += `    /* TODO(lvgl): blendMode=${this.escapeCString(String(component.data.blendMode))} 暂未映射 */\n`;
+      code += `    /* TODO(lvgl): blendMode=${this.escapeCString(String(component.data.blendMode))} not yet mapped */\n`;
     }
 
     if (component.data?.highQuality !== undefined) {
-      code += `    /* TODO(lvgl): highQuality 暂未映射 */\n`;
+      code += `    /* TODO(lvgl): highQuality not yet mapped */\n`;
     }
 
     if (component.data?.needClip !== undefined) {
-      code += `    /* TODO(lvgl): needClip 暂未映射 */\n`;
+      code += `    /* TODO(lvgl): needClip not yet mapped */\n`;
     }
 
     if (transform?.skewX !== undefined || transform?.skewY !== undefined) {
-      code += `    /* TODO(lvgl): skewX/skewY 暂未映射 */\n`;
+      code += `    /* TODO(lvgl): skewX/skewY not yet mapped */\n`;
     }
 
     if (component.data?.buttonMode) {
-      code += `    /* TODO(lvgl): buttonMode=${this.escapeCString(String(component.data.buttonMode))} 暂未映射 */\n`;
+      code += `    /* TODO(lvgl): buttonMode=${this.escapeCString(String(component.data.buttonMode))} not yet mapped */\n`;
     }
 
     return code;
@@ -683,12 +683,12 @@ export class LvglCCodeGenerator implements ICodeGenerator {
         code += `    lv_obj_set_style_bg_grad_opa(${component.id}, ${opacity}, LV_PART_MAIN);\n`;
       }
     } else if (useGradient) {
-      code += `    /* NOTE(lvgl): hg_rect 渐变至少需要 2 个色标，当前回退为纯色填充 */\n`;
+      code += `    /* NOTE(lvgl): hg_rect gradient requires at least 2 color stops, falling back to solid fill */\n`;
     }
 
     // 按键模式提示
     if (component.data?.buttonMode && component.data?.buttonMode !== 'none') {
-      code += `    /* TODO(lvgl): hg_rect buttonMode=${this.escapeCString(String(component.data.buttonMode))} 暂未映射 */\n`;
+      code += `    /* TODO(lvgl): hg_rect buttonMode=${this.escapeCString(String(component.data.buttonMode))} not yet mapped */\n`;
     }
 
     return code;
@@ -760,11 +760,11 @@ export class LvglCCodeGenerator implements ICodeGenerator {
       code += `    lv_obj_set_style_bg_grad_dir(${component.id}, ${gradientType === 'angular' ? 'LV_GRAD_DIR_CONICAL' : 'LV_GRAD_DIR_RADIAL'}, LV_PART_MAIN);\n`;
       code += `    lv_obj_set_style_bg_grad_opa(${component.id}, ${opacity}, LV_PART_MAIN);\n`;
     } else if (useGradient) {
-      code += `    /* NOTE(lvgl): hg_circle 渐变至少需要 2 个色标，当前回退为纯色填充 */\n`;
+      code += `    /* NOTE(lvgl): hg_circle gradient requires at least 2 color stops, falling back to solid fill */\n`;
     }
 
     if (component.data?.buttonMode && component.data?.buttonMode !== 'none') {
-      code += `    /* TODO(lvgl): hg_circle buttonMode=${this.escapeCString(String(component.data.buttonMode))} 暂未映射 */\n`;
+      code += `    /* TODO(lvgl): hg_circle buttonMode=${this.escapeCString(String(component.data.buttonMode))} not yet mapped */\n`;
     }
 
     return code;
@@ -989,14 +989,14 @@ export class LvglCCodeGenerator implements ICodeGenerator {
       return '';
     }
 
-    let code = `// 复选框事件回调函数\n`;
+    let code = `// Checkbox event callback functions\n`;
     for (const cb of checkboxes) {
       const cbName = `${cb.id}_event_cb`;
       code += `static void ${cbName}(lv_event_t * e)\n`;
       code += `{\n`;
       code += `    lv_event_code_t code = lv_event_get_code(e);\n`;
       code += `    lv_obj_t * obj = lv_event_get_target(e);\n`;
-      code += `    (void)obj; // 避免未使用警告\n\n`;
+      code += `    (void)obj; // Avoid unused warning\n\n`;
       code += `    if(code == LV_EVENT_VALUE_CHANGED) {\n`;
       code += `        const char * txt = lv_checkbox_get_text(obj);\n`;
       code += `        bool checked = lv_obj_get_state(obj) & LV_STATE_CHECKED;\n`;
@@ -1091,7 +1091,7 @@ export class LvglCCodeGenerator implements ICodeGenerator {
       return '';
     }
 
-    let code = `// Radio 按钮样式（圆形 indicator）\n`;
+    let code = `// Radio button styles (circular indicator)\n`;
     code += `static lv_style_t style_radio;\n`;
     code += `static lv_style_t style_radio_chk;\n`;
     code += `static bool style_radio_initialized = false;\n\n`;
@@ -1116,14 +1116,14 @@ export class LvglCCodeGenerator implements ICodeGenerator {
       return '';
     }
 
-    let code = `// Radio 按钮事件回调函数\n`;
+    let code = `// Radio button event callback functions\n`;
     for (const rb of radios) {
       const cbName = `${rb.id}_event_cb`;
       code += `static void ${cbName}(lv_event_t * e)\n`;
       code += `{\n`;
       code += `    lv_event_code_t code = lv_event_get_code(e);\n`;
       code += `    lv_obj_t * obj = lv_event_get_target(e);\n`;
-      code += `    (void)obj; // 避免未使用警告\n\n`;
+      code += `    (void)obj; // Avoid unused warning\n\n`;
       code += `    if(code == LV_EVENT_VALUE_CHANGED) {\n`;
       code += `        const char * txt = lv_checkbox_get_text(obj);\n`;
       code += `        if(lv_obj_has_state(obj, LV_STATE_CHECKED)) {\n`;
@@ -1298,7 +1298,7 @@ export class LvglCCodeGenerator implements ICodeGenerator {
     if (srcRaw) {
       code += `    lv_lottie_set_src_file(${component.id}, "${this.escapeCString(src)}");\n`;
     } else {
-      code += `    /* TODO(lvgl): hg_lottie 未设置 src，需要指定 Lottie JSON 文件路径 */\n`;
+      code += `    /* TODO(lvgl): hg_lottie src not set, need to specify Lottie JSON file path */\n`;
     }
 
     // LVGL v9.x：通过内部 lv_anim_t 控制循环次数和播放时长
@@ -1309,12 +1309,12 @@ export class LvglCCodeGenerator implements ICodeGenerator {
     if (loop) {
       code += `            lv_anim_set_repeat_count(anim, LV_ANIM_REPEAT_INFINITE);\n`;
     } else {
-      code += `            lv_anim_set_repeat_count(anim, 1); /* 只播放一次 */\n`;
+      code += `            lv_anim_set_repeat_count(anim, 1); /* Play once only */\n`;
     }
-    code += `            lv_anim_set_duration(anim, 2000); /* 单位：ms，整个动画循环一次的时长 */\n`;
+    code += `            lv_anim_set_duration(anim, 2000); /* Unit: ms, duration for one animation cycle */\n`;
     // autoPlay 控制：set_src_file 后动画默认启动，关闭时立即暂停
     if (!autoPlay) {
-      code += `            lv_anim_pause(anim); /* autoPlay=false：暂停，需手动调用 lv_anim_resume() 启动 */\n`;
+      code += `            lv_anim_pause(anim); /* autoPlay=false: paused, call lv_anim_resume() to start manually */\n`;
     }
     code += `        }\n`;
     code += `    }\n`;
@@ -1373,7 +1373,7 @@ export class LvglCCodeGenerator implements ICodeGenerator {
       code += `        LV_LOG_WARN("GLB load failed: ${this.escapeCString(modelPath)}");\n`;
       code += `    }\n`;
     } else {
-      code += `    /* TODO(lvgl): hg_3d 未设置 modelPath/src，无法加载模型 */\n`;
+      code += `    /* TODO(lvgl): hg_3d modelPath/src not set, cannot load model */\n`;
     }
 
     return code;

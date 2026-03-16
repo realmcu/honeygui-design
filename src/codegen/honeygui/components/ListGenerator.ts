@@ -189,35 +189,35 @@ export class ListGenerator implements ComponentCodeGenerator {
       
       if (listItems.length === 0) {
         // 没有 list_item，生成空回调
-        code += `// note_design 回调函数声明\n`;
+        code += `// note_design callback function declaration\n`;
         code += `static void ${callbackName}(gui_obj_t *obj, void *param);\n\n`;
-        code += `// note_design 回调函数实现\n`;
+        code += `// note_design callback function implementation\n`;
         code += `static void ${callbackName}(gui_obj_t *obj, void *param)\n`;
         code += `{\n`;
         code += `    GUI_UNUSED(obj);\n`;
         code += `    GUI_UNUSED(param);\n`;
-        code += `    // 没有子组件\n`;
+        code += `    // No child components\n`;
         code += `}\n\n`;
         return code;
       }
 
       // 生成回调函数声明
-      code += `// note_design 回调函数声明\n`;
+      code += `// note_design callback function declaration\n`;
       code += `static void ${callbackName}(gui_obj_t *obj, void *param);\n\n`;
 
       // 生成回调函数实现
-      code += `// note_design 回调函数实现\n`;
+      code += `// note_design callback function implementation\n`;
       code += `static void ${callbackName}(gui_obj_t *obj, void *param)\n`;
       code += `{\n`;
       code += `    GUI_UNUSED(param);\n`;
       code += `    \n`;
-      code += `    // 转换 obj 为 gui_list_note_t * 类型\n`;
+      code += `    // Cast obj to gui_list_note_t * type\n`;
       code += `    gui_list_note_t *note = (gui_list_note_t *)obj;\n`;
       
       // 根据是否开启循环滚动，使用不同的 index 计算方式
       const loop = component.data?.loop ?? false;
       if (loop) {
-        code += `    // 循环滚动模式：处理负索引\n`;
+        code += `    // Loop scroll mode: handle negative index\n`;
         code += `    int16_t index = note->index;\n`;
         code += `    gui_list_t *list = (gui_list_t *)obj->parent;\n`;
         code += `    uint8_t note_num = list->note_num;\n`;
@@ -230,7 +230,7 @@ export class ListGenerator implements ComponentCodeGenerator {
       code += `    \n`;
 
       // 生成 switch-case 结构，根据 index 创建不同的内容
-      code += `    // 根据 index 创建不同的 list_item 内容\n`;
+      code += `    // Create different list_item content based on index\n`;
       code += `    switch (index)\n`;
       code += `    {\n`;
 
@@ -376,7 +376,7 @@ export class ListGenerator implements ComponentCodeGenerator {
       }
 
       // 添加注释
-      code += `${indentStr}// 创建 ${component.name || component.id} (${component.type})\n`;
+      code += `${indentStr}// Create ${component.name || component.id} (${component.type})\n`;
 
       // 决定使用哪个上下文：
       // - 第一层子组件：使用 note 作为父组件

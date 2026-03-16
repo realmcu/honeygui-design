@@ -153,7 +153,7 @@ export function generateControlTimerCallbackImpl(component: Component, component
             const callback = timer.mode === 'preset' 
               ? `${target.componentId}_${timer.id}_cb`
               : (timer.callback || `${target.componentId}_timer_cb`);
-            callbackBody += `    ${target.componentId}_timer_cnt = 0; // 清零计数器\n`;
+            callbackBody += `    ${target.componentId}_timer_cnt = 0; // Reset counter\n`;
             callbackBody += `    gui_obj_create_timer(GUI_BASE(${target.componentId}), ${timer.interval}, ${timer.reload ? 'true' : 'false'}, ${callback});\n`;
             callbackBody += `    gui_obj_start_timer(GUI_BASE(${target.componentId}));\n`;
           } else if (target.action === 'stop') {
@@ -220,7 +220,7 @@ export function generateMessageCallbackImpl(component: Component, componentMap: 
               const callback = timer.mode === 'preset' 
                 ? `${target.componentId}_${timer.id}_cb`
                 : (timer.callback || `${target.componentId}_timer_cb`);
-              body += `    ${target.componentId}_timer_cnt = 0; // 清零计数器\n`;
+              body += `    ${target.componentId}_timer_cnt = 0; // Reset counter\n`;
               body += `    gui_obj_create_timer(GUI_BASE(${target.componentId}), ${timer.interval}, ${timer.reload ? 'true' : 'false'}, ${callback});\n`;
               body += `    gui_obj_start_timer(GUI_BASE(${target.componentId}));\n`;
             } else if (target.action === 'stop') {
@@ -236,7 +236,7 @@ export function generateMessageCallbackImpl(component: Component, componentMap: 
 
     // 如果没有 actions 或 body 为空，生成 TODO 注释
     if (!body) {
-      body = `    // TODO: 实现消息处理逻辑\n`;
+      body = `    // TODO: Implement message handling logic\n`;
     }
     
     impls.push(`void ${callbackName}(gui_obj_t *obj, const char *topic, void *data, uint16_t len)
@@ -289,7 +289,7 @@ export function generateKeyEventCallbackImpl(component: Component, componentMap:
 
       // 生成条件判断
       if (isFirst) {
-        callbackBody += `    // 检查按键名\n`;
+        callbackBody += `    // Check key name\n`;
         callbackBody += `    if (strcmp(e->indev_name, "${eventConfig.keyName}") == 0)\n    {\n`;
       } else {
         callbackBody += `    else if (strcmp(e->indev_name, "${eventConfig.keyName}") == 0)\n    {\n`;
@@ -339,7 +339,7 @@ export function generateKeyEventCallbackImpl(component: Component, componentMap:
                   const callback = timer.mode === 'preset'
                     ? `${target.componentId}_${timer.id}_cb`
                     : (timer.callback || `${target.componentId}_timer_cb`);
-                  callbackBody += `        ${target.componentId}_timer_cnt = 0; // 清零计数器\n`;
+                  callbackBody += `        ${target.componentId}_timer_cnt = 0; // Reset counter\n`;
                   callbackBody += `        gui_obj_create_timer(GUI_BASE(${target.componentId}), ${timer.interval}, ${timer.reload ? 'true' : 'false'}, ${callback});\n`;
                   callbackBody += `        gui_obj_start_timer(GUI_BASE(${target.componentId}));\n`;
                 } else if (target.action === 'stop') {
@@ -353,7 +353,7 @@ export function generateKeyEventCallbackImpl(component: Component, componentMap:
         });
       } else {
         // 如果没有 actions，生成 TODO 注释
-        callbackBody += `        // TODO: 实现按键事件处理逻辑\n`;
+        callbackBody += `        // TODO: Implement key event handling logic\n`;
       }
 
       callbackBody += `    }\n`;

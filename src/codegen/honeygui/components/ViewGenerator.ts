@@ -47,12 +47,12 @@ export class ViewGenerator implements ComponentCodeGenerator {
     code += `${indentStr}{\n`;
     
     // 设置动画步长（总是设置，使用默认值或用户配置值）
-    code += `${indentStr}    // 设置动画步长\n`;
+    code += `${indentStr}    // Set animation step\n`;
     code += `${indentStr}    gui_view_set_animate_step(view, ${animateStep});\n`;
     code += '\n';
     
     // 设置透明度
-    code += `${indentStr}    // 设置透明度\n`;
+    code += `${indentStr}    // Set opacity\n`;
     code += `${indentStr}    gui_view_set_opacity(view, ${opacity});\n`;
     
     // 为 hg_view 自己的定时器生成绑定代码（放在设置函数之后）
@@ -84,7 +84,7 @@ export class ViewGenerator implements ComponentCodeGenerator {
     const viewTimeLabels = this.collectViewTimeLabels(component, context);
     
     if (hasTimeLabels) {
-      code += `\n${indentStr}    // 初始化时间字符串\n`;
+      code += `\n${indentStr}    // Initialize time strings\n`;
       code += `${indentStr}    time_t now = time(NULL);\n`;
       code += `${indentStr}    struct tm *t = localtime(&now);\n`;
       if (viewTimeLabels.length > 0) {
@@ -109,7 +109,7 @@ export class ViewGenerator implements ComponentCodeGenerator {
     
     // 为 view 直接子组件中的时间标签创建定时器（window 中的由 WindowGenerator 处理）
     if (viewTimeLabels.length > 0) {
-      code += `\n${indentStr}    // 创建时间更新定时器\n`;
+      code += `\n${indentStr}    // Create time update timer\n`;
       viewTimeLabels.forEach(labelId => {
         const labelComp = context.componentMap.get(labelId);
         const timeFormat = labelComp?.data?.timeFormat;
@@ -324,7 +324,7 @@ export class ViewGenerator implements ComponentCodeGenerator {
       return '';
     }
 
-    code += `${indentStr}// 创建定时器\n`;
+    code += `${indentStr}// Create timer\n`;
     
     enabledTimers.forEach((timer: any, index: number) => {
       const interval = timer.interval || 1000;

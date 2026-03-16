@@ -232,7 +232,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
 
     // 3D 模型不需要外部数据声明（使用 VFS 路径加载 bin 文件）
 
-    code += `\n// 组件句柄声明\n`;
+    code += `\n// Component handle declarations\n`;
 
     this.components.forEach(comp => {
       // 跳过 hg_view、hg_3d 和 hg_list_item（list_item 由 note_design 回调处理）
@@ -253,7 +253,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
     // 双态按钮状态管理函数声明
     const toggleButtons = this.components.filter(c => c.type === 'hg_button' && (c.data?.toggleMode === true || c.data?.toggleMode === 'true'));
     if (toggleButtons.length > 0) {
-      code += `\n// 双态按钮状态管理函数声明\n`;
+      code += `\n// Toggle button state management function declarations\n`;
       toggleButtons.forEach(comp => {
         code += `extern bool ${comp.id}_get_state(void);\n`;
         code += `extern void ${comp.id}_set_state(bool state);\n`;
@@ -305,7 +305,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       code += `#include <string.h>\n`;
     }
 
-    code += `\n// 组件句柄定义\n`;
+    code += `\n// Component handle definitions\n`;
 
     this.components.forEach(comp => {
       // 跳过 hg_view、hg_3d 和 hg_list_item（list_item 由 note_design 回调处理）
@@ -325,7 +325,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
 
     // 为时间标签生成全局时间字符串变量
     if (timeLabels.length > 0) {
-      code += `\n// 时间字符串全局变量\n`;
+      code += `\n// Time string global variables\n`;
       timeLabels.forEach(label => {
         const bufferSize = this.getTimeBufferSize(label.data?.timeFormat);
         code += `char ${label.id}_time_str[${bufferSize}] = {0};\n`;
@@ -348,7 +348,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
     // 生成所有双态按钮的回调函数
     const hasToggleButtons = this.components.some(c => c.type === 'hg_button' && (c.data?.toggleMode === true || c.data?.toggleMode === 'true'));
     if (hasToggleButtons) {
-      code += `// 双态按钮回调函数\n`;
+      code += `// Toggle button callback functions\n`;
       this.components.forEach(comp => {
         if (comp.type === 'hg_button' && (comp.data?.toggleMode === true || comp.data?.toggleMode === 'true')) {
           const generator = ComponentGeneratorFactory.getGenerator('hg_button');
@@ -366,7 +366,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       c.data.buttonMode !== 'none'
     );
     if (hasButtonEffects) {
-      code += `// 按键效果回调函数\n`;
+      code += `// Button effect callback functions\n`;
       this.components.forEach(comp => {
         if (['hg_rect', 'hg_circle', 'hg_image'].includes(comp.type)) {
           const buttonMode = comp.data?.buttonMode;
@@ -383,7 +383,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
     // 生成所有 3D 模型的回调函数（包括动画）
     const has3DComponents = this.components.some(c => c.type === 'hg_3d');
     if (has3DComponents) {
-      code += `// 3D 模型回调函数\n`;
+      code += `// 3D model callback functions\n`;
       this.components.forEach(comp => {
         if (comp.type === 'hg_3d') {
           const generator = ComponentGeneratorFactory.getGenerator('hg_3d');
@@ -399,7 +399,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
     // 生成所有 list 组件的 note_design 回调函数
     const hasListComponents = this.components.some(c => c.type === 'hg_list');
     if (hasListComponents) {
-      code += `// List 组件的 note_design 回调函数\n`;
+      code += `// List component note_design callback functions\n`;
       this.components.forEach(comp => {
         if (comp.type === 'hg_list') {
           const generator = ComponentGeneratorFactory.getGenerator('hg_list');
@@ -417,7 +417,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
     // 生成拆分时间标签的回调函数
     const splitTimeLabels = this.components.filter(c => c.type === 'hg_time_label' && c.data?.timeFormat === 'HH:mm-split');
     if (splitTimeLabels.length > 0) {
-      code += `// 拆分时间标签的回调函数\n`;
+      code += `// Split time label callback functions\n`;
       splitTimeLabels.forEach(label => {
         code += this.generateSplitTimeCallbacks(label);
       });
@@ -444,7 +444,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
     }
 
     // 添加注释
-    code += `\n${indentStr}// 创建 ${component.id} (${component.type})\n`;
+    code += `\n${indentStr}// Create ${component.id} (${component.type})\n`;
 
     // hg_view/hg_window 使用 ViewGenerator
     if (component.type === 'hg_view' || component.type === 'hg_window') {
@@ -671,7 +671,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
           }
           
           const timerName = timer.name || timer.id;
-          code += `${indentStr}// 绑定定时器: ${timerName}\n`;
+          code += `${indentStr}// Bind timer: ${timerName}\n`;
           code += `${indentStr}gui_obj_create_timer((gui_obj_t *)${component.id}, ${timer.interval}, ${timer.reload !== false ? 'true' : 'false'}, ${callback});\n`;
           // 如果没有设置立即运行，则调用 gui_obj_start_timer
           if (!timer.runImmediately) {
@@ -695,7 +695,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
         return code; // 无效配置
       }
       
-      code += `${indentStr}// 绑定定时器\n`;
+      code += `${indentStr}// Bind timer\n`;
       code += `${indentStr}gui_obj_create_timer((gui_obj_t *)${component.id}, ${component.data.timerInterval || 1000}, ${component.data.timerReload !== false ? 'true' : 'false'}, ${callback});\n`;
       code += `${indentStr}gui_obj_start_timer((gui_obj_t *)${component.id});\n`;
     }
@@ -713,7 +713,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
 
 #include "gui_api.h"
 
-// 事件回调函数声明
+// Event callback function declarations
 `;
 
     // 不再生成回调函数声明（视图切换由 SDK 自动处理）
@@ -733,7 +733,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
 #include "../ui/${baseName}_ui.h"
 #include <stdio.h>
 
-// 事件回调函数实现
+// Event callback function implementations
 
 `;
 
@@ -745,13 +745,13 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       code += `{\n`;
       code += `    GUI_UNUSED(obj);\n`;
       code += `    GUI_UNUSED(e);\n`;
-      code += `    // TODO: 实现事件处理逻辑\n`;
+      code += `    // TODO: Implement event handling logic\n`;
       code += `    printf("${funcName} triggered\\n");\n`;
       code += `}\n\n`;
     });
 
     code += `/* @protected start custom_functions */
-// 自定义函数
+// Custom functions
 /* @protected end custom_functions */
 `;
 
@@ -807,7 +807,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
     const rgb = this.colorToRgb(color);
     
     let code = `
-// ${component.id} 拆分时间回调函数
+// ${component.id} split time callback functions
 static int8_t ${component.id}_breath_dir = -1;
 static int16_t ${component.id}_current_alpha = 255;
 

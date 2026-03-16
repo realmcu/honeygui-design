@@ -150,7 +150,7 @@ export class ArcGenerator implements ComponentCodeGenerator {
         const gradientStartAngle = component.data?.gradientStartAngle ?? component.style?.startAngle ?? 0;
         const gradientEndAngle = component.data?.gradientEndAngle ?? component.style?.endAngle ?? 360;
         
-        code += `${indentStr}// 设置角度渐变\n`;
+        code += `${indentStr}// Set angular gradient\n`;
         code += `${indentStr}gui_arc_set_angular_gradient(${component.id}, ${gradientStartAngle}, ${gradientEndAngle});\n`;
         
         stops.forEach(stop => {

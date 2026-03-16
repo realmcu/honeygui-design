@@ -52,7 +52,7 @@ export class WindowGenerator implements ComponentCodeGenerator {
     // 这里只生成 sprintf 调用来初始化时间字符串
     const timeLabels = this.collectTimeLabels(component, context);
     if (timeLabels.length > 0) {
-      code += `\n${indentStr}// 初始化时间字符串（使用 view 中已声明的 now 和 t 变量）\n`;
+      code += `\n${indentStr}// Initialize time strings (using now and t variables declared in view)\n`;
       code += `${indentStr}if (t != NULL)\n`;
       code += `${indentStr}{\n`;
       timeLabels.forEach(labelId => {
@@ -72,7 +72,7 @@ export class WindowGenerator implements ComponentCodeGenerator {
     
     // 为所有带时间格式的 label 创建定时器
     if (timeLabels.length > 0) {
-      code += `\n${indentStr}// 创建时间更新定时器\n`;
+      code += `\n${indentStr}// Create time update timer\n`;
       timeLabels.forEach(labelId => {
         const labelComp = context.componentMap.get(labelId);
         const timeFormat = labelComp?.data?.timeFormat;
