@@ -37,8 +37,13 @@ extern const struct romfs_dirent ${romfsRootName};
 
 static int app_init(void)
 {
-    // Mount romfs from embedded data
+#ifdef _HONEYGUI_SIMULATOR_
+    // Simulator: Mount POSIX filesystem
+    gui_vfs_mount_posix("/", "./assets");
+#else
+    // SOC: Mount romfs from embedded data
     gui_vfs_mount_romfs("/", &${romfsRootName}, 0);
+#endif
 
     gui_view_create(gui_obj_get_root(), "${mainViewId}", 0, 0, 0, 0);
     return 0;
