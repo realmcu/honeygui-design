@@ -388,6 +388,7 @@
   "Enter serial port": "输入串口号",
   "Select Image": "选择图片",
   "Renamed successfully": "重命名成功",
+  "Renamed successfully, updated {0} references": "重命名成功，更新了 {0} 处引用",
   "Folder deleted": "文件夹已删除",
 
   "Checking build environment...": "检查编译环境...",

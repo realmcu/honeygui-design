@@ -547,14 +547,76 @@ export class AssetManager extends EventEmitter {
                 return;
             }
             
+            // 计算新的相对路径
+            const oldDir = path.dirname(oldPath);
+            const newPath = oldDir === '.' ? newName : `${oldDir}/${newName}`;
+            
+            // 更新所有 HML 文件中的引用
+            const updatedCount = await this.updateAssetReferencesInHml(projectRoot, oldPath, newPath);
+            
+            // 重命名物理文件
             fs.renameSync(fullOldPath, fullNewPath);
-            vscode.window.showInformationMessage(vscode.l10n.t('Renamed successfully'));
+            
+            if (updatedCount > 0) {
+                vscode.window.showInformationMessage(
+                    vscode.l10n.t('Renamed successfully, updated {0} references', updatedCount)
+                );
+            } else {
+                vscode.window.showInformationMessage(vscode.l10n.t('Renamed successfully'));
+            }
+            
             // 重新加载资源列表
             this.handleLoadAssets(currentFilePath);
         } catch (error) {
             logger.error(`重命名资源文件失败: ${error}`);
             vscode.window.showErrorMessage(vscode.l10n.t('Failed to rename asset file'));
         }
+    }
+
+    /**
+     * 更新 HML 文件中的资源引用
+     * @param projectRoot 项目根目录
+     * @param oldPath 旧的资源相对路径（相对于 assets 目录）
+     * @param newPath 新的资源相对路径（相对于 assets 目录）
+     * @returns 更新的引用数量
+     */
+    private async updateAssetReferencesInHml(projectRoot: string, oldPath: string, newPath: string): Promise<number> {
+        const uiDir = path.join(projectRoot, 'ui');
+        if (!fs.existsSync(uiDir)) {
+            return 0;
+        }
+
+        let totalUpdated = 0;
+        const oldRef = `assets/${oldPath}`;
+        const newRef = `assets/${newPath}`;
+
+        // 递归扫描 HML 文件
+        const scanAndUpdate = (dir: string) => {
+            const entries = fs.readdirSync(dir, { withFileTypes: true });
+            for (const entry of entries) {
+                const fullPath = path.join(dir, entry.name);
+                if (entry.isDirectory()) {
+                    scanAndUpdate(fullPath);
+                } else if (entry.name.endsWith('.hml')) {
+                    try {
+                        let content = fs.readFileSync(fullPath, 'utf-8');
+                        // 统计替换次数
+                        const matches = content.split(oldRef).length - 1;
+                        if (matches > 0) {
+                            content = content.split(oldRef).join(newRef);
+                            fs.writeFileSync(fullPath, content, 'utf-8');
+                            totalUpdated += matches;
+                            logger.info(`更新 HML 文件引用: ${fullPath}, 替换 ${matches} 处`);
+                        }
+                    } catch (error) {
+                        logger.error(`更新 HML 文件失败: ${fullPath} - ${error}`);
+                    }
+                }
+            }
+        };
+
+        scanAndUpdate(uiDir);
+        return totalUpdated;
     }
 
     /**

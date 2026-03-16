@@ -389,6 +389,7 @@
   "Enter serial port": "Enter serial port",
   "Select Image": "Select Image",
   "Renamed successfully": "Renamed successfully",
+  "Renamed successfully, updated {0} references": "Renamed successfully, updated {0} references",
   "Folder deleted": "Folder deleted",
 
   "Checking build environment...": "Checking build environment...",
