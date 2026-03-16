@@ -93,33 +93,33 @@ export const COMPONENT_SUPPORTED_EVENTS: Record<string, EventType[]> = {
 // 默认支持的事件(未在映射中的组件)
 export const DEFAULT_SUPPORTED_EVENTS: EventType[] = ['onClick', 'onLongPress', 'onKeyShortPress', 'onKeyLongPress', 'onMessage'];
 
-// ============ 事件显示名称 ============
+// ============ 事件显示名称（i18n 键） ============
 
-export const EVENT_LABELS: Record<EventType, string> = {
-  onClick: '单击',
-  onLongPress: '长按',
-  onTouchDown: '按下',
-  onTouchUp: '抬起',
-  onKeyShortPress: '按键短按',
-  onKeyLongPress: '按键长按',
-  onSwipeLeft: '左滑',
-  onSwipeRight: '右滑',
-  onSwipeUp: '上滑',
-  onSwipeDown: '下滑',
-  onValueChange: '值改变',
-  onCheckedChange: '选中改变',
-  onShow: '显示',
-  onHide: '隐藏',
-  onMessage: '消息监听',
+export const EVENT_LABEL_KEYS: Record<EventType, string> = {
+  onClick: 'event.onClick',
+  onLongPress: 'event.onLongPress',
+  onTouchDown: 'event.onTouchDown',
+  onTouchUp: 'event.onTouchUp',
+  onKeyShortPress: 'event.onKeyShortPress',
+  onKeyLongPress: 'event.onKeyLongPress',
+  onSwipeLeft: 'event.onSwipeLeft',
+  onSwipeRight: 'event.onSwipeRight',
+  onSwipeUp: 'event.onSwipeUp',
+  onSwipeDown: 'event.onSwipeDown',
+  onValueChange: 'event.onValueChange',
+  onCheckedChange: 'event.onCheckedChange',
+  onShow: 'event.onShow',
+  onHide: 'event.onHide',
+  onMessage: 'event.onMessage',
 };
 
-// ============ 动作显示名称 ============
+// ============ 动作显示名称（i18n 键） ============
 
-export const ACTION_LABELS: Record<ActionType, string> = {
-  switchView: '跳转界面',
-  sendMessage: '发送消息',
-  callFunction: '调用函数',
-  controlTimer: '自定义动画集',
+export const ACTION_LABEL_KEYS: Record<ActionType, string> = {
+  switchView: 'action.switchView',
+  sendMessage: 'action.sendMessage',
+  callFunction: 'action.callFunction',
+  controlTimer: 'action.controlTimer',
 };
 
 // ============ 视图切换动画选项 ============

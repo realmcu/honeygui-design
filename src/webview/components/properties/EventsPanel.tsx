@@ -10,8 +10,8 @@ import {
   EventType,
   ActionType,
   getSupportedEvents,
-  EVENT_LABELS,
-  ACTION_LABELS,
+  EVENT_LABEL_KEYS,
+  ACTION_LABEL_KEYS,
   SWITCH_OUT_STYLES,
   SWITCH_IN_STYLES,
   KEY_NAMES,
@@ -136,7 +136,7 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
     if (!handler) return null;
     // 检查格式：只允许字母、数字、下划线，不能以数字开头
     if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(handler)) {
-      return '函数名只能包含字母、数字、下划线，且不能以数字开头';
+      return t('Function name can only contain letters, numbers, underscores, and cannot start with a number');
     }
     // 检查重复：在所有组件中查找
     for (const comp of components) {
@@ -146,7 +146,7 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
         if (ec.type === 'onMessage' && ec.handler === handler) {
           // 排除当前正在编辑的
           if (comp.id === component.id && i === currentIndex) continue;
-          return `函数名 "${handler}" 已被组件 "${comp.id}" 使用`;
+          return t('Function name already used by component') + ` "${comp.id}"`;
         }
       }
     }
@@ -300,11 +300,11 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
             <option value="switchView" 
               disabled={eventConfig.actions.filter(a => a.type === 'switchView').length > 0 && action.type !== 'switchView'}
             >
-              跳转界面
+              {t(ACTION_LABEL_KEYS.switchView as any)}
             </option>
-            <option value="sendMessage">发送消息</option>
-            <option value="callFunction">调用自定义函数</option>
-            <option value="controlTimer">自定义动画集</option>
+            <option value="sendMessage">{t(ACTION_LABEL_KEYS.sendMessage as any)}</option>
+            <option value="callFunction">{t(ACTION_LABEL_KEYS.callFunction as any)}</option>
+            <option value="controlTimer">{t(ACTION_LABEL_KEYS.controlTimer as any)}</option>
           </select>
           <button
             className="action-remove-btn"
@@ -377,7 +377,7 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
               <label>{t('Custom Function')}</label>
               {userFunctions.length === 0 ? (
                 <div style={{ fontSize: '12px', color: 'var(--vscode-descriptionForeground)' }}>
-                  未找到用户自定义函数，请在 src/user/**_user.h 中声明函数
+                  {t('No user functions found, declare in src/user/**_user.h')}
                 </div>
               ) : (
                 <select
@@ -411,12 +411,12 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
               {timerComponents.length === 0 ? (
                 <div className="param-row">
                   <span style={{ fontSize: '12px', color: 'var(--vscode-descriptionForeground)' }}>
-                    当前 view 下没有配置定时器的组件
+                    {t('No timer components in current view')}
                   </span>
                 </div>
               ) : (
                 <div className="param-row">
-                  <label>选择目标组件及动作（每个组件至多选择一个定时动画）</label>
+                  <label>{t('Select target component and action (one timer per component)')}</label>
                   <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid var(--vscode-input-border)', borderRadius: '2px', padding: '8px' }}>
                     {timerComponents.map(comp => {
                       // 找到该组件当前选中的定时器
@@ -473,8 +473,8 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
                                         cursor: 'pointer',
                                       }}
                                     >
-                                      <option value="start">开启</option>
-                                      <option value="stop">关闭</option>
+                                      <option value="start">{t('Enable')}</option>
+                                      <option value="stop">{t('Disable')}</option>
                                     </select>
                                   )}
                                 </div>
@@ -498,7 +498,7 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
                                 }}
                                 style={{ cursor: 'pointer' }}
                               />
-                              <span style={{ fontSize: '11px', opacity: 0.7 }}>不选择</span>
+                              <span style={{ fontSize: '11px', opacity: 0.7 }}>{t('timer.none' as any)}</span>
                             </div>
                           </div>
                         </div>
@@ -535,7 +535,7 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
                 className="event-type-select"
               >
                 {supportedEvents.map(et => (
-                  <option key={et} value={et}>{EVENT_LABELS[et]}</option>
+                  <option key={et} value={et}>{t(EVENT_LABEL_KEYS[et] as any)}</option>
                 ))}
               </select>
               <button
