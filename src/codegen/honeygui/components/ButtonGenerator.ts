@@ -152,7 +152,7 @@ export class ButtonGenerator implements ComponentCodeGenerator {
 
   /**
    * 生成双态按钮的回调函数
-   * 使用 gui_img_set_src 切换图片
+   * 使用 gui_img_set_src 切换图片，并将 onClick 事件的 actions 合并在同一个回调中执行
    */
   generateToggleCallback(component: Component): string {
     // 检查是否是双态模式（兼容 boolean 和字符串 "true"）
@@ -165,6 +165,15 @@ export class ButtonGenerator implements ComponentCodeGenerator {
     const imageOff = component.data?.imageOff || '';
     const binOn = this.convertToBinPath(imageOn);
     const binOff = this.convertToBinPath(imageOff);
+
+    // 收集 onClick 事件的 actions，合并到 toggle_cb 中
+    const onClickActions = (component.eventConfigs || [])
+      .filter(e => e.type === 'onClick')
+      .flatMap(e => e.actions || []);
+
+    const extraCode = onClickActions.length > 0
+      ? this.generateOnClickActionsCode(onClickActions, component)
+      : '';
 
     return `
 // ${component.id} 双态按钮回调
@@ -186,7 +195,7 @@ void ${component.id}_toggle_cb(void *obj, gui_event_t *e)
         gui_img_set_src((gui_img_t *)${component.id}, "${binOff}", IMG_SRC_FILESYS);
         ${component.id}_off_callback();
     }
-}
+${extraCode}}
 
 // 获取当前状态
 bool ${component.id}_get_state(void)
@@ -210,6 +219,25 @@ void ${component.id}_set_state(bool state)
     }
 }
 `;
+  }
+
+  /**
+   * 将 onClick actions 生成为内联代码（合并进 toggle_cb）
+   */
+  private generateOnClickActionsCode(actions: any[], component: Component): string {
+    let code = `\n    // onClick 事件动作\n`;
+    actions.forEach(action => {
+      if (action.type === 'callFunction' && action.functionName) {
+        code += `    ${action.functionName}(obj, e);\n`;
+      } else if (action.type === 'switchView' && action.target) {
+        const switchOutStyle = action.switchOutStyle || 'SWITCH_OUT_TO_LEFT_USE_TRANSLATION';
+        const switchInStyle = action.switchInStyle || 'SWITCH_IN_FROM_RIGHT_USE_TRANSLATION';
+        code += `    gui_view_switch_direct(gui_view_get_current(), "${action.target}", ${switchOutStyle}, ${switchInStyle});\n`;
+      } else if (action.type === 'sendMessage' && action.message) {
+        code += `    gui_msg_publish("${action.message}", NULL, 0);\n`;
+      }
+    });
+    return code;
   }
 
   /**
