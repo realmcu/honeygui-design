@@ -269,7 +269,33 @@ export const ViewConnectionLayer: React.FC<ViewConnectionLayerProps> = ({
     }
   };
 
-  // 计算避开障碍物的路径
+  // 构建 Z 形折线路径：保证第一段垂直于 fromEdge，最后一段垂直于 toEdge
+  const buildZPath = (
+    s: { x: number; y: number },
+    e: { x: number; y: number },
+    fEdge?: 'left' | 'right' | 'top' | 'bottom',
+    tEdge?: 'left' | 'right' | 'top' | 'bottom' | 'circle'
+  ): { x: number; y: number }[] => {
+    const fromH = (fEdge === 'left' || fEdge === 'right');
+    const toH = (tEdge === 'left' || tEdge === 'right' || tEdge === 'circle');
+    if (fromH && toH) {
+      // 两边都水平出入：Z 形 (水平→垂直→水平)
+      const midX = (s.x + e.x) / 2;
+      return [s, { x: midX, y: s.y }, { x: midX, y: e.y }, e];
+    } else if (!fromH && !toH) {
+      // 两边都垂直出入：Z 形 (垂直→水平→垂直)
+      const midY = (s.y + e.y) / 2;
+      return [s, { x: s.x, y: midY }, { x: e.x, y: midY }, e];
+    } else if (fromH && !toH) {
+      // 水平出 → 垂直入：L 形
+      return [s, { x: e.x, y: s.y }, e];
+    } else {
+      // 垂直出 → 水平入：L 形
+      return [s, { x: s.x, y: e.y }, e];
+    }
+  };
+
+  // 计算避开障碍物的路径（正交可见性图 + Dijkstra 最短路径）
   const calculateAvoidancePath = (
     start: { x: number; y: number },
     end: { x: number; y: number },
@@ -280,241 +306,240 @@ export const ViewConnectionLayer: React.FC<ViewConnectionLayerProps> = ({
     toEdge?: 'left' | 'right' | 'top' | 'bottom' | 'circle'
   ): string => {
     const cornerRadius = 8;
-    const margin = 30; // 与障碍物的最小距离
-    const exitDistance = 40; // 出线距离
-    
+    const margin = 20;
+    const turnPenalty = 30;
+    const eps = 0.5; // 浮点容差，减少缩放时的路径抖动
+
     // 将原始矩形转换为画布坐标，并添加对应的组件ID
-    const obstacles = originalRects.map((rect, index) => {
-      // 找到对应的组件
-      const component = components.find(c => 
-        c.type === 'hg_view' && 
-        c.position.x === rect.x && 
-        c.position.y === rect.y &&
-        c.position.width === rect.w &&
-        c.position.height === rect.h
+    const obstacles = originalRects.map((rect) => {
+      const component = components.find(c =>
+        c.type === 'hg_view' &&
+        c.position.x === rect.x && c.position.y === rect.y &&
+        c.position.width === rect.w && c.position.height === rect.h
       );
-      
       return {
         x: rect.x * zoom + offset.x,
         y: rect.y * zoom + offset.y,
         w: rect.w * zoom,
         h: rect.h * zoom,
-        id: component?.id,
-        originalIndex: index
+        id: component?.id
       };
     });
-    
+
     // 过滤掉起点和终点所在的 view
     const relevantObstacles = obstacles.filter(obs => {
-      // 通过 ID 排除起点和终点的 view
       if (fromViewId && obs.id === fromViewId) return false;
       if (toViewId && obs.id === toViewId) return false;
-      
-      // 额外检查：排除起点和终点在其内部的 view（容错机制）
-      const startInside = isPointInsideRect(start, obs, 5);
-      const endInside = isPointInsideRect(end, obs, 5);
-      return !startInside && !endInside;
+      return !isPointInsideRect(start, obs, 5) && !isPointInsideRect(end, obs, 5);
     });
-    
-    // 根据边框位置计算出线点和入线点，避免重叠和过近
-    let startExit = { ...start };
-    let endEntry = { ...end };
-    
-    // 起点出线方向
-    if (fromEdge === 'left') {
-      startExit = { x: start.x - exitDistance, y: start.y };
-    } else if (fromEdge === 'right') {
-      startExit = { x: start.x + exitDistance, y: start.y };
-    } else if (fromEdge === 'top') {
-      startExit = { x: start.x, y: start.y - exitDistance };
-    } else if (fromEdge === 'bottom') {
-      startExit = { x: start.x, y: start.y + exitDistance };
+
+    // 无障碍物时使用 Z 型折线（保证出入线垂直于 view 边）
+    if (relevantObstacles.length === 0) {
+      return createRoundedPath(buildZPath(start, end, fromEdge, toEdge), cornerRadius);
     }
-    
-    // 终点入线方向（避免与起点出线点过近）
-    if (toEdge === 'left') {
-      endEntry = { x: end.x - exitDistance, y: end.y };
-    } else if (toEdge === 'right') {
-      endEntry = { x: end.x + exitDistance, y: end.y };
-    } else if (toEdge === 'top') {
-      endEntry = { x: end.x, y: end.y - exitDistance };
-    } else if (toEdge === 'bottom') {
-      endEntry = { x: end.x, y: end.y + exitDistance };
-    } else if (toEdge === 'circle') {
-      // 圆形目标，保持原有逻辑
-      endEntry = { ...end };
+
+    // 先检查简单 Z 路径是否可行
+    const zPath = buildZPath(start, end, fromEdge, toEdge);
+    const zPathOK = !zPath.some((_, i) => i > 0 &&
+      relevantObstacles.some(obs => lineIntersectsRect(zPath[i - 1], zPath[i], obs, margin)));
+    if (zPathOK) return createRoundedPath(zPath, cornerRadius);
+
+    // === 正交可见性图 + Dijkstra ===
+
+    // 外扩障碍物形成路由禁区
+    const expanded = relevantObstacles.map(o => ({
+      x: o.x - margin, y: o.y - margin,
+      w: o.w + 2 * margin, h: o.h + 2 * margin
+    }));
+
+    // 从外扩障碍物边界 + 起终点坐标生成扫描线
+    const xSet = new Set<number>();
+    const ySet = new Set<number>();
+    for (const o of expanded) {
+      xSet.add(o.x); xSet.add(o.x + o.w);
+      ySet.add(o.y); ySet.add(o.y + o.h);
     }
-    
-    // 检查起点出线点和终点入线点是否过近（避免重叠）
-    const distance = Math.sqrt((endEntry.x - startExit.x) ** 2 + (endEntry.y - startExit.y) ** 2);
-    if (distance < exitDistance * 0.5) {
-      // 如果过近，调整终点入线点位置
-      if (toEdge === 'bottom') {
-        endEntry = { x: end.x, y: end.y + exitDistance * 1.5 };
-      } else if (toEdge === 'top') {
-        endEntry = { x: end.x, y: end.y - exitDistance * 1.5 };
-      } else if (toEdge === 'right') {
-        endEntry = { x: end.x + exitDistance * 1.5, y: end.y };
-      } else if (toEdge === 'left') {
-        endEntry = { x: end.x - exitDistance * 1.5, y: end.y };
+    xSet.add(start.x); xSet.add(end.x);
+    ySet.add(start.y); ySet.add(end.y);
+
+    const xs = [...xSet].sort((a, b) => a - b);
+    const ys = [...ySet].sort((a, b) => a - b);
+
+    // 点是否在外扩障碍物内部（使用 eps 容差提高缩放稳定性）
+    const insideExpanded = (x: number, y: number) =>
+      expanded.some(o => x > o.x + eps && x < o.x + o.w - eps &&
+                         y > o.y + eps && y < o.y + o.h - eps);
+
+    // 生成网格节点
+    type Pt = { x: number; y: number };
+    const nodes: Pt[] = [];
+    const nodeMap = new Map<string, number>();
+
+    const addNode = (x: number, y: number): number => {
+      const key = `${Math.round(x * 10)},${Math.round(y * 10)}`;
+      if (nodeMap.has(key)) return nodeMap.get(key)!;
+      const idx = nodes.length;
+      nodes.push({ x, y });
+      nodeMap.set(key, idx);
+      return idx;
+    };
+
+    for (const x of xs) {
+      for (const y of ys) {
+        if (!insideExpanded(x, y)) addNode(x, y);
       }
     }
-    
-    // 检查完整路径的所有线段是否与其他 view 相交
-    const simplePath = [start, startExit, endEntry, end];
-    let hasCollision = false;
-    
-    for (let i = 1; i < simplePath.length; i++) {
-      const segStart = simplePath[i - 1];
-      const segEnd = simplePath[i];
-      
-      if (relevantObstacles.some(obs => lineIntersectsRect(segStart, segEnd, obs, margin))) {
-        hasCollision = true;
-        break;
-      }
+
+    // 强制添加起终点（可能在邻近 view 的扩展禁区内，但仍需作为路由节点）
+    const sIdx = addNode(start.x, start.y);
+    const eIdx = addNode(end.x, end.y);
+
+    // 构建邻接表
+    const adj: [number, number][][] = nodes.map(() => []);
+
+    // 线段碰撞检测（支持选择使用原始或扩展障碍物）
+    const hSegBlocked = (x1: number, x2: number, y: number, rects: typeof expanded) => {
+      const lo = Math.min(x1, x2), hi = Math.max(x1, x2);
+      return rects.some(o => y > o.y + eps && y < o.y + o.h - eps && o.x < hi - eps && o.x + o.w > lo + eps);
+    };
+    const vSegBlocked = (x: number, y1: number, y2: number, rects: typeof expanded) => {
+      const lo = Math.min(y1, y2), hi = Math.max(y1, y2);
+      return rects.some(o => x > o.x + eps && x < o.x + o.w - eps && o.y < hi - eps && o.y + o.h > lo + eps);
+    };
+
+    // 水平连接
+    const byY = new Map<number, number[]>();
+    for (let i = 0; i < nodes.length; i++) {
+      const y = nodes[i].y;
+      if (!byY.has(y)) byY.set(y, []);
+      byY.get(y)!.push(i);
     }
-    
-    if (!hasCollision) {
-      // 简单路径：起点 -> 出线点 -> 入线点 -> 终点
-      return createRoundedPath(simplePath, cornerRadius);
-    }
-    
-    // 需要绕行，计算所有障碍物的包围盒
-    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-    relevantObstacles.forEach(obs => {
-      minX = Math.min(minX, obs.x);
-      maxX = Math.max(maxX, obs.x + obs.w);
-      minY = Math.min(minY, obs.y);
-      maxY = Math.max(maxY, obs.y + obs.h);
-    });
-    
-    // 生成多种绕行路径，确保完全避开所有障碍物
-    const pathOptions: { x: number; y: number }[][] = [];
-    
-    // 计算更大的安全边距，确保绕行路径不会太接近障碍物
-    const safeMargin = margin + 20;
-    
-    // 对于并排的view，优先使用底部出线，然后水平绕行
-    // 这样可以减少连线交叉
-    if (fromEdge === 'bottom' || toEdge === 'bottom') {
-      // 如果起点或终点从底部出线，优先使用水平绕行
-      pathOptions.push(
-        // 底部出线，然后水平绕行
-        [start, startExit, { x: startExit.x, y: maxY + safeMargin }, { x: endEntry.x, y: maxY + safeMargin }, endEntry, end],
-        // 底部出线，然后向上绕行
-        [start, startExit, { x: startExit.x, y: minY - safeMargin }, { x: endEntry.x, y: minY - safeMargin }, endEntry, end],
-        // 左侧绕行
-        [start, startExit, { x: minX - safeMargin, y: startExit.y }, { x: minX - safeMargin, y: endEntry.y }, endEntry, end],
-        // 右侧绕行
-        [start, startExit, { x: maxX + safeMargin, y: startExit.y }, { x: maxX + safeMargin, y: endEntry.y }, endEntry, end]
-      );
-    } else if (fromEdge === 'left') {
-      // 从左边出线，优先向左绕行
-      pathOptions.push(
-        [start, startExit, { x: minX - safeMargin, y: startExit.y }, { x: minX - safeMargin, y: endEntry.y }, endEntry, end],
-        [start, startExit, { x: startExit.x, y: minY - safeMargin }, { x: endEntry.x, y: minY - safeMargin }, endEntry, end],
-        [start, startExit, { x: startExit.x, y: maxY + safeMargin }, { x: endEntry.x, y: maxY + safeMargin }, endEntry, end]
-      );
-    } else if (fromEdge === 'right') {
-      // 从右边出线，优先向右绕行
-      pathOptions.push(
-        [start, startExit, { x: maxX + safeMargin, y: startExit.y }, { x: maxX + safeMargin, y: endEntry.y }, endEntry, end],
-        [start, startExit, { x: startExit.x, y: minY - safeMargin }, { x: endEntry.x, y: minY - safeMargin }, endEntry, end],
-        [start, startExit, { x: startExit.x, y: maxY + safeMargin }, { x: endEntry.x, y: maxY + safeMargin }, endEntry, end]
-      );
-    } else if (fromEdge === 'top') {
-      // 从上边出线，优先向上绕行
-      pathOptions.push(
-        [start, startExit, { x: startExit.x, y: minY - safeMargin }, { x: endEntry.x, y: minY - safeMargin }, endEntry, end],
-        [start, startExit, { x: minX - safeMargin, y: startExit.y }, { x: minX - safeMargin, y: endEntry.y }, endEntry, end],
-        [start, startExit, { x: maxX + safeMargin, y: startExit.y }, { x: maxX + safeMargin, y: endEntry.y }, endEntry, end]
-      );
-    } else {
-      // 默认路径（兼容旧逻辑）
-      pathOptions.push(
-        [start, { x: maxX + safeMargin, y: start.y }, { x: maxX + safeMargin, y: end.y }, end],
-        [start, { x: minX - safeMargin, y: start.y }, { x: minX - safeMargin, y: end.y }, end],
-        [start, { x: start.x, y: minY - safeMargin }, { x: end.x, y: minY - safeMargin }, end],
-        [start, { x: start.x, y: maxY + safeMargin }, { x: end.x, y: maxY + safeMargin }, end]
-      );
-    }
-    
-    // 选择没有碰撞且路径最短的选项
-    let bestPath: { x: number; y: number }[] | null = null;
-    let bestLength = Infinity;
-    
-    for (const path of pathOptions) {
-      let hasPathCollision = false;
-      
-      // 检查路径的每个线段
-      for (let i = 1; i < path.length; i++) {
-        const segStart = path[i - 1];
-        const segEnd = path[i];
-        
-        // 检查是否与任何障碍物相交
-        for (const obs of relevantObstacles) {
-          if (lineIntersectsRect(segStart, segEnd, obs, margin)) {
-            hasPathCollision = true;
-            break;
-          }
-        }
-        
-        if (hasPathCollision) break;
-      }
-      
-      if (!hasPathCollision) {
-        const length = calculatePathLength(path);
-        if (length < bestLength) {
-          bestLength = length;
-          bestPath = path;
+    for (const [y, indices] of byY) {
+      indices.sort((a, b) => nodes[a].x - nodes[b].x);
+      for (let i = 0; i < indices.length - 1; i++) {
+        const a = indices[i], b = indices[i + 1];
+        // 涉及起终点的边使用原始障碍物检测（允许靠近 view 边界），其余使用扩展障碍物
+        const touchesSE = (a === sIdx || a === eIdx || b === sIdx || b === eIdx);
+        const rects = touchesSE ? relevantObstacles : expanded;
+        if (!hSegBlocked(nodes[a].x, nodes[b].x, y, rects)) {
+          const w = Math.abs(nodes[b].x - nodes[a].x);
+          adj[a].push([b, w]);
+          adj[b].push([a, w]);
         }
       }
     }
-    
-    // 如果所有预设路径都有碰撞，使用更保守的绕行策略
-    if (!bestPath) {
-      // 计算一个足够远的绕行距离，确保不会与任何障碍物相交
-      const extraMargin = safeMargin + 50;
-      
-      // 尝试更保守的绕行路径
-      const conservativePaths = [
-        // 远距离左侧绕行
-        [start, startExit, { x: minX - extraMargin, y: startExit.y }, { x: minX - extraMargin, y: endEntry.y }, endEntry, end],
-        // 远距离右侧绕行
-        [start, startExit, { x: maxX + extraMargin, y: startExit.y }, { x: maxX + extraMargin, y: endEntry.y }, endEntry, end],
-        // 远距离上方绕行
-        [start, startExit, { x: startExit.x, y: minY - extraMargin }, { x: endEntry.x, y: minY - extraMargin }, endEntry, end],
-        // 远距离下方绕行
-        [start, startExit, { x: startExit.x, y: maxY + extraMargin }, { x: endEntry.x, y: maxY + extraMargin }, endEntry, end]
-      ];
-      
-      // 选择第一个无碰撞的保守路径
-      for (const path of conservativePaths) {
-        let hasPathCollision = false;
-        
-        for (let i = 1; i < path.length; i++) {
-          const segStart = path[i - 1];
-          const segEnd = path[i];
-          
-          if (relevantObstacles.some(obs => lineIntersectsRect(segStart, segEnd, obs, margin))) {
-            hasPathCollision = true;
-            break;
-          }
+
+    // 垂直连接
+    const byX = new Map<number, number[]>();
+    for (let i = 0; i < nodes.length; i++) {
+      const x = nodes[i].x;
+      if (!byX.has(x)) byX.set(x, []);
+      byX.get(x)!.push(i);
+    }
+    for (const [x, indices] of byX) {
+      indices.sort((a, b) => nodes[a].y - nodes[b].y);
+      for (let i = 0; i < indices.length - 1; i++) {
+        const a = indices[i], b = indices[i + 1];
+        const touchesSE = (a === sIdx || a === eIdx || b === sIdx || b === eIdx);
+        const rects = touchesSE ? relevantObstacles : expanded;
+        if (!vSegBlocked(x, nodes[a].y, nodes[b].y, rects)) {
+          const w = Math.abs(nodes[b].y - nodes[a].y);
+          adj[a].push([b, w]);
+          adj[b].push([a, w]);
         }
-        
-        if (!hasPathCollision) {
-          bestPath = path;
-          break;
-        }
-      }
-      
-      // 如果还是没有找到合适的路径，使用最简单的直线路径（作为最后的兜底）
-      if (!bestPath) {
-        bestPath = [start, startExit, endEntry, end];
       }
     }
-    
-    return createRoundedPath(bestPath, cornerRadius);
+
+    // Dijkstra（带转弯惩罚 + 出入方向偏好）
+    // 状态 = nodeIdx * 3 + dirState (0=水平, 1=垂直, 2=起点)
+    const fromDir = (fromEdge === 'left' || fromEdge === 'right') ? 0 : 1;
+    const toDir = (toEdge === 'left' || toEdge === 'right' || toEdge === 'circle') ? 0 : 1;
+
+    const INF = Infinity;
+    const dist = new Array(nodes.length * 3).fill(INF);
+    const prev = new Array(nodes.length * 3).fill(-1);
+    const startState = sIdx * 3 + 2;
+    dist[startState] = 0;
+    const pq: [number, number][] = [[0, startState]];
+
+    while (pq.length > 0) {
+      let mi = 0;
+      for (let i = 1; i < pq.length; i++) { if (pq[i][0] < pq[mi][0]) mi = i; }
+      const [d, state] = pq.splice(mi, 1)[0];
+      if (d > dist[state]) continue;
+
+      const u = Math.floor(state / 3);
+      const uDir = state % 3;
+
+      for (const [v, w] of adj[u]) {
+        const edgeDir = (nodes[v].y === nodes[u].y) ? 0 : 1;
+        let penalty = 0;
+
+        // 转弯惩罚
+        if (uDir !== 2 && uDir !== edgeDir) penalty += turnPenalty;
+
+        // 起点方向硬约束：第一段必须垂直于 fromEdge
+        if (u === sIdx && uDir === 2) {
+          if (edgeDir !== fromDir) continue;
+          const goingCorrect =
+            (fromEdge === 'right' && nodes[v].x > start.x) ||
+            (fromEdge === 'left' && nodes[v].x < start.x) ||
+            (fromEdge === 'bottom' && nodes[v].y > start.y) ||
+            (fromEdge === 'top' && nodes[v].y < start.y);
+          if (!goingCorrect) continue;
+        }
+
+        // 终点方向硬约束：最后一段必须垂直于 toEdge
+        if (v === eIdx && toEdge !== 'circle') {
+          if (edgeDir !== toDir) continue;
+          const approachCorrect =
+            (toEdge === 'right' && nodes[u].x > end.x) ||
+            (toEdge === 'left' && nodes[u].x < end.x) ||
+            (toEdge === 'bottom' && nodes[u].y > end.y) ||
+            (toEdge === 'top' && nodes[u].y < end.y);
+          if (!approachCorrect) continue;
+        }
+
+        const nd = d + w + penalty;
+        const ns = v * 3 + edgeDir;
+        if (nd < dist[ns]) {
+          dist[ns] = nd;
+          prev[ns] = state;
+          pq.push([nd, ns]);
+        }
+      }
+    }
+
+    // 找到终点最佳到达状态
+    let bestState = -1, bestDist = INF;
+    for (let dir = 0; dir < 3; dir++) {
+      const s = eIdx * 3 + dir;
+      if (dist[s] < bestDist) { bestDist = dist[s]; bestState = s; }
+    }
+
+    if (bestDist === INF) {
+      // 无路径，退回直线
+      return createRoundedPath([start, end], cornerRadius);
+    }
+
+    // 回溯路径
+    const pathStates: number[] = [];
+    let cur = bestState;
+    while (cur !== -1) { pathStates.unshift(cur); cur = prev[cur]; }
+    const points = pathStates.map(s => nodes[Math.floor(s / 3)]);
+
+    // 去除共线冗余中间点
+    const simplified: Pt[] = [points[0]];
+    for (let i = 1; i < points.length - 1; i++) {
+      const p = simplified[simplified.length - 1];
+      const c = points[i], n = points[i + 1];
+      if (Math.abs((c.x - p.x) * (n.y - c.y) - (c.y - p.y) * (n.x - c.x)) > 0.01) {
+        simplified.push(c);
+      }
+    }
+    simplified.push(points[points.length - 1]);
+
+    return createRoundedPath(simplified, cornerRadius);
   };
 
   // 检查点是否在矩形内部或边缘上
@@ -728,7 +753,7 @@ export const ViewConnectionLayer: React.FC<ViewConnectionLayerProps> = ({
     }}>
       <defs>
         <marker id="arr-local" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-          <polygon points="0 0, 8 3, 0 6" fill="#4CAF50" />
+          <polygon points="0 0, 8 3, 0 6" fill="#2196F3" />
         </marker>
         <marker id="arr-ext" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
           <polygon points="0 0, 8 3, 0 6" fill="#2196F3" />
@@ -788,17 +813,33 @@ export const ViewConnectionLayer: React.FC<ViewConnectionLayerProps> = ({
               {/* 实际显示的路径 */}
               <path
                 d={path}
-                stroke={isHovered ? "#66BB6A" : "#4CAF50"}
-                strokeWidth={isHovered ? 3 : 2}
+                stroke={isHovered ? "#42A5F5" : "#2196F3"}
+                strokeWidth={isHovered ? 2 : 1.5}
                 strokeDasharray="6,3"
                 fill="none"
                 opacity={isHovered ? 1 : 0.85}
                 style={{ pointerEvents: 'none' }}
               />
+              {/* 悬浮时的流动光点效果 */}
+              {isHovered && !isBidirectional && (
+                <circle r={3.5} fill="#90CAF9" opacity={0.95} style={{ pointerEvents: 'none' }}>
+                  <animateMotion dur="1.5s" repeatCount="indefinite" path={path} />
+                </circle>
+              )}
+              {isHovered && isBidirectional && (
+                <>
+                  <circle r={3.5} fill="#90CAF9" opacity={0.95} style={{ pointerEvents: 'none' }}>
+                    <animateMotion dur="1.5s" repeatCount="indefinite" path={path} keyPoints="0.5;1" keyTimes="0;1" calcMode="linear" />
+                  </circle>
+                  <circle r={3.5} fill="#90CAF9" opacity={0.95} style={{ pointerEvents: 'none' }}>
+                    <animateMotion dur="1.5s" repeatCount="indefinite" path={path} keyPoints="0.5;0" keyTimes="0;1" calcMode="linear" />
+                  </circle>
+                </>
+              )}
               {/* 终点箭头 */}
               <polygon
                 points={endArrowPoints}
-                fill={isHovered ? "#66BB6A" : "#4CAF50"}
+                fill={isHovered ? "#42A5F5" : "#2196F3"}
                 opacity={isHovered ? 1 : 0.85}
                 style={{ pointerEvents: 'none' }}
               />
@@ -806,7 +847,7 @@ export const ViewConnectionLayer: React.FC<ViewConnectionLayerProps> = ({
               {startArrowPoints && (
                 <polygon
                   points={startArrowPoints}
-                  fill={isHovered ? "#66BB6A" : "#4CAF50"}
+                  fill={isHovered ? "#42A5F5" : "#2196F3"}
                   opacity={isHovered ? 1 : 0.85}
                   style={{ pointerEvents: 'none' }}
                 />
@@ -816,7 +857,7 @@ export const ViewConnectionLayer: React.FC<ViewConnectionLayerProps> = ({
                 <text
                   x={iconPos.x}
                   y={iconPos.y - 10}
-                  fill={isHovered ? "#66BB6A" : "#4CAF50"}
+                  fill={isHovered ? "#42A5F5" : "#2196F3"}
                   fontSize={12}
                   fontWeight="bold"
                   textAnchor="middle"
@@ -833,8 +874,8 @@ export const ViewConnectionLayer: React.FC<ViewConnectionLayerProps> = ({
                   width={conn.from.position.width * zoom}
                   height={conn.from.position.height * zoom}
                   fill="none"
-                  stroke="#66BB6A"
-                  strokeWidth={3}
+                  stroke="#42A5F5"
+                  strokeWidth={2}
                   opacity={0.6}
                   style={{ pointerEvents: 'none' }}
                 />
@@ -847,8 +888,8 @@ export const ViewConnectionLayer: React.FC<ViewConnectionLayerProps> = ({
                   width={conn.to.position.width * zoom}
                   height={conn.to.position.height * zoom}
                   fill="none"
-                  stroke="#66BB6A"
-                  strokeWidth={3}
+                  stroke="#42A5F5"
+                  strokeWidth={2}
                   opacity={0.6}
                   style={{ pointerEvents: 'none' }}
                 />
@@ -907,7 +948,7 @@ export const ViewConnectionLayer: React.FC<ViewConnectionLayerProps> = ({
             <path
               d={path}
               stroke={isHovered ? hoverColor : color}
-              strokeWidth={isHovered ? 3 : 2}
+              strokeWidth={isHovered ? 2 : 1.5}
               strokeDasharray="6,3"
               fill="none"
               opacity={isHovered ? 1 : 0.85}
