@@ -229,296 +229,931 @@ function getHtmlContent(): string {
 
 function getStyles(): string {
     return `
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body {
-    font-family: var(--vscode-font-family);
-    color: var(--vscode-foreground);
-    background-color: var(--vscode-editor-background);
-    overflow: hidden;
+/* ============================================
+   CARTOGRAPHIC ELEGANCE DESIGN SYSTEM
+   Theme: Dark mode map-making aesthetic
+   ============================================ */
+
+/* CSS Custom Properties - Design Tokens */
+:root {
+    /* Color Palette */
+    --color-charcoal: #1a1d23;
+    --color-charcoal-light: #252932;
+    --color-amber: #d4a574;
+    --color-amber-dark: #b8895c;
+    --color-amber-bright: #e8c49a;
+    --color-teal: #4ecdc4;
+    --color-teal-dark: #3db5ad;
+    --color-coral: #e07a5f;
+    --color-offwhite: #e8e6e3;
+    --color-gray: #8b8b8b;
+    --color-gray-dark: #4a4a4a;
+    
+    /* Typography */
+    --font-mono: 'IBM Plex Mono', 'Consolas', 'Courier New', monospace;
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    
+    /* Spacing Scale */
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 12px;
+    --space-lg: 16px;
+    --space-xl: 24px;
+    
+    /* Shadows - Layered map sheet effect */
+    --shadow-sm: 0 2px 4px rgba(0,0,0,0.3);
+    --shadow-md: 0 4px 8px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.2);
+    --shadow-lg: 0 8px 16px rgba(0,0,0,0.5), 0 4px 8px rgba(0,0,0,0.3);
+    
+    /* Transitions */
+    --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.container { display: flex; flex-direction: column; height: 100vh; }
+
+/* Topographic Background Pattern */
+@keyframes topographicFlow {
+    0% { background-position: 0 0; }
+    100% { background-position: 100px 100px; }
+}
+
+/* Progress Bar Animation - Drawing Map Lines */
+@keyframes drawMapLine {
+    0% { 
+        background-size: 0% 100%;
+        opacity: 0.8;
+    }
+    50% { opacity: 1; }
+    100% { 
+        background-size: 100% 100%;
+        opacity: 0.95;
+    }
+}
+
+/* Compass Rose Rotation */
+@keyframes compassRotate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Base Reset */
+* { 
+    margin: 0; 
+    padding: 0; 
+    box-sizing: border-box; 
+}
+
+/* Body - Deep Charcoal with Subtle Texture */
+body {
+    font-family: var(--font-body);
+    color: var(--color-offwhite);
+    background: 
+        linear-gradient(135deg, var(--color-charcoal) 0%, #15171c 100%);
+    overflow: hidden;
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+    position: relative;
+}
+
+body::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image: 
+        repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(212,165,116,0.02) 2px, rgba(212,165,116,0.02) 4px),
+        repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(212,165,116,0.02) 2px, rgba(212,165,116,0.02) 4px);
+    pointer-events: none;
+    opacity: 0.4;
+}
+
+.container { 
+    display: flex; 
+    flex-direction: column; 
+    height: 100vh;
+    position: relative;
+    z-index: 1;
+}
+
+/* ============================================
+   TOOLBAR - Navigation Header
+   ============================================ */
 .toolbar {
     display: flex;
     justify-content: space-between;
-    padding: 8px;
-    background-color: var(--vscode-editorGroupHeader-tabsBackground);
-    border-bottom: 1px solid var(--vscode-panel-border);
+    padding: var(--space-md) var(--space-lg);
+    background: linear-gradient(180deg, #22252e 0%, var(--color-charcoal-light) 100%);
+    border-bottom: 2px solid var(--color-amber);
+    border-bottom-style: double;
     flex-shrink: 0;
+    box-shadow: var(--shadow-md);
+    position: relative;
 }
+
+.toolbar::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, 
+        transparent 0%, 
+        var(--color-amber-bright) 20%, 
+        var(--color-amber-bright) 80%, 
+        transparent 100%
+    );
+}
+
 .toolbar-secondary {
-    background-color: var(--vscode-sideBar-background);
+    background: var(--color-charcoal);
+    border-bottom: 1px solid rgba(212,165,116,0.2);
+    padding: var(--space-sm) var(--space-lg);
 }
-.toolbar-left, .toolbar-right { display: flex; align-items: center; gap: 8px; }
-.toolbar label { font-size: 12px; white-space: nowrap; }
+
+.toolbar-left, .toolbar-right { 
+    display: flex; 
+    align-items: center; 
+    gap: var(--space-md); 
+}
+
+.toolbar label { 
+    font-size: 11px; 
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    white-space: nowrap;
+    color: var(--color-amber);
+    font-weight: 600;
+}
+
 .toolbar input, .toolbar select {
-    background-color: var(--vscode-input-background);
-    color: var(--vscode-input-foreground);
-    border: 1px solid var(--vscode-input-border);
-    padding: 4px 8px;
+    background: rgba(255,255,255,0.05);
+    color: var(--color-offwhite);
+    border: 1px solid rgba(212,165,116,0.3);
+    padding: 6px var(--space-md);
     font-size: 12px;
-    border-radius: 2px;
+    font-family: var(--font-mono);
+    border-radius: 3px;
+    transition: all var(--transition-fast);
+    backdrop-filter: blur(10px);
 }
-.toolbar input[type="number"] { width: 90px; }
-.toolbar select { max-width: 150px; }
-.toolbar button {
-    padding: 4px 12px;
-    background-color: var(--vscode-button-background);
-    color: var(--vscode-button-foreground);
-    border: none;
+
+.toolbar input:focus, .toolbar select:focus {
+    outline: none;
+    border-color: var(--color-amber);
+    background: rgba(255,255,255,0.08);
+    box-shadow: 0 0 0 3px rgba(212,165,116,0.15);
+}
+
+.toolbar input:hover, .toolbar select:hover {
+    border-color: var(--color-amber-bright);
+}
+
+.toolbar input[type="number"] { 
+    width: 90px; 
+}
+
+.toolbar select { 
+    max-width: 160px;
     cursor: pointer;
-    border-radius: 2px;
-    font-size: 12px;
-    font-weight: 500;
 }
-.toolbar button:hover { background-color: var(--vscode-button-hoverBackground); }
-.main-layout { display: flex; flex: 1; overflow: hidden; }
+
+/* Toolbar Buttons */
+.toolbar button {
+    padding: 6px var(--space-lg);
+    background: linear-gradient(135deg, var(--color-amber-dark) 0%, var(--color-amber) 100%);
+    color: var(--color-charcoal);
+    border: 1px solid var(--color-amber-bright);
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all var(--transition-fast);
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    overflow: hidden;
+}
+
+.toolbar button::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%; right: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 0.5s;
+}
+
+.toolbar button:hover {
+    background: linear-gradient(135deg, var(--color-amber) 0%, var(--color-amber-bright) 100%);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+}
+
+.toolbar button:hover::before {
+    left: 100%;
+}
+
+.toolbar button:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
+}
+
+/* ============================================
+   MAIN LAYOUT
+   ============================================ */
+.main-layout { 
+    display: flex; 
+    flex: 1; 
+    overflow: hidden;
+    gap: 0;
+}
+
+/* ============================================
+   MAP CONTAINER
+   ============================================ */
 .map-container {
     flex: 3;
     position: relative;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    border-right: 2px solid rgba(212,165,116,0.2);
 }
-#map { flex: 1; background: #e5e3df; }
+
+#map { 
+    flex: 1; 
+    background: #e5e3df;
+    position: relative;
+}
+
+/* Map Overlay Buttons */
 .map-buttons {
     position: absolute;
-    top: 10px;
-    left: 10px;
+    top: var(--space-lg);
+    left: var(--space-lg);
     display: flex;
-    gap: 10px;
+    gap: var(--space-md);
     z-index: 1000;
 }
+
 .map-buttons button {
-    padding: 8px 16px;
-    background-color: white;
-    border: 2px solid rgba(0,0,0,0.2);
-    border-radius: 4px;
+    padding: var(--space-md) var(--space-lg);
+    background: rgba(26,29,35,0.95);
+    border: 2px solid var(--color-amber);
+    border-radius: 6px;
     cursor: pointer;
     font-size: 13px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    font-weight: 500;
-    transition: all 0.2s;
+    font-family: var(--font-body);
+    font-weight: 600;
+    color: var(--color-amber-bright);
+    box-shadow: var(--shadow-lg);
+    transition: all var(--transition-smooth);
+    backdrop-filter: blur(10px);
+    position: relative;
+    overflow: hidden;
 }
+
+.map-buttons button::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 0; height: 0;
+    border-radius: 50%;
+    background: rgba(212,165,116,0.2);
+    transform: translate(-50%, -50%);
+    transition: width 0.4s, height 0.4s;
+}
+
+.map-buttons button:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
 .map-buttons button:hover { 
-    background-color: #f4f4f4; 
-    transform: translateY(-1px);
-    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    background: rgba(212,165,116,0.95);
+    color: var(--color-charcoal);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg), 0 0 20px rgba(212,165,116,0.4);
 }
-.map-buttons button:active { transform: translateY(0); }
+
+.map-buttons button:active { 
+    transform: translateY(0); 
+}
+
+/* Position Label - Coordinate Display */
 .position-label {
     position: absolute;
-    bottom: 10px;
-    right: 10px;
-    background-color: rgba(255,255,255,0.95);
-    padding: 4px 8px;
+    bottom: var(--space-lg);
+    right: var(--space-lg);
+    background: rgba(26,29,35,0.98);
+    padding: var(--space-sm) var(--space-md);
     border-radius: 4px;
-    font-size: 12px;
+    font-size: 11px;
+    font-family: var(--font-mono);
     z-index: 1000;
-    border: 1px solid rgba(0,0,0,0.1);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    font-family: monospace;
+    border: 1px solid var(--color-amber);
+    box-shadow: var(--shadow-md);
+    color: var(--color-amber-bright);
+    letter-spacing: 0.5px;
+    backdrop-filter: blur(10px);
 }
+
+/* ============================================
+   CONTROL PANEL - Right Sidebar
+   ============================================ */
 .control-panel {
     flex: 1;
     display: flex;
     flex-direction: column;
-    border-left: 1px solid var(--vscode-panel-border);
-    background-color: var(--vscode-sideBar-background);
+    background: var(--color-charcoal);
     overflow-y: auto;
-    min-width: 280px;
-    max-width: 350px;
+    min-width: 300px;
+    max-width: 360px;
+    box-shadow: inset 4px 0 8px rgba(0,0,0,0.3);
+    position: relative;
 }
+
+.control-panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-image: 
+        repeating-linear-gradient(0deg, transparent, transparent 20px, rgba(212,165,116,0.03) 20px, rgba(212,165,116,0.03) 40px);
+    pointer-events: none;
+}
+
+/* ============================================
+   TABS - Map Legend Style
+   ============================================ */
 .tabs {
     display: flex;
-    border-bottom: 1px solid var(--vscode-panel-border);
+    border-bottom: 2px solid rgba(212,165,116,0.3);
     flex-shrink: 0;
+    background: var(--color-charcoal-light);
+    position: relative;
+    z-index: 2;
 }
+
 .tab-button {
     flex: 1;
-    padding: 10px;
-    background-color: transparent;
-    color: var(--vscode-foreground);
+    padding: var(--space-md);
+    background: transparent;
+    color: var(--color-gray);
     border: none;
     cursor: pointer;
-    font-size: 13px;
-    font-weight: 500;
-    transition: background-color 0.2s;
-}
-.tab-button:hover { background-color: var(--vscode-list-hoverBackground); }
-.tab-button.active {
-    background-color: var(--vscode-tab-activeBackground);
-    border-bottom: 2px solid var(--vscode-focusBorder);
-}
-.tab-content { display: none; padding: 16px; }
-.tab-content.active { display: block; }
-.section { margin-bottom: 20px; }
-.section h3 {
-    font-size: 14px;
-    margin-bottom: 8px;
-    color: var(--vscode-foreground);
+    font-size: 12px;
+    font-family: var(--font-mono);
     font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all var(--transition-smooth);
+    position: relative;
 }
+
+.tab-button::before {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 50%;
+    width: 0%;
+    height: 2px;
+    background: var(--color-amber);
+    transform: translateX(-50%);
+    transition: width var(--transition-smooth);
+}
+
+.tab-button:hover { 
+    background: rgba(212,165,116,0.05);
+    color: var(--color-amber-bright);
+}
+
+.tab-button.active {
+    background: rgba(212,165,116,0.1);
+    color: var(--color-amber-bright);
+}
+
+.tab-button.active::before {
+    width: 80%;
+}
+
+.tab-content { 
+    display: none; 
+    padding: var(--space-xl);
+    position: relative;
+    z-index: 1;
+}
+
+.tab-content.active { 
+    display: block; 
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================
+   SECTIONS - Grouped Controls
+   ============================================ */
+.section { 
+    margin-bottom: var(--space-xl);
+    padding: var(--space-lg);
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(212,165,116,0.15);
+    border-radius: 6px;
+    box-shadow: var(--shadow-sm);
+    position: relative;
+}
+
+.section::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 4px; height: 100%;
+    background: linear-gradient(180deg, var(--color-amber) 0%, transparent 100%);
+    border-radius: 6px 0 0 6px;
+}
+
+.section h3 {
+    font-size: 13px;
+    margin-bottom: var(--space-md);
+    color: var(--color-amber-bright);
+    font-weight: 700;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    padding-bottom: var(--space-sm);
+    border-bottom: 1px solid rgba(212,165,116,0.2);
+}
+
 .section label {
     display: block;
-    margin-bottom: 6px;
-    font-size: 13px;
+    margin-bottom: var(--space-sm);
+    font-size: 12px;
     cursor: pointer;
-    transition: color 0.2s;
+    transition: color var(--transition-fast);
+    color: var(--color-offwhite);
+    font-family: var(--font-body);
 }
-.section label:hover { color: var(--vscode-textLink-foreground); }
-.section input[type="checkbox"] { margin-right: 6px; cursor: pointer; }
+
+.section label:hover { 
+    color: var(--color-teal); 
+}
+
+.section input[type="checkbox"] { 
+    margin-right: var(--space-sm); 
+    cursor: pointer;
+    accent-color: var(--color-teal);
+}
+
+/* Setting Rows */
 .setting-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin: 6px 0;
+    margin: var(--space-sm) 0;
+    padding: var(--space-sm);
+    background: rgba(0,0,0,0.2);
+    border-radius: 4px;
 }
+
 .setting-row label {
-    font-size: 12px;
+    font-size: 11px;
     display: inline;
     margin: 0;
+    color: var(--color-amber);
+    font-family: var(--font-mono);
 }
+
 .setting-row input[type="number"] {
     width: 80px;
-    padding: 4px;
-    background-color: var(--vscode-input-background);
-    color: var(--vscode-input-foreground);
-    border: 1px solid var(--vscode-input-border);
-    border-radius: 2px;
+    padding: 6px;
+    background: rgba(255,255,255,0.05);
+    color: var(--color-offwhite);
+    border: 1px solid rgba(212,165,116,0.3);
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    transition: all var(--transition-fast);
 }
+
+.setting-row input[type="number"]:focus {
+    outline: none;
+    border-color: var(--color-teal);
+    background: rgba(255,255,255,0.08);
+    box-shadow: 0 0 0 3px rgba(78,205,196,0.15);
+}
+
+/* Hints */
 .hint {
-    margin-top: 8px;
-    font-size: 11px;
-    color: var(--vscode-descriptionForeground);
-    line-height: 1.4;
+    margin-top: var(--space-md);
+    font-size: 10px;
+    color: var(--color-gray);
+    line-height: 1.5;
+    font-style: italic;
+    padding-left: var(--space-md);
+    border-left: 2px solid rgba(212,165,116,0.2);
 }
+
+/* ============================================
+   FILE SELECTION
+   ============================================ */
 .file-select {
     display: flex;
-    gap: 8px;
+    gap: var(--space-sm);
 }
+
 .file-select input {
     flex: 1;
-    padding: 6px;
-    background-color: var(--vscode-input-background);
-    color: var(--vscode-input-foreground);
-    border: 1px solid var(--vscode-input-border);
-    font-size: 12px;
-    border-radius: 2px;
+    padding: var(--space-sm) var(--space-md);
+    background: rgba(0,0,0,0.3);
+    color: var(--color-offwhite);
+    border: 1px solid rgba(212,165,116,0.3);
+    font-size: 11px;
+    font-family: var(--font-mono);
+    border-radius: 4px;
+    transition: all var(--transition-fast);
 }
+
+.file-select input:focus {
+    outline: none;
+    border-color: var(--color-amber);
+    background: rgba(0,0,0,0.4);
+}
+
 .file-select button {
-    padding: 6px 12px;
-    background-color: var(--vscode-button-background);
-    color: var(--vscode-button-foreground);
-    border: none;
+    padding: var(--space-sm) var(--space-lg);
+    background: linear-gradient(135deg, rgba(212,165,116,0.2) 0%, rgba(212,165,116,0.3) 100%);
+    color: var(--color-amber-bright);
+    border: 1px solid var(--color-amber);
     cursor: pointer;
-    font-size: 12px;
-    border-radius: 2px;
-    font-weight: 500;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    border-radius: 4px;
+    transition: all var(--transition-fast);
 }
-.file-select button:hover { background-color: var(--vscode-button-hoverBackground); }
+
+.file-select button:hover { 
+    background: linear-gradient(135deg, var(--color-amber) 0%, var(--color-amber-bright) 100%);
+    color: var(--color-charcoal);
+    box-shadow: var(--shadow-sm);
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
 .primary-button {
     width: 100%;
-    padding: 10px;
-    background-color: var(--vscode-button-background);
-    color: var(--vscode-button-foreground);
+    padding: var(--space-md);
+    background: linear-gradient(135deg, var(--color-teal-dark) 0%, var(--color-teal) 100%);
+    color: var(--color-charcoal);
     border: none;
     cursor: pointer;
-    font-size: 14px;
-    font-weight: bold;
-    border-radius: 2px;
-    transition: background-color 0.2s;
-}
-.primary-button:hover { background-color: var(--vscode-button-hoverBackground); }
-.primary-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-.info-box {
-    padding: 10px;
-    background-color: var(--vscode-textBlockQuote-background);
-    border-left: 3px solid var(--vscode-textBlockQuote-border);
-    font-size: 12px;
-    color: var(--vscode-foreground);
-    white-space: pre-wrap;
-    font-family: monospace;
-    border-radius: 2px;
-}
-.progress-container { margin-top: 10px; }
-.progress-bar {
-    height: 20px;
-    background-color: var(--vscode-input-background);
-    border-radius: 4px;
+    font-size: 13px;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-radius: 6px;
+    transition: all var(--transition-smooth);
+    box-shadow: var(--shadow-md);
+    position: relative;
     overflow: hidden;
-    border: 1px solid var(--vscode-input-border);
 }
+
+.primary-button::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 0; height: 0;
+    background: rgba(255,255,255,0.3);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.5s, height 0.5s;
+}
+
+.primary-button:hover::after {
+    width: 400px;
+    height: 400px;
+}
+
+.primary-button:hover { 
+    background: linear-gradient(135deg, var(--color-teal) 0%, #6fe5dc 100%);
+    box-shadow: var(--shadow-lg), 0 0 20px rgba(78,205,196,0.4);
+    transform: translateY(-2px);
+}
+
+.primary-button:active {
+    transform: translateY(0);
+}
+
+.primary-button:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    background: rgba(139,139,139,0.2);
+    color: var(--color-gray-dark);
+    box-shadow: none;
+}
+
+.primary-button:disabled:hover {
+    transform: none;
+}
+
+.secondary-button {
+    width: 100%;
+    padding: var(--space-sm) var(--space-md);
+    background: rgba(224,122,95,0.15);
+    color: var(--color-coral);
+    border: 1px solid var(--color-coral);
+    cursor: pointer;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    border-radius: 4px;
+    transition: all var(--transition-fast);
+}
+
+.secondary-button:hover {
+    background: var(--color-coral);
+    color: var(--color-charcoal);
+    box-shadow: var(--shadow-sm);
+}
+
+/* ============================================
+   INFO BOX - Coordinate Display
+   ============================================ */
+.info-box {
+    padding: var(--space-md);
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(212,165,116,0.3);
+    border-left: 3px solid var(--color-amber);
+    font-size: 11px;
+    color: var(--color-amber-bright);
+    white-space: pre-wrap;
+    font-family: var(--font-mono);
+    border-radius: 4px;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
+    letter-spacing: 0.3px;
+    line-height: 1.6;
+}
+
+/* ============================================
+   PROGRESS BARS - Topographic Animation
+   ============================================ */
+.progress-container { 
+    margin-top: var(--space-md);
+}
+
+.progress-bar {
+    height: 24px;
+    background: rgba(0,0,0,0.4);
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid rgba(212,165,116,0.3);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+    position: relative;
+}
+
+.progress-bar::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 10px,
+        rgba(255,255,255,0.02) 10px,
+        rgba(255,255,255,0.02) 20px
+    );
+    pointer-events: none;
+}
+
 .progress-fill {
     height: 100%;
-    background-color: var(--vscode-progressBar-background);
-    transition: width 0.3s ease;
+    background: linear-gradient(90deg, 
+        var(--color-teal-dark) 0%, 
+        var(--color-teal) 50%, 
+        var(--color-teal-dark) 100%
+    );
+    background-size: 200% 100%;
+    animation: progressShimmer 2s linear infinite, drawMapLine 0.8s ease-out;
+    position: relative;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(78,205,196,0.5);
 }
+
+@keyframes progressShimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+.progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image: repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 15px,
+        rgba(255,255,255,0.1) 15px,
+        rgba(255,255,255,0.1) 30px
+    );
+}
+
 .progress-text {
-    margin-top: 6px;
+    margin-top: var(--space-sm);
     font-size: 12px;
-    color: var(--vscode-foreground);
+    font-family: var(--font-mono);
+    font-weight: 700;
+    color: var(--color-teal);
 }
+
 .progress-info {
     display: flex;
     justify-content: space-between;
-    margin-top: 6px;
+    margin-top: var(--space-sm);
 }
+
 .progress-speed {
-    font-size: 11px;
-    color: var(--vscode-descriptionForeground);
+    font-size: 10px;
+    font-family: var(--font-mono);
+    color: var(--color-gray);
 }
+
 .progress-phase {
-    margin-top: 4px;
-    font-size: 11px;
-    color: var(--vscode-textLink-foreground);
+    margin-top: var(--space-xs);
+    font-size: 10px;
+    font-family: var(--font-mono);
+    color: var(--color-amber-bright);
+    font-style: italic;
 }
+
+/* ============================================
+   LOG PANEL
+   ============================================ */
 .log-container {
     display: flex;
     flex-direction: column;
     height: calc(100vh - 200px);
 }
+
 .log-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 10px;
+    margin-bottom: var(--space-md);
+    padding-bottom: var(--space-sm);
+    border-bottom: 1px solid rgba(212,165,116,0.2);
 }
+
 .log-header h3 {
     margin: 0;
+    font-family: var(--font-mono);
+    color: var(--color-amber-bright);
 }
+
 .small-button {
-    padding: 4px 8px;
-    font-size: 11px;
-    background-color: var(--vscode-button-secondaryBackground);
-    color: var(--vscode-button-secondaryForeground);
-    border: none;
+    padding: 6px var(--space-md);
+    font-size: 10px;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: rgba(224,122,95,0.2);
+    color: var(--color-coral);
+    border: 1px solid var(--color-coral);
     cursor: pointer;
-    border-radius: 2px;
+    border-radius: 3px;
+    transition: all var(--transition-fast);
 }
+
 .small-button:hover {
-    background-color: var(--vscode-button-secondaryHoverBackground);
+    background: var(--color-coral);
+    color: var(--color-charcoal);
 }
+
 .log-output {
     flex: 1;
     overflow-y: auto;
-    background-color: var(--vscode-editor-background);
-    border: 1px solid var(--vscode-panel-border);
-    padding: 8px;
-    font-family: var(--vscode-editor-font-family);
-    font-size: 12px;
-    border-radius: 2px;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(212,165,116,0.2);
+    padding: var(--space-md);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    border-radius: 4px;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.4);
 }
+
+.log-output::-webkit-scrollbar {
+    width: 8px;
+}
+
+.log-output::-webkit-scrollbar-track {
+    background: rgba(0,0,0,0.3);
+    border-radius: 4px;
+}
+
+.log-output::-webkit-scrollbar-thumb {
+    background: rgba(212,165,116,0.3);
+    border-radius: 4px;
+}
+
+.log-output::-webkit-scrollbar-thumb:hover {
+    background: rgba(212,165,116,0.5);
+}
+
 .log-entry {
-    margin-bottom: 4px;
-    line-height: 1.4;
+    margin-bottom: 6px;
+    line-height: 1.5;
+    padding-left: var(--space-md);
+    border-left: 2px solid transparent;
+    transition: all var(--transition-fast);
 }
-.log-entry.info { color: var(--vscode-foreground); }
-.log-entry.success { color: #4EC9B0; }
-.log-entry.warning { color: #DCDCAA; }
-.log-entry.error { color: #F48771; }
+
+.log-entry:hover {
+    background: rgba(255,255,255,0.02);
+    border-left-color: var(--color-amber);
+}
+
+.log-entry.info { 
+    color: var(--color-offwhite); 
+}
+
+.log-entry.success { 
+    color: var(--color-teal); 
+    border-left-color: var(--color-teal);
+}
+
+.log-entry.warning { 
+    color: var(--color-amber-bright);
+    border-left-color: var(--color-amber);
+}
+
+.log-entry.error { 
+    color: var(--color-coral);
+    border-left-color: var(--color-coral);
+}
+
+/* ============================================
+   SCROLLBAR CUSTOMIZATION
+   ============================================ */
+.control-panel::-webkit-scrollbar {
+    width: 10px;
+}
+
+.control-panel::-webkit-scrollbar-track {
+    background: var(--color-charcoal);
+}
+
+.control-panel::-webkit-scrollbar-thumb {
+    background: rgba(212,165,116,0.3);
+    border-radius: 5px;
+    border: 2px solid var(--color-charcoal);
+}
+
+.control-panel::-webkit-scrollbar-thumb:hover {
+    background: rgba(212,165,116,0.5);
+}
+
+/* ============================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================ */
+@media (max-width: 1200px) {
+    .control-panel {
+        min-width: 280px;
+        max-width: 300px;
+    }
+}
+
+/* ============================================
+   ACCESSIBILITY
+   ============================================ */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+    outline: 2px solid var(--color-amber);
+    outline-offset: 2px;
+}
+
+/* ============================================
+   DECORATIVE COMPASS ROSE (OPTIONAL)
+   ============================================ */
+.toolbar::before {
+    content: '⊕';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 20px;
+    color: rgba(212,165,116,0.1);
+    pointer-events: none;
+    animation: compassRotate 60s linear infinite;
+}
 `;
 }
 
