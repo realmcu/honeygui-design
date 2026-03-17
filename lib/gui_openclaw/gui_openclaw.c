@@ -26,6 +26,7 @@
 #include "gui_api_os.h"
 #include "tp_algo.h"
 #include "def_file.h"
+
 #include "stb_truetype.h"
 
 /*============================================================================*
@@ -1005,21 +1006,38 @@ static bool gui_openclaw_init_font(gui_openclaw_ctx_t *ctx)
 {
     int offset;
 
+    gui_log("openclaw: init_font called, ctx=%p\n", (void *)ctx);
+
     if (ctx == NULL || ctx->ttf_font_data == NULL)
     {
+        gui_log("openclaw: init_font failed - ctx=%p, ttf_font_data=%p\n",
+                (void *)ctx, ctx ? (void *)ctx->ttf_font_data : NULL);
         return false;
     }
 
+    gui_log("openclaw: ttf_font_data=%p, size=%zu\n",
+            (void *)ctx->ttf_font_data, ctx->ttf_font_size);
+    gui_log("openclaw: ttf first 4 bytes: 0x%02X 0x%02X 0x%02X 0x%02X\n",
+            ctx->ttf_font_data[0], ctx->ttf_font_data[1],
+            ctx->ttf_font_data[2], ctx->ttf_font_data[3]);
+
     offset = stbtt_GetFontOffsetForIndex(ctx->ttf_font_data, 0);
+    gui_log("openclaw: stbtt_GetFontOffsetForIndex returned %d\n", offset);
     if (offset < 0)
     {
+        gui_log("openclaw: warning - invalid font offset, using 0\n");
         offset = 0;
     }
 
     ctx->font_ready = (stbtt_InitFont(&ctx->font, ctx->ttf_font_data, offset) != 0);
+    gui_log("openclaw: stbtt_InitFont result: font_ready=%d\n", ctx->font_ready);
     if (!ctx->font_ready)
     {
         gui_log("openclaw: failed to initialize ttf font\n");
+    }
+    else
+    {
+        gui_log("openclaw: ttf font initialized successfully\n");
     }
     return ctx->font_ready;
 }
@@ -1279,8 +1297,13 @@ static void gui_openclaw_layout_message(gui_openclaw_ctx_t *ctx,
     int last_break_index;
 
     memset(layout, 0x00, sizeof(*layout));
-    if (text == NULL)
+    if (ctx == NULL || !ctx->font_ready || text == NULL)
     {
+        /* No font available, return minimal layout */
+        layout->line_count = 1;
+        layout->line_height = (int)(font_size * 1.35f);
+        layout->bubble_w = 56;
+        layout->bubble_h = layout->line_height + 16;
         return;
     }
 
@@ -1582,9 +1605,16 @@ static void gui_openclaw_draw_text(gui_openclaw_ctx_t *ctx,
     int line_gap;
     float baseline;
     int pen_x = x;
+    static int s_draw_text_log_count = 0;
 
     if (ctx == NULL || !ctx->font_ready || text == NULL)
     {
+        if (s_draw_text_log_count < 5)
+        {
+            gui_log("openclaw: draw_text skip - ctx=%p, font_ready=%d, text=%p\n",
+                    (void *)ctx, ctx ? ctx->font_ready : -1, (void *)text);
+            s_draw_text_log_count++;
+        }
         return;
     }
 
@@ -1626,6 +1656,15 @@ static void gui_openclaw_draw_text(gui_openclaw_ctx_t *ctx,
         stbtt_GetCodepointBitmapBox(&ctx->font, codepoint, scale, scale, &x0, &y0, &x1, &y1);
         out_w = x1 - x0;
         out_h = y1 - y0;
+
+        if (out_w <= 0 || out_h <= 0)
+        {
+            /* skip zero-size glyph (e.g. space) */
+            pen_x += (int)(advance * scale);
+            text += consumed;
+            continue;
+        }
+
         bitmap = stbtt_GetCodepointBitmap(&ctx->font, 0, scale, codepoint, &out_w, &out_h, 0, 0);
 
         if (bitmap != NULL)
@@ -1717,6 +1756,15 @@ static void gui_openclaw_draw_text_clipped(gui_openclaw_ctx_t *ctx,
         stbtt_GetCodepointBitmapBox(&ctx->font, codepoint, scale, scale, &x0, &y0, &x1, &y1);
         out_w = x1 - x0;
         out_h = y1 - y0;
+
+        if (out_w <= 0 || out_h <= 0)
+        {
+            /* skip zero-size glyph (e.g. space) */
+            pen_x += (int)(advance * scale);
+            text += consumed;
+            continue;
+        }
+
         bitmap = stbtt_GetCodepointBitmap(&ctx->font, 0, scale, codepoint, &out_w, &out_h, 0, 0);
 
         if (bitmap != NULL)
@@ -1775,8 +1823,10 @@ static void gui_openclaw_render(gui_openclaw_ctx_t *ctx)
     int chat_bottom;
     const char *input_text;
 
+
     if (ctx == NULL || ctx->pixels == NULL)
     {
+        gui_log("openclaw: render skip - ctx=%p, pixels=%p\n",                (void *)ctx, ctx ? (void *)ctx->pixels : NULL);
         return;
     }
 
@@ -2095,8 +2145,10 @@ gui_openclaw_t *gui_openclaw_create_from_mem(void          *parent,
     gui_img_t *img;
     size_t image_size;
 
-
-    if (parent == NULL || w <= 0 || h <= 0)
+gui_log("openclaw: create_from_mem called with parent=%p, name=%s, font_data_addr=%p, font_data_size=%zu, sender_id=%s, x=%d, y=%d, w=%d, h=%d\n",
+        (void *)parent, name ? name : "(null)", (void *)ttf_font_data_addr, ttf_font_data_size,
+        sender_id ? sender_id : "(null)", x, y, w, h);
+    if (parent == NULL || w <= 0 || h <= 0 || ttf_font_data_addr == NULL || ttf_font_data_size == 0)
     {
         return NULL;
     }
@@ -2128,15 +2180,25 @@ gui_openclaw_t *gui_openclaw_create_from_mem(void          *parent,
                            "MQTT ready | keyboard input unavailable on this platform");
 
     image_size = sizeof(gui_rgb_data_head_t) + (size_t)w * (size_t)h * sizeof(uint16_t);
+    gui_log("openclaw: allocating image buffer, size=%zu\n", image_size);
     ctx->image_data = gui_malloc(image_size);
     GUI_ASSERT(ctx->image_data != NULL);
+    gui_log("openclaw: image_data allocated at %p\n", (void *)ctx->image_data);
     memset(ctx->image_data, 0x00, image_size);
     ctx->image_data->type = RGB565;
     ctx->image_data->w = w;
     ctx->image_data->h = h;
     ctx->pixels = (uint16_t *)((uint8_t *)ctx->image_data + sizeof(gui_rgb_data_head_t));
+    gui_log("openclaw: pixels buffer at %p, w=%d, h=%d\n", (void *)ctx->pixels, w, h);
 
+    gui_log("openclaw: initializing font...\n");
     gui_openclaw_init_font(ctx);
+    gui_log("openclaw: font init done, font_ready=%d\n", ctx->font_ready);
+    if (!ctx->font_ready)
+    {
+        gui_log("openclaw: WARNING - TTF font not loaded! Check if the font file exists in VFS.\n");
+        gui_log("openclaw: Widget will still work but text will not be rendered.\n");
+    }
     gui_openclaw_seed_default_messages(ctx);
 #if defined(_HONEYGUI_SIMULATOR_) && (defined(_WIN32) || defined(__linux__))
     gui_openclaw_mqtt_init(ctx);

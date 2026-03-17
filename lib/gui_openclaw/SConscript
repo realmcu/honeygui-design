@@ -5,7 +5,7 @@ import sys
 from building import *
 
 cwd = GetCurrentDir()
-inc = [cwd, cwd + '/']
+inc = [cwd, cwd + '/claw-mcu/external/stb']
 src = Glob('*.c') + Glob('*.cpp')
 
 if GetDepend(['']):
