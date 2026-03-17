@@ -52,8 +52,9 @@ function getHtmlContent(): string {
             <button id="gotoBtn">Go</button>
         </div>
         <div class="toolbar-right">
-            <button id="zoomInBtn">+</button>
-            <button id="zoomOutBtn">-</button>
+            <button id="selectDownloadBtn">📥 Download Region</button>
+            <button id="selectConvertBtn">🔄 Convert Region</button>
+            <button id="clearSelectionBtn">✖ Clear</button>
         </div>
     </div>
     <!-- 地图源工具栏 -->
@@ -81,11 +82,6 @@ function getHtmlContent(): string {
         <!-- 左侧地图 -->
         <div class="map-container">
             <div id="map"></div>
-            <div class="map-buttons">
-                <button id="selectDownloadBtn">📥 Select Download Region</button>
-                <button id="selectConvertBtn">🔄 Select Convert Region</button>
-                <button id="clearSelectionBtn">❌ Clear Selection</button>
-            </div>
             <div id="positionLabel" class="position-label">Position: ---, ---</div>
         </div>
 
@@ -236,12 +232,14 @@ function getStyles(): string {
 
 /* CSS Custom Properties - Design Tokens */
 :root {
-    /* Color Palette */
+    /* Color Palette - Refined Earth Tones */
     --color-charcoal: #1a1d23;
     --color-charcoal-light: #252932;
-    --color-amber: #d4a574;
-    --color-amber-dark: #b8895c;
-    --color-amber-bright: #e8c49a;
+    --color-bronze: #a88f75;           /* Muted bronze - primary accent */
+    --color-bronze-dark: #8b7963;      /* Dark bronze - borders */
+    --color-bronze-bright: #c4a88a;    /* Light bronze - hover highlights */
+    --color-steel-blue: #7b9eb0;       /* Steel blue - active states */
+    --color-steel-blue-dark: #5a7a8a;  /* Dark steel blue */
     --color-teal: #4ecdc4;
     --color-teal-dark: #3db5ad;
     --color-coral: #e07a5f;
@@ -319,8 +317,8 @@ body::before {
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
     background-image: 
-        repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(212,165,116,0.02) 2px, rgba(212,165,116,0.02) 4px),
-        repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(212,165,116,0.02) 2px, rgba(212,165,116,0.02) 4px);
+        repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(168,143,117,0.02) 2px, rgba(168,143,117,0.02) 4px),
+        repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(168,143,117,0.02) 2px, rgba(168,143,117,0.02) 4px);
     pointer-events: none;
     opacity: 0.4;
 }
@@ -341,7 +339,7 @@ body::before {
     justify-content: space-between;
     padding: var(--space-md) var(--space-lg);
     background: linear-gradient(180deg, #22252e 0%, var(--color-charcoal-light) 100%);
-    border-bottom: 2px solid var(--color-amber);
+    border-bottom: 2px solid var(--color-bronze-dark);
     border-bottom-style: double;
     flex-shrink: 0;
     box-shadow: var(--shadow-md);
@@ -357,15 +355,15 @@ body::before {
     height: 1px;
     background: linear-gradient(90deg, 
         transparent 0%, 
-        var(--color-amber-bright) 20%, 
-        var(--color-amber-bright) 80%, 
+        var(--color-bronze) 20%, 
+        var(--color-bronze) 80%, 
         transparent 100%
     );
 }
 
 .toolbar-secondary {
     background: var(--color-charcoal);
-    border-bottom: 1px solid rgba(212,165,116,0.2);
+    border-bottom: 1px solid rgba(168,143,117,0.2);
     padding: var(--space-sm) var(--space-lg);
 }
 
@@ -381,14 +379,14 @@ body::before {
     text-transform: uppercase;
     letter-spacing: 0.8px;
     white-space: nowrap;
-    color: var(--color-amber);
+    color: var(--color-steel-blue);
     font-weight: 600;
 }
 
 .toolbar input, .toolbar select {
     background: rgba(255,255,255,0.05);
     color: var(--color-offwhite);
-    border: 1px solid rgba(212,165,116,0.3);
+    border: 1px solid rgba(168,143,117,0.3);
     padding: 6px var(--space-md);
     font-size: 12px;
     font-family: var(--font-mono);
@@ -399,13 +397,13 @@ body::before {
 
 .toolbar input:focus, .toolbar select:focus {
     outline: none;
-    border-color: var(--color-amber);
+    border-color: var(--color-steel-blue);
     background: rgba(255,255,255,0.08);
-    box-shadow: 0 0 0 3px rgba(212,165,116,0.15);
+    box-shadow: 0 0 0 3px rgba(123,158,176,0.2);
 }
 
 .toolbar input:hover, .toolbar select:hover {
-    border-color: var(--color-amber-bright);
+    border-color: var(--color-bronze);
 }
 
 .toolbar input[type="number"] { 
@@ -420,9 +418,9 @@ body::before {
 /* Toolbar Buttons */
 .toolbar button {
     padding: 6px var(--space-lg);
-    background: linear-gradient(135deg, var(--color-amber-dark) 0%, var(--color-amber) 100%);
-    color: var(--color-charcoal);
-    border: 1px solid var(--color-amber-bright);
+    background: linear-gradient(135deg, var(--color-steel-blue-dark) 0%, var(--color-steel-blue) 100%);
+    color: var(--color-offwhite);
+    border: 1px solid var(--color-steel-blue);
     cursor: pointer;
     border-radius: 4px;
     font-size: 11px;
@@ -446,8 +444,9 @@ body::before {
 }
 
 .toolbar button:hover {
-    background: linear-gradient(135deg, var(--color-amber) 0%, var(--color-amber-bright) 100%);
-    box-shadow: var(--shadow-md);
+    background: linear-gradient(135deg, var(--color-steel-blue) 0%, var(--color-bronze) 100%);
+    color: var(--color-charcoal);
+    box-shadow: var(--shadow-md), 0 0 15px rgba(123,158,176,0.3);
     transform: translateY(-1px);
 }
 
@@ -479,67 +478,13 @@ body::before {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    border-right: 2px solid rgba(212,165,116,0.2);
+    border-right: 2px solid rgba(168,143,117,0.2);
 }
 
 #map { 
     flex: 1; 
     background: #e5e3df;
     position: relative;
-}
-
-/* Map Overlay Buttons */
-.map-buttons {
-    position: absolute;
-    top: var(--space-lg);
-    left: var(--space-lg);
-    display: flex;
-    gap: var(--space-md);
-    z-index: 1000;
-}
-
-.map-buttons button {
-    padding: var(--space-md) var(--space-lg);
-    background: rgba(26,29,35,0.95);
-    border: 2px solid var(--color-amber);
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 13px;
-    font-family: var(--font-body);
-    font-weight: 600;
-    color: var(--color-amber-bright);
-    box-shadow: var(--shadow-lg);
-    transition: all var(--transition-smooth);
-    backdrop-filter: blur(10px);
-    position: relative;
-    overflow: hidden;
-}
-
-.map-buttons button::before {
-    content: '';
-    position: absolute;
-    top: 50%; left: 50%;
-    width: 0; height: 0;
-    border-radius: 50%;
-    background: rgba(212,165,116,0.2);
-    transform: translate(-50%, -50%);
-    transition: width 0.4s, height 0.4s;
-}
-
-.map-buttons button:hover::before {
-    width: 300px;
-    height: 300px;
-}
-
-.map-buttons button:hover { 
-    background: rgba(212,165,116,0.95);
-    color: var(--color-charcoal);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg), 0 0 20px rgba(212,165,116,0.4);
-}
-
-.map-buttons button:active { 
-    transform: translateY(0); 
 }
 
 /* Position Label - Coordinate Display */
@@ -553,9 +498,9 @@ body::before {
     font-size: 11px;
     font-family: var(--font-mono);
     z-index: 1000;
-    border: 1px solid var(--color-amber);
+    border: 1px solid var(--color-bronze-dark);
     box-shadow: var(--shadow-md);
-    color: var(--color-amber-bright);
+    color: var(--color-steel-blue);
     letter-spacing: 0.5px;
     backdrop-filter: blur(10px);
 }
@@ -581,7 +526,7 @@ body::before {
     top: 0; left: 0;
     width: 100%; height: 100%;
     background-image: 
-        repeating-linear-gradient(0deg, transparent, transparent 20px, rgba(212,165,116,0.03) 20px, rgba(212,165,116,0.03) 40px);
+        repeating-linear-gradient(0deg, transparent, transparent 20px, rgba(168,143,117,0.03) 20px, rgba(168,143,117,0.03) 40px);
     pointer-events: none;
 }
 
@@ -590,7 +535,7 @@ body::before {
    ============================================ */
 .tabs {
     display: flex;
-    border-bottom: 2px solid rgba(212,165,116,0.3);
+    border-bottom: 2px solid rgba(168,143,117,0.3);
     flex-shrink: 0;
     background: var(--color-charcoal-light);
     position: relative;
@@ -619,19 +564,19 @@ body::before {
     bottom: 0; left: 50%;
     width: 0%;
     height: 2px;
-    background: var(--color-amber);
+    background: var(--color-steel-blue);
     transform: translateX(-50%);
     transition: width var(--transition-smooth);
 }
 
 .tab-button:hover { 
-    background: rgba(212,165,116,0.05);
-    color: var(--color-amber-bright);
+    background: rgba(168,143,117,0.05);
+    color: var(--color-bronze);
 }
 
 .tab-button.active {
-    background: rgba(212,165,116,0.1);
-    color: var(--color-amber-bright);
+    background: rgba(168,143,117,0.1);
+    color: var(--color-bronze);
 }
 
 .tab-button.active::before {
@@ -662,7 +607,7 @@ body::before {
     margin-bottom: var(--space-xl);
     padding: var(--space-lg);
     background: rgba(255,255,255,0.02);
-    border: 1px solid rgba(212,165,116,0.15);
+    border: 1px solid rgba(168,143,117,0.15);
     border-radius: 6px;
     box-shadow: var(--shadow-sm);
     position: relative;
@@ -673,20 +618,20 @@ body::before {
     position: absolute;
     top: 0; left: 0;
     width: 4px; height: 100%;
-    background: linear-gradient(180deg, var(--color-amber) 0%, transparent 100%);
+    background: linear-gradient(180deg, var(--color-steel-blue) 0%, transparent 100%);
     border-radius: 6px 0 0 6px;
 }
 
 .section h3 {
     font-size: 13px;
     margin-bottom: var(--space-md);
-    color: var(--color-amber-bright);
+    color: var(--color-bronze);
     font-weight: 700;
     font-family: var(--font-mono);
     text-transform: uppercase;
     letter-spacing: 1.2px;
     padding-bottom: var(--space-sm);
-    border-bottom: 1px solid rgba(212,165,116,0.2);
+    border-bottom: 1px solid rgba(168,143,117,0.2);
 }
 
 .section label {
@@ -724,7 +669,7 @@ body::before {
     font-size: 11px;
     display: inline;
     margin: 0;
-    color: var(--color-amber);
+    color: var(--color-steel-blue);
     font-family: var(--font-mono);
 }
 
@@ -733,7 +678,7 @@ body::before {
     padding: 6px;
     background: rgba(255,255,255,0.05);
     color: var(--color-offwhite);
-    border: 1px solid rgba(212,165,116,0.3);
+    border: 1px solid rgba(168,143,117,0.3);
     border-radius: 3px;
     font-family: var(--font-mono);
     transition: all var(--transition-fast);
@@ -754,7 +699,7 @@ body::before {
     line-height: 1.5;
     font-style: italic;
     padding-left: var(--space-md);
-    border-left: 2px solid rgba(212,165,116,0.2);
+    border-left: 2px solid rgba(168,143,117,0.2);
 }
 
 /* ============================================
@@ -770,7 +715,7 @@ body::before {
     padding: var(--space-sm) var(--space-md);
     background: rgba(0,0,0,0.3);
     color: var(--color-offwhite);
-    border: 1px solid rgba(212,165,116,0.3);
+    border: 1px solid rgba(168,143,117,0.3);
     font-size: 11px;
     font-family: var(--font-mono);
     border-radius: 4px;
@@ -779,15 +724,15 @@ body::before {
 
 .file-select input:focus {
     outline: none;
-    border-color: var(--color-amber);
+    border-color: var(--color-steel-blue);
     background: rgba(0,0,0,0.4);
 }
 
 .file-select button {
     padding: var(--space-sm) var(--space-lg);
-    background: linear-gradient(135deg, rgba(212,165,116,0.2) 0%, rgba(212,165,116,0.3) 100%);
-    color: var(--color-amber-bright);
-    border: 1px solid var(--color-amber);
+    background: linear-gradient(135deg, rgba(168,143,117,0.2) 0%, rgba(168,143,117,0.3) 100%);
+    color: var(--color-bronze);
+    border: 1px solid var(--color-steel-blue);
     cursor: pointer;
     font-size: 11px;
     font-family: var(--font-mono);
@@ -797,7 +742,7 @@ body::before {
 }
 
 .file-select button:hover { 
-    background: linear-gradient(135deg, var(--color-amber) 0%, var(--color-amber-bright) 100%);
+    background: linear-gradient(135deg, var(--color-steel-blue) 0%, var(--color-bronze) 100%);
     color: var(--color-charcoal);
     box-shadow: var(--shadow-sm);
 }
@@ -890,10 +835,10 @@ body::before {
 .info-box {
     padding: var(--space-md);
     background: rgba(0,0,0,0.4);
-    border: 1px solid rgba(212,165,116,0.3);
-    border-left: 3px solid var(--color-amber);
+    border: 1px solid rgba(168,143,117,0.3);
+    border-left: 3px solid var(--color-steel-blue);
     font-size: 11px;
-    color: var(--color-amber-bright);
+    color: var(--color-bronze);
     white-space: pre-wrap;
     font-family: var(--font-mono);
     border-radius: 4px;
@@ -914,7 +859,7 @@ body::before {
     background: rgba(0,0,0,0.4);
     border-radius: 6px;
     overflow: hidden;
-    border: 1px solid rgba(212,165,116,0.3);
+    border: 1px solid rgba(168,143,117,0.3);
     box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
     position: relative;
 }
@@ -989,7 +934,7 @@ body::before {
     margin-top: var(--space-xs);
     font-size: 10px;
     font-family: var(--font-mono);
-    color: var(--color-amber-bright);
+    color: var(--color-bronze);
     font-style: italic;
 }
 
@@ -1008,13 +953,13 @@ body::before {
     align-items: center;
     margin-bottom: var(--space-md);
     padding-bottom: var(--space-sm);
-    border-bottom: 1px solid rgba(212,165,116,0.2);
+    border-bottom: 1px solid rgba(168,143,117,0.2);
 }
 
 .log-header h3 {
     margin: 0;
     font-family: var(--font-mono);
-    color: var(--color-amber-bright);
+    color: var(--color-bronze);
 }
 
 .small-button {
@@ -1041,7 +986,7 @@ body::before {
     flex: 1;
     overflow-y: auto;
     background: rgba(0,0,0,0.5);
-    border: 1px solid rgba(212,165,116,0.2);
+    border: 1px solid rgba(168,143,117,0.2);
     padding: var(--space-md);
     font-family: var(--font-mono);
     font-size: 11px;
@@ -1059,12 +1004,12 @@ body::before {
 }
 
 .log-output::-webkit-scrollbar-thumb {
-    background: rgba(212,165,116,0.3);
+    background: rgba(168,143,117,0.3);
     border-radius: 4px;
 }
 
 .log-output::-webkit-scrollbar-thumb:hover {
-    background: rgba(212,165,116,0.5);
+    background: rgba(168,143,117,0.5);
 }
 
 .log-entry {
@@ -1077,7 +1022,7 @@ body::before {
 
 .log-entry:hover {
     background: rgba(255,255,255,0.02);
-    border-left-color: var(--color-amber);
+    border-left-color: var(--color-steel-blue);
 }
 
 .log-entry.info { 
@@ -1090,8 +1035,8 @@ body::before {
 }
 
 .log-entry.warning { 
-    color: var(--color-amber-bright);
-    border-left-color: var(--color-amber);
+    color: var(--color-bronze);
+    border-left-color: var(--color-steel-blue);
 }
 
 .log-entry.error { 
@@ -1111,13 +1056,13 @@ body::before {
 }
 
 .control-panel::-webkit-scrollbar-thumb {
-    background: rgba(212,165,116,0.3);
+    background: rgba(168,143,117,0.3);
     border-radius: 5px;
     border: 2px solid var(--color-charcoal);
 }
 
 .control-panel::-webkit-scrollbar-thumb:hover {
-    background: rgba(212,165,116,0.5);
+    background: rgba(168,143,117,0.5);
 }
 
 /* ============================================
@@ -1136,7 +1081,7 @@ body::before {
 button:focus-visible,
 input:focus-visible,
 select:focus-visible {
-    outline: 2px solid var(--color-amber);
+    outline: 2px solid var(--color-steel-blue);
     outline-offset: 2px;
 }
 
@@ -1150,7 +1095,7 @@ select:focus-visible {
     left: 50%;
     transform: translate(-50%, -50%);
     font-size: 20px;
-    color: rgba(212,165,116,0.1);
+    color: rgba(168,143,117,0.1);
     pointer-events: none;
     animation: compassRotate 60s linear infinite;
 }
@@ -1341,16 +1286,6 @@ document.getElementById('gotoBtn').addEventListener('click', () => {
     
     map.setView([lat, lon], map.getZoom());
     log(\`Navigated to: \${lat.toFixed(5)}, \${lon.toFixed(5)}\`, 'info');
-});
-
-// Zoom 按钮
-document.getElementById('zoomInBtn').addEventListener('click', () => {
-    map.zoomIn();
-    log(\`Zoomed in to level \${map.getZoom()}\`, 'info');
-});
-document.getElementById('zoomOutBtn').addEventListener('click', () => {
-    map.zoomOut();
-    log(\`Zoomed out to level \${map.getZoom()}\`, 'info');
 });
 
 // Clear Selection
