@@ -146,6 +146,11 @@
         "category": "HoneyGUI"
       },
       {
+        "command": "honeygui.mapTools",
+        "title": "%command.mapTools%",
+        "category": "HoneyGUI"
+      },
+      {
         "command": "honeygui.openInTextEditor",
         "title": "%command.openInTextEditor%",
         "category": "HoneyGUI"
