@@ -647,6 +647,7 @@ const zhCN = {
   'compressionRLE': 'RLE',
   'compressionFastLZ': 'FastLZ',
   'compressionYUV': 'YUV（有损）',
+  'compressionJPEG': 'JPEG（有损）',
   'compressionAdaptive': '无损自适应',
   'compressionInherit': '继承',
   'adaptiveCompressionHint': '比较 FastLZ、RLE 和不压缩，选择最小的结果',
@@ -659,6 +660,15 @@ const zhCN = {
   'ditherHint': '使用误差扩散减少色彩损失带来的色带（推荐用于 RGB565）',
   'Font files do not require conversion settings': '字体文件无需转换设置',
   'Copy only (no format conversion)': '直接拷贝（不进行格式转换）',
+
+  // JPEG 参数
+  'jpegParameters': 'JPEG 参数',
+  'jpegQuality': '质量 (1-31)',
+  'jpegQualityHint': '数值越小质量越高、文件越大。推荐：5-10',
+  'jpegBackgroundColor': '背景色',
+  'jpegBackgroundColorHint': '用于透明图片（如 PNG）的背景填充',
+  'jpegGrayscale': '灰度',
+  'jpegRequiresFFmpeg': 'JPEG 压缩需要安装 FFmpeg 并添加到系统 PATH',
 
   // Collaboration
   'Collaboration': '多人协作',

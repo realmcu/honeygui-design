@@ -202,3 +202,114 @@
   margin-top: 4px;
   font-style: italic;
 }
+
+/* JPEG params section */
+.jpeg-params-section {
+  margin-top: 12px;
+  padding: 12px;
+  background-color: var(--vscode-textBlockQuote-background);
+  border-radius: 4px;
+  border: 1px solid var(--vscode-panel-border);
+}
+
+.jpeg-params-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--vscode-foreground);
+  margin-bottom: 12px;
+}
+
+.jpeg-params-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.jpeg-param-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.jpeg-param-item label {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  margin-bottom: 4px;
+}
+
+.jpeg-param-item select {
+  padding: 4px 6px;
+  font-size: 12px;
+  width: 100%;
+  border: 1px solid var(--vscode-input-border);
+  border-radius: 2px;
+  background-color: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+}
+
+.jpeg-quality-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.jpeg-quality-control input[type="range"] {
+  flex: 1;
+  height: 4px;
+  cursor: pointer;
+  accent-color: var(--vscode-focusBorder);
+}
+
+.jpeg-quality-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--vscode-foreground);
+  min-width: 24px;
+  text-align: center;
+}
+
+.jpeg-color-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.jpeg-color-picker {
+  width: 28px;
+  height: 28px;
+  padding: 2px;
+  border: 1px solid var(--vscode-input-border);
+  border-radius: 2px;
+  background-color: var(--vscode-input-background);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* 隐藏取色器中的吸管按钮 */
+.jpeg-color-picker::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.jpeg-color-text {
+  flex: 1;
+  padding: 4px 6px;
+  font-size: 12px;
+  border: 1px solid var(--vscode-input-border);
+  border-radius: 2px;
+  background-color: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+}
+
+.jpeg-color-text:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+.jpeg-color-label {
+  font-size: 12px;
+  color: var(--vscode-foreground);
+}
+
+.jpeg-ffmpeg-hint {
+  margin-top: 8px;
+  color: var(--vscode-editorWarning-foreground, #cca700);
+}

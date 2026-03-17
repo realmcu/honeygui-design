@@ -647,6 +647,7 @@ const en = {
   'compressionRLE': 'RLE',
   'compressionFastLZ': 'FastLZ',
   'compressionYUV': 'YUV (lossy)',
+  'compressionJPEG': 'JPEG (lossy)',
   'compressionAdaptive': 'Adaptive (lossless)',
   'compressionInherit': 'Inherit',
   'adaptiveCompressionHint': 'Compares FastLZ, RLE, and no compression, selects smallest',
@@ -659,6 +660,15 @@ const en = {
   'ditherHint': 'Reduces color banding using error diffusion (Recommended for RGB565)',
   'Font files do not require conversion settings': 'Font files do not require conversion settings',
   'Copy only (no format conversion)': 'Copy only (no format conversion)',
+
+  // JPEG Parameters
+  'jpegParameters': 'JPEG Parameters',
+  'jpegQuality': 'Quality (1-31)',
+  'jpegQualityHint': 'Lower value = higher quality, larger file. Recommended: 5-10',
+  'jpegBackgroundColor': 'Background Color',
+  'jpegBackgroundColorHint': 'Used for transparent images (PNG etc.)',
+  'jpegGrayscale': 'Grayscale',
+  'jpegRequiresFFmpeg': 'JPEG compression requires FFmpeg installed and in PATH',
 
   // Collaboration
   'Collaboration': 'Collaboration',

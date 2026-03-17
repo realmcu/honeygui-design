@@ -176,6 +176,7 @@ export type CompressionMethod =
   | 'rle'
   | 'fastlz'
   | 'yuv'
+  | 'jpeg'
   | 'adaptive'
   | 'inherit';
 
@@ -202,6 +203,23 @@ export interface YuvParams {
 }
 
 /**
+ * JPEG 采样方式
+ */
+export type JpegSampling = 'YUV420' | 'YUV422' | 'YUV444' | 'Grayscale';
+
+/**
+ * JPEG 压缩参数
+ */
+export interface JpegParams {
+  /** 采样方式 */
+  sampling: JpegSampling;
+  /** 编码质量 1-31，数值越小质量越高 */
+  quality: number;
+  /** 透明图片背景色 */
+  backgroundColor?: string;
+}
+
+/**
  * 单个项目（文件夹或图片）的配置
  */
 export interface ItemSettings {
@@ -217,6 +235,8 @@ export interface ItemSettings {
   compression?: CompressionMethod;
   /** YUV 压缩参数（仅当 compression 为 'yuv' 时有效） */
   yuvParams?: YuvParams;
+  /** JPEG 压缩参数（仅当 compression 为 'jpeg' 时有效） */
+  jpegParams?: JpegParams;
   /** 是否启用抖动（减少色彩损失） */
   dither?: boolean;
   /** 字体：不转换格式，直接拷贝原文件 */
@@ -245,6 +265,8 @@ export interface ResolvedConfig {
   compression: CompressionMethod;
   /** YUV 压缩参数 */
   yuvParams?: YuvParams;
+  /** JPEG 压缩参数 */
+  jpegParams?: JpegParams;
   /** 是否启用抖动 */
   dither?: boolean;
   /** 是否继承自父级 */

@@ -9,6 +9,7 @@ import { Model3DConverterService } from '../services/Model3DConverterService';
 import { FontConverterService, FontConvertOptions } from '../services/FontConverterService';
 import { GlassConverterService, GlassConvertOptions, GlassConvertResult } from '../services/GlassConverterService';
 import { ConversionConfigService, VideoFormat, ConversionConfig, YuvBlur } from '../services/ConversionConfigService';
+import { SamplingFactor } from '../../tools/image-to-jpeg-converter/src/index';
 import { ProjectConfig, DEFAULT_ROMFS_BASE_ADDR } from '../common/ProjectConfig';
 import { RomfsConfig } from '../common/RomfsConfig';
 import { buildSConstruct } from './SConstructTemplate';
@@ -1031,6 +1032,19 @@ Return('objs')
             options.yuvSampleMode = resolvedConfig.yuvParams.sampling.toLowerCase() as YuvSampleMode;
             options.yuvBlurBits = this.parseYuvBlurBits(resolvedConfig.yuvParams.blur);
             options.yuvFastlz = resolvedConfig.yuvParams.fastlzSecondary;
+        }
+        
+        // 如果是 JPEG 压缩，添加 JPEG 参数
+        if (resolvedConfig.compression === 'jpeg' && resolvedConfig.jpegParams) {
+            const samplingMap: Record<string, SamplingFactor> = {
+                'yuv420': SamplingFactor.YUV420,
+                'yuv422': SamplingFactor.YUV422,
+                'yuv444': SamplingFactor.YUV444,
+                'grayscale': SamplingFactor.Grayscale
+            };
+            options.jpegSampling = samplingMap[resolvedConfig.jpegParams.sampling.toLowerCase()] || SamplingFactor.YUV420;
+            options.jpegQuality = resolvedConfig.jpegParams.quality;
+            options.jpegBackgroundColor = resolvedConfig.jpegParams.backgroundColor;
         }
         
         // adaptive 压缩直接传递，由 ImageConverterService.convert 自动比较 RLE/FastLZ 选最优

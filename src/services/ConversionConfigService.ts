@@ -28,6 +28,7 @@ export type CompressionMethod =
   | 'rle'
   | 'fastlz'
   | 'yuv'
+  | 'jpeg'
   | 'adaptive'
   | 'inherit';
 
@@ -40,6 +41,22 @@ export type YuvSampling = 'YUV444' | 'YUV422' | 'YUV411';
  * YUV 模糊程度
  */
 export type YuvBlur = 'none' | '1bit' | '2bit' | '4bit';
+
+/**
+ * JPEG 采样方式
+ */
+export type JpegSampling = 'YUV420' | 'YUV422' | 'YUV444' | 'Grayscale';
+
+/**
+ * JPEG 压缩参数
+ */
+export interface JpegParams {
+  sampling: JpegSampling;
+  /** 编码质量 1-31，数值越小质量越高 */
+  quality: number;
+  /** 透明图片背景色，默认 'black' */
+  backgroundColor?: string;
+}
 
 /**
  * YUV 压缩参数
@@ -67,7 +84,10 @@ export interface ItemSettings {
   /** 抖动处理 */
   dither?: boolean;
   /** YUV 压缩参数 */
-  yuvParams?: YuvParams;  /** 字体：不转换格式，直接拷贝原文件 */
+  yuvParams?: YuvParams;
+  /** JPEG 压缩参数 */
+  jpegParams?: JpegParams;
+  /** 字体：不转换格式，直接拷贝原文件 */
   fontCopyOnly?: boolean;}
 
 /**
@@ -87,6 +107,7 @@ export interface ResolvedConfig {
   format: Exclude<TargetFormat, 'inherit' | 'adaptive16' | 'adaptive24'>;
   compression: Exclude<CompressionMethod, 'inherit'>;
   yuvParams?: YuvParams;
+  jpegParams?: JpegParams;
   dither?: boolean;
   isInherited: boolean;
   inheritedFrom?: string;
@@ -115,6 +136,15 @@ const DEFAULT_YUV_PARAMS: YuvParams = {
   sampling: 'YUV422',
   blur: 'none',
   fastlzSecondary: false
+};
+
+/**
+ * 默认 JPEG 参数
+ */
+const DEFAULT_JPEG_PARAMS: JpegParams = {
+  sampling: 'YUV420',
+  quality: 10,
+  backgroundColor: 'black'
 };
 
 /**
@@ -309,6 +339,12 @@ export class ConversionConfigService {
       result.yuvParams = { ...settings.yuvParams };
     } else if (resolvedCompression === 'yuv') {
       result.yuvParams = { ...DEFAULT_YUV_PARAMS };
+    }
+    
+    if (resolvedCompression === 'jpeg' && settings.jpegParams) {
+      result.jpegParams = { ...settings.jpegParams };
+    } else if (resolvedCompression === 'jpeg') {
+      result.jpegParams = { ...DEFAULT_JPEG_PARAMS };
     }
     
     return result;

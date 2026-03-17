@@ -23,7 +23,8 @@
   "include": [
     "src/**/*",
     "test/**/*",
-    "tools/video-converter-ts/src/**/*"
+    "tools/video-converter-ts/src/**/*",
+    "tools/image-to-jpeg-converter/src/**/*"
   ],
   "exclude": [
     "node_modules",

@@ -13,6 +13,7 @@ import {
   CompressionMethod,
   YuvSampling,
   YuvBlur,
+  JpegSampling,
   ItemSettings,
   ConversionConfig,
 } from '../types';
@@ -69,6 +70,7 @@ const FOLDER_COMPRESSION_OPTIONS: { value: CompressionMethod; label: string }[] 
   { value: 'rle', label: 'compressionRLE' },
   { value: 'fastlz', label: 'compressionFastLZ' },
   { value: 'yuv', label: 'compressionYUV' },
+  { value: 'jpeg', label: 'compressionJPEG' },
   { value: 'adaptive', label: 'compressionAdaptive' },
 ];
 
@@ -79,6 +81,7 @@ const COMPRESSION_OPTIONS: { value: CompressionMethod; label: string }[] = [
   { value: 'rle', label: 'compressionRLE' },
   { value: 'fastlz', label: 'compressionFastLZ' },
   { value: 'yuv', label: 'compressionYUV' },
+  { value: 'jpeg', label: 'compressionJPEG' },
   { value: 'adaptive', label: 'compressionAdaptive' },
 ];
 
@@ -95,6 +98,14 @@ const YUV_BLUR_OPTIONS: { value: YuvBlur; label: string }[] = [
   { value: '1bit', label: '1bit' },
   { value: '2bit', label: '2bit' },
   { value: '4bit', label: '4bit' },
+];
+
+// JPEG 采样方式选项
+const JPEG_SAMPLING_OPTIONS: { value: JpegSampling; label: string }[] = [
+  { value: 'YUV420', label: 'YUV 4:2:0' },
+  { value: 'YUV422', label: 'YUV 4:2:2' },
+  { value: 'YUV444', label: 'YUV 4:4:4' },
+  { value: 'Grayscale', label: 'jpegGrayscale' },
 ];
 
 
@@ -127,6 +138,8 @@ const getCompressionLabel = (compression: CompressionMethod): string => {
       return t('compressionFastLZ');
     case 'yuv':
       return t('compressionYUV');
+    case 'jpeg':
+      return t('compressionJPEG');
     case 'adaptive':
       return t('compressionAdaptive');
     case 'inherit':
@@ -488,6 +501,18 @@ const ConversionConfigPanel: React.FC<ConversionConfigPanelProps> = () => {
       if (newCompression !== 'yuv') {
         delete newSettings.yuvParams;
       }
+      // 如果选择 JPEG，添加默认 JPEG 参数
+      if (newCompression === 'jpeg' && !newSettings.jpegParams) {
+        newSettings.jpegParams = {
+          sampling: 'YUV420',
+          quality: 10,
+          backgroundColor: 'black',
+        };
+      }
+      // 如果不是 JPEG，移除 JPEG 参数
+      if (newCompression !== 'jpeg') {
+        delete newSettings.jpegParams;
+      }
       updateAssetConfig(assetPath, newSettings);
     },
     [selectedAsset, currentSettings, updateAssetConfig]
@@ -558,6 +583,58 @@ const ConversionConfigPanel: React.FC<ConversionConfigPanelProps> = () => {
     [selectedAsset, currentSettings, updateAssetConfig]
   );
 
+  // 处理 JPEG 采样方式变更
+  const handleJpegSamplingChange = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      if (!selectedAsset) return;
+      const newSampling = e.target.value as JpegSampling;
+      const assetPath = selectedAsset.relativePath || selectedAsset.name;
+      updateAssetConfig(assetPath, {
+        ...currentSettings,
+        jpegParams: {
+          ...(currentSettings.jpegParams || { sampling: 'YUV420', quality: 10, backgroundColor: 'black' }),
+          sampling: newSampling,
+        },
+      });
+    },
+    [selectedAsset, currentSettings, updateAssetConfig]
+  );
+
+  // 处理 JPEG 质量变更
+  const handleJpegQualityChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!selectedAsset) return;
+      const value = parseInt(e.target.value, 10);
+      if (isNaN(value) || value < 1 || value > 31) return;
+      const assetPath = selectedAsset.relativePath || selectedAsset.name;
+      updateAssetConfig(assetPath, {
+        ...currentSettings,
+        jpegParams: {
+          ...(currentSettings.jpegParams || { sampling: 'YUV420', quality: 10, backgroundColor: 'black' }),
+          quality: value,
+        },
+      });
+    },
+    [selectedAsset, currentSettings, updateAssetConfig]
+  );
+
+  // 处理 JPEG 背景色变更
+  const handleJpegBackgroundColorChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!selectedAsset) return;
+      const newColor = e.target.value;
+      const assetPath = selectedAsset.relativePath || selectedAsset.name;
+      updateAssetConfig(assetPath, {
+        ...currentSettings,
+        jpegParams: {
+          ...(currentSettings.jpegParams || { sampling: 'YUV420', quality: 10, backgroundColor: 'black' }),
+          backgroundColor: newColor,
+        },
+      });
+    },
+    [selectedAsset, currentSettings, updateAssetConfig]
+  );
+
   // 如果没有选中资源，显示提示
   if (!selectedAsset) {
     return (
@@ -578,6 +655,7 @@ const ConversionConfigPanel: React.FC<ConversionConfigPanelProps> = () => {
   const currentVideoFormat = currentSettings.videoFormat || (isFolder ? 'MJPEG' : 'inherit');
   const currentCompression = currentSettings.compression || 'inherit';
   const showYuvParams = currentCompression === 'yuv' || effectiveSettings.settings.compression === 'yuv';
+  const showJpegParams = currentCompression === 'jpeg' || effectiveSettings.settings.compression === 'jpeg';
 
   // 渲染图片设置区域
   const renderImageSettings = () => (
@@ -696,6 +774,64 @@ const ConversionConfigPanel: React.FC<ConversionConfigPanelProps> = () => {
               <label htmlFor="fastlzSecondary">{t('FastLZ Secondary Compression')}</label>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* JPEG 参数配置 */}
+      {showJpegParams && (
+        <div className="jpeg-params-section">
+          <div className="jpeg-params-title">{t('jpegParameters')}</div>
+          <div className="jpeg-params-grid">
+            <div className="jpeg-param-item">
+              <label>{t('Sampling')}</label>
+              <select
+                value={currentSettings.jpegParams?.sampling || effectiveSettings.settings.jpegParams?.sampling || 'YUV420'}
+                onChange={handleJpegSamplingChange}
+              >
+                {JPEG_SAMPLING_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label.startsWith('jpeg') ? t(option.label as any) : option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="jpeg-param-item">
+              <label>{t('jpegQuality')}</label>
+              <div className="jpeg-quality-control">
+                <input
+                  type="range"
+                  min={1}
+                  max={31}
+                  value={currentSettings.jpegParams?.quality ?? effectiveSettings.settings.jpegParams?.quality ?? 10}
+                  onChange={handleJpegQualityChange}
+                />
+                <span className="jpeg-quality-value">
+                  {currentSettings.jpegParams?.quality ?? effectiveSettings.settings.jpegParams?.quality ?? 10}
+                </span>
+              </div>
+              <div className="config-hint">{t('jpegQualityHint')}</div>
+            </div>
+            <div className="jpeg-param-item">
+              <label>{t('jpegBackgroundColor')}</label>
+              <div className="jpeg-color-control">
+                <input
+                  type="color"
+                  className="jpeg-color-picker"
+                  value={currentSettings.jpegParams?.backgroundColor || effectiveSettings.settings.jpegParams?.backgroundColor || '#000000'}
+                  onChange={handleJpegBackgroundColorChange}
+                />
+                <input
+                  type="text"
+                  className="jpeg-color-text"
+                  value={currentSettings.jpegParams?.backgroundColor || effectiveSettings.settings.jpegParams?.backgroundColor || 'black'}
+                  onChange={handleJpegBackgroundColorChange}
+                  placeholder="black, #FF0000..."
+                />
+              </div>
+              <div className="config-hint">{t('jpegBackgroundColorHint')}</div>
+            </div>
+          </div>
+          <div className="config-hint jpeg-ffmpeg-hint">⚠️ {t('jpegRequiresFFmpeg')}</div>
         </div>
       )}
     </div>

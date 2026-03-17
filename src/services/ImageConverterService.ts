@@ -4,8 +4,9 @@ import { ImageConverter } from '../../tools/image-converter/converter';
 import { PixelFormat } from '../../tools/image-converter/types';
 import { RLECompression, FastLzCompression, YUVCompression } from '../../tools/image-converter/compress';
 import { ConversionConfigService, ConversionConfig, TargetFormat, CompressionMethod, YuvBlur } from './ConversionConfigService';
+import { convertToJpeg, SamplingFactor } from '../../tools/image-to-jpeg-converter/src/index';
 
-export type CompressionType = 'none' | 'rle' | 'fastlz' | 'yuv' | 'adaptive';
+export type CompressionType = 'none' | 'rle' | 'fastlz' | 'yuv' | 'jpeg' | 'adaptive';
 export type YuvSampleMode = 'yuv444' | 'yuv422' | 'yuv411';
 export type YuvBlurBits = 0 | 1 | 2 | 4;
 
@@ -16,6 +17,12 @@ export interface ImageConvertOptions {
     yuvBlurBits?: YuvBlurBits;
     yuvFastlz?: boolean;
     dither?: boolean;
+    /** JPEG 采样方式 */
+    jpegSampling?: SamplingFactor;
+    /** JPEG 编码质量 1-31，越小质量越高 */
+    jpegQuality?: number;
+    /** JPEG 透明图片背景色 */
+    jpegBackgroundColor?: string;
 }
 
 export interface ConvertResult {
@@ -82,6 +89,11 @@ export class ImageConverterService {
                 const mappedFormat = formatMap[opts.format.toLowerCase()];
                 // 使用 !== undefined 而不是 || 来避免 0 值被当作 falsy
                 pixelFormat = mappedFormat !== undefined ? mappedFormat : 'auto';
+            }
+
+            // JPEG 走独立管线（FFmpeg），不走 ImageConverter
+            if (opts.compression === 'jpeg') {
+                return await this.convertToJpegFormat(inputPath, outputPath, opts);
             }
 
             // 自适应压缩：分别用 RLE 和 FastLZ 转换，比较文件大小，保留更小的
@@ -178,6 +190,40 @@ export class ImageConverterService {
         this.converter.setCompressor(undefined);
 
         return { success: true, inputPath, outputPath };
+    }
+
+    /**
+     * JPEG 转换：使用 FFmpeg 将图片转换为带自定义头的 JPEG 二进制文件
+     */
+    private async convertToJpegFormat(
+        inputPath: string,
+        outputPath: string,
+        opts: ImageConvertOptions
+    ): Promise<ConvertResult> {
+        try {
+            // 映射采样参数
+            const samplingFactor = opts.jpegSampling || SamplingFactor.YUV420;
+            const quality = opts.jpegQuality || 10;
+            const backgroundColor = opts.jpegBackgroundColor || 'black';
+
+            // 确保输出目录存在
+            const outputDir = path.dirname(outputPath);
+            if (!fs.existsSync(outputDir)) {
+                fs.mkdirSync(outputDir, { recursive: true });
+            }
+
+            await convertToJpeg({
+                inputPath,
+                outputPath,
+                samplingFactor,
+                quality,
+                backgroundColor
+            });
+
+            return { success: true, inputPath, outputPath };
+        } catch (error: any) {
+            return { success: false, inputPath, outputPath, error: error.message || String(error) };
+        }
     }
 
     /**
@@ -282,6 +328,19 @@ export class ImageConverterService {
             options.yuvSampleMode = resolvedConfig.yuvParams.sampling.toLowerCase() as YuvSampleMode;
             options.yuvBlurBits = this.parseYuvBlurBits(resolvedConfig.yuvParams.blur);
             options.yuvFastlz = resolvedConfig.yuvParams.fastlzSecondary;
+        }
+        
+        // 如果是 JPEG 压缩，添加 JPEG 参数
+        if (resolvedConfig.compression === 'jpeg' && resolvedConfig.jpegParams) {
+            const samplingMap: Record<string, SamplingFactor> = {
+                'yuv420': SamplingFactor.YUV420,
+                'yuv422': SamplingFactor.YUV422,
+                'yuv444': SamplingFactor.YUV444,
+                'grayscale': SamplingFactor.Grayscale
+            };
+            options.jpegSampling = samplingMap[resolvedConfig.jpegParams.sampling.toLowerCase()] || SamplingFactor.YUV420;
+            options.jpegQuality = resolvedConfig.jpegParams.quality;
+            options.jpegBackgroundColor = resolvedConfig.jpegParams.backgroundColor;
         }
         
         // adaptive 压缩直接传递，由 convert 方法中自动比较 RLE/FastLZ 选最优
