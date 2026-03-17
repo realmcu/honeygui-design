@@ -221,6 +221,11 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       }
       code += `#include "gui_openclaw.h"\n`;
     }
+
+    // 蜂窝菜单组件头文件
+    if (componentTypes.includes('hg_menu_cellular')) {
+      code += `#include "gui_menu_cellular.h"\n`;
+    }
     
     // 如果有 arc group，添加头文件
     if (hasArcGroup) {
@@ -273,6 +278,26 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       toggleButtons.forEach(comp => {
         code += `extern bool ${comp.id}_get_state(void);\n`;
         code += `extern void ${comp.id}_set_state(bool state);\n`;
+      });
+    }
+
+    // hg_menu_cellular switch_view 回调函数声明
+    const menuCellularComponents = this.components.filter(c => c.type === 'hg_menu_cellular');
+    if (menuCellularComponents.length > 0) {
+      const { MenuCellularGenerator } = require('./components/MenuCellularGenerator');
+      menuCellularComponents.forEach(comp => {
+        const iconActions: any[] = Array.isArray(comp.data?.iconActions) ? comp.data.iconActions : [];
+        const hasAnyAction = iconActions.some((a: any) => a && a.target && a.target.trim() !== '');
+        if (hasAnyAction) {
+          code += `\n// ${comp.id} menu cellular switch view callback declarations\n`;
+          const generator = new MenuCellularGenerator();
+          iconActions.forEach((action: any, index: number) => {
+            if (action && action.target && action.target.trim() !== '') {
+              const cbName = generator.getSwitchViewCallbackName(comp.id, index);
+              code += `void ${cbName}(void *obj, gui_event_t *e);\n`;
+            }
+          });
+        }
       });
     }
 
@@ -370,6 +395,21 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
           const generator = ComponentGeneratorFactory.getGenerator('hg_button');
           if ('generateToggleCallback' in generator) {
             code += (generator as any).generateToggleCallback(comp);
+          }
+        }
+      });
+    }
+
+    // 生成 hg_menu_cellular 的 switch_view 回调函数
+    const hasMenuCellular = this.components.some(c => c.type === 'hg_menu_cellular');
+    if (hasMenuCellular) {
+      const { MenuCellularGenerator } = require('./components/MenuCellularGenerator');
+      this.components.forEach(comp => {
+        if (comp.type === 'hg_menu_cellular') {
+          const generator = new MenuCellularGenerator();
+          const cbCode = generator.generateSwitchViewCallbacks(comp);
+          if (cbCode) {
+            code += cbCode;
           }
         }
       });
@@ -952,6 +992,8 @@ static void ${component.id}_breath_anim_cb(void *p)
         return 'gui_vector_map_t';
       case 'hg_openclaw':
         return 'gui_openclaw_t';
+      case 'hg_menu_cellular':
+        return 'gui_menu_cellular_t';
       default:
         // 其他未实现的组件使用 gui_obj_t
         return 'gui_obj_t';

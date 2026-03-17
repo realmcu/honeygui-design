@@ -10,6 +10,8 @@ import { TimerAction, TimerConfig } from '../../../hml/types';
 interface BasePropertiesProps extends PropertyPanelProps {
   disableSize?: boolean;
   sizeTooltip?: string;
+  disablePosition?: boolean;  // 是否禁用 x/y 编辑（固定为 0）
+  positionTooltip?: string;   // x/y 禁用时的提示文字
   hideParent?: boolean;  // 是否隐藏父对象选择（用于 hg_view 等顶级容器）
   disableParent?: boolean;  // 是否禁用父对象选择（用于 hg_list_item）
   children?: React.ReactNode;  // 允许插入自定义内容
@@ -21,6 +23,8 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
   components = [],
   disableSize = false,
   sizeTooltip,
+  disablePosition = false,
+  positionTooltip,
   hideParent = false,
   disableParent = false,
   children,
@@ -242,6 +246,8 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
                 type="number"
                 value={component.position.x}
                 onChange={(value) => handlePositionChange('x', value)}
+                disabled={disablePosition}
+                title={positionTooltip}
               />
             </div>
             <div>
@@ -250,6 +256,8 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
                 type="number"
                 value={component.position.y}
                 onChange={(value) => handlePositionChange('y', value)}
+                disabled={disablePosition}
+                title={positionTooltip}
               />
             </div>
             <div>

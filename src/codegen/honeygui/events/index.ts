@@ -55,6 +55,9 @@ export class EventGeneratorFactory {
     this.generators.set('hg_circle', new CircleEventGenerator());
     this.generators.set('hg_rect', new RectEventGenerator());
     this.generators.set('hg_svg', new SvgEventGenerator());
+    
+    // 蜂窝菜单（使用默认事件生成器）
+    this.generators.set('hg_menu_cellular', new DefaultEventGenerator());
   }
 
   static getGenerator(componentType: string): EventCodeGenerator {

@@ -784,6 +784,19 @@ const en = {
   'Angular gradient along circumference, from start angle to end angle': 'Angular gradient along circumference, from start angle to end angle',
   'Linear gradient from start to end in selected direction': 'Linear gradient from start to end in selected direction',
 
+  // HgMenuCellularProperties
+  'Menu Cellular': 'Menu Cellular',
+  'Icon Configuration': 'Icon Configuration',
+  'Icon Folder': 'Icon Folder',
+  'Icon Folder Path': 'Icon Folder Path',
+  'Icon Count': 'Icon Count: {count} image(s)',
+  'Icon Size': 'Icon Size',
+  'Offset': 'Offset',
+  'Click Callbacks': 'Click Callbacks',
+  'Callback {index}': 'Callback [{index}]',
+  'hg_menu_cellular size is determined by project resolution and cannot be modified': 'hg_menu_cellular size is determined by project resolution and cannot be modified',
+  'hg_menu_cellular position is fixed at (0,0) and cannot be modified': 'hg_menu_cellular position is fixed at (0,0) and cannot be modified',
+
   // Vector Map
   'Vector Map': 'Vector Map',
   'Map File (.trmap)': 'Map File (.trmap)',

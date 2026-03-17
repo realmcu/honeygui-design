@@ -478,16 +478,28 @@ const componentDefinitions: ComponentDefinition[] = [
       { name: 'senderId', label: 'Sender ID', type: 'string', defaultValue: 'user1', group: 'data' },
     ],
   },
+  {
+    type: 'hg_menu_cellular',
+    name: 'Menu Cellular',
+    icon: '⬡',
+    defaultSize: { width: 0, height: 0 }, // 创建时动态设置为项目分辨率
+    properties: [
+      { name: 'iconFolder', label: 'Icon Folder', type: 'string', defaultValue: '', group: 'data' },
+      { name: 'iconSize',   label: 'Icon Size',   type: 'number', defaultValue: 64,  group: 'data' },
+      { name: 'offsetX',    label: 'Offset X',    type: 'number', defaultValue: 0,   group: 'data' },
+      { name: 'offsetY',    label: 'Offset Y',    type: 'number', defaultValue: 0,   group: 'data' },
+    ],
+  },
 ];
 
 // Component categories - hg_time_label 不在组件库中直接显示，只能通过右键标签控件创建
 const componentCategories = [
-  { name: 'Containers', types: ['hg_view', 'hg_window', 'hg_canvas', 'hg_list'] },
+  { name: 'Containers', types: ['hg_view', 'hg_window', 'hg_canvas', 'hg_list', 'hg_menu_cellular'] },
   { name: 'Basic Controls', types: ['hg_button', 'hg_label', 'hg_image'] },
   { name: 'Input Controls', types: ['hg_input', 'hg_checkbox', 'hg_radio'] },
   { name: 'Graphics', types: ['hg_arc', 'hg_circle', 'hg_rect', 'hg_svg', 'hg_glass', 'hg_particle'] },
   { name: 'Multimedia', types: ['hg_video', 'hg_gif', 'hg_3d', 'hg_lottie'] },
-  { name: 'Mini App', types: ['hg_map', 'hg_openclaw'] }
+  { name: 'Mini App', types: ['hg_map', 'hg_openclaw'] },
 ];
 
 /**

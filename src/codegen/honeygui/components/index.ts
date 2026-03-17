@@ -26,6 +26,7 @@ import { TimeLabelGenerator } from './TimeLabelGenerator';
 import { ParticleGenerator } from './ParticleGenerator';
 import { MapGenerator } from './MapGenerator';
 import { OpenClawGenerator } from './OpenClawGenerator';
+import { MenuCellularGenerator } from './MenuCellularGenerator';
 import { DefaultGenerator } from './DefaultGenerator';
 
 export class ComponentGeneratorFactory {
@@ -36,6 +37,7 @@ export class ComponentGeneratorFactory {
     // 容器组件
     this.generators.set('hg_view', new ViewGenerator());
     this.generators.set('hg_window', new WindowGenerator());
+    this.generators.set('hg_menu_cellular', new MenuCellularGenerator());
     
     // 基础控件
     this.generators.set('hg_button', new ButtonGenerator());

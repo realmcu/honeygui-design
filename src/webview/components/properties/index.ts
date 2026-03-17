@@ -10,6 +10,7 @@ import { ListItemProperties } from './ListItemProperties';
 import { GeometryProperties } from './GeometryProperties';
 import { DefaultProperties } from './DefaultProperties';
 import { HgParticleProperties } from './HgParticleProperties';
+import { HgMenuCellularProperties } from './HgMenuCellularProperties';
 import { PropertyPanelProps } from './types';
 
 export const propertyPanelRegistry: Record<ComponentType, React.FC<PropertyPanelProps>> = {
@@ -41,6 +42,7 @@ export const propertyPanelRegistry: Record<ComponentType, React.FC<PropertyPanel
   hg_particle: HgParticleProperties,
   hg_map: DefaultProperties,
   hg_openclaw: DefaultProperties,
+  hg_menu_cellular: HgMenuCellularProperties,
 };
 
 export { HgViewProperties } from './HgViewProperties';
@@ -54,6 +56,7 @@ export { ListItemProperties } from './ListItemProperties';
 export { GeometryProperties } from './GeometryProperties';
 export { DefaultProperties } from './DefaultProperties';
 export { HgParticleProperties } from './HgParticleProperties';
+export { HgMenuCellularProperties } from './HgMenuCellularProperties';
 export { BaseProperties } from './BaseProperties';
 export { PropertyEditor } from './PropertyEditor';
 export type { PropertyPanelProps, PropertyEditorProps } from './types';

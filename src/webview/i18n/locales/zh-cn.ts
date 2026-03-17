@@ -786,6 +786,19 @@ const zhCN = {
   'Pressed Opacity': '按下透明度',
   'Released Opacity': '松开透明度',
 
+  // HgMenuCellularProperties
+  'Menu Cellular': '蜂窝菜单',
+  'Icon Configuration': '图标配置',
+  'Icon Folder': '图标文件夹',
+  'Icon Folder Path': '文件夹路径',
+  'Icon Count': '图片数量：{count} 张',
+  'Icon Size': '图标尺寸',
+  'Offset': '偏移量',
+  'Click Callbacks': '点击回调',
+  'Callback {index}': '回调 [{index}]',
+  'hg_menu_cellular size is determined by project resolution and cannot be modified': 'hg_menu_cellular 的宽高由项目分辨率决定，不可修改',
+  'hg_menu_cellular position is fixed at (0,0) and cannot be modified': 'hg_menu_cellular 的坐标固定为 (0,0)，不可修改',
+
   // Vector Map
   'Vector Map': '矢量地图',
   'Map File (.trmap)': '地图文件 (.trmap)',

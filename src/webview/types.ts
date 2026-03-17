@@ -44,7 +44,8 @@ export type ComponentType =
   | 'hg_glass'
   | 'hg_particle'
   | 'hg_map'
-  | 'hg_openclaw';
+  | 'hg_openclaw'
+  | 'hg_menu_cellular';
 
 export interface ComponentDefinition {
   type: ComponentType;

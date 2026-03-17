@@ -22,7 +22,9 @@ class ComponentRegistry {
     // 容器组件
     'hg_window', 'hg_dialog', 'hg_container', 'hg_view',
     // 粒子效果组件
-    'hg_particle'
+    'hg_particle',
+    // 蜂窝菜单组件
+    'hg_menu_cellular'
   ]);
 
   static isValidComponent(name: string): boolean {
@@ -675,7 +677,9 @@ export class HmlParser {
       'timers',
       // 定时器属性（旧版，保留兼容）
       'timerEnabled', 'timerInterval', 'timerReload', 'timerMode', 'timerCallback', 
-      'timerActions', 'timerDuration', 'timerStopOnComplete'
+      'timerActions', 'timerDuration', 'timerStopOnComplete',
+      // 蜂窝菜单属性
+      'iconFolder', 'iconImages', 'iconSize', 'offsetX', 'offsetY', 'iconActions'
     ]);
 
     const metaProps = new Set([
@@ -722,7 +726,7 @@ export class HmlParser {
           value = value === 'true' || value === true;
         }
         // 数字类型属性转换（包括 opacity, timerInterval, timerDuration, timerInitialValue）
-        if (['noteNum', 'offset', 'outScope', 'opacity', 'animateStep', 'timerInterval', 'timerDuration', 'timerInitialValue', 'scrollStartOffset', 'scrollEndOffset', 'scrollInterval', 'scrollDuration'].includes(key) && typeof value === 'string') {
+        if (['noteNum', 'offset', 'outScope', 'opacity', 'animateStep', 'timerInterval', 'timerDuration', 'timerInitialValue', 'scrollStartOffset', 'scrollEndOffset', 'scrollInterval', 'scrollDuration', 'iconSize', 'offsetX', 'offsetY'].includes(key) && typeof value === 'string') {
           const num = parseFloat(value);
           value = isNaN(num) ? value : num;
         }
@@ -750,6 +754,24 @@ export class HmlParser {
             value = JSON.parse(value);
           } catch (e) {
             console.warn(`Failed to parse timers JSON: ${value}`);
+            value = [];
+          }
+        }
+        // iconImages 需要从 JSON 字符串解析为数组
+        if (key === 'iconImages' && typeof value === 'string') {
+          try {
+            value = JSON.parse(value);
+          } catch (e) {
+            console.warn(`Failed to parse iconImages JSON: ${value}`);
+            value = [];
+          }
+        }
+        // iconActions 需要从 JSON 字符串解析为数组
+        if (key === 'iconActions' && typeof value === 'string') {
+          try {
+            value = JSON.parse(value);
+          } catch (e) {
+            console.warn(`Failed to parse iconActions JSON: ${value}`);
             value = [];
           }
         }

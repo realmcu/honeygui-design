@@ -379,21 +379,49 @@ const App: React.FC = () => {
             if (component) {
               // 支持不同的属性名（src, imageOn, imageOff 等）
               const propertyName = message.propertyName || 'src';
-              const updates: any = {
+              // iconImages 是数组，追加而非覆盖
+              if (propertyName === 'iconImages') {
+                const existing: string[] = Array.isArray(component.data?.iconImages) ? component.data.iconImages : [];
+                store.updateComponent(message.componentId, {
+                  data: {
+                    ...component.data,
+                    iconImages: [...existing, message.path]
+                  }
+                });
+              } else {
+                const updates: any = {
+                  data: {
+                    ...component.data,
+                    [propertyName]: message.path
+                  }
+                };
+                // 如果有图片尺寸，同时更新组件尺寸（仅对 src 属性）
+                if (message.imageSize && propertyName === 'src') {
+                  updates.position = {
+                    ...component.position,
+                    width: message.imageSize.width,
+                    height: message.imageSize.height
+                  };
+                }
+                store.updateComponent(message.componentId, updates);
+              }
+            }
+          }
+          break;
+
+        case 'folderPathSelected':
+          // 接收后端扫描文件夹的结果，更新 hg_menu_cellular 的 iconImages 和 iconFolder
+          if (message.componentId && Array.isArray(message.imagePaths)) {
+            const store = useDesignerStore.getState();
+            const component = store.components.find(c => c.id === message.componentId);
+            if (component) {
+              store.updateComponent(message.componentId, {
                 data: {
                   ...component.data,
-                  [propertyName]: message.path
+                  iconImages: message.imagePaths,
+                  iconFolder: message.folderPath || ''
                 }
-              };
-              // 如果有图片尺寸，同时更新组件尺寸（仅对 src 属性）
-              if (message.imageSize && propertyName === 'src') {
-                updates.position = {
-                  ...component.position,
-                  width: message.imageSize.width,
-                  height: message.imageSize.height
-                };
-              }
-              store.updateComponent(message.componentId, updates);
+              });
             }
           }
           break;
@@ -1337,6 +1365,15 @@ const App: React.FC = () => {
 
     // hg_particle 特殊处理：默认宽高为屏幕宽高，因为 effect 支持自适应
     if (componentType === 'hg_particle') {
+      const projectConfig = useDesignerStore.getState().projectConfig;
+      const resolution = projectConfig?.resolution || '480X272';
+      const [resWidth, resHeight] = resolution.split('X').map(Number);
+      width = resWidth;
+      height = resHeight;
+    }
+
+    // hg_menu_cellular 特殊处理：默认宽高为屏幕分辨率
+    if (componentType === 'hg_menu_cellular') {
       const projectConfig = useDesignerStore.getState().projectConfig;
       const resolution = projectConfig?.resolution || '480X272';
       const [resWidth, resHeight] = resolution.split('X').map(Number);

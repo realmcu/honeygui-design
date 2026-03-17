@@ -904,6 +904,105 @@ export class AssetManager extends EventEmitter {
     }
 
     /**
+     * 处理选择文件夹路径（用于 hg_menu_cellular 图标集配置）
+     * 弹出文件夹选择对话框，扫描图片文件，将路径列表返回前端
+     */
+    public async handleSelectFolderPath(componentId: string, currentFilePath: string | undefined): Promise<void> {
+        try {
+            const options: vscode.OpenDialogOptions = {
+                canSelectFiles: false,
+                canSelectFolders: true,
+                canSelectMany: false,
+                openLabel: vscode.l10n.t('Select Folder')
+            };
+
+            const folderUri = await vscode.window.showOpenDialog(options);
+            if (folderUri && folderUri.length > 0) {
+                const folderPath = folderUri[0].fsPath;
+
+                if (!currentFilePath) {
+                    vscode.window.showErrorMessage(vscode.l10n.t('Cannot determine project path'));
+                    return;
+                }
+
+                const projectRoot = ProjectUtils.findProjectRoot(currentFilePath);
+                if (!projectRoot) {
+                    vscode.window.showErrorMessage(vscode.l10n.t('Cannot find project root (project.json)'));
+                    return;
+                }
+
+                const assetsDir = path.join(projectRoot, 'assets');
+                const imageExtensions = ['.png', '.jpg', '.jpeg', '.bmp'];
+
+                // 读取文件夹中的图片文件
+                let files: string[] = [];
+                try {
+                    files = await fs.promises.readdir(folderPath);
+                } catch (e) {
+                    logger.warn(`[AssetManager] 无法读取文件夹: ${folderPath}, ${e}`);
+                    vscode.window.showErrorMessage(vscode.l10n.t('Failed to read folder'));
+                    return;
+                }
+
+                const imageFiles = files
+                    .filter(file => imageExtensions.includes(path.extname(file).toLowerCase()))
+                    .sort();
+
+                // 检查文件夹是否已在 assets 目录中
+                const normalizedFolderPath = path.normalize(folderPath);
+                const normalizedAssetsDir = path.normalize(assetsDir);
+
+                const imagePaths: string[] = [];
+                let folderRelativePath: string;
+
+                if (normalizedFolderPath.startsWith(normalizedAssetsDir)) {
+                    // 文件夹已在 assets 目录中，直接计算相对路径
+                    folderRelativePath = path.relative(assetsDir, folderPath).replace(/\\/g, '/');
+                    for (const file of imageFiles) {
+                        const filePath = path.join(folderPath, file);
+                        const relativeToAssets = path.relative(assetsDir, filePath).replace(/\\/g, '/');
+                        imagePaths.push(`assets/${relativeToAssets}`);
+                    }
+                    logger.info(`[AssetManager] 文件夹已在 assets 目录中，找到 ${imageFiles.length} 张图片`);
+                } else {
+                    // 文件夹在外部，复制到 assets 目录
+                    const folderName = path.basename(folderPath);
+                    const targetFolder = path.join(assetsDir, folderName);
+                    folderRelativePath = folderName;
+
+                    if (!fs.existsSync(targetFolder)) {
+                        await fs.promises.mkdir(targetFolder, { recursive: true });
+                    }
+
+                    for (const file of imageFiles) {
+                        const sourcePath = path.join(folderPath, file);
+                        const targetPath = path.join(targetFolder, file);
+                        if (!fs.existsSync(targetPath)) {
+                            await fs.promises.copyFile(sourcePath, targetPath);
+                        }
+                        imagePaths.push(`assets/${folderName}/${file}`);
+                    }
+                    logger.info(`[AssetManager] 已复制 ${imageFiles.length} 张图片到 assets/${folderName}`);
+                }
+
+                // 返回扫描结果给前端
+                this._panel.webview.postMessage({
+                    command: 'folderPathSelected',
+                    componentId: componentId,
+                    imagePaths: imagePaths,
+                    folderPath: folderRelativePath
+                });
+
+                // 刷新资源列表
+                this.handleLoadAssets(currentFilePath);
+            }
+        } catch (error) {
+            logger.error(`[AssetManager] 选择文件夹路径失败: ${error}`);
+            vscode.window.showErrorMessage(vscode.l10n.t('Failed to select folder'));
+        }
+    }
+
+    /**
      * 处理选择玻璃形状路径
      */
     public async handleSelectGlassPath(componentId: string, currentFilePath: string | undefined): Promise<void> {
