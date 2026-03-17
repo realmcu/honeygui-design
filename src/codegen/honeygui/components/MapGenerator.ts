@@ -6,7 +6,7 @@
  *
  * 使用说明:
  *   - Map File (.bin) / Font File (.ttf) 通过 VFS 文件系统加载
- *   - 运行时使用 gui_vfs_open / gui_vfs_get_file_address 读取文件地址和大小
+ *   - 运行时使用 gui_lower_malloc 申请内存，然后通过 gui_vfs_read 读取文件内容
  */
 import { Component } from '../../../hml/types';
 import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';
@@ -44,9 +44,9 @@ export class MapGenerator implements ComponentCodeGenerator {
 
     // 声明变量
     code += `${indentStr}// Load map and font files via VFS for ${component.id}\n`;
-    code += `${indentStr}const uint8_t *${compIdSafe}_map_addr = NULL;\n`;
+    code += `${indentStr}uint8_t *${compIdSafe}_map_addr = NULL;\n`;
     code += `${indentStr}size_t ${compIdSafe}_map_size = 0;\n`;
-    code += `${indentStr}const uint8_t *${compIdSafe}_ttf_addr = NULL;\n`;
+    code += `${indentStr}uint8_t *${compIdSafe}_ttf_addr = NULL;\n`;
     code += `${indentStr}size_t ${compIdSafe}_ttf_size = 0;\n`;
 
     // 加载地图文件
@@ -56,8 +56,13 @@ export class MapGenerator implements ComponentCodeGenerator {
       code += `${indentStr}    gui_vfs_file_t *f = gui_vfs_open(src_path, GUI_VFS_READ);\n`;
       code += `${indentStr}    if (f)\n`;
       code += `${indentStr}    {\n`;
-      code += `${indentStr}        ${compIdSafe}_map_addr = gui_vfs_get_file_address(src_path);\n`;
       code += `${indentStr}        ${compIdSafe}_map_size = gui_vfs_seek(f, 0, GUI_VFS_SEEK_END);\n`;
+      code += `${indentStr}        gui_vfs_seek(f, 0, GUI_VFS_SEEK_SET);\n`;
+      code += `${indentStr}        ${compIdSafe}_map_addr = (uint8_t *)gui_lower_malloc(${compIdSafe}_map_size);\n`;
+      code += `${indentStr}        if (${compIdSafe}_map_addr)\n`;
+      code += `${indentStr}        {\n`;
+      code += `${indentStr}            gui_vfs_read(f, ${compIdSafe}_map_addr, ${compIdSafe}_map_size);\n`;
+      code += `${indentStr}        }\n`;
       code += `${indentStr}        gui_vfs_close(f);\n`;
       code += `${indentStr}    }\n`;
       code += `${indentStr}}\n`;
@@ -70,8 +75,13 @@ export class MapGenerator implements ComponentCodeGenerator {
       code += `${indentStr}    gui_vfs_file_t *f = gui_vfs_open(src_path, GUI_VFS_READ);\n`;
       code += `${indentStr}    if (f)\n`;
       code += `${indentStr}    {\n`;
-      code += `${indentStr}        ${compIdSafe}_ttf_addr = gui_vfs_get_file_address(src_path);\n`;
       code += `${indentStr}        ${compIdSafe}_ttf_size = gui_vfs_seek(f, 0, GUI_VFS_SEEK_END);\n`;
+      code += `${indentStr}        gui_vfs_seek(f, 0, GUI_VFS_SEEK_SET);\n`;
+      code += `${indentStr}        ${compIdSafe}_ttf_addr = (uint8_t *)gui_lower_malloc(${compIdSafe}_ttf_size);\n`;
+      code += `${indentStr}        if (${compIdSafe}_ttf_addr)\n`;
+      code += `${indentStr}        {\n`;
+      code += `${indentStr}            gui_vfs_read(f, ${compIdSafe}_ttf_addr, ${compIdSafe}_ttf_size);\n`;
+      code += `${indentStr}        }\n`;
       code += `${indentStr}        gui_vfs_close(f);\n`;
       code += `${indentStr}    }\n`;
       code += `${indentStr}}\n`;

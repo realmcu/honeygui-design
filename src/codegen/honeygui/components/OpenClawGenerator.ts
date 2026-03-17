@@ -6,7 +6,8 @@
  *
  * 使用说明:
  *   - Font File (.ttf) 通过 VFS 文件系统加载
- *   - 运行时使用 gui_vfs_open / gui_vfs_get_file_address 读取文件地址和大小
+ *   - 运行时使用 gui_vfs_open / gui_vfs_read 读取文件内容
+ *   - 使用 gui_lower_malloc 申请 buffer 存放字体数据
  */
 import { Component } from '../../../hml/types';
 import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';
@@ -40,18 +41,23 @@ export class OpenClawGenerator implements ComponentCodeGenerator {
 
     // 声明变量
     code += `${indentStr}// Load font file via VFS for ${component.id}\n`;
-    code += `${indentStr}const uint8_t *${compIdSafe}_ttf_addr = NULL;\n`;
+    code += `${indentStr}uint8_t *${compIdSafe}_ttf_addr = NULL;\n`;
     code += `${indentStr}size_t ${compIdSafe}_ttf_size = 0;\n`;
 
-    // 加载字体文件
+    // 加载字体文件到新申请的 buffer
     if (fontFile) {
       code += `${indentStr}{\n`;
       code += `${indentStr}    const char *src_path = "${fontVfsPath}";\n`;
       code += `${indentStr}    gui_vfs_file_t *f = gui_vfs_open(src_path, GUI_VFS_READ);\n`;
       code += `${indentStr}    if (f)\n`;
       code += `${indentStr}    {\n`;
-      code += `${indentStr}        ${compIdSafe}_ttf_addr = gui_vfs_get_file_address(src_path);\n`;
       code += `${indentStr}        ${compIdSafe}_ttf_size = gui_vfs_seek(f, 0, GUI_VFS_SEEK_END);\n`;
+      code += `${indentStr}        gui_vfs_seek(f, 0, GUI_VFS_SEEK_SET);\n`;
+      code += `${indentStr}        ${compIdSafe}_ttf_addr = (uint8_t *)gui_lower_malloc(${compIdSafe}_ttf_size);\n`;
+      code += `${indentStr}        if (${compIdSafe}_ttf_addr)\n`;
+      code += `${indentStr}        {\n`;
+      code += `${indentStr}            gui_vfs_read(f, ${compIdSafe}_ttf_addr, ${compIdSafe}_ttf_size);\n`;
+      code += `${indentStr}        }\n`;
       code += `${indentStr}        gui_vfs_close(f);\n`;
       code += `${indentStr}    }\n`;
       code += `${indentStr}}\n`;
