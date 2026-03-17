@@ -29,10 +29,10 @@ export const useCanvasZoom = (
       // 限制缩放范围
       const clampedZoom = Math.max(0.1, Math.min(5, newZoom));
       
-      // 获取鼠标相对于画布容器的位置
+      // 获取鼠标相对于画布内容区域的位置（需加上滚动偏移）
       const rect = e.currentTarget.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
+      const mouseX = e.clientX - rect.left + e.currentTarget.scrollLeft;
+      const mouseY = e.clientY - rect.top + e.currentTarget.scrollTop;
       
       // 计算缩放比例
       const scale = clampedZoom / zoom;
