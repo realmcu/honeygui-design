@@ -43,7 +43,8 @@ export type ComponentType =
   | 'hg_lottie'
   | 'hg_glass'
   | 'hg_particle'
-  | 'hg_map';
+  | 'hg_map'
+  | 'hg_openclaw';
 
 export interface ComponentDefinition {
   type: ComponentType;

@@ -25,6 +25,7 @@ import { LottieWidget } from './LottieWidget';
 import { CanvasWidget } from './CanvasWidget';
 import { ParticleWidget } from './ParticleWidget';
 import { MapWidget } from './MapWidget';
+import { OpenClawWidget } from './OpenClawWidget';
 
 export { WidgetProps } from './types';
 
@@ -58,4 +59,5 @@ export const widgetRegistry: Record<string, React.FC<WidgetProps>> = {
   hg_lottie: LottieWidget,
   hg_particle: ParticleWidget,
   hg_map: MapWidget,
+  hg_openclaw: OpenClawWidget,
 };

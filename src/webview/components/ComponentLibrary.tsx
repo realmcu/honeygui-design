@@ -468,6 +468,16 @@ const componentDefinitions: ComponentDefinition[] = [
       { name: 'pcSerialName', label: 'PC Serial Name', type: 'string', defaultValue: '', group: 'data' },
     ],
   },
+  {
+    type: 'hg_openclaw',
+    name: 'OpenClaw',
+    icon: '🤖',
+    defaultSize: { width: 410, height: 502 },
+    properties: [
+      { name: 'fontFile', label: 'Font File (.ttf)', type: 'string', defaultValue: '', group: 'data' },
+      { name: 'senderId', label: 'Sender ID', type: 'string', defaultValue: 'user1', group: 'data' },
+    ],
+  },
 ];
 
 // Component categories - hg_time_label 不在组件库中直接显示，只能通过右键标签控件创建
@@ -477,7 +487,7 @@ const componentCategories = [
   { name: 'Input Controls', types: ['hg_input', 'hg_checkbox', 'hg_radio'] },
   { name: 'Graphics', types: ['hg_arc', 'hg_circle', 'hg_rect', 'hg_svg', 'hg_glass', 'hg_particle'] },
   { name: 'Multimedia', types: ['hg_video', 'hg_gif', 'hg_3d', 'hg_lottie'] },
-  { name: 'Mini App', types: ['hg_map'] }
+  { name: 'Mini App', types: ['hg_map', 'hg_openclaw'] }
 ];
 
 /**

@@ -120,6 +120,13 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
         files.push(...copiedFiles);
       }
 
+      // 如果有 OpenClaw 组件，拷贝 gui_openclaw 库
+      const hasOpenClawComponent = this.components.some(c => c.type === 'hg_openclaw');
+      if (hasOpenClawComponent) {
+        const copiedFiles = this.copyOpenClawLibrary(srcDir);
+        files.push(...copiedFiles);
+      }
+
       return { success: true, files };
     } catch (error) {
       return {
@@ -141,6 +148,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
     const hasWindow = componentTypes.includes('hg_window');
     const has3D = componentTypes.includes('hg_3d');
     const hasMap = componentTypes.includes('hg_map');
+    const hasOpenClaw = componentTypes.includes('hg_openclaw');
     const hasLabel = componentTypes.includes('hg_label');
     const hasArc = componentTypes.includes('hg_arc');
     
@@ -204,6 +212,14 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
         code += `#include "gui_vfs.h"\n`;
       }
       code += `#include "gui_vector_map.h"\n`;
+    }
+
+    // OpenClaw 组件需要 VFS 和 openclaw 头文件
+    if (hasOpenClaw) {
+      if (!has3D && !hasMap) {  // 避免重复包含 gui_vfs.h
+        code += `#include "gui_vfs.h"\n`;
+      }
+      code += `#include "gui_openclaw.h"\n`;
     }
     
     // 如果有 arc group，添加头文件
@@ -934,6 +950,8 @@ static void ${component.id}_breath_anim_cb(void *p)
         return 'gui_particle_widget_t';
       case 'hg_map':
         return 'gui_vector_map_t';
+      case 'hg_openclaw':
+        return 'gui_openclaw_t';
       default:
         // 其他未实现的组件使用 gui_obj_t
         return 'gui_obj_t';
@@ -1000,5 +1018,46 @@ static void ${component.id}_breath_anim_cb(void *p)
         files.push(destPath);
       }
     }
+  }
+
+  /**
+   * 拷贝 gui_openclaw 库到生成的代码目录
+   * @param srcDir 源代码目录
+   * @returns 拷贝的文件列表
+   */
+  private copyOpenClawLibrary(srcDir: string): string[] {
+    const files: string[] = [];
+    
+    // 获取插件安装目录
+    // __dirname = out/src/codegen/honeygui，向上四级到项目根目录
+    const extensionPath = path.join(__dirname, '..', '..', '..', '..');
+      // 注意：目录名为 gui_openclaw（历史拼写）
+    const sourceLibDir = path.join(extensionPath, 'lib', 'gui_openclaw');
+    const targetLibDir = path.join(srcDir, 'gui_openclaw');
+
+    console.log(`[OpenClawGenerator] __dirname: ${__dirname}`);
+    console.log(`[OpenClawGenerator] extensionPath: ${extensionPath}`);
+    console.log(`[OpenClawGenerator] sourceLibDir: ${sourceLibDir}`);
+    console.log(`[OpenClawGenerator] targetLibDir: ${targetLibDir}`);
+
+    // 检查源目录是否存在
+    if (!fs.existsSync(sourceLibDir)) {
+      console.warn(`[OpenClawGenerator] gui_openclaw library not found at: ${sourceLibDir}`);
+      return files;
+    }
+
+    console.log(`[OpenClawGenerator] Source directory exists, copying files...`);
+
+    // 创建目标目录
+    if (!fs.existsSync(targetLibDir)) {
+      fs.mkdirSync(targetLibDir, { recursive: true });
+    }
+
+    // 递归拷贝目录
+    this.copyDirRecursive(sourceLibDir, targetLibDir, files);
+
+    console.log(`[OpenClawGenerator] Copied ${files.length} files to ${targetLibDir}`);
+
+    return files;
   }
 }

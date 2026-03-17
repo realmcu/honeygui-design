@@ -247,6 +247,15 @@ export class HoneyGuiApiMapper {
       eventHandlers: [],
       includeHeader: 'gui_vector_map.h'
     });
+
+    // OpenClaw AI 对话组件
+    this.mappings.set('hg_openclaw', {
+      componentType: 'hg_openclaw',
+      createFunction: 'gui_openclaw_create_from_mem',
+      propertySetters: [],
+      eventHandlers: [],
+      includeHeader: 'gui_openclaw.h'
+    });
   }
 
   /**

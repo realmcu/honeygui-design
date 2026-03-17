@@ -40,6 +40,7 @@ export const propertyPanelRegistry: Record<ComponentType, React.FC<PropertyPanel
   hg_glass: DefaultProperties,
   hg_particle: HgParticleProperties,
   hg_map: DefaultProperties,
+  hg_openclaw: DefaultProperties,
 };
 
 export { HgViewProperties } from './HgViewProperties';

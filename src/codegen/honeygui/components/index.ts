@@ -25,6 +25,7 @@ import { GlassGenerator } from './GlassGenerator';
 import { TimeLabelGenerator } from './TimeLabelGenerator';
 import { ParticleGenerator } from './ParticleGenerator';
 import { MapGenerator } from './MapGenerator';
+import { OpenClawGenerator } from './OpenClawGenerator';
 import { DefaultGenerator } from './DefaultGenerator';
 
 export class ComponentGeneratorFactory {
@@ -64,6 +65,7 @@ export class ComponentGeneratorFactory {
     this.generators.set('hg_glass', new GlassGenerator());
     this.generators.set('hg_particle', new ParticleGenerator());
     this.generators.set('hg_map', new MapGenerator());
+    this.generators.set('hg_openclaw', new OpenClawGenerator());
   }
 
   static getGenerator(componentType: string): ComponentCodeGenerator {
