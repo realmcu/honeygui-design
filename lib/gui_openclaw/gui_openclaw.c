@@ -21,7 +21,7 @@
 #include "claw-mcu/claw_mqtt_c_dll/include/claw_mqtt_client.h"
 #endif
 #include "gui_openclaw.h"
-#include "gui_vector_map.h"
+
 #include "gui_fb.h"
 #include "gui_api_os.h"
 #include "tp_algo.h"
