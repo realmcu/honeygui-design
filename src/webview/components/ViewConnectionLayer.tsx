@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useCallback } from 'react';
 import { Component, ViewInfo } from '../types';
 import type { EventConfig, Action } from '../../hml/eventTypes';
 import { useDesignerStore } from '../store';
@@ -31,8 +31,62 @@ export const ViewConnectionLayer: React.FC<ViewConnectionLayerProps> = ({
   if (!visible) return null;
 
   const allHmlFiles = useDesignerStore(state => state.allHmlFiles || []);
-  const [hoveredConnection, setHoveredConnection] = useState<string | null>(null);
+  const [hoveredConnections, setHoveredConnections] = useState<Set<string>>(new Set());
   const setHoveredComponent = useDesignerStore(state => state.setHoveredComponent);
+  
+  // 存储每条连线的路径点，用于命中检测
+  const connectionPathsRef = useRef<Map<string, { points: {x: number, y: number}[], fromId: string }>>(new Map());
+  const svgRef = useRef<SVGSVGElement>(null);
+  
+  // 点到线段的距离
+  const pointToSegmentDist = useCallback((px: number, py: number, a: {x: number, y: number}, b: {x: number, y: number}) => {
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const lenSq = dx * dx + dy * dy;
+    if (lenSq === 0) return Math.sqrt((px - a.x) ** 2 + (py - a.y) ** 2);
+    const t = Math.max(0, Math.min(1, ((px - a.x) * dx + (py - a.y) * dy) / lenSq));
+    const cx = a.x + t * dx, cy = a.y + t * dy;
+    return Math.sqrt((px - cx) ** 2 + (py - cy) ** 2);
+  }, []);
+
+  // 使用 document 级别的 pointermove 进行命中检测，不阻挡画布交互
+  React.useEffect(() => {
+    if (!visible) return;
+    
+    const handlePointerMove = (e: PointerEvent) => {
+      if (!svgRef.current) return;
+      const svgRect = svgRef.current.getBoundingClientRect();
+      const mouseX = e.clientX - svgRect.left;
+      const mouseY = e.clientY - svgRect.top;
+
+      // 鼠标不在 SVG 区域内则清空
+      if (mouseX < 0 || mouseY < 0 || mouseX > svgRect.width || mouseY > svgRect.height) {
+        setHoveredConnections(prev => prev.size > 0 ? new Set() : prev);
+        setHoveredComponent(null);
+        return;
+      }
+
+      const threshold = 8;
+      const newHovered = new Set<string>();
+      let firstFromId: string | null = null;
+
+      for (const [connId, data] of connectionPathsRef.current) {
+        const pts = data.points;
+        for (let i = 0; i < pts.length - 1; i++) {
+          if (pointToSegmentDist(mouseX, mouseY, pts[i], pts[i + 1]) <= threshold) {
+            newHovered.add(connId);
+            if (!firstFromId) firstFromId = data.fromId;
+            break;
+          }
+        }
+      }
+
+      setHoveredConnections(newHovered);
+      setHoveredComponent(firstFromId);
+    };
+
+    document.addEventListener('pointermove', handlePointerMove);
+    return () => document.removeEventListener('pointermove', handlePointerMove);
+  }, [visible, setHoveredComponent, pointToSegmentDist]);
 
   const viewRects = useMemo(() => {
     return components
@@ -746,8 +800,11 @@ export const ViewConnectionLayer: React.FC<ViewConnectionLayerProps> = ({
 
   const externalCountByFrom = new Map<string, number>();
 
+  // 每次渲染前清空路径数据
+  connectionPathsRef.current.clear();
+
   return (
-    <svg style={{
+    <svg ref={svgRef} style={{
       position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
       pointerEvents: 'none', overflow: 'visible', zIndex: 1000
     }}>
@@ -778,7 +835,11 @@ export const ViewConnectionLayer: React.FC<ViewConnectionLayerProps> = ({
             conn.to.id
           );
           
-          const isHovered = hoveredConnection === conn.id;
+          // 存储路径点用于命中检测
+          const pathPoints = parsePathPoints(path);
+          connectionPathsRef.current.set(conn.id, { points: pathPoints, fromId: conn.from.id });
+          
+          const isHovered = hoveredConnections.has(conn.id);
           const endArrowPoints = createArrowPath(arrowTip, arrowAngle, 8, false);
           
           // 起点箭头（双向连接）
@@ -787,29 +848,11 @@ export const ViewConnectionLayer: React.FC<ViewConnectionLayerProps> = ({
             : null;
           
           // 计算双向图标位置（在路径中点，避开 view 区域）
-          const pathPoints = parsePathPoints(path);
           const midIndex = Math.floor(pathPoints.length / 2);
           const iconPos = pathPoints[midIndex] || arrowTip;
           
           return (
             <g key={conn.id}>
-              {/* 透明的宽路径用于鼠标悬停检测 */}
-              <path
-                d={path}
-                stroke="transparent"
-                strokeWidth={12}
-                fill="none"
-                style={{ pointerEvents: 'auto', cursor: 'pointer' }}
-                onMouseEnter={() => {
-                  setHoveredConnection(conn.id);
-                  // 高亮起始和终点 view
-                  setHoveredComponent(conn.from.id);
-                }}
-                onMouseLeave={() => {
-                  setHoveredConnection(null);
-                  setHoveredComponent(null);
-                }}
-              />
               {/* 实际显示的路径 */}
               <path
                 d={path}
@@ -913,12 +956,16 @@ export const ViewConnectionLayer: React.FC<ViewConnectionLayerProps> = ({
           conn.from.id,
           undefined
         );
+        
+        // 存储路径点用于命中检测
+        connectionPathsRef.current.set(conn.id, { points: parsePathPoints(path), fromId: conn.from.id });
+        
         const color = conn.isValid ? '#2196F3' : '#f44336';
         const hoverColor = conn.isValid ? '#42A5F5' : '#EF5350';
         const label1 = conn.targetFile || '?';
         const label2 = conn.targetName.length > 8 ? conn.targetName.slice(0, 8) + '..' : conn.targetName;
         const canClick = conn.isValid && conn.targetFile;
-        const isHovered = hoveredConnection === conn.id;
+        const isHovered = hoveredConnections.has(conn.id);
         const endArrowPoints = createArrowPath(arrowTip, arrowAngle, 8, false);
         
         // 起点箭头（双向连接）
@@ -928,22 +975,6 @@ export const ViewConnectionLayer: React.FC<ViewConnectionLayerProps> = ({
 
         return (
           <g key={conn.id}>
-            {/* 透明的宽路径用于鼠标悬停检测 */}
-            <path
-              d={path}
-              stroke="transparent"
-              strokeWidth={12}
-              fill="none"
-              style={{ pointerEvents: 'auto', cursor: 'pointer' }}
-              onMouseEnter={() => {
-                setHoveredConnection(conn.id);
-                setHoveredComponent(conn.from.id);
-              }}
-              onMouseLeave={() => {
-                setHoveredConnection(null);
-                setHoveredComponent(null);
-              }}
-            />
             {/* 实际显示的路径 */}
             <path
               d={path}

@@ -174,6 +174,7 @@ const zhCN = {
   'Zoom Out': '缩小',
   'Reset Zoom': '重置缩放',
   'Fit to Screen': '适应屏幕',
+  'Fit All Content': '全局视图',
   'Center View': '居中视图',
   'Align Left': '左对齐',
   'Align Center': '水平居中',

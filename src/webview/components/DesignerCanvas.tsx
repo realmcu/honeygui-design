@@ -84,6 +84,22 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
   // 使用右键菜单 Hook
   const { menuState, showMenu, hideMenu } = useContextMenu();
   
+  // 画布空白处右键菜单状态
+  const [canvasMenuState, setCanvasMenuState] = useState<{ visible: boolean; x: number; y: number }>({ visible: false, x: 0, y: 0 });
+  
+  // 画布菜单点击外部关闭
+  useEffect(() => {
+    if (!canvasMenuState.visible) return;
+    const close = () => setCanvasMenuState(prev => ({ ...prev, visible: false }));
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+    window.addEventListener('click', close);
+    window.addEventListener('keydown', handleKey);
+    return () => {
+      window.removeEventListener('click', close);
+      window.removeEventListener('keydown', handleKey);
+    };
+  }, [canvasMenuState.visible]);
+
   // 使用组件调整大小 Hook
   const {
     isResizing,
@@ -854,6 +870,22 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
         onMouseLeave={handleCanvasMouseUp}
         onContextMenu={(e) => {
           e.preventDefault();
+          
+          // 检查右键点击位置是否在组件上
+          const rect = canvasRef.current?.getBoundingClientRect();
+          if (rect) {
+            const effectiveZoom = zoom / (window.devicePixelRatio || 1);
+            const mouseX = (e.clientX - rect.left - canvasOffset.x) / effectiveZoom;
+            const mouseY = (e.clientY - rect.top - canvasOffset.y) / effectiveZoom;
+            const clickedComp = findComponentAtPosition(mouseX, mouseY, components);
+            
+            // 点击在空白区域：显示画布菜单
+            if (!clickedComp) {
+              setCanvasMenuState({ visible: true, x: e.clientX, y: e.clientY });
+              return;
+            }
+          }
+          
           const ids = selectedComponents && selectedComponents.length ? selectedComponents : (selectedComponent ? [selectedComponent] : []);
           if (ids.length === 0) return;
           const label = ids.length > 1 
@@ -955,6 +987,43 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
         multiSelectCount={selectedComponents.length}
         onAction={handleMenuAction}
       />
+      
+      {/* 画布空白处右键菜单 */}
+      {canvasMenuState.visible && (
+        <div
+          style={{
+            position: 'fixed',
+            left: canvasMenuState.x,
+            top: canvasMenuState.y,
+            zIndex: 10000,
+            background: 'var(--vscode-menu-background, #252526)',
+            border: '1px solid var(--vscode-menu-border, #454545)',
+            borderRadius: 4,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+            padding: '4px 0',
+            minWidth: 160,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div
+            style={{
+              padding: '6px 24px',
+              cursor: 'pointer',
+              color: 'var(--vscode-menu-foreground, #ccc)',
+              fontSize: 13,
+              whiteSpace: 'nowrap',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--vscode-menu-selectionBackground, #04395e)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+            onClick={() => {
+              setCanvasMenuState({ visible: false, x: 0, y: 0 });
+              useDesignerStore.getState().fitContentToView();
+            }}
+          >
+            {t('Fit All Content')}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

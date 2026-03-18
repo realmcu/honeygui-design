@@ -174,6 +174,7 @@ const en = {
   'Zoom Out': 'Zoom Out',
   'Reset Zoom': 'Reset Zoom',
   'Fit to Screen': 'Fit to Screen',
+  'Fit All Content': 'Fit All Content',
   'Center View': 'Center View',
   'Align Left': 'Align Left',
   'Align Center': 'Align Center',
