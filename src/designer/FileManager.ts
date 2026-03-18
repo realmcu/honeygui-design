@@ -22,6 +22,9 @@ export class FileManager {
     private _undoStack: string[] = [];
     private _redoStack: string[] = [];
     private readonly _maxHistorySize = 50;
+    private _isInUndoRedo = false;
+    private _lastUndoPushTime = 0;
+    private readonly _undoDebounceMs = 500; // 连续操作合并窗口
     
     // 事件发射器
     private readonly _onDidUpdateTitle = new vscode.EventEmitter<string>();
@@ -45,10 +48,23 @@ export class FileManager {
     
     /**
      * 记录当前状态到撤销栈（在保存前调用）
+     * 使用滑动窗口防抖：连续快速操作期间只记录首次状态，
+     * 只有在操作间隔超过 500ms 后才创建新的撤销点
      */
     public pushUndoState(hmlContent: string): void {
         // 避免重复记录相同内容
         if (this._undoStack.length > 0 && this._undoStack[this._undoStack.length - 1] === hmlContent) {
+            this._lastUndoPushTime = Date.now(); // 即使跳过也更新活动时间
+            return;
+        }
+        
+        const now = Date.now();
+        const timeSinceLastActivity = now - this._lastUndoPushTime;
+        this._lastUndoPushTime = now; // 每次活动都重置计时器（滑动窗口）
+        
+        // 连续操作合并：只有间隔超过 500ms 才创建新的撤销点
+        if (timeSinceLastActivity < this._undoDebounceMs) {
+            logger.debug('[FileManager] 跳过撤销记录（连续操作合并）');
             return;
         }
         
@@ -74,29 +90,35 @@ export class FileManager {
             return false;
         }
         
-        // 获取当前内容作为重做状态
-        const document = await vscode.workspace.openTextDocument(this._filePath);
-        const currentContent = document.getText();
-        this._redoStack.push(currentContent);
-        
-        // 弹出上一个状态
-        const previousContent = this._undoStack.pop()!;
-        
-        // 写入文件
-        const edit = new vscode.WorkspaceEdit();
-        edit.replace(
-            document.uri,
-            new vscode.Range(0, 0, document.lineCount, 0),
-            previousContent
-        );
-        await vscode.workspace.applyEdit(edit);
-        await document.save();
-        
-        // 重新加载到前端
-        await this.reloadCurrentDocument();
-        
-        logger.info(`[FileManager] 撤销成功，剩余撤销栈: ${this._undoStack.length}`);
-        return true;
+        this._isInUndoRedo = true;
+        try {
+            // 读取当前文件内容作为重做状态
+            const currentContent = fs.readFileSync(this._filePath, 'utf8');
+            this._redoStack.push(currentContent);
+            
+            // 弹出上一个状态
+            const previousContent = this._undoStack.pop()!;
+            
+            // 解析并更新 hmlController（与正常加载一致）
+            this._hmlController.parseContent(previousContent);
+            
+            // 写入文件（与正常保存一致，使用 fs.writeFileSync）
+            fs.writeFileSync(this._filePath, previousContent, 'utf8');
+            
+            // 更新快照
+            this._lastSerializedSnapshot = previousContent;
+            
+            // 重新加载到前端（此时 hmlController 已更新，reloadCurrentDocument 会发送正确数据）
+            await this.reloadCurrentDocument();
+            
+            logger.info(`[FileManager] 撤销成功，剩余撤销栈: ${this._undoStack.length}`);
+            return true;
+        } catch (error) {
+            logger.error(`[FileManager] 撤销失败: ${error}`);
+            return false;
+        } finally {
+            this._isInUndoRedo = false;
+        }
     }
     
     /**
@@ -108,29 +130,35 @@ export class FileManager {
             return false;
         }
         
-        // 获取当前内容作为撤销状态
-        const document = await vscode.workspace.openTextDocument(this._filePath);
-        const currentContent = document.getText();
-        this._undoStack.push(currentContent);
-        
-        // 弹出重做状态
-        const nextContent = this._redoStack.pop()!;
-        
-        // 写入文件
-        const edit = new vscode.WorkspaceEdit();
-        edit.replace(
-            document.uri,
-            new vscode.Range(0, 0, document.lineCount, 0),
-            nextContent
-        );
-        await vscode.workspace.applyEdit(edit);
-        await document.save();
-        
-        // 重新加载到前端
-        await this.reloadCurrentDocument();
-        
-        logger.info(`[FileManager] 重做成功，剩余重做栈: ${this._redoStack.length}`);
-        return true;
+        this._isInUndoRedo = true;
+        try {
+            // 读取当前文件内容作为撤销状态
+            const currentContent = fs.readFileSync(this._filePath, 'utf8');
+            this._undoStack.push(currentContent);
+            
+            // 弹出重做状态
+            const nextContent = this._redoStack.pop()!;
+            
+            // 解析并更新 hmlController
+            this._hmlController.parseContent(nextContent);
+            
+            // 写入文件
+            fs.writeFileSync(this._filePath, nextContent, 'utf8');
+            
+            // 更新快照
+            this._lastSerializedSnapshot = nextContent;
+            
+            // 重新加载到前端
+            await this.reloadCurrentDocument();
+            
+            logger.info(`[FileManager] 重做成功，剩余重做栈: ${this._redoStack.length}`);
+            return true;
+        } catch (error) {
+            logger.error(`[FileManager] 重做失败: ${error}`);
+            return false;
+        } finally {
+            this._isInUndoRedo = false;
+        }
     }
     
     /**
@@ -356,6 +384,12 @@ export class FileManager {
      * 从文档更新内容（当文档在外部被修改时）
      */
     public async updateFromDocument(): Promise<void> {
+        // 如果正在撤销/重做操作中，跳过更新（避免与 undo/redo 的 save 冲突）
+        if (this._isInUndoRedo) {
+            logger.debug('[FileManager] 正在撤销/重做操作中，跳过updateFromDocument');
+            return;
+        }
+        
         // 如果正在保存事务中，不执行更新（避免我们自己的保存操作触发重新加载）
         if (this._saveManager.getCurrentTransactionId() > 0) {
             logger.debug('[FileManager] 正在保存事务中，跳过updateFromDocument');

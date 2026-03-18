@@ -130,7 +130,7 @@ export interface DesignerStore extends DesignerState {
   // Actions
   setComponents: (components: Component[]) => void;
   addComponent: (component: Component, options?: { save?: boolean }) => void;
-  updateComponent: (id: string, updates: Partial<Component>) => void;
+  updateComponent: (id: string, updates: Partial<Component>, options?: { save?: boolean }) => void;
   renameComponent: (oldId: string, newId: string) => boolean;
   removeComponent: (id: string, fromListSync?: boolean) => void;
   removeComponents: (ids: string[]) => void;
@@ -432,7 +432,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     }
   },
 
-  updateComponent: (id, updates) => {
+  updateComponent: (id, updates, options) => {
     const state = get();
     const before = state.components.find(c => c.id === id);
     if (!before) return;
@@ -596,7 +596,9 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       });
     }
 
-    get().saveToFile();
+    if (options?.save !== false) {
+      get().saveToFile();
+    }
   },
 
   renameComponent: (oldId, newId) => {

@@ -39,9 +39,6 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
   const [boxSelectEnd, setBoxSelectEnd] = useState({ x: 0, y: 0 }); // 框选结束位置（画布坐标）
   const [boxSelectTimer, setBoxSelectTimer] = useState<NodeJS.Timeout | null>(null); // 长按定时器
   
-  // 撤销/重做：记录操作开始前是否已保存状态
-  const [hasRecordedUndoState, setHasRecordedUndoState] = useState(false);
-  
   // 标记是否是框选后的移动（框选移动不触发跨容器拖拽）
   const [isBoxSelectMove, setIsBoxSelectMove] = useState(false);
 
@@ -197,9 +194,6 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
         setBoxSelectTimer(null);
       }
     }
-    
-    // 重置撤销状态记录标志
-    setHasRecordedUndoState(false);
     
     // Ctrl + 点击：穿透选中内层控件（只在同级组件之间循环，不包括父容器）
     if (e.ctrlKey && !e.shiftKey && !e.metaKey) {
@@ -382,13 +376,6 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
       const threshold = 3; // 移动超过3px才开始拖动
       
       if (deltaX > threshold || deltaY > threshold) {
-        // 开始拖拽前，保存当前状态（仅一次）
-        if (!hasRecordedUndoState) {
-          const saveToFile = useDesignerStore.getState().saveToFile;
-          saveToFile();
-          setHasRecordedUndoState(true);
-        }
-        
         // 开始拖拽，取消框选
         if (boxSelectTimer) {
           clearTimeout(boxSelectTimer);
@@ -436,7 +423,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
             
             updateComponent(id, {
               position: { ...comp.position, x: newX, y: newY },
-            });
+            }, { save: false });
           }
         });
         setAlignmentLines([]); // 多选时不显示辅助线
@@ -491,11 +478,11 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
           const snappedAbsY = targetAbsPos.y + alignment.y;
           updateComponent(component.id, {
             position: { ...component.position, x: snappedAbsX - parentAbsPos.x, y: snappedAbsY - parentAbsPos.y },
-          });
+          }, { save: false });
         } else {
           updateComponent(component.id, {
             position: { ...component.position, x: alignment.x, y: alignment.y },
-          });
+          }, { save: false });
         }
       }
     }
@@ -581,11 +568,10 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
     setMultiDragOffsets(new Map());
     setIsBoxSelectMove(false); // 重置框选移动标志
     
-    // 如果有拖拽操作且已记录初始状态，再保存最终状态
-    if (hadDragOperation && hasRecordedUndoState) {
+    // 如果有拖拽操作，保存最终状态（触发一次 undo 快照 + 文件保存）
+    if (hadDragOperation) {
       const saveToFile = useDesignerStore.getState().saveToFile;
       saveToFile();
-      setHasRecordedUndoState(false);
     }
   };
 
@@ -612,10 +598,6 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
         
         e.preventDefault();
         
-        // 第一次按方向键时，保存当前状态
-        const saveToFile = useDesignerStore.getState().saveToFile;
-        saveToFile();
-        
         // 计算移动距离（按住 Shift 键时移动 10px，否则移动 1px）
         const step = e.shiftKey ? 10 : 1;
         let deltaX = 0;
@@ -636,7 +618,7 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
             break;
         }
         
-        // 移动所有选中的组件
+        // 移动所有选中的组件（不触发保存）
         ids.forEach(id => {
           const comp = components.find(c => c.id === id);
           if (comp && !comp.locked) {
@@ -646,9 +628,13 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
                 x: comp.position.x + deltaX,
                 y: comp.position.y + deltaY,
               },
-            });
+            }, { save: false });
           }
         });
+        
+        // 移动完成后统一保存一次
+        const saveToFile = useDesignerStore.getState().saveToFile;
+        saveToFile();
         
         return;
       }

@@ -162,12 +162,11 @@ export class MessageHandler {
                 }
 
                 try {
-                    // 保存前记录当前状态到撤销栈
+                    // 保存前记录当前状态到撤销栈（直接读文件，避免 VSCode buffer 不同步）
                     const currentFilePath = this._fileManager.currentFilePath;
                     if (currentFilePath) {
                         try {
-                            const document = await vscode.workspace.openTextDocument(currentFilePath);
-                            const currentContent = document.getText();
+                            const currentContent = fs.readFileSync(currentFilePath, 'utf8');
                             this._fileManager.pushUndoState(currentContent);
                         } catch (e) {
                             logger.warn(`[MessageHandler] 记录撤销状态失败: ${e}`);
