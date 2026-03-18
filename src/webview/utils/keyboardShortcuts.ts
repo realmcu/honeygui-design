@@ -207,18 +207,6 @@ export const useKeyboardShortcuts = () => {
           }
           break;
 
-        // Nudge (Arrow keys)
-        case 'ArrowUp':
-        case 'ArrowDown':
-        case 'ArrowLeft':
-        case 'ArrowRight':
-          if (selectedComponent) {
-            e.preventDefault();
-            const nudgeDistance = isShift ? 10 : 1; // Shift+Arrow for 10px, Arrow for 1px
-            nudgeComponent(e.key, nudgeDistance, selectedComponent);
-          }
-          break;
-
         // Generate Code (Ctrl+G)
         case 'g':
         case 'G':
@@ -255,38 +243,6 @@ export const useKeyboardShortcuts = () => {
       if (handled) {
         e.stopPropagation();
       }
-    };
-
-    const nudgeComponent = (key: string, distance: number, componentId: string) => {
-      const { components, updateComponent } = useDesignerStore.getState();
-      const component = components.find(c => c.id === componentId);
-      if (!component) return;
-
-      let deltaX = 0;
-      let deltaY = 0;
-
-      switch (key) {
-        case 'ArrowUp':
-          deltaY = -distance;
-          break;
-        case 'ArrowDown':
-          deltaY = distance;
-          break;
-        case 'ArrowLeft':
-          deltaX = -distance;
-          break;
-        case 'ArrowRight':
-          deltaX = distance;
-          break;
-      }
-
-      updateComponent(componentId, {
-        position: {
-          ...component.position,
-          x: Math.max(0, component.position.x + deltaX),
-          y: Math.max(0, component.position.y + deltaY),
-        },
-      });
     };
 
     window.addEventListener('keydown', handleKeyDown);

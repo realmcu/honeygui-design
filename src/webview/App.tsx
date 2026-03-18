@@ -298,12 +298,10 @@ const App: React.FC = () => {
                 batchUpdate.components = message.components;
               }
               
-              // 如果恢复了视图状态，添加到批量更新中
+              // 不恢复缩放和偏移（每次打开都自适应居中）
               if (restored && savedState) {
-                batchUpdate.zoom = savedState.zoom;
-                batchUpdate.canvasOffset = savedState.canvasOffset;
                 batchUpdate.selectedComponent = savedState.selectedComponent;
-                console.log('[ViewState] 批量恢复视图状态:', savedState);
+                console.log('[ViewState] 恢复选中状态，缩放将自适应居中');
               }
               
               // 添加仿真状态
@@ -321,19 +319,12 @@ const App: React.FC = () => {
                 });
               });
               
-              // 只有在没有恢复视图状态时才自动居中
-              if (!restored && message.components) {
-                console.log('[ViewState] 无保存状态，自动居中第一个 view');
-                // 延迟执行居中，确保组件已渲染
+              // 每次打开文件都自适应居中显示
+              if (message.components) {
+                console.log('[ViewState] 自适应居中显示内容');
                 setTimeout(() => {
-                  const currentComponents = useDesignerStore.getState().components;
-                  const firstView = currentComponents.find(c => c.type === 'hg_view');
-                  if (firstView) {
-                    store.centerViewOnCanvas(firstView.id);
-                  }
+                  store.fitContentToView();
                 }, 0);
-              } else if (restored) {
-                console.log('[ViewState] 已恢复保存的视图状态，跳过自动居中');
               }
             } else {
               // 没有 currentFilePath 的情况（旧逻辑兼容）
@@ -353,6 +344,8 @@ const App: React.FC = () => {
               
               if (message.components) {
                 store.setComponents(message.components);
+                // 自适应居中
+                setTimeout(() => { store.fitContentToView(); }, 0);
               }
               
               // 隐藏加载状态

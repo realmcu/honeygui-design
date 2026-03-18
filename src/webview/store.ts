@@ -148,6 +148,7 @@ export interface DesignerStore extends DesignerState {
   setEditingMode: (mode: 'select' | 'move' | 'resize') => void;
   setCanvasBackgroundColor: (color: string) => void;
   centerViewOnCanvas: (componentId: string) => void;
+  fitContentToView: () => void;
   saveViewState: (uiState?: { leftPanelTab?: 'components' | 'assets' | 'tree'; leftPanelVisible?: boolean; rightPanelVisible?: boolean; leftPanelWidth?: number; rightPanelWidth?: number }) => void;
   restoreViewState: (filePath: string) => { restored: boolean; state?: ViewState };
   
@@ -990,6 +991,63 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     });
     
     set({ canvasOffset: { x: offsetX, y: offsetY } });
+  },
+
+  // 自适应居中：计算所有顶层组件的包围盒，自动缩放并居中显示
+  fitContentToView: () => {
+    const state = get();
+    const topLevelComponents = state.components.filter(c => c.parent === null);
+    if (topLevelComponents.length === 0) return;
+
+    // 计算所有顶层组件的包围盒
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const comp of topLevelComponents) {
+      minX = Math.min(minX, comp.position.x);
+      minY = Math.min(minY, comp.position.y);
+      maxX = Math.max(maxX, comp.position.x + comp.position.width);
+      maxY = Math.max(maxY, comp.position.y + comp.position.height);
+    }
+
+    const contentWidth = maxX - minX;
+    const contentHeight = maxY - minY;
+    if (contentWidth <= 0 || contentHeight <= 0) return;
+
+    const contentCenterX = (minX + maxX) / 2;
+    const contentCenterY = (minY + maxY) / 2;
+
+    // 获取视口尺寸
+    const containerElement = document.querySelector('.designer-canvas-container');
+    if (!containerElement) return;
+    const rect = containerElement.getBoundingClientRect();
+    const viewportWidth = rect.width;
+    const viewportHeight = rect.height;
+    if (viewportWidth <= 0 || viewportHeight <= 0) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const padding = 0.85; // 留 15% 边距
+
+    // 计算适合的 effectiveZoom（实际渲染缩放 = zoom / dpr）
+    const fitEffectiveZoom = Math.min(
+      (viewportWidth * padding) / contentWidth,
+      (viewportHeight * padding) / contentHeight
+    );
+
+    // 转换为 store 中的 zoom 值，并限制范围
+    const fitZoom = Math.max(0.1, Math.min(5, fitEffectiveZoom * dpr));
+    const effectiveZoom = fitZoom / dpr;
+
+    // 计算居中偏移
+    const offsetX = viewportWidth / 2 - contentCenterX * effectiveZoom;
+    const offsetY = viewportHeight / 2 - contentCenterY * effectiveZoom;
+
+    console.log('[fitContentToView]', {
+      content: { minX, minY, maxX, maxY, width: contentWidth, height: contentHeight },
+      viewport: { width: viewportWidth, height: viewportHeight },
+      fitZoom, effectiveZoom,
+      offset: { x: offsetX, y: offsetY }
+    });
+
+    set({ zoom: fitZoom, canvasOffset: { x: offsetX, y: offsetY } });
   },
 
   // Drag and drop
