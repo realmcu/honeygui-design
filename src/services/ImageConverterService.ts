@@ -84,6 +84,9 @@ export class ImageConverterService {
                     'argb8888': PixelFormat.ARGB8888,
                     'argb8565': PixelFormat.ARGB8565,
                     'a8': PixelFormat.A8,
+                    'a4': PixelFormat.A4,
+                    'a2': PixelFormat.A2,
+                    'a1': PixelFormat.A1,
                     'i8': PixelFormat.I8,
                 };
                 const mappedFormat = formatMap[opts.format.toLowerCase()];

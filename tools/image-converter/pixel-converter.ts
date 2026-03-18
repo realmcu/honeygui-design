@@ -11,6 +11,31 @@ interface RGBA {
     a: number;
 }
 
+/**
+ * 计算 A4/A2/A1 格式每行需要的字节数（向上取整到整字节）
+ * @param width 图像宽度（像素数）
+ * @param bitsPerPixel 每像素位数 (4, 2, 1)
+ * @returns 每行字节数
+ */
+function calcRowBytes(width: number, bitsPerPixel: number): number {
+    const totalBits = width * bitsPerPixel;
+    return Math.ceil(totalBits / 8);
+}
+
+/**
+ * 计算 A4/A2/A1 格式每行需要补齐到的像素数（使每行为整字节）
+ * A4: 2个像素/字节，补齐到偶数
+ * A2: 4个像素/字节，补齐到4的倍数
+ * A1: 8个像素/字节，补齐到8的倍数
+ * @param width 原始宽度
+ * @param bitsPerPixel 每像素位数
+ * @returns 补齐后的宽度
+ */
+function calcPaddedWidth(width: number, bitsPerPixel: number): number {
+    const pixelsPerByte = 8 / bitsPerPixel;
+    return Math.ceil(width / pixelsPerByte) * pixelsPerByte;
+}
+
 function rgbToRgb565(r: number, g: number, b: number): number {
     return ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
 }
@@ -170,9 +195,76 @@ export function convertPixels(pixels: RGBA[], width: number, format: PixelFormat
             }
             break;
         
+        case PixelFormat.A4:
+            // A4: 4 bits per pixel, 2 pixels per byte
+            // 每行需要补齐到整字节（2像素的倍数）
+            buffers.push(convertToSubByteAlpha(processedPixels, width, 4));
+            break;
+        
+        case PixelFormat.A2:
+            // A2: 2 bits per pixel, 4 pixels per byte
+            // 每行需要补齐到整字节（4像素的倍数）
+            buffers.push(convertToSubByteAlpha(processedPixels, width, 2));
+            break;
+        
+        case PixelFormat.A1:
+            // A1: 1 bit per pixel, 8 pixels per byte
+            // 每行需要补齐到整字节（8像素的倍数）
+            buffers.push(convertToSubByteAlpha(processedPixels, width, 1));
+            break;
+        
         default:
             throw new Error(`Unsupported format: ${format}`);
     }
     
     return Buffer.concat(buffers);
+}
+
+/**
+ * 将像素数据转换为子字节 Alpha 格式 (A4/A2/A1)
+ * 每行独立处理，补齐到整字节边界
+ * @param pixels 像素数组
+ * @param width 图像宽度
+ * @param bitsPerPixel 每像素位数 (4, 2, 1)
+ * @returns 转换后的 Buffer
+ */
+function convertToSubByteAlpha(pixels: RGBA[], width: number, bitsPerPixel: number): Buffer {
+    const height = Math.ceil(pixels.length / width);
+    const pixelsPerByte = 8 / bitsPerPixel;
+    const paddedWidth = calcPaddedWidth(width, bitsPerPixel);
+    const bytesPerRow = paddedWidth / pixelsPerByte;
+    const maxValue = (1 << bitsPerPixel) - 1;  // A4=15, A2=3, A1=1
+    
+    const result: number[] = [];
+    
+    for (let y = 0; y < height; y++) {
+        const rowStart = y * width;
+        
+        for (let byteIdx = 0; byteIdx < bytesPerRow; byteIdx++) {
+            let byteValue = 0;
+            
+            for (let pixelInByte = 0; pixelInByte < pixelsPerByte; pixelInByte++) {
+                const x = byteIdx * pixelsPerByte + pixelInByte;
+                const pixelIdx = rowStart + x;
+                
+                // 获取 alpha 值，超出宽度的像素用 0 填充
+                let alpha = 0;
+                if (x < width && pixelIdx < pixels.length) {
+                    // 将 8 位 alpha 量化到目标位数
+                    alpha = Math.round(pixels[pixelIdx].a * maxValue / 255);
+                }
+                
+                // 将 alpha 值打包到字节中（低位在前）
+                // 例如 A4: 第一个像素在低4位(bit0-3)，第二个像素在高4位(bit4-7)
+                // A2: 第一个像素在bit0-1，第二个在bit2-3，第三个在bit4-5，第四个在bit6-7
+                // A1: 第一个像素在bit0，第二个在bit1，...，第八个在bit7
+                const shift = pixelInByte * bitsPerPixel;
+                byteValue |= (alpha << shift);
+            }
+            
+            result.push(byteValue);
+        }
+    }
+    
+    return Buffer.from(result);
 }

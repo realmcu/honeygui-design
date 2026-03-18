@@ -6,6 +6,7 @@
  * - ARGB8565:  [len:1] [pixel:2] [alpha:1]
  * - RGB888:    [len:1] [b:1] [g:1] [r:1]
  * - ARGB8888:  [len:1] [pixel:4]
+ * - A8/A4/A2/A1: [len:1] [byte:1]  (子字节格式按字节压缩)
  */
 
 import { CompressionAlgorithm, CompressionResult } from './base';
@@ -29,15 +30,17 @@ export class RLECompression implements CompressionAlgorithm {
     pixelData: Buffer,
     width: number,
     height: number,
-    pixelBytes: number
+    pixelBytes: number,
+    bytesPerLine?: number
   ): CompressionResult {
     const compressedData: number[] = [];
     const lineOffsets: number[] = [];
-    const bytesPerLine = width * pixelBytes;
+    // 使用提供的 bytesPerLine，否则按传统方式计算
+    const actualBytesPerLine = bytesPerLine ?? (width * pixelBytes);
 
     for (let line = 0; line < height; line++) {
-      const lineStart = line * bytesPerLine;
-      const lineEnd = lineStart + bytesPerLine;
+      const lineStart = line * actualBytesPerLine;
+      const lineEnd = lineStart + actualBytesPerLine;
       const lineData = pixelData.subarray(lineStart, lineEnd);
 
       // Record offset for this line

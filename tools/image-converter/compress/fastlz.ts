@@ -12,15 +12,17 @@ export class FastLzCompression implements CompressionAlgorithm {
     pixelData: Buffer,
     width: number,
     height: number,
-    pixelBytes: number
+    pixelBytes: number,
+    bytesPerLine?: number
   ): CompressionResult {
     const compressedLines: Buffer[] = [];
-    const bytesPerLine = width * pixelBytes;
+    // 使用提供的 bytesPerLine，否则按传统方式计算
+    const actualBytesPerLine = bytesPerLine ?? (width * pixelBytes);
 
     // Compress each line
     for (let line = 0; line < height; line++) {
-      const lineStart = line * bytesPerLine;
-      const lineEnd = lineStart + bytesPerLine;
+      const lineStart = line * actualBytesPerLine;
+      const lineEnd = lineStart + actualBytesPerLine;
       const lineData = pixelData.subarray(lineStart, lineEnd);
       
       const compressed = this.compressLine(lineData);

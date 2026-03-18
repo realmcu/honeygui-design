@@ -33,6 +33,9 @@ const FOLDER_FORMAT_OPTIONS: { value: TargetFormat; label: string }[] = [
   { value: 'ARGB8888', label: 'ARGB8888' },
   { value: 'I8', label: 'I8' },
   { value: 'A8', label: 'A8' },
+  { value: 'A4', label: 'A4' },
+  { value: 'A2', label: 'A2' },
+  { value: 'A1', label: 'A1' },
   { value: 'adaptive16', label: 'formatAdaptive16' },
   { value: 'adaptive24', label: 'formatAdaptive24' },
 ];
@@ -46,6 +49,9 @@ const IMAGE_FORMAT_OPTIONS: { value: TargetFormat; label: string }[] = [
   { value: 'ARGB8888', label: 'ARGB8888' },
   { value: 'I8', label: 'I8' },
   { value: 'A8', label: 'A8' },
+  { value: 'A4', label: 'A4' },
+  { value: 'A2', label: 'A2' },
+  { value: 'A1', label: 'A1' },
 ];
 
 // 文件夹可用的视频格式选项（不含继承）

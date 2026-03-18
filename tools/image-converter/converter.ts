@@ -127,11 +127,31 @@ export class ImageConverter {
         if (useCompress && this.compressor) {
             // Compress data
             const pixelBytes = FORMAT_TO_BPP[pixelFormat];
+            
+            // 计算每行实际字节数（子字节格式需要特殊处理）
+            // 同时计算 IMDC header 中的 raw_pic_width（子字节格式需要除以像素/字节数）
+            let bytesPerLine: number | undefined;
+            let imdcWidth = width;  // IMDC header 中的宽度
+            if (pixelFormat === PixelFormat.A4) {
+                // A4: 4 bits/pixel, 2 pixels/byte, 补齐到偶数像素
+                bytesPerLine = Math.ceil(width / 2);
+                imdcWidth = Math.ceil(width / 2);  // raw_pic_width 需要除以 2
+            } else if (pixelFormat === PixelFormat.A2) {
+                // A2: 2 bits/pixel, 4 pixels/byte, 补齐到4的倍数像素
+                bytesPerLine = Math.ceil(width / 4);
+                imdcWidth = Math.ceil(width / 4);  // raw_pic_width 需要除以 4
+            } else if (pixelFormat === PixelFormat.A1) {
+                // A1: 1 bit/pixel, 8 pixels/byte, 补齐到8的倍数像素
+                bytesPerLine = Math.ceil(width / 8);
+                imdcWidth = Math.ceil(width / 8);  // raw_pic_width 需要除以 8
+            }
+            
             const { compressedData, lineOffsets, params } = this.compressor.compress(
                 pixelData,
                 width,
                 height,
-                pixelBytes
+                pixelBytes,
+                bytesPerLine
             );
 
             // Build IMDC header
@@ -140,7 +160,7 @@ export class ImageConverter {
                 params.feature_1,
                 params.feature_2,
                 FORMAT_TO_PIXEL_BYTES[pixelFormat],
-                width,
+                imdcWidth,
                 height
             );
             const imdcBuffer = imdc.pack();
