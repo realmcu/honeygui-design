@@ -662,7 +662,7 @@ export class HmlParser {
       // hg_view 特有属性
       'residentMemory', 'animateStep',
       // 双态按钮属性
-      'toggleMode', 'imageOn', 'imageOff', 'initialState',
+      'toggleMode', 'imageOn', 'imageOff', 'initialState', 'onCallback', 'offCallback',
       // hg_glass 特有属性
       'movable', 'click',
       // hg_canvas SVG 文件属性
@@ -697,7 +697,40 @@ export class HmlParser {
         return;
       }
 
-      if (key.startsWith('on')) {
+      if (dataProps.has(key)) {
+        // dataProps 白名单优先（防止 onCallback 等被误判为事件）
+        let value = attributes[key];
+        // 布尔值转换（loop, createBar, autoAlign, inertia, enableAreaDisplay, keepNoteAlive, toggleMode, movable, click, timerEnabled, timerReload, timerStopOnComplete, enableScroll, scrollReverse, highQuality, needClip, isTimerLabel, timerAutoStart 等）
+        if (['loop', 'createBar', 'autoAlign', 'inertia', 'enableAreaDisplay', 'keepNoteAlive', 'toggleMode', 'movable', 'click', 'timerEnabled', 'timerReload', 'timerStopOnComplete', 'enableScroll', 'scrollReverse', 'highQuality', 'needClip', 'isTimerLabel', 'timerAutoStart'].includes(key)) {
+          value = value === 'true' || value === true;
+        }
+        // 数字类型属性转换（包括 opacity, timerInterval, timerDuration, timerInitialValue）
+        if (['noteNum', 'offset', 'outScope', 'opacity', 'animateStep', 'timerInterval', 'timerDuration', 'timerInitialValue', 'scrollStartOffset', 'scrollEndOffset', 'scrollInterval', 'scrollDuration', 'iconSize', 'offsetX', 'offsetY'].includes(key) && typeof value === 'string') {
+          const num = parseFloat(value);
+          value = isNaN(num) ? value : num;
+        }
+        // characterSets 需要从 JSON 字符串解析为数组
+        if (key === 'characterSets' && typeof value === 'string') {
+          try { value = JSON.parse(value); } catch (e) { value = []; }
+        }
+        // timerActions 需要从 JSON 字符串解析为数组
+        if (key === 'timerActions' && typeof value === 'string') {
+          try { value = JSON.parse(value); } catch (e) { value = []; }
+        }
+        // timers 需要从 JSON 字符串解析为数组
+        if (key === 'timers' && typeof value === 'string') {
+          try { value = JSON.parse(value); } catch (e) { value = []; }
+        }
+        // iconImages 需要从 JSON 字符串解析为数组
+        if (key === 'iconImages' && typeof value === 'string') {
+          try { value = JSON.parse(value); } catch (e) { value = []; }
+        }
+        // iconActions 需要从 JSON 字符串解析为数组
+        if (key === 'iconActions' && typeof value === 'string') {
+          try { value = JSON.parse(value); } catch (e) { value = []; }
+        }
+        data[key] = value;
+      } else if (key.startsWith('on')) {
         events[key] = attributes[key];
       } else if (styleProps.has(key)) {
         // 数字类型属性需要转换
@@ -719,63 +752,6 @@ export class HmlParser {
           value = value === 'true' || value === true;
         }
         style[key] = value;
-      } else if (dataProps.has(key)) {
-        let value = attributes[key];
-        // 布尔值转换（loop, createBar, autoAlign, inertia, enableAreaDisplay, keepNoteAlive, toggleMode, movable, click, timerEnabled, timerReload, timerStopOnComplete, enableScroll, scrollReverse, highQuality, needClip, isTimerLabel, timerAutoStart 等）
-        if (['loop', 'createBar', 'autoAlign', 'inertia', 'enableAreaDisplay', 'keepNoteAlive', 'toggleMode', 'movable', 'click', 'timerEnabled', 'timerReload', 'timerStopOnComplete', 'enableScroll', 'scrollReverse', 'highQuality', 'needClip', 'isTimerLabel', 'timerAutoStart'].includes(key)) {
-          value = value === 'true' || value === true;
-        }
-        // 数字类型属性转换（包括 opacity, timerInterval, timerDuration, timerInitialValue）
-        if (['noteNum', 'offset', 'outScope', 'opacity', 'animateStep', 'timerInterval', 'timerDuration', 'timerInitialValue', 'scrollStartOffset', 'scrollEndOffset', 'scrollInterval', 'scrollDuration', 'iconSize', 'offsetX', 'offsetY'].includes(key) && typeof value === 'string') {
-          const num = parseFloat(value);
-          value = isNaN(num) ? value : num;
-        }
-        // characterSets 需要从 JSON 字符串解析为数组
-        if (key === 'characterSets' && typeof value === 'string') {
-          try {
-            value = JSON.parse(value);
-          } catch (e) {
-            console.warn(`Failed to parse characterSets JSON: ${value}`);
-            value = [];
-          }
-        }
-        // timerActions 需要从 JSON 字符串解析为数组
-        if (key === 'timerActions' && typeof value === 'string') {
-          try {
-            value = JSON.parse(value);
-          } catch (e) {
-            console.warn(`Failed to parse timerActions JSON: ${value}`);
-            value = [];
-          }
-        }
-        // timers 需要从 JSON 字符串解析为数组
-        if (key === 'timers' && typeof value === 'string') {
-          try {
-            value = JSON.parse(value);
-          } catch (e) {
-            console.warn(`Failed to parse timers JSON: ${value}`);
-            value = [];
-          }
-        }
-        // iconImages 需要从 JSON 字符串解析为数组
-        if (key === 'iconImages' && typeof value === 'string') {
-          try {
-            value = JSON.parse(value);
-          } catch (e) {
-            console.warn(`Failed to parse iconImages JSON: ${value}`);
-            value = [];
-          }
-        }
-        // iconActions 需要从 JSON 字符串解析为数组
-        if (key === 'iconActions' && typeof value === 'string') {
-          try {
-            value = JSON.parse(value);
-          } catch (e) {
-            console.warn(`Failed to parse iconActions JSON: ${value}`);
-            value = [];
-          }
-        }
-        data[key] = value;
       } else {
         // 未知属性放入data
         let value = attributes[key];

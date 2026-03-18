@@ -102,6 +102,8 @@ const componentDefinitions: ComponentDefinition[] = [
       { name: 'imageOff', label: 'Off Image', type: 'string', group: 'data' },
       { name: 'initialState', label: 'Initial State', type: 'select', defaultValue: 'off', 
         options: ['on', 'off'], group: 'data' },
+      { name: 'onCallback', label: 'On State Callback', type: 'string', defaultValue: '', group: 'data' },
+      { name: 'offCallback', label: 'Off State Callback', type: 'string', defaultValue: '', group: 'data' },
       { name: 'controlTarget', label: 'Control Target', type: 'string', defaultValue: '', group: 'data' },
       { name: 'enabled', label: 'Enabled', type: 'boolean', defaultValue: true, group: 'general' },
     ],

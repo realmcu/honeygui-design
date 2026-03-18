@@ -49,6 +49,8 @@ const zhCN = {
   'On Image': '开启图片',
   'Off Image': '关闭图片',
   'Initial State': '初始状态',
+  'On State Callback': '开启状态回调',
+  'Off State Callback': '关闭状态回调',
   'Control Target': '控制目标',
   'Enabled': '启用',
   'Disabled': '禁用',

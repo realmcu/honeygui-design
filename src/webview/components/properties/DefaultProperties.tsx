@@ -14,6 +14,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
   const [activeTab, setActiveTab] = useState<'properties' | 'events'>('properties');
   const [showFontPicker, setShowFontPicker] = useState(false);
   const [fontFiles, setFontFiles] = useState<string[]>([]);
+  const [userFunctions, setUserFunctions] = useState<Array<{ name: string; type: 'event' | 'message' }>>([]);
   
   // 保存当前正在编辑的组件 ID（用于异步操作时确保操作应用到正确的组件）
   const componentIdRef = React.useRef(component.id);
@@ -111,6 +112,8 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
         if (event.data.fontPath === (component.data as any)?.fontFile) {
           setFontMetrics(event.data.metrics);
         }
+      } else if (event.data.command === 'userFunctionsLoaded') {
+        setUserFunctions(event.data.functions || []);
       }
     };
     window.addEventListener('message', handleMessage);
@@ -129,6 +132,63 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
       setFontMetrics(null);
     }
   }, [(component.data as any)?.fontFile, component.type]);
+
+  // 当 hg_button 被选中时，加载用户自定义函数列表
+  React.useEffect(() => {
+    if (component.type === 'hg_button') {
+      window.vscodeAPI?.postMessage({ command: 'getUserFunctions' });
+    }
+  }, [component.id, component.type]);
+
+  const renderCallbackSelector = (propertyName: 'onCallback' | 'offCallback') => {
+    const value = (component.data as any)?.[propertyName] || '';
+    const eventFunctions = userFunctions.filter(f => f.type === 'event');
+    return (
+      <div style={{ display: 'flex', gap: '4px', marginTop: '4px', alignItems: 'center' }}>
+        {eventFunctions.length === 0 ? (
+          <div style={{ fontSize: '12px', color: 'var(--vscode-descriptionForeground)', flex: 1 }}>
+            {t('No user functions found, declare in src/user/**_user.h')}
+          </div>
+        ) : (
+          <select
+            value={value}
+            onChange={(e) => handleDataChange(propertyName, e.target.value)}
+            style={{
+              flex: 1,
+              padding: '4px 6px',
+              backgroundColor: 'var(--vscode-dropdown-background)',
+              color: 'var(--vscode-dropdown-foreground)',
+              border: '1px solid var(--vscode-dropdown-border)',
+              borderRadius: '2px',
+              fontSize: '12px',
+            }}
+          >
+            <option value="">-- {t('None')} --</option>
+            {eventFunctions.map(func => (
+              <option key={func.name} value={func.name}>{func.name}</option>
+            ))}
+          </select>
+        )}
+        {value && (
+          <button
+            onClick={() => handleDataChange(propertyName, '')}
+            style={{
+              padding: '4px 6px',
+              backgroundColor: 'var(--vscode-button-secondaryBackground)',
+              color: 'var(--vscode-button-secondaryForeground)',
+              border: 'none',
+              borderRadius: '2px',
+              cursor: 'pointer',
+              fontSize: '12px',
+            }}
+            title={t('Clear')}
+          >
+            ✕
+          </button>
+        )}
+      </div>
+    );
+  };
 
   const renderImageProperty = (value: any, onChange: (value: any) => void, propertyName?: string) => {
     return (
@@ -903,6 +963,9 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                           (value) => handleDataChange(property.name, value),
                           property.name
                         )
+                      ) : (property.name === 'onCallback' || property.name === 'offCallback') && component.type === 'hg_button' ? (
+                        // 双态按钮的回调函数选择器
+                        renderCallbackSelector(property.name as 'onCallback' | 'offCallback')
                       ) : (property.name === 'buttonStateOnImage' || property.name === 'buttonStateOffImage') && component.type === 'hg_image' ? (
                         // Image 组件双态按键的图片选择器
                         renderImageProperty(

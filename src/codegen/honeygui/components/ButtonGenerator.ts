@@ -20,13 +20,19 @@ export class ButtonGenerator implements ComponentCodeGenerator {
     
     if (toggleMode) {
       // 双态模式：使用 gui_img 创建图片按钮
+      // 创建时先用 off 图片占位，随后根据运行时状态变量设置正确图片
       const imageOn = component.data?.imageOn || '';
       const imageOff = component.data?.imageOff || '';
-      const initialState = component.data?.initialState === 'on';
-      const initialImage = initialState ? imageOn : imageOff;
-      const binSrc = this.convertToBinPath(initialImage);
-      
-      return `${indentStr}${component.id} = gui_img_create_from_fs(${parentRef}, "${component.name}", "${binSrc}", ${x}, ${y}, ${width}, ${height});\n`;
+      const binOn = this.convertToBinPath(imageOn);
+      const binOff = this.convertToBinPath(imageOff);
+
+      // 创建控件（用 off 图片作为占位）
+      let code = `${indentStr}${component.id} = gui_img_create_from_fs(${parentRef}, "${component.name}", "${binOff}", ${x}, ${y}, ${width}, ${height});\n`;
+      // 根据运行时状态变量决定初始显示的图片（页面重入时恢复上次状态）
+      code += `${indentStr}if (${component.id}_state) {\n`;
+      code += `${indentStr}    gui_img_set_src((gui_img_t *)${component.id}, "${binOn}", IMG_SRC_FILESYS);\n`;
+      code += `${indentStr}}\n`;
+      return code;
     }
 
     // 普通模式：也使用 gui_img（SDK 没有 gui_button）
@@ -166,6 +172,16 @@ export class ButtonGenerator implements ComponentCodeGenerator {
     const binOn = this.convertToBinPath(imageOn);
     const binOff = this.convertToBinPath(imageOff);
 
+    // 用户配置的回调函数名（可为空，空则不调用）
+    const onCallback = component.data?.onCallback || '';
+    const offCallback = component.data?.offCallback || '';
+
+    // 生成回调调用代码（为空则不生成）
+    const onCallLine = onCallback ? `        ${onCallback}(obj, e);\n` : '';
+    const offCallLine = offCallback ? `        ${offCallback}(obj, e);\n` : '';
+    const onCallLineNull = onCallback ? `        ${onCallback}(NULL, NULL);\n` : '';
+    const offCallLineNull = offCallback ? `        ${offCallback}(NULL, NULL);\n` : '';
+
     // 收集 onClick 事件的 actions，合并到 toggle_cb 中
     const onClickActions = (component.eventConfigs || [])
       .filter(e => e.type === 'onClick')
@@ -190,11 +206,9 @@ void ${component.id}_toggle_cb(void *obj, gui_event_t *e)
     // 根据状态切换图片并调用对应回调
     if (${component.id}_state) {
         gui_img_set_src((gui_img_t *)${component.id}, "${binOn}", IMG_SRC_FILESYS);
-        ${component.id}_on_callback();
-    } else {
+${onCallLine}    } else {
         gui_img_set_src((gui_img_t *)${component.id}, "${binOff}", IMG_SRC_FILESYS);
-        ${component.id}_off_callback();
-    }
+${offCallLine}    }
 ${extraCode}}
 
 // 获取当前状态
@@ -211,11 +225,9 @@ void ${component.id}_set_state(bool state)
         
         if (state) {
             gui_img_set_src((gui_img_t *)${component.id}, "${binOn}", IMG_SRC_FILESYS);
-            ${component.id}_on_callback();
-        } else {
+${onCallLineNull}        } else {
             gui_img_set_src((gui_img_t *)${component.id}, "${binOff}", IMG_SRC_FILESYS);
-            ${component.id}_off_callback();
-        }
+${offCallLineNull}        }
     }
 }
 `;
@@ -242,53 +254,18 @@ void ${component.id}_set_state(bool state)
 
   /**
    * 生成双态按钮的状态回调函数声明（用于头文件）
+   * 回调函数由用户在 _user.h 中声明，此处不生成
    */
-  generateCallbackDeclarations(component: Component): string {
-    const toggleMode = component.data?.toggleMode === true || component.data?.toggleMode === 'true';
-    if (!toggleMode) {
-      return '';
-    }
-
-    return `// ${component.id} 状态回调函数
-void ${component.id}_on_callback(void);
-void ${component.id}_off_callback(void);
-`;
+  generateCallbackDeclarations(_component: Component): string {
+    return '';
   }
 
   /**
    * 生成双态按钮的状态回调函数实现（用于 callbacks.c）
+   * 回调函数由用户自行实现，此处不生成
    */
-  generateCallbackImplementations(component: Component): string {
-    const toggleMode = component.data?.toggleMode === true || component.data?.toggleMode === 'true';
-    if (!toggleMode) {
-      return '';
-    }
-
-    return `
-/* USER CODE BEGIN ${component.id}_on_callback */
-/**
- * ${component.id} 开启状态回调
- * 当按钮切换到开启状态时调用
- */
-void ${component.id}_on_callback(void)
-{
-    // TODO: 实现开启状态的业务逻辑
-    // 例如：music_player_play();
-}
-/* USER CODE END ${component.id}_on_callback */
-
-/* USER CODE BEGIN ${component.id}_off_callback */
-/**
- * ${component.id} 关闭状态回调
- * 当按钮切换到关闭状态时调用
- */
-void ${component.id}_off_callback(void)
-{
-    // TODO: 实现关闭状态的业务逻辑
-    // 例如：music_player_pause();
-}
-/* USER CODE END ${component.id}_off_callback */
-`;
+  generateCallbackImplementations(_component: Component): string {
+    return '';
   }
 
   /**

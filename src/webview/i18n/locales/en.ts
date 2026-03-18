@@ -49,6 +49,8 @@ const en = {
   'On Image': 'On Image',
   'Off Image': 'Off Image',
   'Initial State': 'Initial State',
+  'On State Callback': 'On State Callback',
+  'Off State Callback': 'Off State Callback',
   'Control Target': 'Control Target',
   'Enabled': 'Enabled',
   'Disabled': 'Disabled',
