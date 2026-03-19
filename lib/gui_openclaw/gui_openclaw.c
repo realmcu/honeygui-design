@@ -8,6 +8,7 @@
  *                        Header Files
  *============================================================================*/
 #include <stdio.h>
+#include <stdarg.h>
 #include <string.h>
 #include <stdbool.h>
 #if defined(_HONEYGUI_SIMULATOR_) && (defined(_WIN32) || defined(__linux__))
@@ -21,24 +22,24 @@
 #include "claw-mcu/claw_mqtt_c_dll/include/claw_mqtt_client.h"
 #endif
 #include "gui_openclaw.h"
+#include "gui_openclaw_emoji.h"
 
 #include "gui_fb.h"
 #include "gui_api_os.h"
 #include "tp_algo.h"
 #include "def_file.h"
-
 #include "stb_truetype.h"
 
 /*============================================================================*
  *                           Types
  *============================================================================*/
 #define GUI_OPENCLAW_MAX_MESSAGES        12
-#define GUI_OPENCLAW_MAX_MESSAGE_LENGTH  256
+#define GUI_OPENCLAW_MAX_MESSAGE_LENGTH  10240
 #define GUI_OPENCLAW_MAX_WRAP_LINES      12
 #define GUI_OPENCLAW_INFO_TEXT_LENGTH    96
 #define GUI_OPENCLAW_INPUT_TEXT_LENGTH   256
 #define GUI_OPENCLAW_INPUT_EVENT_QUEUE   128
-#define GUI_OPENCLAW_MQTT_TEXT_LENGTH    256
+#define GUI_OPENCLAW_MQTT_TEXT_LENGTH    10240
 #define GUI_OPENCLAW_MQTT_EVENT_QUEUE    16
 #define GUI_OPENCLAW_CORRELATION_ID_LEN  64
 
@@ -139,8 +140,12 @@ typedef struct gui_openclaw_ctx
     int height;
     const uint8_t *ttf_font_data;
     size_t ttf_font_size;
+    const uint8_t *emoji_ttf_font_data;
+    size_t emoji_ttf_font_size;
     stbtt_fontinfo font;
+    stbtt_fontinfo emoji_font;
     bool font_ready;
+    bool emoji_font_ready;
     bool dirty;
     bool connected;
     uint32_t tick_count;
@@ -175,6 +180,7 @@ typedef struct gui_openclaw_ctx
 #endif
     int message_count;
     gui_openclaw_message_t messages[GUI_OPENCLAW_MAX_MESSAGES];
+    gui_openclaw_emoji_widget_t *emoji_widget;
 } gui_openclaw_ctx_t;
 
 /*============================================================================*
@@ -188,6 +194,9 @@ static const char *s_openclaw_default_sender = "esp32-sim-c-cli-01";
  *============================================================================*/
 static gui_openclaw_ctx_t *s_openclaw_ctx_list = NULL;
 static gui_openclaw_ctx_t *s_openclaw_active_ctx = NULL;
+static char s_openclaw_info_line_buffer[GUI_OPENCLAW_INFO_TEXT_LENGTH * 2];
+static char s_openclaw_input_line_buffer[GUI_OPENCLAW_INPUT_TEXT_LENGTH + 4];
+static char s_openclaw_chat_line_buffer[GUI_OPENCLAW_MAX_MESSAGE_LENGTH];
 
 #if defined(_HONEYGUI_SIMULATOR_) && (defined(_WIN32) || defined(__linux__))
 static pthread_mutex_t s_openclaw_input_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -219,6 +228,106 @@ static void gui_openclaw_mqtt_process_events(gui_openclaw_ctx_t *ctx);
 #endif
 
 static void gui_openclaw_log_chat(gui_openclaw_role_t role, const char *text);
+
+static bool gui_openclaw_init_font_face(const uint8_t *font_data,
+                                        size_t         font_size,
+                                        stbtt_fontinfo *font)
+{
+    int offset;
+
+    if (font_data == NULL || font_size == 0 || font == NULL)
+    {
+        return false;
+    }
+
+    offset = stbtt_GetFontOffsetForIndex(font_data, 0);
+    if (offset < 0)
+    {
+        offset = 0;
+    }
+
+    return (stbtt_InitFont(font, font_data, offset) != 0);
+}
+
+static bool gui_openclaw_is_zero_width_codepoint(int codepoint)
+{
+    return (codepoint == 0x200D ||
+            codepoint == 0xFE0E ||
+            codepoint == 0xFE0F ||
+            codepoint == 0x20E3);
+}
+
+static bool gui_openclaw_is_emoji_codepoint(int codepoint)
+{
+    return ((codepoint >= 0x1F000 && codepoint <= 0x1FAFF) ||
+            (codepoint >= 0x2600 && codepoint <= 0x27BF) ||
+            (codepoint >= 0x2300 && codepoint <= 0x23FF));
+}
+
+static const stbtt_fontinfo *gui_openclaw_select_font(gui_openclaw_ctx_t *ctx,
+                                                      int                 codepoint)
+{
+    bool is_emoji;
+
+    if (ctx == NULL)
+    {
+        return NULL;
+    }
+
+    is_emoji = gui_openclaw_is_emoji_codepoint(codepoint);
+
+    if (is_emoji)
+    {
+        /* Emoji characters prefer the dedicated emoji font first.
+           If the emoji font was not loaded successfully, or the glyph is
+           missing there, fall back to the normal text font. */
+        if (ctx->emoji_font_ready &&
+            stbtt_FindGlyphIndex(&ctx->emoji_font, codepoint) != 0)
+        {
+            return &ctx->emoji_font;
+        }
+
+        if (ctx->font_ready &&
+            stbtt_FindGlyphIndex(&ctx->font, codepoint) != 0)
+        {
+            return &ctx->font;
+        }
+
+        if (ctx->emoji_font_ready)
+        {
+            return &ctx->emoji_font;
+        }
+
+        if (ctx->font_ready)
+        {
+            return &ctx->font;
+        }
+
+        return NULL;
+    }
+
+    if (ctx->font_ready && stbtt_FindGlyphIndex(&ctx->font, codepoint) != 0)
+    {
+        return &ctx->font;
+    }
+
+    if (ctx->emoji_font_ready && stbtt_FindGlyphIndex(&ctx->emoji_font, codepoint) != 0)
+    {
+        return &ctx->emoji_font;
+    }
+
+    if (ctx->font_ready)
+    {
+        return &ctx->font;
+    }
+
+    if (ctx->emoji_font_ready)
+    {
+        return &ctx->emoji_font;
+    }
+
+    return NULL;
+}
 
 static void gui_openclaw_color_to_rgba(uint32_t color,
                                        uint8_t *r,
@@ -256,6 +365,27 @@ static void gui_openclaw_safe_copy(char *dst, size_t dst_size, const char *src)
     dst[dst_size - 1] = '\0';
 }
 
+static void gui_openclaw_format_text(char *dst, size_t dst_size, const char *format, ...)
+{
+    va_list args;
+
+    if (dst == NULL || dst_size == 0)
+    {
+        return;
+    }
+
+    if (format == NULL)
+    {
+        dst[0] = '\0';
+        return;
+    }
+
+    va_start(args, format);
+    vsnprintf(dst, dst_size, format, args);
+    va_end(args);
+    dst[dst_size - 1] = '\0';
+}
+
 static void gui_openclaw_log_chat(gui_openclaw_role_t role, const char *text)
 {
     const char *role_name = NULL;
@@ -272,8 +402,7 @@ static void gui_openclaw_log_chat(gui_openclaw_role_t role, const char *text)
         break;
 
     case GUI_OPENCLAW_ROLE_ASSISTANT:
-        role_name = "openclaw";
-        break;
+        return;
 
     default:
         return;
@@ -298,8 +427,8 @@ static const char *gui_openclaw_touch_type_name(T_GUI_INPUT_TYPE type)
         return "TOUCH_LONG";
     case TOUCH_DOUBLE:
         return "TOUCH_DOUBLE";
-    case TOUCH_TRIPLE:
-        return "TOUCH_TRIPLE";
+    // case TOUCH_TRIPLE:
+    //     return "TOUCH_TRIPLE";
     case TOUCH_ORIGIN_FROM_X:
         return "TOUCH_ORIGIN_FROM_X";
     case TOUCH_ORIGIN_FROM_Y:
@@ -476,6 +605,45 @@ static bool gui_openclaw_mqtt_enqueue_event(gui_openclaw_ctx_t               *ct
     return true;
 }
 
+static bool gui_openclaw_mqtt_enqueue_eventf(gui_openclaw_ctx_t               *ctx,
+                                             gui_openclaw_mqtt_event_type_t     type,
+                                             bool                               connected,
+                                             const char                        *format,
+                                             ...)
+{
+    uint16_t next_tail;
+    gui_openclaw_mqtt_event_t *event;
+    va_list args;
+
+    if (ctx == NULL)
+    {
+        return false;
+    }
+
+    pthread_mutex_lock(&ctx->mqtt_event_mutex);
+    next_tail = (uint16_t)((ctx->mqtt_event_tail + 1U) % GUI_OPENCLAW_MQTT_EVENT_QUEUE);
+    if (next_tail == ctx->mqtt_event_head)
+    {
+        pthread_mutex_unlock(&ctx->mqtt_event_mutex);
+        return false;
+    }
+
+    event = &ctx->mqtt_events[ctx->mqtt_event_tail];
+    memset(event, 0x00, sizeof(*event));
+    event->type = type;
+    event->connected = connected;
+    if (format != NULL)
+    {
+        va_start(args, format);
+        vsnprintf(event->text, sizeof(event->text), format, args);
+        va_end(args);
+        event->text[sizeof(event->text) - 1] = '\0';
+    }
+    ctx->mqtt_event_tail = next_tail;
+    pthread_mutex_unlock(&ctx->mqtt_event_mutex);
+    return true;
+}
+
 static bool gui_openclaw_mqtt_dequeue_event(gui_openclaw_ctx_t *ctx,
                                             gui_openclaw_mqtt_event_t *event)
 {
@@ -514,7 +682,6 @@ static void gui_openclaw_mqtt_message_cb(const char *topic,
                                          void *user_data)
 {
     gui_openclaw_ctx_t *ctx = (gui_openclaw_ctx_t *)user_data;
-    char buffer[GUI_OPENCLAW_MQTT_TEXT_LENGTH];
 
     GUI_UNUSED(topic);
     GUI_UNUSED(sender_id);
@@ -526,14 +693,12 @@ static void gui_openclaw_mqtt_message_cb(const char *topic,
         return;
     }
 
-    gui_openclaw_safe_copy(buffer, sizeof(buffer), text);
-    gui_openclaw_mqtt_enqueue_event(ctx, GUI_OPENCLAW_MQTT_EVENT_MESSAGE, buffer, true);
+    gui_openclaw_mqtt_enqueue_event(ctx, GUI_OPENCLAW_MQTT_EVENT_MESSAGE, text, true);
 }
 
 static void gui_openclaw_mqtt_log_cb(int level, const char *message, void *user_data)
 {
     gui_openclaw_ctx_t *ctx = (gui_openclaw_ctx_t *)user_data;
-    char buffer[GUI_OPENCLAW_MQTT_TEXT_LENGTH];
 
     if (ctx == NULL || message == NULL)
     {
@@ -545,15 +710,18 @@ static void gui_openclaw_mqtt_log_cb(int level, const char *message, void *user_
         return;
     }
 
-    snprintf(buffer, sizeof(buffer), "MQTT log[%d]: %s", level, message);
-    gui_openclaw_mqtt_enqueue_event(ctx, GUI_OPENCLAW_MQTT_EVENT_STATUS, buffer, ctx->mqtt_connected);
+    gui_openclaw_mqtt_enqueue_eventf(ctx,
+                                     GUI_OPENCLAW_MQTT_EVENT_STATUS,
+                                     ctx->mqtt_connected,
+                                     "MQTT log[%d]: %s",
+                                     level,
+                                     message);
 }
 
 static void *gui_openclaw_mqtt_connect_thread(void *arg)
 {
     gui_openclaw_ctx_t *ctx = (gui_openclaw_ctx_t *)arg;
     int rc;
-    char status[GUI_OPENCLAW_MQTT_TEXT_LENGTH];
 
     if (ctx == NULL || ctx->mqtt_api.connect == NULL || ctx->mqtt_client == NULL)
     {
@@ -570,13 +738,19 @@ static void *gui_openclaw_mqtt_connect_thread(void *arg)
 
     if (ctx->mqtt_connected)
     {
-        snprintf(status, sizeof(status), "MQTT connected | outbound=%s", ctx->outbound_topic);
-        gui_openclaw_mqtt_enqueue_event(ctx, GUI_OPENCLAW_MQTT_EVENT_CONNECTION, status, true);
+        gui_openclaw_mqtt_enqueue_eventf(ctx,
+                                         GUI_OPENCLAW_MQTT_EVENT_CONNECTION,
+                                         true,
+                                         "MQTT connected | outbound=%s",
+                                         ctx->outbound_topic);
     }
     else
     {
-        snprintf(status, sizeof(status), "MQTT connect failed: %s", gui_openclaw_mqtt_status_desc(ctx, rc));
-        gui_openclaw_mqtt_enqueue_event(ctx, GUI_OPENCLAW_MQTT_EVENT_CONNECTION, status, false);
+        gui_openclaw_mqtt_enqueue_eventf(ctx,
+                                         GUI_OPENCLAW_MQTT_EVENT_CONNECTION,
+                                         false,
+                                         "MQTT connect failed: %s",
+                                         gui_openclaw_mqtt_status_desc(ctx, rc));
     }
     return NULL;
 }
@@ -730,9 +904,10 @@ static bool gui_openclaw_mqtt_init(gui_openclaw_ctx_t *ctx)
                                  1);
     if (rc != CLAW_STATUS_OK)
     {
-        char status[GUI_OPENCLAW_MQTT_TEXT_LENGTH];
-        snprintf(status, sizeof(status), "MQTT configure failed: %s", gui_openclaw_mqtt_status_desc(ctx, rc));
-        gui_openclaw_safe_copy(ctx->status_text, sizeof(ctx->status_text), status);
+        gui_openclaw_format_text(ctx->status_text,
+                                 sizeof(ctx->status_text),
+                                 "MQTT configure failed: %s",
+                                 gui_openclaw_mqtt_status_desc(ctx, rc));
         ctx->mqtt_api.destroy(ctx->mqtt_client);
         ctx->mqtt_client = NULL;
         gui_openclaw_dylib_close((void *)ctx->mqtt_api.handle);
@@ -770,8 +945,125 @@ static void gui_openclaw_mqtt_process_events(gui_openclaw_ctx_t *ctx)
         switch (event.type)
         {
         case GUI_OPENCLAW_MQTT_EVENT_MESSAGE:
-            gui_openclaw_push_message(ctx, GUI_OPENCLAW_ROLE_ASSISTANT, event.text);
-            gui_openclaw_safe_copy(ctx->status_text, sizeof(ctx->status_text), "Reply received");
+            /* Extract [EXPR]{...}[/EXPR] tag if present, and strip it
+               from the text shown in the chat bubble. */
+            {
+                char *expr_start = strstr(event.text, "[EXPR]");
+                char *expr_end   = expr_start ? strstr(expr_start, "[/EXPR]") : NULL;
+                bool  expr_applied = false;
+
+                gui_log("openclaw: raw reply: %s\n", event.text);
+
+                if (expr_start != NULL && expr_end != NULL && expr_end > expr_start)
+                {
+                    /* Temporarily null-terminate the JSON inside the tags */
+                    char *json_begin = expr_start + 6; /* strlen("[EXPR]") */
+                    *expr_end = '\0';
+
+                    gui_log("openclaw: found [EXPR] payload: %s\n", json_begin);
+
+                    if (ctx->emoji_widget != NULL)
+                    {
+                        expr_applied = gui_openclaw_emoji_apply_json(ctx->emoji_widget, json_begin);
+                        gui_log("openclaw: [EXPR] payload parse %s\n",
+                                expr_applied ? "success" : "failed");
+                    }
+
+                    /* Remove the entire [EXPR]...[/EXPR] from the display text */
+                    {
+                        char *after_tag = expr_end + 7; /* strlen("[/EXPR]") */
+                        memmove(expr_start, after_tag, strlen(after_tag) + 1);
+                    }
+                }
+                else if (expr_start != NULL && expr_end == NULL)
+                {
+                    /* [EXPR] found but [/EXPR] missing (message was truncated).
+                       Try to parse whatever JSON we have, then strip the
+                       incomplete tag so it does not appear in the chat. */
+                    char *json_begin = expr_start + 6;
+                    gui_log("openclaw: found truncated [EXPR] payload: %s\n", json_begin);
+                    if (ctx->emoji_widget != NULL && *json_begin != '\0')
+                    {
+                        expr_applied = gui_openclaw_emoji_apply_json(ctx->emoji_widget, json_begin);
+                        gui_log("openclaw: truncated [EXPR] payload parse %s\n",
+                                expr_applied ? "success" : "failed");
+                    }
+                    /* Chop everything from [EXPR] onwards */
+                    *expr_start = '\0';
+                }
+
+                /* Trim trailing whitespace / newlines */
+                {
+                    size_t tlen = strlen(event.text);
+                    while (tlen > 0 &&
+                           (event.text[tlen - 1] == ' '  ||
+                            event.text[tlen - 1] == '\n' ||
+                            event.text[tlen - 1] == '\r'))
+                    {
+                        event.text[--tlen] = '\0';
+                    }
+                }
+
+                gui_openclaw_push_message(ctx, GUI_OPENCLAW_ROLE_ASSISTANT, event.text);
+                gui_openclaw_safe_copy(ctx->status_text, sizeof(ctx->status_text), "Reply received");
+
+                /* Fallback: try bare JSON keys or keyword matching */
+                if (!expr_applied && ctx->emoji_widget != NULL)
+                {
+                    expr_applied = gui_openclaw_emoji_apply_json(ctx->emoji_widget, event.text);
+                    if (expr_applied)
+                    {
+                        gui_log("openclaw: bare JSON parse success\n");
+                    }
+                    else
+                    {
+                        gui_log("openclaw: bare JSON parse failed, fallback to keyword match\n");
+
+                        /* No JSON params found – infer expression from keywords */
+                        if (strstr(event.text, "happy") || strstr(event.text, "great") ||
+                            strstr(event.text, "glad") || strstr(event.text, "awesome"))
+                        {
+                            gui_openclaw_emoji_set_expression(ctx->emoji_widget, GUI_OPENCLAW_EXPR_HAPPY);
+                            gui_log("openclaw: emoji keyword match -> HAPPY\n");
+                        }
+                        else if (strstr(event.text, "sorry") || strstr(event.text, "sad") ||
+                                 strstr(event.text, "unfortunately"))
+                        {
+                            gui_openclaw_emoji_set_expression(ctx->emoji_widget, GUI_OPENCLAW_EXPR_SAD);
+                            gui_log("openclaw: emoji keyword match -> SAD\n");
+                        }
+                        else if (strstr(event.text, "think") || strstr(event.text, "hmm") ||
+                                 strstr(event.text, "let me"))
+                        {
+                            gui_openclaw_emoji_set_expression(ctx->emoji_widget, GUI_OPENCLAW_EXPR_THINKING);
+                            gui_log("openclaw: emoji keyword match -> THINKING\n");
+                        }
+                        else if (strstr(event.text, "wow") || strstr(event.text, "surprise") ||
+                                 strstr(event.text, "amazing"))
+                        {
+                            gui_openclaw_emoji_set_expression(ctx->emoji_widget, GUI_OPENCLAW_EXPR_SURPRISED);
+                            gui_log("openclaw: emoji keyword match -> SURPRISED\n");
+                        }
+                        else if (strstr(event.text, "angry") || strstr(event.text, "error") ||
+                                 strstr(event.text, "fail"))
+                        {
+                            gui_openclaw_emoji_set_expression(ctx->emoji_widget, GUI_OPENCLAW_EXPR_ANGRY);
+                            gui_log("openclaw: emoji keyword match -> ANGRY\n");
+                        }
+                        else if (strstr(event.text, "love") || strstr(event.text, "heart") ||
+                                 strstr(event.text, "thank"))
+                        {
+                            gui_openclaw_emoji_set_expression(ctx->emoji_widget, GUI_OPENCLAW_EXPR_LOVE);
+                            gui_log("openclaw: emoji keyword match -> LOVE\n");
+                        }
+                        else
+                        {
+                            gui_openclaw_emoji_set_expression(ctx->emoji_widget, GUI_OPENCLAW_EXPR_NEUTRAL);
+                            gui_log("openclaw: emoji fallback to neutral\n");
+                        }
+                    }
+                }
+            }
             break;
 
         case GUI_OPENCLAW_MQTT_EVENT_STATUS:
@@ -865,7 +1157,6 @@ static void gui_openclaw_input_submit_ctx(gui_openclaw_ctx_t *ctx)
 {
 #if defined(_HONEYGUI_SIMULATOR_) && (defined(_WIN32) || defined(__linux__))
     int rc;
-    char status[GUI_OPENCLAW_MQTT_TEXT_LENGTH];
 #endif
 
     if (ctx == NULL)
@@ -900,13 +1191,18 @@ static void gui_openclaw_input_submit_ctx(gui_openclaw_ctx_t *ctx)
                                          sizeof(ctx->last_correlation_id));
             if (rc == CLAW_STATUS_OK)
             {
-                snprintf(status, sizeof(status), "Sent | correlationId=%s", ctx->last_correlation_id);
+                gui_openclaw_format_text(ctx->status_text,
+                                         sizeof(ctx->status_text),
+                                         "Sent | correlationId=%s",
+                                         ctx->last_correlation_id);
             }
             else
             {
-                snprintf(status, sizeof(status), "Send failed: %s", gui_openclaw_mqtt_status_desc(ctx, rc));
+                gui_openclaw_format_text(ctx->status_text,
+                                         sizeof(ctx->status_text),
+                                         "Send failed: %s",
+                                         gui_openclaw_mqtt_status_desc(ctx, rc));
             }
-            gui_openclaw_safe_copy(ctx->status_text, sizeof(ctx->status_text), status);
         }
         else if (ctx->mqtt_connecting)
         {
@@ -1004,42 +1300,36 @@ static void gui_openclaw_process_input_events(gui_openclaw_ctx_t *ctx)
 
 static bool gui_openclaw_init_font(gui_openclaw_ctx_t *ctx)
 {
-    int offset;
+    bool ok = false;
 
-    gui_log("openclaw: init_font called, ctx=%p\n", (void *)ctx);
-
-    if (ctx == NULL || ctx->ttf_font_data == NULL)
+    if (ctx == NULL)
     {
-        gui_log("openclaw: init_font failed - ctx=%p, ttf_font_data=%p\n",
-                (void *)ctx, ctx ? (void *)ctx->ttf_font_data : NULL);
         return false;
     }
 
-    gui_log("openclaw: ttf_font_data=%p, size=%zu\n",
-            (void *)ctx->ttf_font_data, ctx->ttf_font_size);
-    gui_log("openclaw: ttf first 4 bytes: 0x%02X 0x%02X 0x%02X 0x%02X\n",
-            ctx->ttf_font_data[0], ctx->ttf_font_data[1],
-            ctx->ttf_font_data[2], ctx->ttf_font_data[3]);
-
-    offset = stbtt_GetFontOffsetForIndex(ctx->ttf_font_data, 0);
-    gui_log("openclaw: stbtt_GetFontOffsetForIndex returned %d\n", offset);
-    if (offset < 0)
-    {
-        gui_log("openclaw: warning - invalid font offset, using 0\n");
-        offset = 0;
-    }
-
-    ctx->font_ready = (stbtt_InitFont(&ctx->font, ctx->ttf_font_data, offset) != 0);
-    gui_log("openclaw: stbtt_InitFont result: font_ready=%d\n", ctx->font_ready);
+    ctx->font_ready = gui_openclaw_init_font_face(ctx->ttf_font_data,
+                                                  ctx->ttf_font_size,
+                                                  &ctx->font);
     if (!ctx->font_ready)
     {
-        gui_log("openclaw: failed to initialize ttf font\n");
+        gui_log("openclaw: failed to initialize primary ttf font\n");
     }
     else
     {
-        gui_log("openclaw: ttf font initialized successfully\n");
+        ok = true;
     }
-    return ctx->font_ready;
+
+    ctx->emoji_font_ready = gui_openclaw_init_font_face(ctx->emoji_ttf_font_data,
+                                                        ctx->emoji_ttf_font_size,
+                                                        &ctx->emoji_font);
+    if (ctx->emoji_ttf_font_data != NULL && ctx->emoji_ttf_font_size > 0 &&
+        !ctx->emoji_font_ready)
+    {
+        gui_log("openclaw: failed to initialize emoji ttf font\n");
+    }
+
+    ok = ok || ctx->emoji_font_ready;
+    return ok;
 }
 
 static void gui_openclaw_blend_pixel(gui_openclaw_ctx_t *ctx,
@@ -1243,38 +1533,55 @@ static int gui_openclaw_measure_span(gui_openclaw_ctx_t *ctx,
                                      uint16_t len,
                                      float font_size)
 {
-    float scale;
     int width = 0;
     int previous_codepoint = 0;
     uint16_t index = 0;
+    const stbtt_fontinfo *previous_font = NULL;
 
-    if (ctx == NULL || !ctx->font_ready || text == NULL || len == 0)
+    if (ctx == NULL || (!ctx->font_ready && !ctx->emoji_font_ready) || text == NULL || len == 0)
     {
         return 0;
     }
 
-    scale = stbtt_ScaleForPixelHeight(&ctx->font, font_size);
     while (index < len)
     {
         int codepoint;
         int advance;
         int lsb;
         int consumed = gui_openclaw_decode_utf8(text + index, &codepoint);
+        const stbtt_fontinfo *font;
+        float scale;
 
         if (consumed <= 0)
         {
             break;
         }
 
-        if (previous_codepoint != 0)
+        if (gui_openclaw_is_zero_width_codepoint(codepoint))
         {
-            width += (int)(stbtt_GetCodepointKernAdvance(&ctx->font, previous_codepoint, codepoint) * scale);
+            index += (uint16_t)consumed;
+            continue;
         }
 
-        stbtt_GetCodepointHMetrics(&ctx->font, codepoint, &advance, &lsb);
+        font = gui_openclaw_select_font(ctx, codepoint);
+        if (font == NULL)
+        {
+            index += (uint16_t)consumed;
+            continue;
+        }
+
+        scale = stbtt_ScaleForPixelHeight(font, font_size);
+
+        if (previous_codepoint != 0 && previous_font == font)
+        {
+            width += (int)(stbtt_GetCodepointKernAdvance(font, previous_codepoint, codepoint) * scale);
+        }
+
+        stbtt_GetCodepointHMetrics(font, codepoint, &advance, &lsb);
         GUI_UNUSED(lsb);
         width += (int)(advance * scale);
         previous_codepoint = codepoint;
+        previous_font = font;
         index += (uint16_t)consumed;
     }
 
@@ -1297,13 +1604,8 @@ static void gui_openclaw_layout_message(gui_openclaw_ctx_t *ctx,
     int last_break_index;
 
     memset(layout, 0x00, sizeof(*layout));
-    if (ctx == NULL || !ctx->font_ready || text == NULL)
+    if (text == NULL)
     {
-        /* No font available, return minimal layout */
-        layout->line_count = 1;
-        layout->line_height = (int)(font_size * 1.35f);
-        layout->bubble_w = 56;
-        layout->bubble_h = layout->line_height + 16;
         return;
     }
 
@@ -1328,6 +1630,8 @@ static void gui_openclaw_layout_message(gui_openclaw_ctx_t *ctx,
         int lsb;
         int consumed = gui_openclaw_decode_utf8(text + index, &codepoint);
         int glyph_width;
+        const stbtt_fontinfo *font;
+        float scale;
 
         if (consumed <= 0)
         {
@@ -1352,9 +1656,23 @@ static void gui_openclaw_layout_message(gui_openclaw_ctx_t *ctx,
             continue;
         }
 
-        stbtt_GetCodepointHMetrics(&ctx->font, codepoint, &advance, &lsb);
+        if (gui_openclaw_is_zero_width_codepoint(codepoint))
+        {
+            index += (uint16_t)consumed;
+            continue;
+        }
+
+        font = gui_openclaw_select_font(ctx, codepoint);
+        if (font == NULL)
+        {
+            index += (uint16_t)consumed;
+            continue;
+        }
+
+        scale = stbtt_ScaleForPixelHeight(font, font_size);
+        stbtt_GetCodepointHMetrics(font, codepoint, &advance, &lsb);
         GUI_UNUSED(lsb);
-        glyph_width = (int)(advance * stbtt_ScaleForPixelHeight(&ctx->font, font_size));
+        glyph_width = (int)(advance * scale);
 
         if (current_width > 0 && current_width + glyph_width > max_text_width)
         {
@@ -1599,31 +1917,18 @@ static void gui_openclaw_draw_text(gui_openclaw_ctx_t *ctx,
     uint8_t g;
     uint8_t b;
     uint8_t a;
-    float scale;
-    int ascent;
-    int descent;
-    int line_gap;
-    float baseline;
+    float line_top;
+    float line_height;
     int pen_x = x;
-    static int s_draw_text_log_count = 0;
 
-    if (ctx == NULL || !ctx->font_ready || text == NULL)
+    if (ctx == NULL || (!ctx->font_ready && !ctx->emoji_font_ready) || text == NULL)
     {
-        if (s_draw_text_log_count < 5)
-        {
-            gui_log("openclaw: draw_text skip - ctx=%p, font_ready=%d, text=%p\n",
-                    (void *)ctx, ctx ? ctx->font_ready : -1, (void *)text);
-            s_draw_text_log_count++;
-        }
         return;
     }
 
     gui_openclaw_color_to_rgba(color, &r, &g, &b, &a);
-    scale = stbtt_ScaleForPixelHeight(&ctx->font, font_size);
-    stbtt_GetFontVMetrics(&ctx->font, &ascent, &descent, &line_gap);
-    GUI_UNUSED(descent);
-    GUI_UNUSED(line_gap);
-    baseline = y + ascent * scale;
+    line_top = (float)y;
+    line_height = font_size * 1.35f;
 
     while (*text != '\0')
     {
@@ -1638,6 +1943,12 @@ static void gui_openclaw_draw_text(gui_openclaw_ctx_t *ctx,
         int out_h;
         int consumed = gui_openclaw_decode_utf8(text, &codepoint);
         unsigned char *bitmap;
+        const stbtt_fontinfo *font;
+        float scale;
+        int ascent;
+        int descent;
+        int line_gap;
+        float baseline;
 
         if (consumed <= 0)
         {
@@ -1647,25 +1958,35 @@ static void gui_openclaw_draw_text(gui_openclaw_ctx_t *ctx,
         if (codepoint == '\n')
         {
             pen_x = x;
-            baseline += font_size * 1.35f;
+            line_top += line_height;
             text += consumed;
             continue;
         }
 
-        stbtt_GetCodepointHMetrics(&ctx->font, codepoint, &advance, &lsb);
-        stbtt_GetCodepointBitmapBox(&ctx->font, codepoint, scale, scale, &x0, &y0, &x1, &y1);
+        if (gui_openclaw_is_zero_width_codepoint(codepoint))
+        {
+            text += consumed;
+            continue;
+        }
+
+        font = gui_openclaw_select_font(ctx, codepoint);
+        if (font == NULL)
+        {
+            text += consumed;
+            continue;
+        }
+
+        scale = stbtt_ScaleForPixelHeight(font, font_size);
+        stbtt_GetFontVMetrics(font, &ascent, &descent, &line_gap);
+        GUI_UNUSED(descent);
+        GUI_UNUSED(line_gap);
+        baseline = line_top + ascent * scale;
+
+        stbtt_GetCodepointHMetrics(font, codepoint, &advance, &lsb);
+        stbtt_GetCodepointBitmapBox(font, codepoint, scale, scale, &x0, &y0, &x1, &y1);
         out_w = x1 - x0;
         out_h = y1 - y0;
-
-        if (out_w <= 0 || out_h <= 0)
-        {
-            /* skip zero-size glyph (e.g. space) */
-            pen_x += (int)(advance * scale);
-            text += consumed;
-            continue;
-        }
-
-        bitmap = stbtt_GetCodepointBitmap(&ctx->font, 0, scale, codepoint, &out_w, &out_h, 0, 0);
+        bitmap = stbtt_GetCodepointBitmap(font, 0, scale, codepoint, &out_w, &out_h, 0, 0);
 
         if (bitmap != NULL)
         {
@@ -1706,24 +2027,19 @@ static void gui_openclaw_draw_text_clipped(gui_openclaw_ctx_t *ctx,
     uint8_t g;
     uint8_t b;
     uint8_t a;
-    float scale;
-    int ascent;
-    int descent;
-    int line_gap;
-    float baseline;
+    float line_top;
+    float line_height;
     int pen_x = x;
 
-    if (ctx == NULL || !ctx->font_ready || text == NULL || clip_w <= 0 || clip_h <= 0)
+    if (ctx == NULL || (!ctx->font_ready && !ctx->emoji_font_ready) ||
+        text == NULL || clip_w <= 0 || clip_h <= 0)
     {
         return;
     }
 
     gui_openclaw_color_to_rgba(color, &r, &g, &b, &a);
-    scale = stbtt_ScaleForPixelHeight(&ctx->font, font_size);
-    stbtt_GetFontVMetrics(&ctx->font, &ascent, &descent, &line_gap);
-    GUI_UNUSED(descent);
-    GUI_UNUSED(line_gap);
-    baseline = y + ascent * scale;
+    line_top = (float)y;
+    line_height = font_size * 1.35f;
 
     while (*text != '\0')
     {
@@ -1738,6 +2054,12 @@ static void gui_openclaw_draw_text_clipped(gui_openclaw_ctx_t *ctx,
         int out_h;
         int consumed = gui_openclaw_decode_utf8(text, &codepoint);
         unsigned char *bitmap;
+        const stbtt_fontinfo *font;
+        float scale;
+        int ascent;
+        int descent;
+        int line_gap;
+        float baseline;
 
         if (consumed <= 0)
         {
@@ -1747,25 +2069,35 @@ static void gui_openclaw_draw_text_clipped(gui_openclaw_ctx_t *ctx,
         if (codepoint == '\n')
         {
             pen_x = x;
-            baseline += font_size * 1.35f;
+            line_top += line_height;
             text += consumed;
             continue;
         }
 
-        stbtt_GetCodepointHMetrics(&ctx->font, codepoint, &advance, &lsb);
-        stbtt_GetCodepointBitmapBox(&ctx->font, codepoint, scale, scale, &x0, &y0, &x1, &y1);
+        if (gui_openclaw_is_zero_width_codepoint(codepoint))
+        {
+            text += consumed;
+            continue;
+        }
+
+        font = gui_openclaw_select_font(ctx, codepoint);
+        if (font == NULL)
+        {
+            text += consumed;
+            continue;
+        }
+
+        scale = stbtt_ScaleForPixelHeight(font, font_size);
+        stbtt_GetFontVMetrics(font, &ascent, &descent, &line_gap);
+        GUI_UNUSED(descent);
+        GUI_UNUSED(line_gap);
+        baseline = line_top + ascent * scale;
+
+        stbtt_GetCodepointHMetrics(font, codepoint, &advance, &lsb);
+        stbtt_GetCodepointBitmapBox(font, codepoint, scale, scale, &x0, &y0, &x1, &y1);
         out_w = x1 - x0;
         out_h = y1 - y0;
-
-        if (out_w <= 0 || out_h <= 0)
-        {
-            /* skip zero-size glyph (e.g. space) */
-            pen_x += (int)(advance * scale);
-            text += consumed;
-            continue;
-        }
-
-        bitmap = stbtt_GetCodepointBitmap(&ctx->font, 0, scale, codepoint, &out_w, &out_h, 0, 0);
+        bitmap = stbtt_GetCodepointBitmap(font, 0, scale, codepoint, &out_w, &out_h, 0, 0);
 
         if (bitmap != NULL)
         {
@@ -1809,8 +2141,6 @@ static void gui_openclaw_draw_text_clipped(gui_openclaw_ctx_t *ctx,
 
 static void gui_openclaw_render(gui_openclaw_ctx_t *ctx)
 {
-    char info_line[GUI_OPENCLAW_INFO_TEXT_LENGTH * 2];
-    char input_line[GUI_OPENCLAW_INPUT_TEXT_LENGTH + 4];
     int y;
     int i;
     int max_bubble_w;
@@ -1823,10 +2153,8 @@ static void gui_openclaw_render(gui_openclaw_ctx_t *ctx)
     int chat_bottom;
     const char *input_text;
 
-
     if (ctx == NULL || ctx->pixels == NULL)
     {
-        gui_log("openclaw: render skip - ctx=%p, pixels=%p\n",                (void *)ctx, ctx ? (void *)ctx->pixels : NULL);
         return;
     }
 
@@ -1838,10 +2166,12 @@ static void gui_openclaw_render(gui_openclaw_ctx_t *ctx)
     gui_openclaw_fill_rect(ctx, ctx->width - 22, 11, 8, 8,
                            ctx->connected ? ((ctx->tick_count & 0x04U) ? 0x4CD964FF : 0x34C759FF) : 0xFF9500FF);
 
-    snprintf(info_line, sizeof(info_line), "%s | senderId=%s",
-             ctx->broker_url[0] ? ctx->broker_url : s_openclaw_default_broker,
-             ctx->sender_id[0] ? ctx->sender_id : s_openclaw_default_sender);
-    gui_openclaw_draw_text(ctx, 12, 38, info_line, 11.0f, 0x4A5568FF);
+    gui_openclaw_format_text(s_openclaw_info_line_buffer,
+                             sizeof(s_openclaw_info_line_buffer),
+                             "%s | senderId=%s",
+                             ctx->broker_url[0] ? ctx->broker_url : s_openclaw_default_broker,
+                             ctx->sender_id[0] ? ctx->sender_id : s_openclaw_default_sender);
+    gui_openclaw_draw_text(ctx, 12, 38, s_openclaw_info_line_buffer, 11.0f, 0x4A5568FF);
 
     if (ctx->status_text[0] != '\0')
     {
@@ -1875,18 +2205,22 @@ static void gui_openclaw_render(gui_openclaw_ctx_t *ctx)
 
         if (ctx->input_text[0] != '\0')
         {
-            snprintf(input_line, sizeof(input_line), "%s%s",
-                     ctx->input_text,
-                     show_cursor ? "_" : "");
-            input_text = input_line;
+            gui_openclaw_format_text(s_openclaw_input_line_buffer,
+                                     sizeof(s_openclaw_input_line_buffer),
+                                     "%s%s",
+                                     ctx->input_text,
+                                     show_cursor ? "_" : "");
+            input_text = s_openclaw_input_line_buffer;
         }
         else
         {
             if (ctx->input_focused)
             {
-                snprintf(input_line, sizeof(input_line), "%s",
-                         show_cursor ? "_" : "");
-                input_text = input_line;
+                gui_openclaw_format_text(s_openclaw_input_line_buffer,
+                                         sizeof(s_openclaw_input_line_buffer),
+                                         "%s",
+                                         show_cursor ? "_" : "");
+                input_text = s_openclaw_input_line_buffer;
             }
             else
             {
@@ -1973,20 +2307,21 @@ static void gui_openclaw_render(gui_openclaw_ctx_t *ctx)
         text_x = bubble_x + 10;
         for (line_index = 0; line_index < layout.line_count; line_index++)
         {
-            char line_buf[GUI_OPENCLAW_MAX_MESSAGE_LENGTH];
             uint16_t line_len = layout.lines[line_index].len;
 
-            if (line_len >= sizeof(line_buf))
+            if (line_len >= sizeof(s_openclaw_chat_line_buffer))
             {
-                line_len = sizeof(line_buf) - 1;
+                line_len = sizeof(s_openclaw_chat_line_buffer) - 1;
             }
 
-            memcpy(line_buf, message->text + layout.lines[line_index].start, line_len);
-            line_buf[line_len] = '\0';
+            memcpy(s_openclaw_chat_line_buffer,
+                   message->text + layout.lines[line_index].start,
+                   line_len);
+            s_openclaw_chat_line_buffer[line_len] = '\0';
             gui_openclaw_draw_text_clipped(ctx,
                                            text_x,
                                            y + 8 + line_index * layout.line_height,
-                                           line_buf,
+                                           s_openclaw_chat_line_buffer,
                                            15.0f,
                                            text_color,
                                            chat_panel_x + 1,
@@ -2135,6 +2470,8 @@ gui_openclaw_t *gui_openclaw_create_from_mem(void          *parent,
                                              const char    *name,
                                              const uint8_t *ttf_font_data_addr,
                                              size_t         ttf_font_data_size,
+                                             const uint8_t *emoji_ttf_font_data_addr,
+                                             size_t         emoji_ttf_font_data_size,
                                              const char    *sender_id,
                                              int16_t        x,
                                              int16_t        y,
@@ -2145,10 +2482,8 @@ gui_openclaw_t *gui_openclaw_create_from_mem(void          *parent,
     gui_img_t *img;
     size_t image_size;
 
-gui_log("openclaw: create_from_mem called with parent=%p, name=%s, font_data_addr=%p, font_data_size=%zu, sender_id=%s, x=%d, y=%d, w=%d, h=%d\n",
-        (void *)parent, name ? name : "(null)", (void *)ttf_font_data_addr, ttf_font_data_size,
-        sender_id ? sender_id : "(null)", x, y, w, h);
-    if (parent == NULL || w <= 0 || h <= 0 || ttf_font_data_addr == NULL || ttf_font_data_size == 0)
+
+    if (parent == NULL || w <= 0 || h <= 0)
     {
         return NULL;
     }
@@ -2161,6 +2496,8 @@ gui_log("openclaw: create_from_mem called with parent=%p, name=%s, font_data_add
     ctx->height = h;
     ctx->ttf_font_data = ttf_font_data_addr;
     ctx->ttf_font_size = ttf_font_data_size;
+    ctx->emoji_ttf_font_data = emoji_ttf_font_data_addr;
+    ctx->emoji_ttf_font_size = emoji_ttf_font_data_size;
     ctx->connected = false;
     ctx->dirty = true;
     ctx->scroll_follow_bottom = true;
@@ -2180,25 +2517,15 @@ gui_log("openclaw: create_from_mem called with parent=%p, name=%s, font_data_add
                            "MQTT ready | keyboard input unavailable on this platform");
 
     image_size = sizeof(gui_rgb_data_head_t) + (size_t)w * (size_t)h * sizeof(uint16_t);
-    gui_log("openclaw: allocating image buffer, size=%zu\n", image_size);
     ctx->image_data = gui_malloc(image_size);
     GUI_ASSERT(ctx->image_data != NULL);
-    gui_log("openclaw: image_data allocated at %p\n", (void *)ctx->image_data);
     memset(ctx->image_data, 0x00, image_size);
     ctx->image_data->type = RGB565;
     ctx->image_data->w = w;
     ctx->image_data->h = h;
     ctx->pixels = (uint16_t *)((uint8_t *)ctx->image_data + sizeof(gui_rgb_data_head_t));
-    gui_log("openclaw: pixels buffer at %p, w=%d, h=%d\n", (void *)ctx->pixels, w, h);
 
-    gui_log("openclaw: initializing font...\n");
     gui_openclaw_init_font(ctx);
-    gui_log("openclaw: font init done, font_ready=%d\n", ctx->font_ready);
-    if (!ctx->font_ready)
-    {
-        gui_log("openclaw: WARNING - TTF font not loaded! Check if the font file exists in VFS.\n");
-        gui_log("openclaw: Widget will still work but text will not be rendered.\n");
-    }
     gui_openclaw_seed_default_messages(ctx);
 #if defined(_HONEYGUI_SIMULATOR_) && (defined(_WIN32) || defined(__linux__))
     gui_openclaw_mqtt_init(ctx);
@@ -2360,6 +2687,31 @@ void gui_openclaw_input_submit(void)
         gui_log("openclaw: input queue full, dropping submit\n");
     }
 #endif
+}
+
+bool gui_openclaw_set_emoji(gui_openclaw_t              *widget,
+                            gui_openclaw_emoji_widget_t *emoji_widget)
+{
+    gui_openclaw_ctx_t *ctx = gui_openclaw_find_ctx(widget);
+
+    if (ctx == NULL)
+    {
+        return false;
+    }
+
+    ctx->emoji_widget = emoji_widget;
+    gui_log("openclaw: emoji widget %s\n", (emoji_widget != NULL) ? "attached" : "detached");
+    return true;
+}
+
+gui_openclaw_emoji_widget_t *gui_openclaw_get_emoji(gui_openclaw_t *widget)
+{
+    gui_openclaw_ctx_t *ctx = gui_openclaw_find_ctx(widget);
+    if (ctx == NULL)
+    {
+        return NULL;
+    }
+    return ctx->emoji_widget;
 }
 
 

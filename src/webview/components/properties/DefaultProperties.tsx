@@ -12,7 +12,7 @@ const FONT_EXTS = ['ttf', 'otf', 'woff', 'woff2', 'bin'];
 
 export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onUpdate, components }) => {
   const [activeTab, setActiveTab] = useState<'properties' | 'events'>('properties');
-  const [showFontPicker, setShowFontPicker] = useState(false);
+  const [showFontPicker, setShowFontPicker] = useState<string | null>(null);
   const [fontFiles, setFontFiles] = useState<string[]>([]);
   const [userFunctions, setUserFunctions] = useState<Array<{ name: string; type: 'event' | 'message' }>>([]);
   
@@ -83,9 +83,9 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
   };
 
   // 请求字体文件列表（用于 label 下拉选择）
-  const handleOpenFontPicker = () => {
+  const handleOpenFontPicker = (propertyName: string) => {
     window.vscodeAPI?.postMessage({ command: 'getFontFiles' });
-    setShowFontPicker(true);
+    setShowFontPicker(propertyName);
   };
 
   const handleSelectFontPath = () => {
@@ -262,7 +262,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
     );
   };
 
-  const renderFontProperty = (value: any, onChange: (value: any) => void) => {
+  const renderFontProperty = (value: any, onChange: (value: any) => void, propertyName: string = 'fontFile') => {
     return (
       <div style={{ position: 'relative' }}>
         <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
@@ -281,7 +281,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
             }}
           />
           <button
-            onClick={handleOpenFontPicker}
+            onClick={() => handleOpenFontPicker(propertyName)}
             style={{
               padding: '4px 8px',
               backgroundColor: 'var(--vscode-button-background)',
@@ -296,7 +296,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
             🔤
           </button>
         </div>
-        {showFontPicker && (
+        {showFontPicker === propertyName && (
           <div style={{
             position: 'absolute',
             top: '100%',
@@ -321,7 +321,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                   key={font}
                   onClick={() => {
                     onChange(font);
-                    setShowFontPicker(false);
+                    setShowFontPicker(null);
                   }}
                   style={{
                     padding: '6px 8px',
@@ -337,7 +337,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
               ))
             )}
             <div
-              onClick={() => setShowFontPicker(false)}
+              onClick={() => setShowFontPicker(null)}
               style={{
                 padding: '6px 8px',
                 cursor: 'pointer',
@@ -978,10 +978,11 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                           (component.data as any)?.[property.name],
                           (value) => handleDataChange(property.name, value)
                         )
-                      ) : property.name === 'fontFile' ? (
+                      ) : property.name === 'fontFile' || property.name === 'emojiFontFile' ? (
                         renderFontProperty(
                           (component.data as any)?.[property.name],
-                          (value) => handleDataChange(property.name, value)
+                          (value) => handleDataChange(property.name, value),
+                          property.name
                         )
                       ) : property.name === 'mapFile' ? (
                         renderMapFileProperty(
@@ -1031,6 +1032,36 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                       )}
                     </div>
                   ))}
+                {/* OpenClaw Emoji 字体推荐 */}
+                {component.type === 'hg_openclaw' && (
+                  <div style={{
+                    marginTop: '12px',
+                    padding: '8px',
+                    backgroundColor: 'var(--vscode-textBlockQuote-background)',
+                    borderRadius: '4px',
+                    fontSize: '11px',
+                    color: 'var(--vscode-descriptionForeground)',
+                    lineHeight: 1.5,
+                  }}>
+                    <div style={{ marginBottom: '4px' }}>💡 {t('Recommended Emoji Font')}</div>
+                    <a
+                      href="https://fonts.google.com/noto/specimen/Noto+Emoji"
+                      style={{
+                        color: 'var(--vscode-textLink-foreground)',
+                        textDecoration: 'none',
+                      }}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        window.vscodeAPI?.postMessage({
+                          command: 'openExternal',
+                          url: 'https://fonts.google.com/noto/specimen/Noto+Emoji'
+                        });
+                      }}
+                    >
+                      Noto Emoji ↗
+                    </a>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1177,7 +1208,8 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                   <label>{t('Font File')}</label>
                   {renderFontProperty(
                     (component.data as any)?.fontFile,
-                    (value) => handleDataChange('fontFile', value)
+                    (value) => handleDataChange('fontFile', value),
+                    'fontFile'
                   )}
                 </div>
                 {/* 字体大小 */}

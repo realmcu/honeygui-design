@@ -477,6 +477,7 @@ const componentDefinitions: ComponentDefinition[] = [
     defaultSize: { width: 410, height: 502 },
     properties: [
       { name: 'fontFile', label: 'Font File (.ttf)', type: 'string', defaultValue: '', group: 'data' },
+      { name: 'emojiFontFile', label: 'Emoji Font (.ttf)', type: 'string', defaultValue: '', group: 'data', hint: 'Recommended: Noto Emoji (https://fonts.google.com/noto/specimen/Noto+Emoji)' },
       { name: 'senderId', label: 'Sender ID', type: 'string', defaultValue: 'user1', group: 'data' },
     ],
   },

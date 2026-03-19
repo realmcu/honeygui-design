@@ -124,5 +124,5 @@ __pycache__/
 *.pyc
 
 # HoneyGUI 目录
-HoneyGUI/
+#HoneyGUI/
 lvgl/

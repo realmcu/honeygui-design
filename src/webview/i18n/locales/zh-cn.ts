@@ -157,6 +157,7 @@ const zhCN = {
   'Shape Path': '形状路径',
   'Distortion (%)': '扭曲强度(%)',
   'Effect Range (%)': '效果范围(%)',
+  'Recommended Emoji Font': '推荐 Emoji 字体:',
 
   // Toolbar
   'Save': '保存',

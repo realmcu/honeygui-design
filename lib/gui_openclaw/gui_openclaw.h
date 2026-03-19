@@ -19,6 +19,7 @@ extern "C" {
 #include "guidef.h"
 #include "gui_api.h"
 #include "gui_img.h"
+#include "gui_openclaw_emoji.h"
 
 /*============================================================================*
  *                         Types
@@ -37,9 +38,10 @@ typedef enum
  *============================================================================*/
 gui_openclaw_t *gui_openclaw_create_from_mem(void          *parent,
                                              const char    *name,
-                                    
                                              const uint8_t *ttf_font_data_addr,
                                              size_t         ttf_font_data_size,
+                                             const uint8_t *emoji_ttf_font_data_addr,
+                                             size_t         emoji_ttf_font_data_size,
                                              const char    *sender_id,
                                              int16_t        x,
                                              int16_t        y,
@@ -66,6 +68,11 @@ void gui_openclaw_input_utf8(const char *text);
 void gui_openclaw_input_backspace(void);
 
 void gui_openclaw_input_submit(void);
+
+bool gui_openclaw_set_emoji(gui_openclaw_t              *widget,
+                            gui_openclaw_emoji_widget_t *emoji_widget);
+
+gui_openclaw_emoji_widget_t *gui_openclaw_get_emoji(gui_openclaw_t *widget);
 
 #ifdef __cplusplus
 }

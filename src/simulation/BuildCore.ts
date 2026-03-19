@@ -694,11 +694,11 @@ Return('objs')
             processAssetPath(assetPath);
         }
 
-        // 特殊处理：hg_map 组件的 fontFile 属性（字体文件需要直接拷贝，不进行格式转换）
-        const fontFileRegex = /fontFile\s*=\s*["']([^"']+)["']/g;
+        // 特殊处理：hg_map/hg_openclaw 组件的 fontFile 和 emojiFontFile 属性（字体文件需要直接拷贝，不进行格式转换）
+        const fontFileRegex = /(fontFile|emojiFontFile)\s*=\s*["']([^"']+)["']/g;
         let fontMatch;
         while ((fontMatch = fontFileRegex.exec(hmlContent)) !== null) {
-            let fontPath = fontMatch[1];
+            let fontPath = fontMatch[2];
             if (fontPath.startsWith('assets/')) {
                 fontPath = fontPath.substring(7);
             }

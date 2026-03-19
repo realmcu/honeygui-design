@@ -157,6 +157,7 @@ const en = {
   'Shape Path': 'Shape Path',
   'Distortion (%)': 'Distortion (%)',
   'Effect Range (%)': 'Effect Range (%)',
+  'Recommended Emoji Font': 'Recommended Emoji Font:',
 
   // Toolbar
   'Save': 'Save',
