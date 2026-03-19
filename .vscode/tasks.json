@@ -38,6 +38,27 @@
 			}
 		},
 		{
+			"label": "compile-dev",
+			"type": "shell",
+			"command": "npm run compile && npm run build:webview:dev",
+			"windows": {
+				"options": {
+					"shell": {
+						"executable": "cmd.exe",
+						"args": [
+							"/d",
+							"/c"
+						]
+					}
+				}
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"reveal": "always",
+				"panel": "new"
+			}
+		},
+		{
 			"label": "compile-all",
 			"type": "shell",
 			"command": "npm run compile && npm run build:webview",

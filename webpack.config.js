@@ -69,7 +69,7 @@ module.exports = (env, argv) => {
       new HtmlWebpackPlugin({
         template: './src/webview/index.html',
         filename: 'index.html',
-        inject: 'body',
+        inject: false,
         minify: isProduction,
       }),
       ...(isProduction
@@ -82,7 +82,7 @@ module.exports = (env, argv) => {
           ]
         : []),
     ],
-    devtool: isProduction ? 'source-map' : 'eval-source-map',
+    devtool: isProduction ? 'source-map' : 'cheap-module-source-map',
     optimization: {
       usedExports: true, // 启用 Tree Shaking
       minimize: isProduction,

@@ -24,13 +24,13 @@
 			"preLaunchTask": "compile-all"
 		},
 		{
-			"name": "Run Extension (Watch Mode)",
+			"name": "Run Extension (Quick - Dev Webview)",
 			"type": "extensionHost",
 			"request": "launch",
 			"runtimeExecutable": "${execPath}",
 			"args": ["--extensionDevelopmentPath=${workspaceRoot}"],
 			"outFiles": ["${workspaceFolder}/out/**/*.js"],
-			"preLaunchTask": "npm: watch"
+			"preLaunchTask": "compile-dev"
 		}
 	]
 }
