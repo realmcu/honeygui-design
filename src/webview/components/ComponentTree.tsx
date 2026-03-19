@@ -1,9 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useDesignerStore } from '../store';
 import { ChevronDown, ChevronRight, Eye, EyeOff, Lock, Unlock } from 'lucide-react';
 import { componentIconMap } from './ComponentLibrary';
 import { t } from '../i18n';
 import './ComponentTree.css';
+
+// 共享展开/折叠状态的 Context
+interface TreeExpandContextType {
+  collapsedNodes: Set<string>;
+  toggleCollapse: (id: string) => void;
+}
+const TreeExpandContext = React.createContext<TreeExpandContextType>({
+  collapsedNodes: new Set(),
+  toggleCollapse: () => {},
+});
 
 interface ComponentTreeNodeProps {
   componentId: string;
@@ -25,9 +35,11 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
     moveComponentToPosition,
   } = useDesignerStore();
 
-  const [isExpanded, setIsExpanded] = useState(true);
   const [isDragOver, setIsDragOver] = useState(false);
   const [dropPosition, setDropPosition] = useState<'before' | 'after' | 'inside' | null>(null);
+
+  const { collapsedNodes, toggleCollapse } = React.useContext(TreeExpandContext);
+  const isExpanded = !collapsedNodes.has(componentId);
 
   const component = components.find(c => c.id === componentId);
   if (!component) return null;
@@ -149,7 +161,7 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
   const handleToggleExpand = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (hasChildren) {
-      setIsExpanded(!isExpanded);
+      toggleCollapse(componentId);
     }
   };
 
@@ -394,6 +406,19 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
 const ComponentTree: React.FC<{ onContextMenu?: (e: React.MouseEvent, componentId: string) => void }> = ({ onContextMenu }) => {
   const { components, allHmlFiles, currentFilePath, vscodeAPI, selectedComponent } = useDesignerStore();
   const treeContentRef = React.useRef<HTMLDivElement>(null);
+  const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(new Set());
+
+  const toggleCollapse = useCallback((id: string) => {
+    setCollapsedNodes(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
 
   // 获取根组件并按 zIndex 排序（确保组件树显示顺序和层级一致）
   const rootComponents = components
@@ -414,10 +439,31 @@ const ComponentTree: React.FC<{ onContextMenu?: (e: React.MouseEvent, componentI
     }
   };
 
-  // 当选中组件变化时，滚动到对应的节点
+  // 当选中组件变化时，展开祖先节点并滚动到对应的节点
   React.useEffect(() => {
     if (selectedComponent && treeContentRef.current) {
-      // 延迟执行，确保 DOM 已更新
+      // 展开所有祖先节点
+      const ancestorIds: string[] = [];
+      const comp = components.find(c => c.id === selectedComponent);
+      if (comp) {
+        let parentId = comp.parent;
+        while (parentId) {
+          ancestorIds.push(parentId);
+          const parent = components.find(c => c.id === parentId);
+          parentId = parent?.parent || null;
+        }
+      }
+      if (ancestorIds.length > 0) {
+        setCollapsedNodes(prev => {
+          const hasCollapsed = ancestorIds.some(id => prev.has(id));
+          if (!hasCollapsed) return prev;
+          const next = new Set(prev);
+          ancestorIds.forEach(id => next.delete(id));
+          return next;
+        });
+      }
+
+      // 延迟执行，确保 DOM 已更新（祖先展开后子节点才会渲染）
       setTimeout(() => {
         const selectedNode = treeContentRef.current?.querySelector(`[data-component-id="${selectedComponent}"]`);
         if (selectedNode) {
@@ -431,7 +477,10 @@ const ComponentTree: React.FC<{ onContextMenu?: (e: React.MouseEvent, componentI
     }
   }, [selectedComponent]);
 
+  const expandContextValue = React.useMemo(() => ({ collapsedNodes, toggleCollapse }), [collapsedNodes, toggleCollapse]);
+
   return (
+    <TreeExpandContext.Provider value={expandContextValue}>
     <div className="component-tree">
       {allHmlFiles && allHmlFiles.length > 1 && (
         <div className="tree-file-selector">
@@ -468,6 +517,7 @@ const ComponentTree: React.FC<{ onContextMenu?: (e: React.MouseEvent, componentI
         )}
       </div>
     </div>
+    </TreeExpandContext.Provider>
   );
 };
 
