@@ -10,9 +10,14 @@ module.exports = (env, argv) => {
   return {
     mode: isProduction ? 'production' : 'development',
     
-    // 禁用缓存机制，避免调试过程中的风险
-    // Webpack 5 默认启用文件系统缓存，这可能导致修改后的代码不生效
-    cache: false,
+    // 开发模式启用文件系统缓存加速重复构建
+    // 生产模式禁用缓存确保输出干净
+    cache: isProduction ? false : {
+      type: 'filesystem',
+      buildDependencies: {
+        config: [__filename],
+      },
+    },
     
     entry: './src/webview/index.tsx',
     output: {
