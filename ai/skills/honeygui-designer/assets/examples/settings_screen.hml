@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hml>
+  <meta>
+    <title>Settings Screen</title>
+    <description>Settings page with adjustable brightness and volume sliders</description>
+    <project>
+      <resolution>454x454</resolution>
+      <pixelMode>RGB565</pixelMode>
+    </project>
+  </meta>
+
+  <view id="view_settings">
+    <!-- Header -->
+    <hg_view id="view_header"
+             name="Header"
+             x="0" y="0"
+             w="454" h="80"
+             backgroundColor="#0066CC">
+      <hg_button id="btn_back"
+                 name="Back Button"
+                 x="20" y="20"
+                 w="40" h="40"
+                 src="assets/icon_back.bin"
+                 onClick="goBack" />
+
+      <hg_label id="lbl_title"
+                name="Title"
+                x="127" y="20"
+                w="200" h="40"
+                text="Settings"
+                fontSize="24"
+                color="#FFFFFF"
+                textAlign="center" />
+    </hg_view>
+
+    <!-- Content Container -->
+    <hg_container id="cnt_content"
+                  name="Content"
+                  x="0" y="80"
+                  w="454" h="374"
+                  overflow="scroll"
+                  backgroundColor="#000000">
+
+      <!-- Brightness Setting -->
+      <hg_view id="item_brightness"
+               name="Brightness Setting"
+               x="40" y="30"
+               w="374" h="100">
+        <hg_image id="icon_brightness"
+                  name="Brightness Icon"
+                  x="0" y="20"
+                  w="50" h="50"
+                  src="assets/icon_brightness.bin" />
+
+        <hg_label id="lbl_brightness"
+                  name="Brightness Label"
+                  x="70" y="10"
+                  w="200" h="30"
+                  text="Brightness"
+                  fontSize="18"
+                  color="#FFFFFF" />
+
+        <hg_label id="lbl_brightness_value"
+                  name="Brightness Value"
+                  x="270" y="10"
+                  w="100" h="30"
+                  text="70%"
+                  fontSize="18"
+                  color="#00FF88"
+                  textAlign="right" />
+
+        <hg_slider id="slider_brightness"
+                   name="Brightness Slider"
+                   x="70" y="50"
+                   w="300" h="40"
+                   min="0"
+                   max="100"
+                   value="70"
+                   orientation="horizontal"
+                   onValueChange="handleBrightnessChange" />
+      </hg_view>
+
+      <!-- Volume Setting -->
+      <hg_view id="item_volume"
+               name="Volume Setting"
+               x="40" y="150"
+               w="374" h="100">
+        <hg_image id="icon_volume"
+                  name="Volume Icon"
+                  x="0" y="20"
+                  w="50" h="50"
+                  src="assets/icon_volume.bin" />
+
+        <hg_label id="lbl_volume"
+                  name="Volume Label"
+                  x="70" y="10"
+                  w="200" h="30"
+                  text="Volume"
+                  fontSize="18"
+                  color="#FFFFFF" />
+
+        <hg_label id="lbl_volume_value"
+                  name="Volume Value"
+                  x="270" y="10"
+                  w="100" h="30"
+                  text="50%"
+                  fontSize="18"
+                  color="#00FF88"
+                  textAlign="right" />
+
+        <hg_slider id="slider_volume"
+                   name="Volume Slider"
+                   x="70" y="50"
+                   w="300" h="40"
+                   min="0"
+                   max="100"
+                   value="50"
+                   orientation="horizontal"
+                   onValueChange="handleVolumeChange" />
+      </hg_view>
+
+      <!-- About Button -->
+      <hg_button id="btn_about"
+                 name="About Button"
+                 x="40" y="270"
+                 w="374" h="60"
+                 backgroundColor="#1E1E1E"
+                 borderRadius="12"
+                 onClick="goToAbout">
+        <hg_image id="icon_about"
+                  name="About Icon"
+                  x="20" y="5"
+                  w="50" h="50"
+                  src="assets/icon_info.bin" />
+
+        <hg_label id="lbl_about"
+                  name="About Label"
+                  x="90" y="15"
+                  w="200" h="30"
+                  text="About"
+                  fontSize="18"
+                  color="#FFFFFF" />
+      </hg_button>
+    </hg_container>
+  </view>
+</hml>

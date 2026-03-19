@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hml>
+  <meta>
+    <title>Music Player</title>
+    <description>Media playback interface with album art and controls</description>
+    <project>
+      <resolution>454x454</resolution>
+      <pixelMode>RGB565</pixelMode>
+    </project>
+  </meta>
+
+  <view id="view_player">
+    <!-- Gradient Background -->
+    <hg_image id="img_background"
+              name="Background"
+              x="0" y="0"
+              w="454" h="454"
+              src="assets/bg_gradient.bin" />
+
+    <!-- Album Cover -->
+    <hg_view id="view_album_container"
+             name="Album Container"
+             x="127" y="70"
+             w="200" h="200"
+             borderRadius="20"
+             backgroundColor="#1E1E1E">
+      <hg_image id="img_album"
+                name="Album Art"
+                x="10" y="10"
+                w="180" h="180"
+                src="assets/album_cover.bin"
+                borderRadius="12" />
+    </hg_view>
+
+    <!-- Song Title -->
+    <hg_label id="lbl_song_title"
+              name="Song Title"
+              x="77" y="290"
+              w="300" h="35"
+              text="Beautiful Song"
+              fontSize="22"
+              color="#FFFFFF"
+              textAlign="center" />
+
+    <!-- Artist Name -->
+    <hg_label id="lbl_artist"
+              name="Artist"
+              x="77" y="330"
+              w="300" h="28"
+              text="Artist Name"
+              fontSize="16"
+              color="#CCCCCC"
+              textAlign="center" />
+
+    <!-- Progress Bar -->
+    <hg_progressbar id="progress_playback"
+                    name="Playback Progress"
+                    x="77" y="375"
+                    w="300" h="6"
+                    value="45"
+                    color="#00FF88"
+                    backgroundColor="#333333"
+                    borderRadius="3" />
+
+    <!-- Time Labels -->
+    <hg_label id="lbl_time_current"
+              name="Current Time"
+              x="77" y="390"
+              w="80" h="22"
+              text="1:23"
+              fontSize="13"
+              color="#999999" />
+
+    <hg_label id="lbl_time_total"
+              name="Total Time"
+              x="297" y="390"
+              w="80" h="22"
+              text="3:05"
+              fontSize="13"
+              color="#999999"
+              textAlign="right" />
+
+    <!-- Control Buttons Container -->
+    <hg_view id="view_controls"
+             name="Controls"
+             x="77" y="420"
+             w="300" h="70">
+
+      <!-- Previous Button -->
+      <hg_button id="btn_previous"
+                 name="Previous"
+                 x="30" y="10"
+                 w="50" h="50"
+                 src="assets/icon_previous.bin"
+                 onClick="handlePrevious" />
+
+      <!-- Play/Pause Button (Larger) -->
+      <hg_button id="btn_play_pause"
+                 name="Play/Pause"
+                 x="120" y="5"
+                 w="60" h="60"
+                 src="assets/icon_play.bin"
+                 onClick="handlePlayPause" />
+
+      <!-- Next Button -->
+      <hg_button id="btn_next"
+                 name="Next"
+                 x="220" y="10"
+                 w="50" h="50"
+                 src="assets/icon_next.bin"
+                 onClick="handleNext" />
+    </hg_view>
+  </view>
+</hml>

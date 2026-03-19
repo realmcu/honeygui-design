@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hml>
+  <meta>
+    <title>Simple Watch Home</title>
+    <description>Clean smartwatch home screen with time display and quick actions</description>
+    <project>
+      <resolution>454x454</resolution>
+      <pixelMode>RGB565</pixelMode>
+    </project>
+  </meta>
+
+  <view id="view_home">
+    <!-- Background -->
+    <hg_image id="img_background"
+              name="Background"
+              x="0" y="0"
+              w="454" h="454"
+              src="assets/bg_home.bin" />
+
+    <!-- Time Display -->
+    <hg_label id="lbl_time"
+              name="Time"
+              x="127" y="140"
+              w="200" h="70"
+              timeFormat="HH:MM"
+              fontSize="56"
+              color="#FFFFFF"
+              textAlign="center" />
+
+    <!-- Date Display -->
+    <hg_label id="lbl_date"
+              name="Date"
+              x="127" y="220"
+              w="200" h="30"
+              timeFormat="YYYY-MM-DD"
+              fontSize="16"
+              color="#CCCCCC"
+              textAlign="center" />
+
+    <!-- Day of Week -->
+    <hg_label id="lbl_day"
+              name="Day"
+              x="127" y="250"
+              w="200" h="25"
+              timeFormat="dddd"
+              fontSize="14"
+              color="#999999"
+              textAlign="center" />
+
+    <!-- Quick Action Buttons -->
+    <hg_button id="btn_activity"
+               name="Activity Button"
+               x="107" y="320"
+               w="80" h="80"
+               src="assets/icon_activity.bin"
+               onClick="goToActivity" />
+
+    <hg_button id="btn_apps"
+               name="Apps Button"
+               x="187" y="320"
+               w="80" h="80"
+               src="assets/icon_apps.bin"
+               onClick="goToApps" />
+
+    <hg_button id="btn_settings"
+               name="Settings Button"
+               x="267" y="320"
+               w="80" h="80"
+               src="assets/icon_settings.bin"
+               onClick="goToSettings" />
+  </view>
+</hml>

@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hml>
+  <meta>
+    <title>Fitness Dashboard</title>
+    <description>Health and fitness metrics dashboard with multiple status cards</description>
+    <project>
+      <resolution>454x454</resolution>
+      <pixelMode>RGB565</pixelMode>
+    </project>
+  </meta>
+
+  <view id="view_dashboard">
+    <!-- Background -->
+    <hg_view id="view_background"
+             name="Background"
+             x="0" y="0"
+             w="454" h="454"
+             backgroundColor="#000000" />
+
+    <!-- Header -->
+    <hg_label id="lbl_title"
+              name="Title"
+              x="127" y="30"
+              w="200" h="40"
+              text="Dashboard"
+              fontSize="26"
+              color="#FFFFFF"
+              textAlign="center" />
+
+    <!-- Metric Cards (2x2 Grid) -->
+
+    <!-- Card 1: Steps (Top Left) -->
+    <hg_view id="card_steps"
+             name="Steps Card"
+             x="40" y="90"
+             w="167" h="147"
+             backgroundColor="#1E1E1E"
+             borderRadius="16">
+      <hg_image id="icon_steps"
+                name="Steps Icon"
+                x="59" y="20"
+                w="50" h="50"
+                src="assets/icon_steps.bin" />
+
+      <hg_label id="lbl_steps_value"
+                name="Steps Value"
+                x="34" y="75"
+                w="100" h="40"
+                text="8,542"
+                fontSize="28"
+                color="#00FF88"
+                textAlign="center" />
+
+      <hg_label id="lbl_steps_label"
+                name="Steps Label"
+                x="34" y="112"
+                w="100" h="22"
+                text="Steps"
+                fontSize="14"
+                color="#999999"
+                textAlign="center" />
+    </hg_view>
+
+    <!-- Card 2: Heart Rate (Top Right) -->
+    <hg_view id="card_heart"
+             name="Heart Card"
+             x="247" y="90"
+             w="167" h="147"
+             backgroundColor="#1E1E1E"
+             borderRadius="16">
+      <hg_image id="icon_heart"
+                name="Heart Icon"
+                x="59" y="20"
+                w="50" h="50"
+                src="assets/icon_heart.bin" />
+
+      <hg_label id="lbl_heart_value"
+                name="Heart Value"
+                x="34" y="75"
+                w="100" h="40"
+                text="72"
+                fontSize="28"
+                color="#FF0066"
+                textAlign="center" />
+
+      <hg_label id="lbl_heart_label"
+                name="Heart Label"
+                x="34" y="112"
+                w="100" h="22"
+                text="BPM"
+                fontSize="14"
+                color="#999999"
+                textAlign="center" />
+    </hg_view>
+
+    <!-- Card 3: Calories (Bottom Left) -->
+    <hg_view id="card_calories"
+             name="Calories Card"
+             x="40" y="257"
+             w="167" h="147"
+             backgroundColor="#1E1E1E"
+             borderRadius="16">
+      <hg_image id="icon_calories"
+                name="Calories Icon"
+                x="59" y="20"
+                w="50" h="50"
+                src="assets/icon_calories.bin" />
+
+      <hg_label id="lbl_calories_value"
+                name="Calories Value"
+                x="34" y="75"
+                w="100" h="40"
+                text="420"
+                fontSize="28"
+                color="#FF8800"
+                textAlign="center" />
+
+      <hg_label id="lbl_calories_label"
+                name="Calories Label"
+                x="34" y="112"
+                w="100" h="22"
+                text="Cal"
+                fontSize="14"
+                color="#999999"
+                textAlign="center" />
+    </hg_view>
+
+    <!-- Card 4: Sleep (Bottom Right) -->
+    <hg_view id="card_sleep"
+             name="Sleep Card"
+             x="247" y="257"
+             w="167" h="147"
+             backgroundColor="#1E1E1E"
+             borderRadius="16">
+      <hg_image id="icon_sleep"
+                name="Sleep Icon"
+                x="59" y="20"
+                w="50" h="50"
+                src="assets/icon_sleep.bin" />
+
+      <hg_label id="lbl_sleep_value"
+                name="Sleep Value"
+                x="34" y="75"
+                w="100" h="40"
+                text="7.5h"
+                fontSize="28"
+                color="#6688FF"
+                textAlign="center" />
+
+      <hg_label id="lbl_sleep_label"
+                name="Sleep Label"
+                x="34" y="112"
+                w="100" h="22"
+                text="Sleep"
+                fontSize="14"
+                color="#999999"
+                textAlign="center" />
+    </hg_view>
+  </view>
+</hml>
