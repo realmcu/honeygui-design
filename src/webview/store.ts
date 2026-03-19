@@ -13,6 +13,7 @@ import {
   DistributeType,
   ResizeType
 } from './utils/alignmentUtils';
+import { generateComponentId } from './utils/componentNaming';
 
 // ============ 层级调整辅助函数 ============
 
@@ -82,46 +83,49 @@ function rebuildComponentsArray(
 // ============ 辅助函数：深度克隆组件 ============
 
 /**
- * 深度克隆组件及其子组件
- * @param component 要克隆的组件
- * @param newIdSuffix 新ID的后缀
- * @returns 克隆后的组件
+ * 递归收集组件树中所有组件
  */
-function cloneComponent(component: Component, newIdSuffix: string): Component {
-  const newId = `${component.id}_${newIdSuffix}`;
-  return {
-    ...component,
-    id: newId,
-    name: `${component.name}_copy`,
-    // 如果有子组件ID数组，也需要更新
-    children: component.children?.map(childId => `${childId}_${newIdSuffix}`)
-  };
+function collectTree(components: Component[], root: Component): Component[] {
+  const result: Component[] = [root];
+  if (root.children) {
+    for (const childId of root.children) {
+      const child = components.find(c => c.id === childId);
+      if (child) {
+        result.push(...collectTree(components, child));
+      }
+    }
+  }
+  return result;
 }
 
 /**
  * 递归克隆组件树（包括所有子组件）
+ * 使用 ID 映射方式生成新的缩写+编号 ID
  * @param components 所有组件数组
  * @param rootComponent 要克隆的根组件
- * @param newIdSuffix 新ID的后缀
+ * @param allComponents 当前所有组件（用于生成唯一ID）
  * @returns 克隆后的组件数组（包括根组件和所有子组件）
  */
-function cloneComponentTree(components: Component[], rootComponent: Component, newIdSuffix: string): Component[] {
-  const clonedComponents: Component[] = [];
-  const clonedRoot = cloneComponent(rootComponent, newIdSuffix);
-  clonedComponents.push(clonedRoot);
+function cloneComponentTree(components: Component[], rootComponent: Component, allComponents: Component[]): Component[] {
+  const toClone = collectTree(components, rootComponent);
   
-  // 递归克隆所有子组件
-  if (rootComponent.children && rootComponent.children.length > 0) {
-    rootComponent.children.forEach(childId => {
-      const childComponent = components.find(c => c.id === childId);
-      if (childComponent) {
-        const clonedChildren = cloneComponentTree(components, childComponent, newIdSuffix);
-        clonedComponents.push(...clonedChildren);
-      }
-    });
+  // 第一步：为所有组件生成新 ID，并建立映射
+  const idMap = new Map<string, string>();
+  let trackingComponents = [...allComponents];
+  for (const comp of toClone) {
+    const newId = generateComponentId(comp.type, trackingComponents);
+    idMap.set(comp.id, newId);
+    trackingComponents.push({ ...comp, id: newId } as Component);
   }
   
-  return clonedComponents;
+  // 第二步：用映射后的 ID 创建克隆组件
+  return toClone.map(comp => ({
+    ...comp,
+    id: idMap.get(comp.id)!,
+    name: idMap.get(comp.id)!,
+    children: comp.children?.map(childId => idMap.get(childId) || childId),
+    parent: comp.parent ? (idMap.get(comp.parent) || comp.parent) : comp.parent,
+  }));
 }
 
 // ============ Store 定义 ============
@@ -1112,10 +1116,11 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     const component = state.components.find((c) => c.id === id);
     if (!component) return;
 
+    const newId = generateComponentId(component.type, state.components);
     const newComponent: Component = {
       ...component,
-      id: `${component.id}_copy_${Date.now()}`,
-      name: `${component.name}_copy`,
+      id: newId,
+      name: newId,
       position: {
         x: component.position.x + 20,
         y: component.position.y + 20,
@@ -1190,13 +1195,14 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     // 多选粘贴
     if (clipboardMultiple.length > 0) {
       const newIds: string[] = [];
-      const timestamp = Date.now();
       
       // 创建旧ID到新ID的映射表
       const idMap = new Map<string, string>();
-      clipboardMultiple.forEach((comp, index) => {
-        const newId = `${comp.id}_copy_${timestamp}_${index}`;
+      let trackingComponents = [...components];
+      clipboardMultiple.forEach((comp) => {
+        const newId = generateComponentId(comp.type, trackingComponents);
         idMap.set(comp.id, newId);
+        trackingComponents.push({ ...comp, id: newId } as Component);
       });
       
       // 找出所有顶层组件（没有父组件或父组件不在复制列表中）
@@ -1263,7 +1269,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
         const newComponent: Component = {
           ...comp,
           id: newId,
-          name: `${comp.name}_copy`,
+          name: newId,
           parent: newParent,
           children: newChildren,
           position: newPosition,
@@ -1284,10 +1290,11 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       ? components.some((c) => c.id === clipboard.parent)
       : true;
     
+    const newId = generateComponentId(clipboard.type, components);
     const newComponent: Component = {
       ...clipboard,
-      id: `${clipboard.id}_copy_${Date.now()}`,
-      name: `${clipboard.name}_copy`,
+      id: newId,
+      name: newId,
       parent: parentExists ? clipboard.parent : null,
       position: position ? {
         x: position.x,
@@ -1806,7 +1813,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
           const newItemId = `${listId}_item_${i}`;
           const newItem: Component = {
             id: newItemId,
-            name: `hg_list_item${i}`,
+            name: `li_${i + 1}`,
             type: 'hg_list_item',
             parent: listId,
             position: { x: 0, y: 0, width: 0, height: 0 },
@@ -1820,30 +1827,23 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
           
           // 如果存在第一个 item，复制第一个 item 的子组件作为模板
           if (firstItem && firstItem.children && firstItem.children.length > 0) {
-            const clonedChildren: Component[] = [];
-            
             // 递归克隆第一个 item 的所有子组件
             firstItem.children.forEach(childId => {
               const childComponent = state.components.find(c => c.id === childId);
               if (childComponent) {
-                const suffix = `item${i}`;
-                const clonedTree = cloneComponentTree(state.components, childComponent, suffix);
+                const clonedTree = cloneComponentTree(state.components, childComponent, newComponents);
                 
                 // 更新克隆组件的 parent 为新的 list_item
                 clonedTree.forEach((clonedComp, index) => {
                   if (index === 0) {
-                    // 根组件的 parent 是新的 list_item
                     clonedComp.parent = newItemId;
                   }
                 });
                 
-                clonedChildren.push(...clonedTree);
                 newItem.children!.push(clonedTree[0].id);
+                newComponents.push(...clonedTree);
               }
             });
-            
-            // 将克隆的子组件添加到 components 数组
-            newComponents.push(...clonedChildren);
           }
           
           // 添加新的 list_item

@@ -13,6 +13,7 @@ import { ViewRelationModal } from './components/ViewRelationModal';
 import { CanvasEditorModal } from './components/CanvasEditorModal';
 import { Component, ComponentType } from './types';
 import useKeyboardShortcuts from './utils/keyboardShortcuts';
+import { generateComponentId } from './utils/componentNaming';
 import { getAbsolutePosition, findComponentAtPosition, isDropTargetType, isContainerType } from './utils/componentUtils';
 import { createImageComponentAtPosition, create3DComponentAtPosition, createVideoComponentAtPosition, createSvgComponentAtPosition, createGlassComponentAtPosition, createLottieComponentAtPosition, createGifComponentAtPosition } from './services/messageHandler';
 import { processImageFiles } from './utils/fileUtils';
@@ -940,7 +941,7 @@ const App: React.FC = () => {
     }
 
     // 生成唯一组件ID
-    const componentId = `${componentType}_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
+    const componentId = generateComponentId(componentType, components);
     
     // 默认位置和尺寸
     let defWidth = componentDef.defaultSize.width;
@@ -1013,7 +1014,7 @@ const App: React.FC = () => {
     const newComponent: Component = {
       id: componentId,
       type: componentType,
-      name: `${componentType}_${Date.now().toString().substr(-4)}`,
+      name: componentId,
       position: {
         x: positionX,
         y: positionY,
@@ -1235,7 +1236,7 @@ const App: React.FC = () => {
     }
 
     // 生成唯一组件ID
-    const componentId = `${componentType}_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
+    const componentId = generateComponentId(componentType, components);
 
     let positionX = x;
     let positionY = y;
@@ -1411,7 +1412,7 @@ const App: React.FC = () => {
     const newComponent: Component = {
       id: componentId,
       type: componentType,
-      name: `${componentType}_${Date.now().toString().substr(-4)}`,
+      name: componentId,
       position: {
         x: positionX,
         y: positionY,

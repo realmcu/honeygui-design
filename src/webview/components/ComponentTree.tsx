@@ -324,10 +324,9 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
     return componentIconMap[component.type] || '📦';
   };
 
-  // 获取组件显示名称
+  // 获取组件显示名称（使用 id，与属性面板 Name 字段一致）
   const getComponentDisplayName = () => {
-    // 直接使用 component.name，不做特殊处理
-    return component.name;
+    return component.id;
   };
 
   return (

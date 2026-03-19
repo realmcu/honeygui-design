@@ -1,5 +1,6 @@
 import { Component } from '../types';
 import { getAbsolutePosition } from '../utils/componentUtils';
+import { generateComponentId } from '../utils/componentNaming';
 
 const getNextZIndex = (components: Component[], parentId: string): number => {
   const siblings = components.filter(c => c.parent === parentId);
@@ -32,10 +33,11 @@ export const createImageComponentAtPosition = (
   const height = imageSize?.height || 100;
   const zIndex = getNextZIndex(components, targetContainerId);
 
+  const imageId = generateComponentId('hg_image', components);
   const imageComponent: Component = {
-    id: `hg_image_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+    id: imageId,
     type: 'hg_image',
-    name: `image_${Date.now().toString().substr(-4)}`,
+    name: imageId,
     position: { x: relativeX, y: relativeY, width, height },
     visible: true,
     enabled: true,
@@ -72,10 +74,11 @@ export const createGifComponentAtPosition = (
   const height = imageSize?.height || 150;
   const zIndex = getNextZIndex(components, targetContainerId);
 
+  const gifId = generateComponentId('hg_gif', components);
   const gifComponent: Component = {
-    id: `hg_gif_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+    id: gifId,
     type: 'hg_gif',
-    name: `gif_${Date.now().toString().substr(-4)}`,
+    name: gifId,
     position: { x: relativeX, y: relativeY, width, height },
     visible: true,
     enabled: true,
@@ -108,10 +111,11 @@ export const create3DComponentAtPosition = (
   const relativeY = Math.max(0, dropPosition.y - targetAbsPos.y);
   const zIndex = getNextZIndex(components, targetContainerId);
 
+  const id3D = generateComponentId('hg_3d', components);
   const component3D: Component = {
-    id: `hg_3d_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+    id: id3D,
     type: 'hg_3d',
-    name: `model_${Date.now().toString().substr(-4)}`,
+    name: id3D,
     position: { x: relativeX, y: relativeY, width: 400, height: 400 },
     visible: true,
     enabled: true,
@@ -163,10 +167,11 @@ export const createVideoComponentAtPosition = (
   const { width, height } = videoSize || { width: 320, height: 240 };
   const zIndex = getNextZIndex(components, targetContainerId);
 
+  const videoId = generateComponentId('hg_video', components);
   const videoComponent: Component = {
-    id: `hg_video_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+    id: videoId,
     type: 'hg_video',
-    name: `video_${Date.now().toString().substr(-4)}`,
+    name: videoId,
     position: { x: relativeX, y: relativeY, width, height },
     visible: true,
     enabled: true,
@@ -200,10 +205,11 @@ export const createSvgComponentAtPosition = (
   const relativeY = Math.max(0, dropPosition.y - targetAbsPos.y);
   const zIndex = getNextZIndex(components, targetContainerId);
 
+  const svgId = generateComponentId('hg_svg', components);
   const svgComponent: Component = {
-    id: `hg_svg_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+    id: svgId,
     type: 'hg_svg',
-    name: `svg_${Date.now().toString().substr(-4)}`,
+    name: svgId,
     position: { 
       x: relativeX, 
       y: relativeY, 
@@ -242,10 +248,11 @@ export const createGlassComponentAtPosition = (
   const relativeY = Math.max(0, dropPosition.y - targetAbsPos.y);
   const zIndex = getNextZIndex(components, targetContainerId);
 
+  const glassId = generateComponentId('hg_glass', components);
   const glassComponent: Component = {
-    id: `hg_glass_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+    id: glassId,
     type: 'hg_glass',
-    name: `glass_${Date.now().toString().substr(-4)}`,
+    name: glassId,
     position: { 
       x: relativeX, 
       y: relativeY, 
@@ -288,10 +295,11 @@ export const createLottieComponentAtPosition = (
   const relativeY = Math.max(0, dropPosition.y - targetAbsPos.y);
   const zIndex = getNextZIndex(components, targetContainerId);
 
+  const lottieId = generateComponentId('hg_lottie', components);
   const lottieComponent: Component = {
-    id: `hg_lottie_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+    id: lottieId,
     type: 'hg_lottie',
-    name: `lottie_${Date.now().toString().substr(-4)}`,
+    name: lottieId,
     position: { 
       x: relativeX, 
       y: relativeY, 

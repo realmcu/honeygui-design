@@ -153,6 +153,8 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
     } else {
       // 更新引用为新的 ID
       editingComponentIdRef.current = editingId;
+      // 同步 name 为新的 ID 值
+      onUpdate({ name: editingId });
     }
   };
 
