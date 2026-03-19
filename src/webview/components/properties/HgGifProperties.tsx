@@ -114,22 +114,23 @@ export const HgGifProperties: React.FC<PropertyPanelProps> = ({ component, onUpd
   const currentBlendMode = component.data?.blendMode || 'IMG_FILTER_BLACK';
 
   return (
-    <div className="properties-content">
+    <>
       <div className="properties-tabs">
         <button
-          className={`tab-button ${activeTab === 'properties' ? 'active' : ''}`}
+          className={activeTab === 'properties' ? 'active' : ''}
           onClick={() => setActiveTab('properties')}
         >
           {t('Properties')}
         </button>
         <button
-          className={`tab-button ${activeTab === 'events' ? 'active' : ''}`}
+          className={activeTab === 'events' ? 'active' : ''}
           onClick={() => setActiveTab('events')}
         >
           {t('Events')}
         </button>
       </div>
 
+      <div className="properties-content">
       {activeTab === 'properties' ? (
         <>
           <BaseProperties component={component} onUpdate={onUpdate} components={components} disableSize={true} sizeTooltip="GIF 尺寸由源文件决定">
@@ -346,6 +347,7 @@ export const HgGifProperties: React.FC<PropertyPanelProps> = ({ component, onUpd
       ) : (
         <EventsPanel component={component} onUpdate={onUpdate} />
       )}
-    </div>
+      </div>
+    </>
   );
 };

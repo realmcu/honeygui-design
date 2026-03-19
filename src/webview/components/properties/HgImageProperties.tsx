@@ -142,22 +142,23 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
   };
 
   return (
-    <div className="properties-content">
+    <>
       <div className="properties-tabs">
         <button
-          className={`tab-button ${activeTab === 'properties' ? 'active' : ''}`}
+          className={activeTab === 'properties' ? 'active' : ''}
           onClick={() => setActiveTab('properties')}
         >
           {t('Properties')}
         </button>
         <button
-          className={`tab-button ${activeTab === 'events' ? 'active' : ''}`}
+          className={activeTab === 'events' ? 'active' : ''}
           onClick={() => setActiveTab('events')}
         >
           {t('Events')}
         </button>
       </div>
 
+      <div className="properties-content">
       {activeTab === 'properties' ? (
         <>
           <BaseProperties component={component} onUpdate={onUpdate} components={components} disableSize={true} sizeTooltip="图片尺寸由源文件决定">
@@ -443,6 +444,7 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
       ) : (
         <EventsPanel component={component} onUpdate={onUpdate} />
       )}
-    </div>
+      </div>
+    </>
   );
 };
