@@ -193,31 +193,31 @@ export class LvglCCodeGenerator implements ICodeGenerator {
 
   private generateEntryHeader(): string {
     let code = `/**\n`;
-    code += ` * HoneyGUI LVGL generated entry (auto-generated)\n`;
+    code += ` * LVGL generated entry (auto-generated)\n`;
     code += ` * Generated at: ${new Date().toISOString()}\n`;
     code += ` */\n`;
-    code += `#ifndef HONEYGUI_LVGL_GENERATED_UI_H\n`;
-    code += `#define HONEYGUI_LVGL_GENERATED_UI_H\n\n`;
+    code += `#ifndef LVGL_GENERATED_UI_H\n`;
+    code += `#define LVGL_GENERATED_UI_H\n\n`;
     code += `#include "lvgl.h"\n\n`;
     code += `#ifdef __cplusplus\n`;
     code += `extern "C" {\n`;
     code += `#endif\n\n`;
-    code += `void honeygui_lvgl_ui_create(lv_obj_t * parent);\n\n`;
+    code += `void lvgl_generated_ui_create(lv_obj_t * parent);\n\n`;
     code += `#ifdef __cplusplus\n`;
     code += `}\n`;
     code += `#endif\n\n`;
-    code += `#endif /* HONEYGUI_LVGL_GENERATED_UI_H */\n`;
+    code += `#endif /* LVGL_GENERATED_UI_H */\n`;
     return code;
   }
 
   private generateEntrySource(designName: string): string {
     let code = `/**\n`;
-    code += ` * HoneyGUI LVGL generated entry implementation (auto-generated)\n`;
+    code += ` * LVGL generated entry implementation (auto-generated)\n`;
     code += ` * Generated at: ${new Date().toISOString()}\n`;
     code += ` */\n`;
     code += `#include "lvgl_generated_ui.h"\n`;
     code += `#include "${designName}_lvgl_ui.h"\n\n`;
-    code += `void honeygui_lvgl_ui_create(lv_obj_t * parent)\n`;
+    code += `void lvgl_generated_ui_create(lv_obj_t * parent)\n`;
     code += `{\n`;
     code += `    ${designName}_lvgl_ui_create(parent);\n`;
     code += `}\n`;
