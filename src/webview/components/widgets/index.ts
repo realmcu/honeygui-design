@@ -26,6 +26,7 @@ import { CanvasWidget } from './CanvasWidget';
 import { ParticleWidget } from './ParticleWidget';
 import { MapWidget } from './MapWidget';
 import { OpenClawWidget } from './OpenClawWidget';
+import { ClawFaceWidget } from './ClawFaceWidget';
 import { MenuCellularWidget } from './MenuCellularWidget';
 
 export { WidgetProps } from './types';
@@ -61,5 +62,6 @@ export const widgetRegistry: Record<string, React.FC<WidgetProps>> = {
   hg_particle: ParticleWidget,
   hg_map: MapWidget,
   hg_openclaw: OpenClawWidget,
+  hg_claw_face: ClawFaceWidget,
   hg_menu_cellular: MenuCellularWidget,
 };

@@ -70,7 +70,7 @@ export const OpenClawWidget: React.FC<WidgetProps> = ({ component, style, handle
           pointerEvents: 'none',
         }}
       >
-        <span aria-hidden="true">🤖</span>
+        <span aria-hidden="true">🦞</span>
       </div>
       
       {/* 光效 */}

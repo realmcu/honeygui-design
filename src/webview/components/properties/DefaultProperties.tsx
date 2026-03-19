@@ -190,6 +190,128 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
     );
   };
 
+  const getClawFaceScopeOwner = () => {
+    if (component.type !== 'hg_claw_face' || !components) {
+      return null;
+    }
+
+    let current = component;
+    let rootView = current.type === 'hg_view' ? current : null;
+
+    while (current.parent) {
+      const parent = components.find(c => c.id === current.parent);
+      if (!parent) {
+        break;
+      }
+
+      if (parent.type === 'hg_window') {
+        return parent;
+      }
+
+      if (parent.type === 'hg_view') {
+        rootView = parent;
+      }
+
+      current = parent;
+    }
+
+    return rootView;
+  };
+
+  const getScopedOpenClawTargets = () => {
+    const scopeOwner = getClawFaceScopeOwner();
+    if (!scopeOwner || !components) {
+      return [] as Array<{ value: string; label: string }>;
+    }
+
+    const result: Array<{ value: string; label: string }> = [];
+    const visited = new Set<string>();
+
+    const walk = (comp: typeof component) => {
+      if (visited.has(comp.id)) {
+        return;
+      }
+      visited.add(comp.id);
+
+      if (comp.type === 'hg_openclaw') {
+        result.push({
+          value: comp.id,
+          label: `${comp.name} (${comp.id})`
+        });
+      }
+
+      if (comp.children && comp.children.length > 0) {
+        comp.children.forEach(childId => {
+          const child = components.find(c => c.id === childId);
+          if (child) {
+            walk(child);
+          }
+        });
+      }
+    };
+
+    walk(scopeOwner);
+    return result;
+  };
+
+  const renderOpenClawTargetSelector = () => {
+    const value = (component.data as any)?.openclawTarget || '';
+    const scopedTargets = getScopedOpenClawTargets();
+    const options: Array<{ value: string; label: string }> = [
+      { value: '', label: t('Auto Match First OpenClaw in Scope') }
+    ];
+
+    options.push(...scopedTargets);
+
+    if (value && !options.some(option => option.value === value)) {
+      options.push({ value, label: `${value} (${t('Out of Scope or Missing')})` });
+    }
+
+    return (
+      <div>
+        <PropertyEditor
+          type="select"
+          value={value}
+          onChange={(nextValue) => handleDataChange('openclawTarget', nextValue)}
+          options={options}
+          disabled={options.length === 1}
+        />
+        <div style={{
+          fontSize: '10px',
+          color: 'var(--vscode-descriptionForeground)',
+          marginTop: '4px',
+          lineHeight: '1.4'
+        }}>
+          💡 {options.length === 1 ? t('No OpenClaw targets found in current scope') : t('Only OpenClaw components in the current view or window are available')}
+        </div>
+      </div>
+    );
+  };
+
+  const renderClawFaceExpressionSelector = () => {
+    const value = (component.data as any)?.initialExpression || 'neutral';
+    const options = [
+      { value: 'neutral', label: t('Neutral') },
+      { value: 'happy', label: t('Happy') },
+      { value: 'sad', label: t('Sad') },
+      { value: 'angry', label: t('Angry') },
+      { value: 'surprised', label: t('Surprised') },
+      { value: 'thinking', label: t('Thinking') },
+      { value: 'sleeping', label: t('Sleeping') },
+      { value: 'love', label: t('Love') },
+      { value: 'wink', label: t('Wink') },
+    ];
+
+    return (
+      <PropertyEditor
+        type="select"
+        value={value}
+        onChange={(nextValue) => handleDataChange('initialExpression', nextValue)}
+        options={options}
+      />
+    );
+  };
+
   const renderImageProperty = (value: any, onChange: (value: any) => void, propertyName?: string) => {
     return (
       <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
@@ -989,6 +1111,10 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                           (component.data as any)?.[property.name],
                           (value) => handleDataChange(property.name, value)
                         )
+                      ) : property.name === 'openclawTarget' && component.type === 'hg_claw_face' ? (
+                        renderOpenClawTargetSelector()
+                      ) : property.name === 'initialExpression' && component.type === 'hg_claw_face' ? (
+                        renderClawFaceExpressionSelector()
                       ) : property.name === 'text' && (component.type === 'hg_timer_label' || component.type === 'hg_time_label') ? (
                         // 计时器标签和时间标签的文本是自动生成的，不显示输入框
                         <div style={{

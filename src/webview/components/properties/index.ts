@@ -42,6 +42,7 @@ export const propertyPanelRegistry: Record<ComponentType, React.FC<PropertyPanel
   hg_particle: HgParticleProperties,
   hg_map: DefaultProperties,
   hg_openclaw: DefaultProperties,
+  hg_claw_face: DefaultProperties,
   hg_menu_cellular: HgMenuCellularProperties,
 };
 

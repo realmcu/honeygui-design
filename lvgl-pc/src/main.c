@@ -8,6 +8,9 @@
 #include <stdint.h>
 #include <stdio.h>
 
+/* Only pull in SDL_GetTicks – avoid SDL_main.h redefining main() */
+extern uint32_t SDL_GetTicks(void);
+
 #include "lvgl.h"
 #include "lv_port_disp.h"
 #include "lv_port_indev.h"
@@ -40,7 +43,7 @@ static void lvgl_log_cb(lv_log_level_t level, const char *buf)
 static void create_ui(void)
 {
     lv_obj_t *scr = lv_screen_active();
-    honeygui_lvgl_ui_create(scr);
+    lvgl_generated_ui_create(scr);
 }
 
 int main(void)
@@ -49,6 +52,10 @@ int main(void)
     fflush(stdout);
 
     lv_init();
+
+    /* Register SDL_GetTicks as LVGL tick source (LVGL 9.x uses callback instead of lv_tick_inc) */
+    lv_tick_set_cb(SDL_GetTicks);
+
     lv_log_register_print_cb(lvgl_log_cb);
 
     printf("[APP] LV_USE_LOG=%d LV_LOG_LEVEL=%d\n", LV_USE_LOG, LV_LOG_LEVEL);

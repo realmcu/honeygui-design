@@ -120,9 +120,10 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
         files.push(...copiedFiles);
       }
 
-      // 如果有 OpenClaw 组件，拷贝 gui_openclaw 库
+      // 如果有 OpenClaw / Claw Face 组件，拷贝 gui_openclaw 库
       const hasOpenClawComponent = this.components.some(c => c.type === 'hg_openclaw');
-      if (hasOpenClawComponent) {
+      const hasClawFaceComponent = this.components.some(c => c.type === 'hg_claw_face');
+      if (hasOpenClawComponent || hasClawFaceComponent) {
         const copiedFiles = this.copyOpenClawLibrary(srcDir);
         files.push(...copiedFiles);
       }
@@ -149,6 +150,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
     const has3D = componentTypes.includes('hg_3d');
     const hasMap = componentTypes.includes('hg_map');
     const hasOpenClaw = componentTypes.includes('hg_openclaw');
+    const hasClawFace = componentTypes.includes('hg_claw_face');
     const hasLabel = componentTypes.includes('hg_label');
     const hasArc = componentTypes.includes('hg_arc');
     
@@ -220,6 +222,10 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
         code += `#include "gui_vfs.h"\n`;
       }
       code += `#include "gui_openclaw.h"\n`;
+    }
+
+    if (hasClawFace && !hasOpenClaw) {
+      code += `#include "gui_openclaw_emoji.h"\n`;
     }
 
     // 蜂窝菜单组件头文件
@@ -613,6 +619,14 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
           childrenCode += this.generateComponentTree(child, childIndent);
         }
       });
+
+      const openClawEmojiBindings = this.generateOpenClawEmojiBindings(
+        component,
+        component.type === 'hg_window' ? indent : indent + 1
+      );
+      if (openClawEmojiBindings) {
+        childrenCode += `\n${openClawEmojiBindings}`;
+      }
     }
     
     // 生成事件绑定代码（用于 hg_view 和 hg_window 的 onMessage、按键事件等）
@@ -992,6 +1006,8 @@ static void ${component.id}_breath_anim_cb(void *p)
         return 'gui_vector_map_t';
       case 'hg_openclaw':
         return 'gui_openclaw_t';
+      case 'hg_claw_face':
+        return 'gui_openclaw_emoji_widget_t';
       case 'hg_menu_cellular':
         return 'gui_menu_cellular_t';
       default:
@@ -1038,6 +1054,100 @@ static void ${component.id}_breath_anim_cb(void *p)
     console.log(`[MapGenerator] Copied ${files.length} files to ${targetLibDir}`);
 
     return files;
+  }
+
+  /**
+   * 为当前容器下直接挂载的 clawFace 组件生成 OpenClaw 绑定代码
+   */
+  private generateOpenClawEmojiBindings(container: Component, indent: number): string {
+    const containerChildren = container.children ?? [];
+
+    if (containerChildren.length === 0) {
+      return '';
+    }
+
+    const directClawFaces = containerChildren
+      .map(childId => this.componentMap.get(childId))
+      .filter((child): child is Component => child !== undefined && child.type === 'hg_claw_face');
+
+    if (directClawFaces.length === 0) {
+      return '';
+    }
+
+    const indentStr = '    '.repeat(indent);
+    const subtreeComponents = this.collectSubtreeComponents(container);
+    const sameContainerOpenClaws = subtreeComponents.filter(comp => comp.type === 'hg_openclaw');
+    let code = '';
+
+    directClawFaces.forEach(face => {
+      const explicitTarget = typeof face.data?.openclawTarget === 'string'
+        ? face.data.openclawTarget.trim()
+        : '';
+
+      let targetComp: Component | undefined;
+      let warningMessage = '';
+
+      if (explicitTarget) {
+        const candidate = this.componentMap.get(explicitTarget);
+        if (!candidate) {
+          warningMessage = `OpenClaw target \"${explicitTarget}\" for ${face.id} was not found`;
+        } else if (candidate.type !== 'hg_openclaw') {
+          warningMessage = `Target \"${explicitTarget}\" for ${face.id} is not an hg_openclaw component`;
+        } else if (!sameContainerOpenClaws.some(comp => comp.id === candidate.id)) {
+          warningMessage = `Target \"${explicitTarget}\" for ${face.id} is outside the current view/window scope`;
+        } else {
+          targetComp = candidate;
+        }
+      } else {
+        const siblingOpenClaw = (containerChildren
+          .map(childId => this.componentMap.get(childId))
+          .find(child => child?.type === 'hg_openclaw'));
+
+        targetComp = siblingOpenClaw || sameContainerOpenClaws[0];
+
+        if (!targetComp) {
+          warningMessage = `No hg_openclaw component found for ${face.id}`;
+        }
+      }
+
+      code += `\n${indentStr}// Bind ${face.id} to OpenClaw\n`;
+
+      if (!targetComp) {
+        code += `${indentStr}// Warning: ${warningMessage}\n`;
+        return;
+      }
+
+      code += `${indentStr}if (${targetComp.id} != NULL && ${face.id} != NULL)\n`;
+      code += `${indentStr}{\n`;
+      code += `${indentStr}    gui_openclaw_set_emoji(${targetComp.id}, ${face.id});\n`;
+      code += `${indentStr}}\n`;
+    });
+
+    return code;
+  }
+
+  /**
+   * 按组件树顺序收集当前容器子树中的所有组件
+   */
+  private collectSubtreeComponents(container: Component): Component[] {
+    const result: Component[] = [];
+
+    const walk = (comp: Component) => {
+      result.push(comp);
+      if (!comp.children || comp.children.length === 0) {
+        return;
+      }
+
+      comp.children.forEach(childId => {
+        const child = this.componentMap.get(childId);
+        if (child) {
+          walk(child);
+        }
+      });
+    };
+
+    walk(container);
+    return result;
   }
 
   /**
