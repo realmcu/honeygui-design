@@ -463,7 +463,7 @@ const App: React.FC = () => {
         case 'createImageComponent':
           if (message.imagePath && message.targetContainerId && message.dropPosition) {
             const store = useDesignerStore.getState();
-            createImageComponentAtPosition(
+            const newId = createImageComponentAtPosition(
               message.imagePath,
               message.dropPosition,
               message.targetContainerId,
@@ -471,13 +471,14 @@ const App: React.FC = () => {
               store.addComponent,
               message.imageSize
             );
+            if (newId) store.selectComponent(newId);
           }
           break;
 
         case 'createGifComponent':
           if (message.gifPath && message.targetContainerId && message.dropPosition) {
             const store = useDesignerStore.getState();
-            createGifComponentAtPosition(
+            const newId = createGifComponentAtPosition(
               message.gifPath,
               message.dropPosition,
               message.targetContainerId,
@@ -485,26 +486,28 @@ const App: React.FC = () => {
               store.addComponent,
               message.imageSize
             );
+            if (newId) store.selectComponent(newId);
           }
           break;
 
         case 'create3DComponent':
           if (message.modelPath && message.targetContainerId && message.dropPosition) {
             const store = useDesignerStore.getState();
-            create3DComponentAtPosition(
+            const newId = create3DComponentAtPosition(
               message.modelPath,
               message.dropPosition,
               message.targetContainerId,
               store.components,
               store.addComponent
             );
+            if (newId) store.selectComponent(newId);
           }
           break;
 
         case 'createVideoComponent':
           if (message.videoPath && message.targetContainerId && message.dropPosition) {
             const store = useDesignerStore.getState();
-            createVideoComponentAtPosition(
+            const newId = createVideoComponentAtPosition(
               message.videoPath,
               message.dropPosition,
               message.targetContainerId,
@@ -512,6 +515,7 @@ const App: React.FC = () => {
               store.addComponent,
               message.videoSize
             );
+            if (newId) store.selectComponent(newId);
           }
           break;
 
@@ -534,7 +538,7 @@ const App: React.FC = () => {
         case 'createSvgComponent':
           if (message.svgPath && message.targetContainerId && message.dropPosition) {
             const store = useDesignerStore.getState();
-            createSvgComponentAtPosition(
+            const newId = createSvgComponentAtPosition(
               message.svgPath,
               message.dropPosition,
               message.targetContainerId,
@@ -542,13 +546,14 @@ const App: React.FC = () => {
               store.addComponent,
               message.size
             );
+            if (newId) store.selectComponent(newId);
           }
           break;
 
         case 'createGlassComponent':
           if (message.glassPath && message.targetContainerId && message.dropPosition) {
             const store = useDesignerStore.getState();
-            createGlassComponentAtPosition(
+            const newId = createGlassComponentAtPosition(
               message.glassPath,
               message.dropPosition,
               message.targetContainerId,
@@ -556,13 +561,14 @@ const App: React.FC = () => {
               store.addComponent,
               message.size
             );
+            if (newId) store.selectComponent(newId);
           }
           break;
 
         case 'createLottieComponent':
           if (message.lottiePath && message.targetContainerId && message.dropPosition) {
             const store = useDesignerStore.getState();
-            createLottieComponentAtPosition(
+            const newId = createLottieComponentAtPosition(
               message.lottiePath,
               message.dropPosition,
               message.targetContainerId,
@@ -570,6 +576,7 @@ const App: React.FC = () => {
               store.addComponent,
               message.size
             );
+            if (newId) store.selectComponent(newId);
           }
           break;
 

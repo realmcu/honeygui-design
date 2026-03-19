@@ -21,7 +21,7 @@ export const createImageComponentAtPosition = (
   components: Component[],
   addComponent: (component: Component) => void,
   imageSize?: { width: number; height: number }
-): void => {
+): string | undefined => {
   const targetContainer = components.find(c => c.id === targetContainerId);
   if (!targetContainer) return;
 
@@ -50,6 +50,7 @@ export const createImageComponentAtPosition = (
   };
 
   addComponent(imageComponent);
+  return imageId;
 };
 
 /**
@@ -62,7 +63,7 @@ export const createGifComponentAtPosition = (
   components: Component[],
   addComponent: (component: Component) => void,
   imageSize?: { width: number; height: number }
-): void => {
+): string | undefined => {
   const targetContainer = components.find(c => c.id === targetContainerId);
   if (!targetContainer) return;
 
@@ -91,6 +92,7 @@ export const createGifComponentAtPosition = (
   };
 
   addComponent(gifComponent);
+  return gifId;
 };
 
 /**
@@ -102,7 +104,7 @@ export const create3DComponentAtPosition = (
   targetContainerId: string,
   components: Component[],
   addComponent: (component: Component) => void
-): void => {
+): string | undefined => {
   const targetContainer = components.find(c => c.id === targetContainerId);
   if (!targetContainer) return;
 
@@ -143,6 +145,7 @@ export const create3DComponentAtPosition = (
   };
 
   addComponent(component3D);
+  return id3D;
 };
 
 /**
@@ -155,7 +158,7 @@ export const createVideoComponentAtPosition = (
   components: Component[],
   addComponent: (component: Component) => void,
   videoSize?: { width: number; height: number }
-): void => {
+): string | undefined => {
   const targetContainer = components.find(c => c.id === targetContainerId);
   if (!targetContainer) return;
 
@@ -184,6 +187,7 @@ export const createVideoComponentAtPosition = (
   };
 
   addComponent(videoComponent);
+  return videoId;
 };
 
 /**
@@ -196,7 +200,7 @@ export const createSvgComponentAtPosition = (
   components: Component[],
   addComponent: (component: Component) => void,
   size?: { width: number; height: number }
-): void => {
+): string | undefined => {
   const targetContainer = components.find(c => c.id === targetContainerId);
   if (!targetContainer) return;
 
@@ -227,6 +231,7 @@ export const createSvgComponentAtPosition = (
   };
 
   addComponent(svgComponent);
+  return svgId;
 };
 
 /**
@@ -239,7 +244,7 @@ export const createGlassComponentAtPosition = (
   components: Component[],
   addComponent: (component: Component) => void,
   size?: { width: number; height: number }
-): void => {
+): string | undefined => {
   const targetContainer = components.find(c => c.id === targetContainerId);
   if (!targetContainer) return;
 
@@ -268,12 +273,13 @@ export const createGlassComponentAtPosition = (
     style: {},
     data: { 
       src: glassPath,
-      distortion: 10,  // 默认扭曲强度 10%
-      region: 50       // 默认效果区域 50%
+      distortion: 10,
+      region: 50
     },
   };
 
   addComponent(glassComponent);
+  return glassId;
 };
 
 /**
@@ -286,7 +292,7 @@ export const createLottieComponentAtPosition = (
   components: Component[],
   addComponent: (component: Component) => void,
   size?: { width: number; height: number }
-): void => {
+): string | undefined => {
   const targetContainer = components.find(c => c.id === targetContainerId);
   if (!targetContainer) return;
 
@@ -321,6 +327,7 @@ export const createLottieComponentAtPosition = (
   };
 
   addComponent(lottieComponent);
+  return lottieId;
 };
 
 /**
@@ -360,7 +367,7 @@ export const handleBackendMessage = (
 
     case 'createImageComponent':
       if (message.imagePath && message.targetContainerId && message.dropPosition) {
-        createImageComponentAtPosition(
+        const newId = createImageComponentAtPosition(
           message.imagePath,
           message.dropPosition,
           message.targetContainerId,
@@ -368,12 +375,13 @@ export const handleBackendMessage = (
           addComponent,
           message.imageSize
         );
+        if (newId) selectComponent(newId);
       }
       break;
 
     case 'createSvgComponent':
       if (message.svgPath && message.targetContainerId && message.dropPosition) {
-        createSvgComponentAtPosition(
+        const newId = createSvgComponentAtPosition(
           message.svgPath,
           message.dropPosition,
           message.targetContainerId,
@@ -381,12 +389,13 @@ export const handleBackendMessage = (
           addComponent,
           message.size
         );
+        if (newId) selectComponent(newId);
       }
       break;
 
     case 'createLottieComponent':
       if (message.lottiePath && message.targetContainerId && message.dropPosition) {
-        createLottieComponentAtPosition(
+        const newId = createLottieComponentAtPosition(
           message.lottiePath,
           message.dropPosition,
           message.targetContainerId,
@@ -394,6 +403,7 @@ export const handleBackendMessage = (
           addComponent,
           message.size
         );
+        if (newId) selectComponent(newId);
       }
       break;
 
