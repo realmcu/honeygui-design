@@ -26,6 +26,7 @@ export class SimulationRunner {
     private taskEndListener: vscode.Disposable | null = null; // 任务结束监听器
     private processMonitorInterval: NodeJS.Timeout | null = null; // 进程监听定时器
     private hasExited: boolean = false; // 标记是否已经处理过退出事件
+    private isCancelled: boolean = false; // 标记是否已取消（用于中止启动流程）
 
     constructor(projectRoot: string, sdkPath: string, outputChannel: vscode.OutputChannel) {
         this.projectRoot = projectRoot;
@@ -44,6 +45,7 @@ export class SimulationRunner {
      * 启动编译仿真
      */
     async start(): Promise<void> {
+        this.isCancelled = false;
         try {
             this.listener?.onStart?.();
 
@@ -52,6 +54,7 @@ export class SimulationRunner {
 
             if (targetEngine === 'lvgl') {
                 await this.generateCode();
+                this.throwIfCancelled();
                 await this.startLvglSimulation();
                 this.isRunning = true;
                 this.listener?.onSuccess?.();
@@ -60,15 +63,19 @@ export class SimulationRunner {
 
             // 1. 环境检查
             await this.checkEnvironment();
+            this.throwIfCancelled();
 
             // 2. 生成代码（所有 HML 文件）
             await this.generateCode();
+            this.throwIfCancelled();
 
             // 3. 准备编译环境
             await this.setupBuildEnvironment();
+            this.throwIfCancelled();
 
             // 4. 编译
             await this.compile();
+            this.throwIfCancelled();
 
             // 5. 运行
             await this.run();
@@ -82,10 +89,25 @@ export class SimulationRunner {
     }
 
     /**
+     * 检查是否已取消，若已取消则抛出异常
+     */
+    private throwIfCancelled(): void {
+        if (this.isCancelled) {
+            throw new Error('Simulation cancelled');
+        }
+    }
+
+    /**
      * 停止仿真
      */
     async stop(): Promise<void> {
+        this.isCancelled = true;
         this.isManuallyStopped = true;
+        
+        // 中止正在进行的编译
+        if (this.buildManager) {
+            this.buildManager.abort();
+        }
         
         // 终止任务
         if (this.currentTask) {

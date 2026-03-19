@@ -99,7 +99,10 @@ export class SimulationService {
 
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            vscode.window.showErrorMessage(vscode.l10n.t('Compilation failed: {0}', message));
+            // 用户主动取消不显示错误
+            if (message !== 'Simulation cancelled') {
+                vscode.window.showErrorMessage(vscode.l10n.t('Compilation failed: {0}', message));
+            }
             this.isRunning = false;
             this.notifyStatusChange(false);
         }
@@ -272,8 +275,8 @@ export class SimulationService {
             onStart: () => {
                 this.outputChannel.clear();
                 this.outputChannel.show(true);
-                this.isRunning = false; // 启动中，暂时显示为未运行
-                this.notifyStatusChange(false);
+                this.isRunning = true; // 启动中，立即禁用按钮防止重复点击
+                this.notifyStatusChange(true);
             },
             
             onSuccess: () => {

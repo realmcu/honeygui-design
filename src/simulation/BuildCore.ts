@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import * as vscode from 'vscode';
-import { spawn } from 'child_process';
+import { spawn, ChildProcess } from 'child_process';
 import { minimatch } from 'minimatch';
 import { ImageConverterService, ImageConvertOptions, ConvertResult, CompressionType, YuvSampleMode, YuvBlurBits } from '../services/ImageConverterService';
 import { VideoConverterService } from '../services/VideoConverterService';
@@ -31,6 +31,7 @@ export class BuildCore {
     protected libSimPath: string;  // 插件内置的 lib/sim 路径
     protected logger: Logger;
     protected projectConfig: ProjectConfig;
+    private compileProcess: ChildProcess | null = null;
 
     constructor(projectRoot: string, libSimPath: string, projectConfig: ProjectConfig, logger: Logger) {
         this.projectRoot = projectRoot;
@@ -340,6 +341,25 @@ Return('objs')
         }
     }
 
+    /**
+     * 中止编译进程
+     */
+    abort(): void {
+        if (this.compileProcess && this.compileProcess.pid) {
+            this.logger.log('正在中止编译...');
+            try {
+                if (process.platform === 'win32') {
+                    spawn('taskkill', ['/F', '/T', '/PID', String(this.compileProcess.pid)], { windowsHide: true });
+                } else {
+                    this.compileProcess.kill('SIGTERM');
+                }
+            } catch {
+                // 进程可能已退出
+            }
+            this.compileProcess = null;
+        }
+    }
+
     async compile(): Promise<void> {
         this.logger.log('开始编译...');
 
@@ -349,6 +369,7 @@ Return('objs')
                 shell: true,
                 windowsHide: true  // Windows 上隐藏命令行窗口
             });
+            this.compileProcess = compileProcess;
 
             let compiledCount = 0;
 
@@ -429,6 +450,7 @@ Return('objs')
             });
 
             compileProcess.on('exit', (code) => {
+                this.compileProcess = null;
                 if (code === 0) {
                     this.logger.log(`编译成功！共编译 ${compiledCount} 个文件`);
                     resolve();
@@ -437,7 +459,10 @@ Return('objs')
                 }
             });
 
-            compileProcess.on('error', reject);
+            compileProcess.on('error', (err) => {
+                this.compileProcess = null;
+                reject(err);
+            });
         });
     }
 
