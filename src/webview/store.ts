@@ -1052,6 +1052,12 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     });
 
     set({ zoom: fitZoom, canvasOffset: { x: offsetX, y: offsetY } });
+
+    // 重置滚动位置，避免滚轮滚动后再次居中时偏移
+    if (containerElement instanceof HTMLElement) {
+      containerElement.scrollLeft = 0;
+      containerElement.scrollTop = 0;
+    }
   },
 
   // Drag and drop
