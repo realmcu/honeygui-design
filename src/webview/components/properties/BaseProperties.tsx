@@ -111,19 +111,33 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
   const [idError, setIdError] = useState<string | null>(null);
   const renameComponent = useDesignerStore(state => state.renameComponent);
   
-  // 保存当前正在编辑的组件 ID（用于确保修改应用到正确的组件）
+  // 保存当前正在编辑的组件 ID 和编辑值（用于组件切换时提交）
   const editingComponentIdRef = React.useRef(component.id);
+  const editingIdRef = React.useRef(component.id);
+  editingIdRef.current = editingId;
 
-  // 组件切换时重置编辑状态
+  // 组件切换或卸载时提交之前的更改
   useEffect(() => {
-    // 如果组件切换了，先提交之前的更改
-    if (editingComponentIdRef.current !== component.id && editingId !== editingComponentIdRef.current) {
-      handleIdCommit();
-    }
-    
     setEditingId(component.id);
     setIdError(null);
     editingComponentIdRef.current = component.id;
+
+    return () => {
+      // cleanup: 组件切换（同类型 re-render）或卸载（不同类型）时都会执行
+      const originalId = editingComponentIdRef.current;
+      const pendingValue = editingIdRef.current;
+      if (pendingValue !== originalId && pendingValue.trim()) {
+        const store = useDesignerStore.getState();
+        const allIds = store.components.map(c => c.id);
+        const result = validateComponentId(pendingValue, allIds, originalId);
+        if (result.valid) {
+          const success = store.renameComponent(originalId, pendingValue);
+          if (success) {
+            store.updateComponent(pendingValue, { name: pendingValue });
+          }
+        }
+      }
+    };
   }, [component.id]);
 
   const handleIdChange = (value: string) => {
