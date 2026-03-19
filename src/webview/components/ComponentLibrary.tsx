@@ -473,12 +473,22 @@ const componentDefinitions: ComponentDefinition[] = [
   {
     type: 'hg_openclaw',
     name: 'OpenClaw',
-    icon: '🤖',
+    icon: '🦞',
     defaultSize: { width: 410, height: 502 },
     properties: [
       { name: 'fontFile', label: 'Font File (.ttf)', type: 'string', defaultValue: '', group: 'data' },
       { name: 'emojiFontFile', label: 'Emoji Font (.ttf)', type: 'string', defaultValue: '', group: 'data', hint: 'Recommended: Noto Emoji (https://fonts.google.com/noto/specimen/Noto+Emoji)' },
       { name: 'senderId', label: 'Sender ID', type: 'string', defaultValue: 'user1', group: 'data' },
+    ],
+  },
+  {
+    type: 'hg_claw_face',
+    name: 'Claw Face',
+    icon: '😐',
+    defaultSize: { width: 160, height: 160 },
+    properties: [
+      { name: 'openclawTarget', label: 'OpenClaw Target', type: 'string', defaultValue: '', group: 'data' },
+      { name: 'initialExpression', label: 'Initial Expression', type: 'select', defaultValue: 'neutral', group: 'data', options: ['neutral', 'happy', 'sad', 'angry', 'surprised', 'thinking', 'sleeping', 'love', 'wink'] },
     ],
   },
   {
@@ -502,7 +512,7 @@ const componentCategories = [
   { name: 'Input Controls', types: ['hg_input', 'hg_checkbox', 'hg_radio'] },
   { name: 'Graphics', types: ['hg_arc', 'hg_circle', 'hg_rect', 'hg_svg', 'hg_glass', 'hg_particle'] },
   { name: 'Multimedia', types: ['hg_video', 'hg_gif', 'hg_3d', 'hg_lottie'] },
-  { name: 'Mini App', types: ['hg_map', 'hg_openclaw'] },
+  { name: 'Mini App', types: ['hg_map', 'hg_openclaw', 'hg_claw_face'] },
 ];
 
 /**

@@ -26,6 +26,7 @@ import { TimeLabelGenerator } from './TimeLabelGenerator';
 import { ParticleGenerator } from './ParticleGenerator';
 import { MapGenerator } from './MapGenerator';
 import { OpenClawGenerator } from './OpenClawGenerator';
+import { ClawFaceGenerator } from './ClawFaceGenerator';
 import { MenuCellularGenerator } from './MenuCellularGenerator';
 import { DefaultGenerator } from './DefaultGenerator';
 
@@ -68,6 +69,7 @@ export class ComponentGeneratorFactory {
     this.generators.set('hg_particle', new ParticleGenerator());
     this.generators.set('hg_map', new MapGenerator());
     this.generators.set('hg_openclaw', new OpenClawGenerator());
+    this.generators.set('hg_claw_face', new ClawFaceGenerator());
   }
 
   static getGenerator(componentType: string): ComponentCodeGenerator {

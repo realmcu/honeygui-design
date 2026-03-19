@@ -256,6 +256,14 @@ export class HoneyGuiApiMapper {
       eventHandlers: [],
       includeHeader: 'gui_openclaw.h'
     });
+
+    this.mappings.set('hg_claw_face', {
+      componentType: 'hg_claw_face',
+      createFunction: 'gui_openclaw_emoji_create',
+      propertySetters: [],
+      eventHandlers: [],
+      includeHeader: 'gui_openclaw_emoji.h'
+    });
   }
 
   /**

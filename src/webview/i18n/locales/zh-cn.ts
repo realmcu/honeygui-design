@@ -158,6 +158,21 @@ const zhCN = {
   'Distortion (%)': '扭曲强度(%)',
   'Effect Range (%)': '效果范围(%)',
   'Recommended Emoji Font': '推荐 Emoji 字体:',
+  'OpenClaw Target': 'OpenClaw 目标',
+  'Initial Expression': '初始表情',
+  'Auto Match First OpenClaw in Scope': '自动匹配当前作用域中的第一个 OpenClaw',
+  'No OpenClaw targets found in current scope': '当前作用域内未找到 OpenClaw 目标',
+  'Only OpenClaw components in the current view or window are available': '这里只显示当前视图或窗口内可绑定的 OpenClaw 组件',
+  'Out of Scope or Missing': '超出作用域或不存在',
+  'Neutral': '平静',
+  'Happy': '开心',
+  'Sad': '难过',
+  'Angry': '生气',
+  'Surprised': '惊讶',
+  'Thinking': '思考',
+  'Sleeping': '睡觉',
+  'Love': '喜爱',
+  'Wink': '眨眼',
 
   // Toolbar
   'Save': '保存',
@@ -817,6 +832,11 @@ const zhCN = {
   'Vector Map': '矢量地图',
   'Map File (.trmap)': '地图文件 (.trmap)',
   'Font File (.ttf)': '字体文件 (.ttf)',
+  'OpenClaw': 'OpenClaw',
+  'Emoji Font (.ttf)': 'Emoji 字体文件 (.ttf)',
+  'Sender ID': '发送者 ID',
+  'Claw Face': 'Claw 表情',
+  'OpenClaw Target ID': 'OpenClaw 目标 ID',
 };
 
 export default zhCN;

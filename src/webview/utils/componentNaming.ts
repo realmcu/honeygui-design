@@ -29,6 +29,7 @@ const TYPE_ABBREVIATIONS: Record<string, string> = {
   hg_particle: 'ptcl',
   hg_map: 'map',
   hg_openclaw: 'claw',
+  hg_claw_face: 'face',
   hg_menu_cellular: 'menu_cell',
 };
 
