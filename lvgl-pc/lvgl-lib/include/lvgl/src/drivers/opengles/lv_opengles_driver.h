@@ -45,7 +45,7 @@ void lv_opengles_init(void);
 void lv_opengles_deinit(void);
 
 /**
- * Render a texture using alternate blending mode for smoother translucent materials and correct anti-aliasing of glTF elements when using transparent background
+ * Render a texture
  * @param texture        OpenGL texture ID
  * @param texture_area   the area in the window to render the texture in
  * @param opa            opacity to blend the texture with existing contents
@@ -54,16 +54,17 @@ void lv_opengles_deinit(void);
  * @param h_flip         horizontal flip
  * @param v_flip         vertical flip
  */
-void lv_opengles_render_texture(unsigned int texture, const lv_area_t * texture_area, lv_opa_t opa, int32_t disp_w,
-                                int32_t disp_h, const lv_area_t * texture_clip_area, bool h_flip, bool v_flip);
+void lv_opengles_render_texture(unsigned int texture, const lv_area_t *texture_area, lv_opa_t opa,
+                                int32_t disp_w,
+                                int32_t disp_h, const lv_area_t *texture_clip_area, bool h_flip, bool v_flip);
 
 /**
- * Render a display texture - Supports rotation - Switches red and blue channels
+ * Render a display texture - Supports rotation
  * @param display           LVGL Texture display. Created with the `lv_opengles_texture` module
  * @param h_flip            horizontal flip
  * @param v_flip            vertical flip
  */
-void lv_opengles_render_display_texture(lv_display_t * display, bool h_flip, bool v_flip);
+void lv_opengles_render_display_texture(lv_display_t *display, bool h_flip, bool v_flip);
 
 /**
  * Render a fill
@@ -73,7 +74,8 @@ void lv_opengles_render_display_texture(lv_display_t * display, bool h_flip, boo
  * @param disp_w         width of the window/framebuffer being rendered to
  * @param disp_h         height of the window/framebuffer being rendered to
  */
-void lv_opengles_render_fill(lv_color_t color, const lv_area_t * area, lv_opa_t opa, int32_t disp_w, int32_t disp_h);
+void lv_opengles_render_fill(lv_color_t color, const lv_area_t *area, lv_opa_t opa, int32_t disp_w,
+                             int32_t disp_h);
 
 /**
  * Clear the window/display
@@ -88,12 +90,6 @@ void lv_opengles_render_clear(void);
  * @param h        height of the viewport
  */
 void lv_opengles_viewport(int32_t x, int32_t y, int32_t w, int32_t h);
-
-/**
- * Reinitialize OpenGL state after external GL operations (e.g., NanoVG)
- * This rebinds VAO, VBO, IBO and resets vertex attributes
- */
-void lv_opengles_reinit_state(void);
 
 /**********************
  *      MACROS

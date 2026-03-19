@@ -125,3 +125,4 @@ __pycache__/
 
 # HoneyGUI 目录
 HoneyGUI/
+lvgl/

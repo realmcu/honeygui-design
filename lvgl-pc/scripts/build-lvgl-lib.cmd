@@ -3,7 +3,11 @@ setlocal
 
 set SCRIPT_DIR=%~dp0
 
-if "%RUSTGLB_ROOT%"=="" set "RUSTGLB_ROOT=%SCRIPT_DIR%..\..\..\rustglb"
-powershell -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_DIR%build-lvgl-lib.ps1"  -RustglbRoot "%RUSTGLB_ROOT%" %*
+REM ============================================
+REM LVGL source path: 请修改为你本地的 LVGL v9 源码路径
+REM ============================================
+if "%LVGL_SRC%"=="" set LVGL_SRC=G:\LVGL\lvgl_v9
+
+powershell -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_DIR%build-lvgl-lib.ps1" -LvglSrcPath "%LVGL_SRC%" -Clean %*
 pause
 endlocal

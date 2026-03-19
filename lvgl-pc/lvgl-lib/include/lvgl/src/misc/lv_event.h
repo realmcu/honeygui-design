@@ -26,12 +26,13 @@ extern "C" {
  *      TYPEDEFS
  **********************/
 
-typedef void (*lv_event_cb_t)(lv_event_t * e);
+typedef void (*lv_event_cb_t)(lv_event_t *e);
 
 /**
  * Type of event being sent to Widget
  */
-typedef enum {
+typedef enum
+{
     LV_EVENT_ALL = 0,
 
     /** Input device events*/
@@ -78,7 +79,6 @@ typedef enum {
     LV_EVENT_REFRESH,             /**< Notify Widget to refresh something on it (for user)*/
     LV_EVENT_READY,               /**< A process has finished */
     LV_EVENT_CANCEL,              /**< A process has been cancelled */
-    LV_EVENT_STATE_CHANGED,       /**< The state of the widget changed*/
 
     /** Other events */
     LV_EVENT_CREATE,              /**< Object is being created */
@@ -112,7 +112,6 @@ typedef enum {
     LV_EVENT_FLUSH_FINISH,        /**< Sent after flush callback call has returned. */
     LV_EVENT_FLUSH_WAIT_START,    /**< Sent before flush wait callback is called. */
     LV_EVENT_FLUSH_WAIT_FINISH,   /**< Sent after flush wait callback call has returned. */
-    LV_EVENT_UPDATE_LAYOUT_COMPLETED,    /**< Sent after layout update completes*/
 
     LV_EVENT_VSYNC,
     LV_EVENT_VSYNC_REQUEST,
@@ -127,7 +126,8 @@ typedef enum {
     LV_EVENT_MARKED_DELETING = 0x10000,
 } lv_event_code_t;
 
-typedef struct {
+typedef struct
+{
     lv_array_t array;
     uint8_t is_traversing: 1;          /**< True: the list is being nested traversed */
     uint8_t has_marked_deleting: 1;    /**< True: the list has marked deleting objects
@@ -140,29 +140,30 @@ typedef struct {
  * For details, see ::lv_event_t.
  */
 
-lv_result_t lv_event_send(lv_event_list_t * list, lv_event_t * e, bool preprocess);
+lv_result_t lv_event_send(lv_event_list_t *list, lv_event_t *e, bool preprocess);
 
-lv_event_dsc_t * lv_event_add(lv_event_list_t * list, lv_event_cb_t cb, lv_event_code_t filter, void * user_data);
-bool lv_event_remove_dsc(lv_event_list_t * list, lv_event_dsc_t * dsc);
+lv_event_dsc_t *lv_event_add(lv_event_list_t *list, lv_event_cb_t cb, lv_event_code_t filter,
+                             void  *user_data);
+bool lv_event_remove_dsc(lv_event_list_t *list, lv_event_dsc_t *dsc);
 
-uint32_t lv_event_get_count(lv_event_list_t * list);
+uint32_t lv_event_get_count(lv_event_list_t *list);
 
-lv_event_dsc_t * lv_event_get_dsc(lv_event_list_t * list, uint32_t index);
+lv_event_dsc_t *lv_event_get_dsc(lv_event_list_t *list, uint32_t index);
 
-lv_event_cb_t lv_event_dsc_get_cb(lv_event_dsc_t * dsc);
+lv_event_cb_t lv_event_dsc_get_cb(lv_event_dsc_t *dsc);
 
-void * lv_event_dsc_get_user_data(lv_event_dsc_t * dsc);
+void *lv_event_dsc_get_user_data(lv_event_dsc_t *dsc);
 
-bool lv_event_remove(lv_event_list_t * list, uint32_t index);
+bool lv_event_remove(lv_event_list_t *list, uint32_t index);
 
-void lv_event_remove_all(lv_event_list_t * list);
+void lv_event_remove_all(lv_event_list_t *list);
 
 /**
  * Get Widget originally targeted by the event. It's the same even if event was bubbled.
  * @param e     pointer to the event descriptor
  * @return      the target of the event_code
  */
-void * lv_event_get_target(lv_event_t * e);
+void *lv_event_get_target(lv_event_t *e);
 
 /**
  * Get current target of the event. It's the Widget for which the event handler being called.
@@ -170,56 +171,56 @@ void * lv_event_get_target(lv_event_t * e);
  * @param e     pointer to the event descriptor
  * @return      pointer to the current target of the event_code
  */
-void * lv_event_get_current_target(lv_event_t * e);
+void *lv_event_get_current_target(lv_event_t *e);
 
 /**
  * Get event code of an event.
  * @param e     pointer to the event descriptor
  * @return      the event code. (E.g. `LV_EVENT_CLICKED`, `LV_EVENT_FOCUSED`, etc)
  */
-lv_event_code_t lv_event_get_code(lv_event_t * e);
+lv_event_code_t lv_event_get_code(lv_event_t *e);
 
 /**
  * Get parameter passed when event was sent.
  * @param e     pointer to the event descriptor
  * @return      pointer to the parameter
  */
-void * lv_event_get_param(lv_event_t * e);
+void *lv_event_get_param(lv_event_t *e);
 
 /**
  * Get user_data passed when event was registered on Widget.
  * @param e     pointer to the event descriptor
  * @return      pointer to the user_data
  */
-void * lv_event_get_user_data(lv_event_t * e);
+void *lv_event_get_user_data(lv_event_t *e);
 
 /**
  * Stop event from bubbling.
  * This is only valid when called in the middle of an event processing chain.
  * @param e     pointer to the event descriptor
  */
-void lv_event_stop_bubbling(lv_event_t * e);
+void lv_event_stop_bubbling(lv_event_t *e);
 
 /**
  * Stop event from trickling down to children.
  * This is only valid when called in the middle of an event processing chain.
  * @param e     pointer to the event descriptor
  */
-void lv_event_stop_trickling(lv_event_t * e);
+void lv_event_stop_trickling(lv_event_t *e);
 
 /**
  * Stop processing this event.
  * This is only valid when called in the middle of an event processing chain.
  * @param e     pointer to the event descriptor
  */
-void lv_event_stop_processing(lv_event_t * e);
+void lv_event_stop_processing(lv_event_t *e);
 
 /**
  * Helper function typically used in LV_EVENT_DELETE
  * to free the event's user_data
  * @param e     pointer to an event descriptor
  */
-void lv_event_free_user_data_cb(lv_event_t * e);
+void lv_event_free_user_data_cb(lv_event_t *e);
 
 
 /**
@@ -243,20 +244,7 @@ uint32_t lv_event_register_id(void);
  * @param code  the event code
  * @return      the name of the event code as a string
  */
-const char * lv_event_code_get_name(lv_event_code_t code);
-
-#if LV_USE_EXT_DATA
-/**
- * Set external data and its destructor for an event descriptor.
- * This allows associating custom data with an event callback that will be automatically cleaned up
- * when the event descriptor is removed or destroyed.
- * @param dsc         pointer to an event descriptor (from lv_obj_add_event_cb)
- * @param data        pointer to the external data to associate with the event descriptor
- * @param free_cb     function pointer to a destructor that will be called to clean up the external data.
- *                    The destructor will receive the data pointer as its parameter.
- */
-void lv_event_desc_set_external_data(lv_event_dsc_t * dsc, void * data, void (* free_cb)(void * data));
-#endif
+const char *lv_event_code_get_name(lv_event_code_t code);
 
 /**********************
  *      MACROS

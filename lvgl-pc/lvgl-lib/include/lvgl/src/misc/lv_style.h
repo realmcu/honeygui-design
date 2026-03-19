@@ -86,7 +86,8 @@ LV_EXPORT_CONST_INT(LV_SCALE_NONE);
 /**
  * Possible options for blending opaque drawings
  */
-typedef enum {
+typedef enum
+{
     LV_BLEND_MODE_NORMAL,     /**< Simply mix according to the opacity value*/
     LV_BLEND_MODE_ADDITIVE,   /**< Add the respective color channels*/
     LV_BLEND_MODE_SUBTRACTIVE,/**< Subtract the foreground from the background*/
@@ -98,7 +99,8 @@ typedef enum {
  * Some options to apply decorations on texts.
  * 'OR'ed values can be used.
  */
-typedef enum {
+typedef enum
+{
     LV_TEXT_DECOR_NONE          = 0x00,
     LV_TEXT_DECOR_UNDERLINE     = 0x01,
     LV_TEXT_DECOR_STRIKETHROUGH = 0x02,
@@ -108,7 +110,8 @@ typedef enum {
  * Selects on which sides border should be drawn
  * 'OR'ed values can be used.
  */
-typedef enum {
+typedef enum
+{
     LV_BORDER_SIDE_NONE     = 0x00,
     LV_BORDER_SIDE_BOTTOM   = 0x01,
     LV_BORDER_SIDE_TOP      = 0x02,
@@ -118,16 +121,11 @@ typedef enum {
     LV_BORDER_SIDE_INTERNAL = 0x10, /**< FOR matrix-like objects (e.g. Button matrix)*/
 } lv_border_side_t;
 
-typedef enum {
-    LV_BLUR_QUALITY_AUTO = 0,   /**< Set the quality automatically */
-    LV_BLUR_QUALITY_SPEED,      /**< Prefer speed over precision */
-    LV_BLUR_QUALITY_PRECISION,  /**< Prefer precision over speed*/
-} lv_blur_quality_t;
-
 /** A image colorkey definition.
  *  The transparency within the color range of [low, high] will be set to LV_OPA_TRANSP If the "enable" flag is set to true.
  */
-typedef struct {
+typedef struct
+{
     lv_color_t low;
     lv_color_t high;
 } lv_image_colorkey_t;
@@ -135,9 +133,10 @@ typedef struct {
 /**
  * A common type to handle all the property types in the same way.
  */
-typedef union {
+typedef union
+{
     int32_t num;         /**< Number integer number (opacity, enums, booleans or "normal" numbers)*/
-    const void * ptr;    /**< Constant pointers  (font, cone text, etc)*/
+    const void *ptr;     /**< Constant pointers  (font, cone text, etc)*/
     lv_color_t color;    /**< Colors*/
 } lv_style_value_t;
 
@@ -146,202 +145,170 @@ typedef union {
  *
  * Props are split into groups of 16. When adding a new prop to a group, ensure it does not overflow into the next one.
  */
-enum _lv_style_id_t {
+enum _lv_style_id_t
+{
     LV_STYLE_PROP_INV               = 0,
 
-    /*The properties are listed in a special order to make caching more effective.
-     *Groups are used when LV_OBJ_STYLE_CACHE is enabled.
-     *If a property from a groups is set, a bit will be set in
-     *obj->style_main_prop_is_set and style_other_prop_is_set
-     *to indicate that the property is set.
-     *
-     *Strategy 1: group related properties. E.g. if no "border" properties are set
-     *            they will be skipped quickly.
-     *
-     *Strategy 2: group common property with rarely used properties. This way
-     *            the common property is cached properly and it's rarely affected
-     *            by other props. The other props are cached in an sub-optimal way,
-     *            but they are used rarely.
-     *
-     *Strategy 3: group properties they are used rarely together so that caching doesn't
-     *            interfere
-     *
-     *Each group can have 8 properties. (see STYLE_PROP_SHIFTED)*/
+    /*Group 0*/
+    LV_STYLE_WIDTH                  = 1,
+    LV_STYLE_HEIGHT                 = 2,
+    LV_STYLE_LENGTH                 = 3,
 
-    /* Size related properties*/
-    LV_STYLE_WIDTH = 1,
-    LV_STYLE_HEIGHT,
-    LV_STYLE_LENGTH,
-    LV_STYLE_TRANSFORM_WIDTH,
-    LV_STYLE_TRANSFORM_HEIGHT,
+    LV_STYLE_MIN_WIDTH              = 4,
+    LV_STYLE_MAX_WIDTH              = 5,
+    LV_STYLE_MIN_HEIGHT             = 6,
+    LV_STYLE_MAX_HEIGHT             = 7,
 
-    LV_STYLE_MIN_WIDTH = 8,
-    LV_STYLE_MAX_WIDTH,
-    LV_STYLE_MIN_HEIGHT,
-    LV_STYLE_MAX_HEIGHT,
-    LV_STYLE_TRANSLATE_X,
-    LV_STYLE_TRANSLATE_Y,
-    LV_STYLE_RADIAL_OFFSET,
+    LV_STYLE_X                      = 8,
+    LV_STYLE_Y                      = 9,
+    LV_STYLE_ALIGN                  = 10,
 
-    /*Position related properties */
-    LV_STYLE_X = 16,
-    LV_STYLE_Y,
-    LV_STYLE_ALIGN,
+    LV_STYLE_RADIUS                 = 12,
+    LV_STYLE_RADIAL_OFFSET          = 13,
+    LV_STYLE_PAD_RADIAL             = 14,
 
-    /*Padding related properties */
-    LV_STYLE_PAD_TOP = 24,
-    LV_STYLE_PAD_BOTTOM,
-    LV_STYLE_PAD_LEFT,
-    LV_STYLE_PAD_RIGHT,
-    LV_STYLE_PAD_RADIAL,
-    LV_STYLE_PAD_ROW,
-    LV_STYLE_PAD_COLUMN,
+    /*Group 1*/
+    LV_STYLE_PAD_TOP                = 16,
+    LV_STYLE_PAD_BOTTOM             = 17,
+    LV_STYLE_PAD_LEFT               = 18,
+    LV_STYLE_PAD_RIGHT              = 19,
 
-    /*Margin related properties*/
-    LV_STYLE_MARGIN_TOP = 32,
-    LV_STYLE_MARGIN_BOTTOM,
-    LV_STYLE_MARGIN_LEFT,
-    LV_STYLE_MARGIN_RIGHT,
+    LV_STYLE_PAD_ROW                = 20,
+    LV_STYLE_PAD_COLUMN             = 21,
+    LV_STYLE_LAYOUT                 = 22,
 
-    /*Bg. Gradient*/
-    LV_STYLE_BG_GRAD = 40,
-    LV_STYLE_BG_GRAD_DIR,
-    LV_STYLE_BG_MAIN_OPA,
-    LV_STYLE_BG_GRAD_OPA,
-    LV_STYLE_BG_GRAD_COLOR,
-    LV_STYLE_BG_MAIN_STOP,
-    LV_STYLE_BG_GRAD_STOP,
+    LV_STYLE_MARGIN_TOP             = 24,
+    LV_STYLE_MARGIN_BOTTOM          = 25,
+    LV_STYLE_MARGIN_LEFT            = 26,
+    LV_STYLE_MARGIN_RIGHT           = 27,
 
-    /*Bg image*/
-    LV_STYLE_BG_IMAGE_SRC = 48,
-    LV_STYLE_BG_IMAGE_OPA,
-    LV_STYLE_BG_IMAGE_RECOLOR_OPA,
-    LV_STYLE_BG_IMAGE_TILED,
-    LV_STYLE_BG_IMAGE_RECOLOR,
+    /*Group 2*/
+    LV_STYLE_BG_COLOR               = 28,
+    LV_STYLE_BG_OPA                 = 29,
+
+    LV_STYLE_BG_GRAD_DIR            = 32,
+    LV_STYLE_BG_MAIN_STOP           = 33,
+    LV_STYLE_BG_GRAD_STOP           = 34,
+    LV_STYLE_BG_GRAD_COLOR          = 35,
+
+    LV_STYLE_BG_MAIN_OPA            = 36,
+    LV_STYLE_BG_GRAD_OPA            = 37,
+    LV_STYLE_BG_GRAD                = 38,
+    LV_STYLE_BASE_DIR               = 39,
+
+    LV_STYLE_BG_IMAGE_SRC             = 40,
+    LV_STYLE_BG_IMAGE_OPA             = 41,
+    LV_STYLE_BG_IMAGE_RECOLOR         = 42,
+    LV_STYLE_BG_IMAGE_RECOLOR_OPA     = 43,
+
+    LV_STYLE_BG_IMAGE_TILED           = 44,
+    LV_STYLE_CLIP_CORNER            = 45,
 
     /*Group 3*/
-    LV_STYLE_BORDER_WIDTH = 56,
-    LV_STYLE_BORDER_COLOR,
-    LV_STYLE_BORDER_OPA,
-    LV_STYLE_BORDER_POST,
-    LV_STYLE_BORDER_SIDE,
+    LV_STYLE_BORDER_WIDTH           = 48,
+    LV_STYLE_BORDER_COLOR           = 49,
+    LV_STYLE_BORDER_OPA             = 50,
 
-    /*Outline */
-    LV_STYLE_OUTLINE_WIDTH = 64,
-    LV_STYLE_OUTLINE_COLOR,
-    LV_STYLE_OUTLINE_OPA,
-    LV_STYLE_OUTLINE_PAD,
+    LV_STYLE_BORDER_SIDE            = 52,
+    LV_STYLE_BORDER_POST            = 53,
 
-    /*Image, Shadow, Line, Arc, and Text are rarely used together.*/
-    LV_STYLE_BG_OPA = 72,
-    LV_STYLE_BG_COLOR,
-    LV_STYLE_SHADOW_WIDTH,
-    LV_STYLE_LINE_WIDTH,
-    LV_STYLE_ARC_WIDTH,
-    LV_STYLE_TEXT_FONT,
-    LV_STYLE_IMAGE_RECOLOR_OPA,
+    LV_STYLE_OUTLINE_WIDTH          = 56,
+    LV_STYLE_OUTLINE_COLOR          = 57,
+    LV_STYLE_OUTLINE_OPA            = 58,
+    LV_STYLE_OUTLINE_PAD            = 59,
 
-    LV_STYLE_IMAGE_OPA = 80,
-    LV_STYLE_SHADOW_OPA,
-    LV_STYLE_LINE_OPA,
-    LV_STYLE_ARC_OPA,
-    LV_STYLE_TEXT_OPA,
+    /*Group 4*/
+    LV_STYLE_SHADOW_WIDTH           = 60,
+    LV_STYLE_SHADOW_COLOR           = 61,
+    LV_STYLE_SHADOW_OPA             = 62,
 
-    LV_STYLE_SHADOW_COLOR = 88,
-    LV_STYLE_IMAGE_RECOLOR,
-    LV_STYLE_LINE_COLOR,
-    LV_STYLE_ARC_COLOR,
-    LV_STYLE_TEXT_COLOR,
+    LV_STYLE_SHADOW_OFFSET_X        = 64,
+    LV_STYLE_SHADOW_OFFSET_Y        = 65,
+    LV_STYLE_SHADOW_SPREAD          = 66,
 
-    LV_STYLE_ARC_IMAGE_SRC = 96,
-    LV_STYLE_SHADOW_OFFSET_X,
-    LV_STYLE_SHADOW_OFFSET_Y,
-    LV_STYLE_SHADOW_SPREAD,
-    LV_STYLE_LINE_DASH_WIDTH,
-    LV_STYLE_TEXT_ALIGN,
-    LV_STYLE_TEXT_LETTER_SPACE,
-    LV_STYLE_TEXT_LINE_SPACE,
+    LV_STYLE_IMAGE_OPA                = 68,
+    LV_STYLE_IMAGE_RECOLOR            = 69,
+    LV_STYLE_IMAGE_RECOLOR_OPA        = 70,
 
-    LV_STYLE_LINE_DASH_GAP = 104,
-    LV_STYLE_LINE_ROUNDED,
-    LV_STYLE_IMAGE_COLORKEY,
-    LV_STYLE_TEXT_OUTLINE_STROKE_WIDTH,
-    LV_STYLE_TEXT_OUTLINE_STROKE_OPA,
-    LV_STYLE_TEXT_OUTLINE_STROKE_COLOR,
-    LV_STYLE_TEXT_DECOR,
-    LV_STYLE_ARC_ROUNDED,
+    LV_STYLE_LINE_WIDTH             = 72,
+    LV_STYLE_LINE_DASH_WIDTH        = 73,
+    LV_STYLE_LINE_DASH_GAP          = 74,
+    LV_STYLE_LINE_ROUNDED           = 75,
+    LV_STYLE_LINE_COLOR             = 76,
+    LV_STYLE_LINE_OPA               = 77,
 
-    /*Group unrelated props*/
-    LV_STYLE_OPA = 112,
-    LV_STYLE_OPA_LAYERED,
-    LV_STYLE_COLOR_FILTER_DSC,
-    LV_STYLE_COLOR_FILTER_OPA,
-    LV_STYLE_ANIM,
-    LV_STYLE_ANIM_DURATION,
-    LV_STYLE_TRANSITION,
+    /*Group 5*/
+    LV_STYLE_ARC_WIDTH              = 80,
+    LV_STYLE_ARC_ROUNDED            = 81,
+    LV_STYLE_ARC_COLOR              = 82,
+    LV_STYLE_ARC_OPA                = 83,
+    LV_STYLE_ARC_IMAGE_SRC            = 84,
 
-    /*Radius is requested a lot, group it with rarely requested ones*/
-    LV_STYLE_RADIUS = 120,
-    LV_STYLE_BITMAP_MASK_SRC,
-    LV_STYLE_BLEND_MODE,
-    LV_STYLE_ROTARY_SENSITIVITY,
-    LV_STYLE_TRANSLATE_RADIAL,
+    LV_STYLE_TEXT_COLOR             = 88,
+    LV_STYLE_TEXT_OPA               = 89,
+    LV_STYLE_TEXT_FONT              = 90,
 
-    /*Requested a lot but rarely used*/
-    LV_STYLE_CLIP_CORNER = 128,
-    LV_STYLE_BASE_DIR,
-    LV_STYLE_RECOLOR,
-    LV_STYLE_RECOLOR_OPA,
-    LV_STYLE_LAYOUT,
+    LV_STYLE_TEXT_LETTER_SPACE      = 91,
+    LV_STYLE_TEXT_LINE_SPACE        = 92,
+    LV_STYLE_TEXT_DECOR             = 93,
+    LV_STYLE_TEXT_ALIGN             = 94,
+    LV_STYLE_TEXT_OUTLINE_STROKE_WIDTH = 95,
+    LV_STYLE_TEXT_OUTLINE_STROKE_OPA   = 96,
+    LV_STYLE_TEXT_OUTLINE_STROKE_COLOR = 97,
 
-    /*Blur*/
-    LV_STYLE_BLUR_RADIUS = 136,
-    LV_STYLE_BLUR_BACKDROP,
-    LV_STYLE_BLUR_QUALITY,
+    LV_STYLE_OPA                    = 98,
+    LV_STYLE_OPA_LAYERED            = 99,
+    LV_STYLE_COLOR_FILTER_DSC       = 100,
+    LV_STYLE_COLOR_FILTER_OPA       = 101,
+    LV_STYLE_ANIM                   = 102,
+    LV_STYLE_ANIM_DURATION          = 103,
+    LV_STYLE_TRANSITION             = 104,
+    LV_STYLE_BLEND_MODE             = 105,
+    LV_STYLE_TRANSFORM_WIDTH        = 106,
+    LV_STYLE_TRANSFORM_HEIGHT       = 107,
+    LV_STYLE_TRANSLATE_X            = 108,
+    LV_STYLE_TRANSLATE_Y            = 109,
+    LV_STYLE_TRANSFORM_SCALE_X      = 110,
+    LV_STYLE_TRANSFORM_SCALE_Y      = 111,
+    LV_STYLE_TRANSFORM_ROTATION     = 112,
+    LV_STYLE_TRANSFORM_PIVOT_X      = 113,
+    LV_STYLE_TRANSFORM_PIVOT_Y      = 114,
+    LV_STYLE_TRANSFORM_SKEW_X       = 115,
+    LV_STYLE_TRANSFORM_SKEW_Y       = 116,
+    LV_STYLE_BITMAP_MASK_SRC        = 117,
+    LV_STYLE_ROTARY_SENSITIVITY     = 118,
+    LV_STYLE_TRANSLATE_RADIAL       = 119,
+    LV_STYLE_RECOLOR                = 120,
+    LV_STYLE_RECOLOR_OPA            = 121,
 
-    /*Drop shadow*/
-    LV_STYLE_DROP_SHADOW_RADIUS = 144,
-    LV_STYLE_DROP_SHADOW_OFFSET_X,
-    LV_STYLE_DROP_SHADOW_OFFSET_Y,
-    LV_STYLE_DROP_SHADOW_COLOR,
-    LV_STYLE_DROP_SHADOW_OPA,
-    LV_STYLE_DROP_SHADOW_QUALITY,
+    LV_STYLE_FLEX_FLOW              = 122,
+    LV_STYLE_FLEX_MAIN_PLACE        = 123,
+    LV_STYLE_FLEX_CROSS_PLACE       = 124,
+    LV_STYLE_FLEX_TRACK_PLACE       = 125,
+    LV_STYLE_FLEX_GROW              = 126,
 
-    /*Scale and transform*/
-    LV_STYLE_TRANSFORM_SCALE_X = 152,
-    LV_STYLE_TRANSFORM_SCALE_Y,
-    LV_STYLE_TRANSFORM_PIVOT_X,
-    LV_STYLE_TRANSFORM_PIVOT_Y,
-    LV_STYLE_TRANSFORM_ROTATION,
-    LV_STYLE_TRANSFORM_SKEW_X,
-    LV_STYLE_TRANSFORM_SKEW_Y,
+    LV_STYLE_GRID_COLUMN_ALIGN      = 127,
+    LV_STYLE_GRID_ROW_ALIGN         = 128,
+    LV_STYLE_GRID_ROW_DSC_ARRAY     = 129,
+    LV_STYLE_GRID_COLUMN_DSC_ARRAY  = 130,
+    LV_STYLE_GRID_CELL_COLUMN_POS   = 131,
+    LV_STYLE_GRID_CELL_COLUMN_SPAN  = 132,
+    LV_STYLE_GRID_CELL_X_ALIGN      = 133,
+    LV_STYLE_GRID_CELL_ROW_POS      = 134,
+    LV_STYLE_GRID_CELL_ROW_SPAN     = 135,
+    LV_STYLE_GRID_CELL_Y_ALIGN      = 136,
+    LV_STYLE_IMAGE_COLORKEY         = 137,
 
-    /*Flex and basic grid (rarely used together)*/
-    LV_STYLE_FLEX_FLOW = 160,
-    LV_STYLE_FLEX_MAIN_PLACE,
-    LV_STYLE_FLEX_CROSS_PLACE,
-    LV_STYLE_FLEX_TRACK_PLACE,
-    LV_STYLE_FLEX_GROW,
-    LV_STYLE_GRID_COLUMN_DSC_ARRAY,
-    LV_STYLE_GRID_ROW_DSC_ARRAY,
+    LV_STYLE_LAST_BUILT_IN_PROP     = 138,
 
-    LV_STYLE_GRID_COLUMN_ALIGN = 168,
-    LV_STYLE_GRID_ROW_ALIGN,
-    LV_STYLE_GRID_CELL_COLUMN_POS,
-    LV_STYLE_GRID_CELL_COLUMN_SPAN,
-    LV_STYLE_GRID_CELL_X_ALIGN,
-    LV_STYLE_GRID_CELL_ROW_POS,
-    LV_STYLE_GRID_CELL_ROW_SPAN,
-    LV_STYLE_GRID_CELL_Y_ALIGN,
-
-    LV_STYLE_LAST_BUILT_IN_PROP,
     LV_STYLE_NUM_BUILT_IN_PROPS     = LV_STYLE_LAST_BUILT_IN_PROP + 1,
 
     LV_STYLE_PROP_ANY                = 0xFF,
     LV_STYLE_PROP_CONST             = 0xFF /* magic value for const styles */
 };
 
-typedef enum {
+typedef enum
+{
     LV_STYLE_RES_NOT_FOUND,
     LV_STYLE_RES_FOUND,
 } lv_style_res_t;
@@ -349,9 +316,10 @@ typedef enum {
 /**
  * Descriptor for style transitions
  */
-typedef struct {
-    const lv_style_prop_t * props; /**< An array with the properties to animate.*/
-    void * user_data;              /**< A custom user data that will be passed to the animation's user_data */
+typedef struct
+{
+    const lv_style_prop_t *props;  /**< An array with the properties to animate.*/
+    void *user_data;               /**< A custom user data that will be passed to the animation's user_data */
     lv_anim_path_cb_t path_xcb;    /**< A path for the animation.*/
     uint32_t time;                 /**< Duration of the transition in [ms]*/
     uint32_t delay;                /**< Delay before the transition in [ms]*/
@@ -360,7 +328,8 @@ typedef struct {
 /**
  * Descriptor of a constant style property.
  */
-typedef struct {
+typedef struct
+{
     lv_style_prop_t prop;
     lv_style_value_t value;
 } lv_style_const_prop_t;
@@ -368,13 +337,14 @@ typedef struct {
 /**
  * Descriptor of a style (a collection of properties and values).
  */
-typedef struct {
+typedef struct
+{
 
 #if LV_USE_ASSERT_STYLE
     uint32_t sentinel;
 #endif
 
-    void * values_and_props;
+    void *values_and_props;
 
     uint32_t has_group;
     uint8_t prop_cnt;   /**< 255 means it's a constant style*/
@@ -391,13 +361,13 @@ typedef struct {
  *       because this function won't free the used memory, just sets a default state for the style.
  *       In other words be sure to initialize styles only once!
  */
-void lv_style_init(lv_style_t * style);
+void lv_style_init(lv_style_t *style);
 
 /**
  * Clear all properties from a style and free all allocated memories.
  * @param style pointer to a style
  */
-void lv_style_reset(lv_style_t * style);
+void lv_style_reset(lv_style_t *style);
 
 /**
  * Copy all properties of a style to an other.
@@ -410,7 +380,7 @@ void lv_style_reset(lv_style_t * style);
  * @param dst   the destination to copy into (can not the a constant style)
  * @param src   the source style to copy from.
  */
-void lv_style_copy(lv_style_t * dst, const lv_style_t * src);
+void lv_style_copy(lv_style_t *dst, const lv_style_t *src);
 
 /**
  * Copy all properties of a style to an other without resetting the dst style.
@@ -423,7 +393,7 @@ void lv_style_copy(lv_style_t * dst, const lv_style_t * src);
  * @param dst   the destination to copy into (cannot be a constant style)
  * @param src   the source style to copy from.
  */
-void lv_style_merge(lv_style_t * dst, const lv_style_t * src);
+void lv_style_merge(lv_style_t *dst, const lv_style_t *src);
 
 
 /**
@@ -431,9 +401,9 @@ void lv_style_merge(lv_style_t * dst, const lv_style_t * src);
  * @param style     pointer to a style
  * @return          true: the style is constant
  */
-static inline bool lv_style_is_const(const lv_style_t * style)
+static inline bool lv_style_is_const(const lv_style_t *style)
 {
-    if(style->prop_cnt == 255) return true;
+    if (style->prop_cnt == 255) { return true; }
     return false;
 }
 
@@ -467,7 +437,7 @@ lv_style_prop_t lv_style_get_num_custom_props(void);
  * @param prop  a style property ORed with a state.
  * @return true: the property was found and removed; false: the property wasn't found
  */
-bool lv_style_remove_prop(lv_style_t * style, lv_style_prop_t prop);
+bool lv_style_remove_prop(lv_style_t *style, lv_style_prop_t prop);
 
 /**
  * Set the value of property in a style.
@@ -477,7 +447,7 @@ bool lv_style_remove_prop(lv_style_t * style, lv_style_prop_t prop);
  * @param prop the ID of a property (e.g. `LV_STYLE_BG_COLOR`)
  * @param value `lv_style_value_t` variable in which a field is set according to the type of `prop`
  */
-void lv_style_set_prop(lv_style_t * style, lv_style_prop_t prop, lv_style_value_t value);
+void lv_style_set_prop(lv_style_t *style, lv_style_prop_t prop, lv_style_value_t value);
 
 /**
  * Get the value of a property
@@ -488,7 +458,8 @@ void lv_style_set_prop(lv_style_t * style, lv_style_prop_t prop, lv_style_value_
  *         LV_RESULT_OK: the property was fond, and `value` is set accordingly
  * @note For performance reasons there are no sanity check on `style`
  */
-lv_style_res_t lv_style_get_prop(const lv_style_t * style, lv_style_prop_t prop, lv_style_value_t * value);
+lv_style_res_t lv_style_get_prop(const lv_style_t *style, lv_style_prop_t prop,
+                                 lv_style_value_t *value);
 
 /**
  * Initialize a transition descriptor.
@@ -506,8 +477,8 @@ lv_style_res_t lv_style_get_prop(const lv_style_t * style, lv_style_prop_t prop,
  * lv_style_transition_dsc_init(&trans1, trans_props, NULL, 300, 0, NULL);
  * @endcode
  */
-void lv_style_transition_dsc_init(lv_style_transition_dsc_t * tr, const lv_style_prop_t props[],
-                                  lv_anim_path_cb_t path_cb, uint32_t time, uint32_t delay, void * user_data);
+void lv_style_transition_dsc_init(lv_style_transition_dsc_t *tr, const lv_style_prop_t props[],
+                                  lv_anim_path_cb_t path_cb, uint32_t time, uint32_t delay, void *user_data);
 
 /**
  * Get the default value of a property
@@ -526,25 +497,33 @@ lv_style_value_t lv_style_prop_get_default(lv_style_prop_t prop);
  * @note For performance reasons there are no sanity check on `style`
  * @note This function is the same as ::lv_style_get_prop but inlined. Use it only on performance critical places
  */
-static inline lv_style_res_t lv_style_get_prop_inlined(const lv_style_t * style, lv_style_prop_t prop,
-                                                       lv_style_value_t * value)
+static inline lv_style_res_t lv_style_get_prop_inlined(const lv_style_t *style,
+                                                       lv_style_prop_t prop,
+                                                       lv_style_value_t *value)
 {
-    if(lv_style_is_const(style)) {
-        lv_style_const_prop_t * props = (lv_style_const_prop_t *)style->values_and_props;
+    if (lv_style_is_const(style))
+    {
+        lv_style_const_prop_t *props = (lv_style_const_prop_t *)style->values_and_props;
         uint32_t i;
-        for(i = 0; props[i].prop != LV_STYLE_PROP_INV; i++) {
-            if(props[i].prop == prop) {
+        for (i = 0; props[i].prop != LV_STYLE_PROP_INV; i++)
+        {
+            if (props[i].prop == prop)
+            {
                 *value = props[i].value;
                 return LV_STYLE_RES_FOUND;
             }
         }
     }
-    else {
-        lv_style_prop_t * props = (lv_style_prop_t *)style->values_and_props + style->prop_cnt * sizeof(lv_style_value_t);
+    else
+    {
+        lv_style_prop_t *props = (lv_style_prop_t *)style->values_and_props + style->prop_cnt * sizeof(
+                                     lv_style_value_t);
         uint32_t i;
-        for(i = 0; i < style->prop_cnt; i++) {
-            if(props[i] == prop) {
-                lv_style_value_t * values = (lv_style_value_t *)style->values_and_props;
+        for (i = 0; i < style->prop_cnt; i++)
+        {
+            if (props[i] == prop)
+            {
+                lv_style_value_t *values = (lv_style_value_t *)style->values_and_props;
                 *value = values[i];
                 return LV_STYLE_RES_FOUND;
             }
@@ -558,7 +537,7 @@ static inline lv_style_res_t lv_style_get_prop_inlined(const lv_style_t * style,
  * @param style pointer to a style
  * @return true if the style is empty
  */
-bool lv_style_is_empty(const lv_style_t * style);
+bool lv_style_is_empty(const lv_style_t *style);
 
 /**
  * Tell the group of a property. If the a property from a group is set in a style the (1 << group) bit of style->has_group is set.
@@ -569,7 +548,7 @@ bool lv_style_is_empty(const lv_style_t * style);
 static inline uint32_t lv_style_get_prop_group(lv_style_prop_t prop)
 {
     uint32_t group = prop >> 2;
-    if(group > 30) group = 31;    /*The MSB marks all the custom properties*/
+    if (group > 30) { group = 31; }   /*The MSB marks all the custom properties*/
     return group;
 
 }
@@ -584,24 +563,13 @@ uint8_t lv_style_prop_lookup_flags(lv_style_prop_t prop);
 
 #include "lv_style_gen.h"
 
-/**
- * Set `style`s width and height.
- * @param  style   pointer to style to be modified
- * @param  width   width in pixels
- * @param  height  height in pixels
- */
-static inline void lv_style_set_size(lv_style_t * style, int32_t width, int32_t height)
+static inline void lv_style_set_size(lv_style_t *style, int32_t width, int32_t height)
 {
     lv_style_set_width(style, width);
     lv_style_set_height(style, height);
 }
 
-/**
- * Set all 4 of `style`s padding values.
- * @param  style   pointer to style to be modified
- * @param  value   padding dimension in pixels
- */
-static inline void lv_style_set_pad_all(lv_style_t * style, int32_t value)
+static inline void lv_style_set_pad_all(lv_style_t *style, int32_t value)
 {
     lv_style_set_pad_left(style, value);
     lv_style_set_pad_right(style, value);
@@ -609,67 +577,37 @@ static inline void lv_style_set_pad_all(lv_style_t * style, int32_t value)
     lv_style_set_pad_bottom(style, value);
 }
 
-/**
- * Set `style`s left and right padding values.
- * @param  style   pointer to style to be modified
- * @param  value   padding dimension in pixels
- */
-static inline void lv_style_set_pad_hor(lv_style_t * style, int32_t value)
+static inline void lv_style_set_pad_hor(lv_style_t *style, int32_t value)
 {
     lv_style_set_pad_left(style, value);
     lv_style_set_pad_right(style, value);
 }
 
-/**
- * Set `style`s top and bottom padding values.
- * @param  style   pointer to style to be modified
- * @param  value   padding dimension in pixels
- */
-static inline void lv_style_set_pad_ver(lv_style_t * style, int32_t value)
+static inline void lv_style_set_pad_ver(lv_style_t *style, int32_t value)
 {
     lv_style_set_pad_top(style, value);
     lv_style_set_pad_bottom(style, value);
 }
 
-/**
- * Set `style`s row and column padding gaps (applies only to Grid and Flex layouts).
- * @param  style   pointer to style to be modified
- * @param  value   gap dimension in pixels
- */
-static inline void lv_style_set_pad_gap(lv_style_t * style, int32_t value)
+static inline void lv_style_set_pad_gap(lv_style_t *style, int32_t value)
 {
     lv_style_set_pad_row(style, value);
     lv_style_set_pad_column(style, value);
 }
 
-/**
- * Set `style`s left and right margin values.
- * @param  style   pointer to style to be modified
- * @param  value   margin dimension in pixels
- */
-static inline void lv_style_set_margin_hor(lv_style_t * style, int32_t value)
+static inline void lv_style_set_margin_hor(lv_style_t *style, int32_t value)
 {
     lv_style_set_margin_left(style, value);
     lv_style_set_margin_right(style, value);
 }
 
-/**
- * Set `style`s top and bottom margin values.
- * @param  style   pointer to style to be modified
- * @param  value   margin dimension in pixels
- */
-static inline void lv_style_set_margin_ver(lv_style_t * style, int32_t value)
+static inline void lv_style_set_margin_ver(lv_style_t *style, int32_t value)
 {
     lv_style_set_margin_top(style, value);
     lv_style_set_margin_bottom(style, value);
 }
 
-/**
- * Set all 4 of `style`s margin values.
- * @param  style   pointer to style to be modified
- * @param  value   margin dimension in pixels
- */
-static inline void lv_style_set_margin_all(lv_style_t * style, int32_t value)
+static inline void lv_style_set_margin_all(lv_style_t *style, int32_t value)
 {
     lv_style_set_margin_left(style, value);
     lv_style_set_margin_right(style, value);
@@ -677,17 +615,7 @@ static inline void lv_style_set_margin_all(lv_style_t * style, int32_t value)
     lv_style_set_margin_bottom(style, value);
 }
 
-/**
- * Set `style`s X and Y transform scale values.
- * @param  style   pointer to style to be modified
- * @param  value   scale factor.  Example values:
- *                     - 256 or LV_SCALE_NONE:  no zoom
- *                     - <256:  scale down
- *                     - >256:  scale up
- *                     - 128:  half size
- *                     - 512:  double size
- */
-static inline void lv_style_set_transform_scale(lv_style_t * style, int32_t value)
+static inline void lv_style_set_transform_scale(lv_style_t *style, int32_t value)
 {
     lv_style_set_transform_scale_x(style, value);
     lv_style_set_transform_scale_y(style, value);

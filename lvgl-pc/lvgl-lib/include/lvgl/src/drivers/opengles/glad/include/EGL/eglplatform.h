@@ -1,8 +1,9 @@
 #ifndef __eglplatform_h_
 #define __eglplatform_h_
 
-#include "../../../../../lv_conf_internal.h"
-#if LV_USE_OPENGLES
+#include "../../../lv_opengles_egl.h"
+
+#if LV_USE_EGL
 
 /*
 ** Copyright 2007-2020 The Khronos Group Inc.
@@ -70,8 +71,8 @@ typedef HWND    EGLNativeWindowType;
 #elif defined(__QNX__)
 
 typedef khronos_uintptr_t      EGLNativeDisplayType;
-typedef struct _screen_pixmap* EGLNativePixmapType;  /* screen_pixmap_t */
-typedef struct _screen_window* EGLNativeWindowType;  /* screen_window_t */
+typedef struct _screen_pixmap *EGLNativePixmapType;  /* screen_pixmap_t */
+typedef struct _screen_window *EGLNativeWindowType;  /* screen_window_t */
 
 #elif defined(__EMSCRIPTEN__)
 
@@ -102,9 +103,9 @@ typedef void               *EGLNativeWindowType;
 struct ANativeWindow;
 struct egl_native_pixmap_t;
 
-typedef void*                           EGLNativeDisplayType;
-typedef struct egl_native_pixmap_t*     EGLNativePixmapType;
-typedef struct ANativeWindow*           EGLNativeWindowType;
+typedef void                           *EGLNativeDisplayType;
+typedef struct egl_native_pixmap_t     *EGLNativePixmapType;
+typedef struct ANativeWindow           *EGLNativeWindowType;
 
 #elif defined(USE_OZONE)
 
@@ -175,5 +176,6 @@ typedef khronos_int32_t EGLint;
 #define EGL_CAST(type, value) ((type) (value))
 #endif
 
-#endif /*LV_USE_OPENGLES*/
+#endif /*LV_USE_EGL*/
+
 #endif /* __eglplatform_h */
