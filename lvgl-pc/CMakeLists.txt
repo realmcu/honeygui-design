@@ -103,9 +103,11 @@ target_include_directories(lvgl_pc PRIVATE
     "${SDL2_ROOT}/include/SDL2"
 )
 
-# Glob generated UI / image / font sources
+# Glob generated UI / callback / image / font sources
 file(GLOB LVGL_GENERATED_UI_SOURCES
     "${CMAKE_CURRENT_LIST_DIR}/src/generated/*_lvgl_ui.c")
+file(GLOB LVGL_GENERATED_CB_SOURCES
+    "${CMAKE_CURRENT_LIST_DIR}/src/generated/*_lvgl_callbacks.c")
 file(GLOB LVGL_GENERATED_IMG_SOURCES
     "${CMAKE_CURRENT_LIST_DIR}/src/generated/img_*.c")
 file(GLOB LVGL_GENERATED_FONT_SOURCES
@@ -114,6 +116,7 @@ file(GLOB LVGL_GENERATED_FONT_SOURCES
 
 target_sources(lvgl_pc PRIVATE
     ${LVGL_GENERATED_UI_SOURCES}
+    ${LVGL_GENERATED_CB_SOURCES}
     ${LVGL_GENERATED_IMG_SOURCES}
     ${LVGL_GENERATED_FONT_SOURCES})
 
