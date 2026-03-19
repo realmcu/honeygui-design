@@ -1782,6 +1782,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   
   /**
    * 同步 list 控件的 list_item 子组件数量
+   * 只负责数量增减，不复制子控件，不修改已有 item 的内容
    * @param listId list 控件的 ID
    */
   syncListItems: (listId: string) => {
@@ -1794,9 +1795,11 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       // 获取 noteNum 属性（默认为 5）
       const noteNum = (listComponent.data?.noteNum as number) || 5;
       
-      // 获取当前所有 list_item 子组件，并按 index 排序
+      // 双重过滤：parent 字段匹配 OR 在 list 的 children 数组中
+      // 防止 HML 加载后 parent 字段不一致导致漏算
+      const listChildrenSet = new Set(listComponent.children || []);
       const currentItems = state.components
-        .filter(c => c.type === 'hg_list_item' && c.parent === listId)
+        .filter(c => c.type === 'hg_list_item' && (c.parent === listId || listChildrenSet.has(c.id)))
         .sort((a, b) => {
           const indexA = (a.data?.index as number) ?? 0;
           const indexB = (b.data?.index as number) ?? 0;
@@ -1804,64 +1807,68 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
         });
       const currentCount = currentItems.length;
       
+      console.log(`[syncListItems] listId=${listId}, noteNum=${noteNum}, currentCount=${currentCount}`);
+      
       // 如果数量已经匹配，不需要调整
       if (currentCount === noteNum) {
         return state;
       }
       
+      // 获取布局属性，用于计算新 item 的位置
+      const itemWidth = parseInt(String(listComponent.style?.itemWidth)) || 100;
+      const itemHeight = parseInt(String(listComponent.style?.itemHeight)) || 100;
+      const space = parseInt(String(listComponent.style?.space)) || 0;
+      const direction = (listComponent.style?.direction as string) || 'VERTICAL';
+      const isVertical = direction === 'VERTICAL';
+      
       let newComponents = [...state.components];
       
       if (noteNum > currentCount) {
-        // 需要添加新的 list_item
-        const firstItem = currentItems[0];
-        
-        for (let i = currentCount; i < noteNum; i++) {
-          const newItemId = `${listId}_item_${i}`;
+        // 以当前最大 index + 1 作为新 item 的起始 index
+        const maxExistingIndex = currentItems.length > 0
+          ? Math.max(...currentItems.map(c => (c.data?.index as number) ?? 0))
+          : -1;
+
+        for (let i = 0; i < noteNum - currentCount; i++) {
+          const newIndex = maxExistingIndex + 1 + i;
+          // 生成唯一 id，避免与已有组件冲突
+          let newItemId = `${listId}_item_${newIndex}`;
+          let idSuffix = newIndex;
+          while (newComponents.some(c => c.id === newItemId)) {
+            idSuffix++;
+            newItemId = `${listId}_item_${idSuffix}`;
+          }
+          
+          // 根据布局属性计算正确的位置
+          const newPosition = {
+            x: isVertical ? 0 : newIndex * (itemWidth + space),
+            y: isVertical ? newIndex * (itemHeight + space) : 0,
+            width: itemWidth,
+            height: itemHeight,
+          };
+          
+          // 新增空的 hg_list_item，不复制已有 item 的子控件
           const newItem: Component = {
             id: newItemId,
-            name: `li_${i + 1}`,
+            name: newItemId,
             type: 'hg_list_item',
             parent: listId,
-            position: { x: 0, y: 0, width: 0, height: 0 },
-            data: { index: i },
+            position: newPosition,
+            data: { index: newIndex },
             children: [],
             visible: true,
             enabled: true,
             locked: false,
-            zIndex: 0
+            zIndex: newIndex,
           };
           
-          // 如果存在第一个 item，复制第一个 item 的子组件作为模板
-          if (firstItem && firstItem.children && firstItem.children.length > 0) {
-            // 递归克隆第一个 item 的所有子组件
-            firstItem.children.forEach(childId => {
-              const childComponent = state.components.find(c => c.id === childId);
-              if (childComponent) {
-                const clonedTree = cloneComponentTree(state.components, childComponent, newComponents);
-                
-                // 更新克隆组件的 parent 为新的 list_item
-                clonedTree.forEach((clonedComp, index) => {
-                  if (index === 0) {
-                    clonedComp.parent = newItemId;
-                  }
-                });
-                
-                newItem.children!.push(clonedTree[0].id);
-                newComponents.push(...clonedTree);
-              }
-            });
-          }
-          
-          // 添加新的 list_item
           newComponents.push(newItem);
           
           // 更新 list 组件的 children 数组
           const listIndex = newComponents.findIndex(c => c.id === listId);
           if (listIndex !== -1) {
             const updatedList = { ...newComponents[listIndex] };
-            if (!updatedList.children) {
-              updatedList.children = [];
-            }
+            updatedList.children = updatedList.children ? [...updatedList.children] : [];
             if (!updatedList.children.includes(newItemId)) {
               updatedList.children.push(newItemId);
             }
@@ -1869,23 +1876,19 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
           }
         }
       } else if (noteNum < currentCount) {
-        // 需要删除多余的 list_item
+        // 需要删除多余的 list_item（删除末尾的）
         const itemsToRemove = currentItems.slice(noteNum);
         const idsToRemove = new Set<string>();
         
         // 收集要删除的 list_item 及其所有子组件的 ID
         itemsToRemove.forEach(item => {
           idsToRemove.add(item.id);
-          
-          // 递归收集所有子组件 ID
           const collectChildIds = (parentId: string) => {
-            const children = newComponents.filter(c => c.parent === parentId);
-            children.forEach(child => {
+            newComponents.filter(c => c.parent === parentId).forEach(child => {
               idsToRemove.add(child.id);
               collectChildIds(child.id);
             });
           };
-          
           collectChildIds(item.id);
         });
         
@@ -1896,32 +1899,30 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
         const listIndex = newComponents.findIndex(c => c.id === listId);
         if (listIndex !== -1) {
           const updatedList = { ...newComponents[listIndex] };
-          updatedList.children = updatedList.children?.filter(
+          updatedList.children = (updatedList.children || []).filter(
             childId => !idsToRemove.has(childId)
-          ) || [];
+          );
           newComponents[listIndex] = updatedList;
         }
       }
       
-      // 最后，确保 list 的 children 数组按 index 排序
+      // 最后，确保 list 的 children 数组按 index 排序（list_item 在前，其他子组件在后）
       const finalListIndex = newComponents.findIndex(c => c.id === listId);
       if (finalListIndex !== -1) {
         const finalList = { ...newComponents[finalListIndex] };
         if (finalList.children && finalList.children.length > 0) {
-          // 获取所有 list_item 子组件
           const listItems = finalList.children
             .map(childId => newComponents.find(c => c.id === childId))
             .filter(child => child !== undefined && child.type === 'hg_list_item') as Component[];
           
-          // 按 index 排序
-          listItems.sort((a, b) => {
-            const indexA = a.data?.index ?? 0;
-            const indexB = b.data?.index ?? 0;
-            return indexA - indexB;
+          listItems.sort((a, b) => ((a.data?.index as number) ?? 0) - ((b.data?.index as number) ?? 0));
+          
+          const otherChildren = finalList.children.filter(childId => {
+            const child = newComponents.find(c => c.id === childId);
+            return child && child.type !== 'hg_list_item';
           });
           
-          // 更新 children 数组为排序后的顺序
-          finalList.children = listItems.map(c => c.id);
+          finalList.children = [...listItems.map(c => c.id), ...otherChildren];
           newComponents[finalListIndex] = finalList;
         }
       }
@@ -1929,7 +1930,6 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       return { components: newComponents };
     });
     
-    // 保存到文件
     get().saveToFile();
   },
 
