@@ -85,6 +85,19 @@ CLAW_MQTT_API int claw_client_send_text(
     char* out_correlation_id,
     size_t out_correlation_id_size);
 
+CLAW_MQTT_API int claw_client_doctor(
+  const char* broker_url,
+  const char* inbound_topic,
+  const char* outbound_topic,
+  const char* sender_id,
+  const char* client_id,
+  const char* username,
+  const char* password,
+  int qos,
+  int timeout_ms,
+  char* out_report,
+  size_t out_report_size);
+
 CLAW_MQTT_API const char* claw_status_string(int code);
 
 #ifdef __cplusplus

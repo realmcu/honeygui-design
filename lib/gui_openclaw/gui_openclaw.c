@@ -42,6 +42,7 @@
 #define GUI_OPENCLAW_MQTT_TEXT_LENGTH    10240
 #define GUI_OPENCLAW_MQTT_EVENT_QUEUE    16
 #define GUI_OPENCLAW_CORRELATION_ID_LEN  64
+#define GUI_OPENCLAW_DOCTOR_TEXT_LENGTH  512
 
 #define GUI_OPENCLAW_INPUT_EVENT_BACKSPACE (-1)
 #define GUI_OPENCLAW_INPUT_EVENT_SUBMIT    (-2)
@@ -108,6 +109,17 @@ typedef int (*gui_openclaw_claw_send_text_fn)(claw_client_t *client,
                                               const char *correlation_id,
                                               char *out_correlation_id,
                                               size_t out_correlation_id_size);
+typedef int (*gui_openclaw_claw_doctor_fn)(const char *broker_url,
+                                           const char *inbound_topic,
+                                           const char *outbound_topic,
+                                           const char *sender_id,
+                                           const char *client_id,
+                                           const char *username,
+                                           const char *password,
+                                           int qos,
+                                           int timeout_ms,
+                                           char *out_report,
+                                           size_t out_report_size);
 typedef const char *(*gui_openclaw_claw_status_string_fn)(int code);
 
 typedef struct
@@ -126,6 +138,7 @@ typedef struct
     gui_openclaw_claw_disconnect_fn disconnect;
     gui_openclaw_claw_is_connected_fn is_connected;
     gui_openclaw_claw_send_text_fn send_text;
+    gui_openclaw_claw_doctor_fn doctor;
     gui_openclaw_claw_status_string_fn status_string;
 } gui_openclaw_mqtt_api_t;
 #endif
@@ -828,6 +841,55 @@ static bool gui_openclaw_mqtt_load_dll(gui_openclaw_ctx_t *ctx)
     return false;
 }
 
+static void gui_openclaw_mqtt_apply_doctor_failure(gui_openclaw_ctx_t *ctx, const char *report)
+{
+    if (ctx == NULL)
+    {
+        return;
+    }
+
+    gui_openclaw_safe_copy(ctx->status_text, sizeof(ctx->status_text), "MQTT doctor failed");
+    if (report != NULL && report[0] != '\0')
+    {
+        gui_openclaw_push_message(ctx, GUI_OPENCLAW_ROLE_SYSTEM, report);
+    }
+}
+
+static bool gui_openclaw_mqtt_run_doctor(gui_openclaw_ctx_t *ctx)
+{
+    static char report[GUI_OPENCLAW_DOCTOR_TEXT_LENGTH];
+    int rc;
+
+    if (ctx == NULL || ctx->mqtt_api.doctor == NULL)
+    {
+        return true;
+    }
+
+    memset(report, 0x00, sizeof(report));
+    rc = ctx->mqtt_api.doctor(ctx->broker_url,
+                              ctx->inbound_topic,
+                              ctx->outbound_topic,
+                              ctx->sender_id,
+                              NULL,
+                              NULL,
+                              NULL,
+                              1,
+                              5000,
+                              report,
+                              sizeof(report));
+    if (rc != CLAW_STATUS_OK)
+    {
+        gui_openclaw_mqtt_apply_doctor_failure(ctx, report);
+        return false;
+    }
+
+    if (report[0] != '\0')
+    {
+        gui_log("openclaw: mqtt doctor passed: %s\n", report);
+    }
+    return true;
+}
+
 static bool gui_openclaw_mqtt_resolve_api(gui_openclaw_ctx_t *ctx)
 {
     ctx->mqtt_api.create = (gui_openclaw_claw_create_fn)gui_openclaw_dylib_symbol(ctx->mqtt_api.handle, "claw_client_create");
@@ -839,13 +901,15 @@ static bool gui_openclaw_mqtt_resolve_api(gui_openclaw_ctx_t *ctx)
     ctx->mqtt_api.disconnect = (gui_openclaw_claw_disconnect_fn)gui_openclaw_dylib_symbol(ctx->mqtt_api.handle, "claw_client_disconnect");
     ctx->mqtt_api.is_connected = (gui_openclaw_claw_is_connected_fn)gui_openclaw_dylib_symbol(ctx->mqtt_api.handle, "claw_client_is_connected");
     ctx->mqtt_api.send_text = (gui_openclaw_claw_send_text_fn)gui_openclaw_dylib_symbol(ctx->mqtt_api.handle, "claw_client_send_text");
+    ctx->mqtt_api.doctor = (gui_openclaw_claw_doctor_fn)gui_openclaw_dylib_symbol(ctx->mqtt_api.handle, "claw_client_doctor");
     ctx->mqtt_api.status_string = (gui_openclaw_claw_status_string_fn)gui_openclaw_dylib_symbol(ctx->mqtt_api.handle, "claw_status_string");
 
     if (ctx->mqtt_api.create == NULL || ctx->mqtt_api.destroy == NULL ||
         ctx->mqtt_api.configure == NULL || ctx->mqtt_api.set_message_callback == NULL ||
         ctx->mqtt_api.set_log_callback == NULL || ctx->mqtt_api.connect == NULL ||
         ctx->mqtt_api.disconnect == NULL || ctx->mqtt_api.is_connected == NULL ||
-        ctx->mqtt_api.send_text == NULL || ctx->mqtt_api.status_string == NULL)
+        ctx->mqtt_api.send_text == NULL || ctx->mqtt_api.doctor == NULL ||
+        ctx->mqtt_api.status_string == NULL)
     {
         gui_openclaw_safe_copy(ctx->status_text, sizeof(ctx->status_text),
                                "MQTT DLL exports incomplete");
@@ -875,6 +939,12 @@ static bool gui_openclaw_mqtt_init(gui_openclaw_ctx_t *ctx)
         return false;
     }
     if (!gui_openclaw_mqtt_resolve_api(ctx))
+    {
+        gui_openclaw_dylib_close((void *)ctx->mqtt_api.handle);
+        memset(&ctx->mqtt_api, 0x00, sizeof(ctx->mqtt_api));
+        return false;
+    }
+    if (!gui_openclaw_mqtt_run_doctor(ctx))
     {
         gui_openclaw_dylib_close((void *)ctx->mqtt_api.handle);
         memset(&ctx->mqtt_api, 0x00, sizeof(ctx->mqtt_api));
@@ -2453,7 +2523,7 @@ static void gui_openclaw_timer_cb(void *param)
 
 static void gui_openclaw_seed_default_messages(gui_openclaw_ctx_t *ctx)
 {
-    gui_openclaw_push_message(ctx, GUI_OPENCLAW_ROLE_SYSTEM, "Connected. Type text and press Enter.");
+    gui_openclaw_push_message(ctx, GUI_OPENCLAW_ROLE_SYSTEM, "Widget ready. MQTT will be checked during startup.");
     gui_openclaw_push_message(ctx, GUI_OPENCLAW_ROLE_ASSISTANT, "Use /help for commands.");
     gui_openclaw_push_message(ctx, GUI_OPENCLAW_ROLE_ASSISTANT, "This widget now renders chat text with TTF into a framebuffer and displays it through gui_img_create_from_mem.");
 #if defined(_HONEYGUI_SIMULATOR_) && (defined(_WIN32) || defined(__linux__))
