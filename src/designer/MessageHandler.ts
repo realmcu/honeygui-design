@@ -28,6 +28,7 @@ export class MessageHandler {
     private _collaborationController?: CollaborationController; // Add reference
     private _autoCodeGenTimer: NodeJS.Timeout | null = null;
     private _updateThrottles: Map<string, { timer: NodeJS.Timeout | null, pendingMessage: any, hasNew: boolean }> = new Map();
+    private _userFuncWatcher: vscode.FileSystemWatcher | undefined;
 
     constructor(
         panel: vscode.WebviewPanel,
@@ -1185,7 +1186,12 @@ export class MessageHandler {
             }
 
             // 读取文件内容
-            const content = fs.readFileSync(userHeaderPath, 'utf-8');
+            const rawContent = fs.readFileSync(userHeaderPath, 'utf-8');
+
+            // Strip C/C++ comments before parsing to avoid matching commented-out declarations
+            const content = rawContent
+                .replace(/\/\/.*$/gm, '')       // remove single-line comments
+                .replace(/\/\*[\s\S]*?\*\//g, ''); // remove multi-line comments
 
             // 解析函数声明
             // 匹配模式：void function_name(void *obj, gui_event_t *e) 或 void function_name(gui_obj_t *obj, const char *topic, void *data, uint16_t len)
@@ -1213,6 +1219,25 @@ export class MessageHandler {
                 functions
             });
 
+            // Watch _user.h for changes and auto-refresh function list
+            if (this._userFuncWatcher) {
+                this._userFuncWatcher.dispose();
+            }
+            const watchPattern = new vscode.RelativePattern(
+                vscode.Uri.file(path.dirname(userHeaderPath)),
+                path.basename(userHeaderPath)
+            );
+            this._userFuncWatcher = vscode.workspace.createFileSystemWatcher(watchPattern);
+            const refreshFunctions = () => this._handleGetUserFunctions();
+            this._userFuncWatcher.onDidChange(refreshFunctions);
+            this._userFuncWatcher.onDidCreate(refreshFunctions);
+            this._userFuncWatcher.onDidDelete(() => {
+                this._panel.webview.postMessage({
+                    command: 'userFunctionsLoaded',
+                    functions: []
+                });
+            });
+
         } catch (error) {
             logger.error(`[MessageHandler] 获取用户函数失败: ${error}`);
             this._panel.webview.postMessage({
@@ -1220,6 +1245,16 @@ export class MessageHandler {
                 functions: [],
                 error: error instanceof Error ? error.message : String(error)
             });
+        }
+    }
+
+    /**
+     * Clean up resources
+     */
+    dispose(): void {
+        if (this._userFuncWatcher) {
+            this._userFuncWatcher.dispose();
+            this._userFuncWatcher = undefined;
         }
     }
 

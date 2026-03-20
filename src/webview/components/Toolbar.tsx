@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useDesignerStore } from '../store';
-import { Save, Code, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, GitBranch, Palette, AlignLeft, Grid, Download, Rocket, Trash2, Square, Users } from 'lucide-react';
+import { Save, Code, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, GitBranch, Palette, AlignLeft, Grid, Download, Rocket, BrushCleaning, Square, Users } from 'lucide-react';
 import { AlignType, DistributeType, ResizeType, getAlignmentConfigsByCategory } from '../utils/alignmentUtils';
 import { t } from '../i18n';
 import './Toolbar.css';
@@ -369,7 +369,7 @@ const Toolbar: React.FC<{
             onClick={handleClean}
             title={t('Clean Build')}
           >
-            <Trash2 size={16} strokeWidth={1.4} />
+            <BrushCleaning size={16} strokeWidth={1.4} />
           </button>
         </div>
       </div>

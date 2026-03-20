@@ -299,6 +299,9 @@ export class DesignerPanel {
         // 清理保存管理器
         this._saveManager.dispose();
 
+        // 清理消息处理器
+        this._messageHandler.dispose();
+
         // 销毁面板
         this._panel.dispose();
 
