@@ -693,11 +693,24 @@ export class SimulationRunner {
         }
 
         if (deep) {
-            // 深度清理：清理整个 src 目录
+            // 深度清理：清理 src 目录，但保留 user/ 和 callbacks/ 子目录
             const srcDir = path.join(this.projectRoot, 'src');
             if (fs.existsSync(srcDir)) {
-                this.log(`清理 src 目录: ${srcDir}`);
-                await this.removeDirectoryWithRetry(srcDir, 5, 500);
+                const preserveDirs = ['user', 'callbacks'];
+                const entries = fs.readdirSync(srcDir, { withFileTypes: true });
+                for (const entry of entries) {
+                    if (preserveDirs.includes(entry.name)) {
+                        this.log(`保留目录: src/${entry.name}`);
+                        continue;
+                    }
+                    const fullPath = path.join(srcDir, entry.name);
+                    this.log(`清理: src/${entry.name}`);
+                    if (entry.isDirectory()) {
+                        await this.removeDirectoryWithRetry(fullPath, 5, 500);
+                    } else {
+                        fs.rmSync(fullPath, { force: true });
+                    }
+                }
             }
         } else {
             // 普通清理：只清理 src/ui 目录
