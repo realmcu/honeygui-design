@@ -582,11 +582,13 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
                 {(event.type === 'onKeyShortPress' || event.type === 'onKeyLongPress') && (
                   <div className="key-name-input">
                     <label>{t('Key Name')}</label>
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                       <select
                         value={KEY_NAMES.some(k => k.value === event.keyName) ? event.keyName : 'custom'}
                         onChange={(e) => {
-                          if (e.target.value !== 'custom') {
+                          if (e.target.value === 'custom') {
+                            handleKeyNameChange(eventIndex, '');
+                          } else {
                             handleKeyNameChange(eventIndex, e.target.value);
                           }
                         }}
@@ -603,7 +605,7 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
                           value={event.keyName || ''}
                           onChange={(e) => handleKeyNameChange(eventIndex, e.target.value)}
                           placeholder={t('Enter custom key name')}
-                          style={{ flex: 1 }}
+                          style={{ flex: '1 1 0', minWidth: '0' }}
                         />
                       )}
                     </div>
