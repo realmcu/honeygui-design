@@ -58,8 +58,6 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
 
   // 判断是否可以拖拽
   const canDrag = (comp: NonNullable<typeof component>) => {
-    // hg_view 不能拖拽
-    if (comp.type === 'hg_view') return false;
     // hg_list_item 不能拖拽（由 list 控件自动管理）
     if (comp.type === 'hg_list_item') return false;
     return true;
@@ -254,6 +252,10 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
 
     // 根据放置位置执行不同的操作
     if (position === 'inside') {
+      // hg_view 只能在顶层排序，不能拖入其他容器
+      if (draggedComp.type === 'hg_view') {
+        return;
+      }
       // 作为子节点
       if (!canDrop(draggedComp, component)) {
         return;
@@ -275,6 +277,10 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
       // 验证：只有 hg_view 可以放在顶层（parent 为 null）
       // hg_window, hg_list, hg_canvas 等都必须在容器内
       if (!targetParent && draggedComp.type !== 'hg_view') {
+        return;
+      }
+      // hg_view 只能放在顶层，不能放入其他容器
+      if (targetParent && draggedComp.type === 'hg_view') {
         return;
       }
       
@@ -478,6 +484,82 @@ const ComponentTree: React.FC<{ onContextMenu?: (e: React.MouseEvent, componentI
   }, [selectedComponent]);
 
   const expandContextValue = React.useMemo(() => ({ collapsedNodes, toggleCollapse }), [collapsedNodes, toggleCollapse]);
+
+  // 拖拽时的自动滚动
+  const scrollTimerRef = React.useRef<number | null>(null);
+  const isDraggingRef = React.useRef(false);
+
+  // Use capture phase + document-level listeners to detect drag state
+  // (child nodes call e.stopPropagation on dragover)
+  React.useEffect(() => {
+    const container = treeContentRef.current;
+    if (!container) return;
+
+    const edgeSize = 60;
+
+    const handleDragOverCapture = (e: DragEvent) => {
+      isDraggingRef.current = true;
+
+      const rect = container.getBoundingClientRect();
+      const y = e.clientY;
+
+      if (scrollTimerRef.current) {
+        cancelAnimationFrame(scrollTimerRef.current);
+        scrollTimerRef.current = null;
+      }
+
+      // Only auto-scroll if cursor is within the container's horizontal bounds
+      if (e.clientX < rect.left || e.clientX > rect.right) return;
+
+      const distFromTop = y - rect.top;
+      const distFromBottom = rect.bottom - y;
+
+      if (distFromTop >= 0 && distFromTop < edgeSize) {
+        // Speed proportional to proximity: closer to edge = faster (max 6px/frame)
+        const speed = Math.max(1, Math.ceil((1 - distFromTop / edgeSize) * 6));
+        const tick = () => {
+          if (!isDraggingRef.current) return;
+          container.scrollTop -= speed;
+          scrollTimerRef.current = requestAnimationFrame(tick);
+        };
+        scrollTimerRef.current = requestAnimationFrame(tick);
+      } else if (distFromBottom >= 0 && distFromBottom < edgeSize) {
+        const speed = Math.max(1, Math.ceil((1 - distFromBottom / edgeSize) * 6));
+        const tick = () => {
+          if (!isDraggingRef.current) return;
+          container.scrollTop += speed;
+          scrollTimerRef.current = requestAnimationFrame(tick);
+        };
+        scrollTimerRef.current = requestAnimationFrame(tick);
+      }
+    };
+
+    const handleDragEnd = () => {
+      isDraggingRef.current = false;
+      if (scrollTimerRef.current) {
+        cancelAnimationFrame(scrollTimerRef.current);
+        scrollTimerRef.current = null;
+      }
+    };
+
+    const handleDrop = () => {
+      handleDragEnd();
+    };
+
+    // Capture phase to get events before children stop propagation
+    container.addEventListener('dragover', handleDragOverCapture, true);
+    document.addEventListener('dragend', handleDragEnd);
+    document.addEventListener('drop', handleDrop);
+
+    return () => {
+      container.removeEventListener('dragover', handleDragOverCapture, true);
+      document.removeEventListener('dragend', handleDragEnd);
+      document.removeEventListener('drop', handleDrop);
+      if (scrollTimerRef.current) {
+        cancelAnimationFrame(scrollTimerRef.current);
+      }
+    };
+  }, []);
 
   return (
     <TreeExpandContext.Provider value={expandContextValue}>
