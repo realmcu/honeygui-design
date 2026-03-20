@@ -1,6 +1,6 @@
 /**
- * hg_input 组件代码生成器
- * 使用 gui_text 组件 + gui_text_input_set 实现输入功能
+ * hg_input component code generator
+ * Implements input functionality using gui_text + gui_text_input_set
  */
 import { Component } from '../../../hml/types';
 import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';
@@ -11,17 +11,17 @@ export class InputGenerator implements ComponentCodeGenerator {
     const parentRef = context.getParentRef(component);
     const { x, y, width, height } = component.position;
     
-    // 获取占位符文本（需要进行 C 字符串转义）
+    // Get placeholder text (requires C string escaping)
     const placeholder = component.data?.placeholder || 'Input...';
     const escapedPlaceholder = this.escapeCString(placeholder);
     
-    // 使用 gui_text_create 创建文本组件
+    // Create text component using gui_text_create
     let code = `${indentStr}${component.id} = gui_text_create(${parentRef}, "${component.name}", ${x}, ${y}, ${width}, ${height});\n`;
     
-    // 设置占位符文本
+    // Set placeholder text
     code += `${indentStr}gui_text_set(${component.id}, (void *)"${escapedPlaceholder}", "Arial", APP_COLOR_GRAY, strlen("${escapedPlaceholder}"), ${component.style?.fontSize || 16});\n`;
     
-    // 启用输入功能
+    // Enable input functionality
     code += `${indentStr}gui_text_input_set(${component.id}, true);\n`;
     
     return code;
@@ -31,13 +31,13 @@ export class InputGenerator implements ComponentCodeGenerator {
     const indentStr = '    '.repeat(indent);
     let code = '';
 
-    // 如果有初始文本值（需要进行 C 字符串转义）
+    // Set initial text value if present (requires C string escaping)
     if (component.data?.text) {
       const escapedText = this.escapeCString(component.data.text);
       code += `${indentStr}gui_text_set(${component.id}, (void *)"${escapedText}", "Arial", APP_COLOR_BLACK, strlen("${escapedText}"), ${component.style?.fontSize || 16});\n`;
     }
     
-    // 文本颜色
+    // Text color
     if (component.style?.color) {
       const color = this.convertColor(component.style.color);
       code += `${indentStr}gui_text_set_color(${component.id}, ${color});\n`;
@@ -47,20 +47,20 @@ export class InputGenerator implements ComponentCodeGenerator {
   }
   
   /**
-   * 转义 C 字符串中的特殊字符
+   * Escape special characters in C strings
    */
   private escapeCString(str: string): string {
     return str
-      .replace(/\\/g, '\\\\')   // 反斜杠必须最先处理
-      .replace(/"/g, '\\"')     // 双引号
-      .replace(/\n/g, '\\n')    // 换行符
-      .replace(/\r/g, '\\r')    // 回车符
-      .replace(/\t/g, '\\t')    // 制表符
-      .replace(/\0/g, '\\0');   // 空字符
+      .replace(/\\/g, '\\\\')   // Backslash must be processed first
+      .replace(/"/g, '\\"')     // Double quote
+      .replace(/\n/g, '\\n')    // Newline
+      .replace(/\r/g, '\\r')    // Carriage return
+      .replace(/\t/g, '\\t')    // Tab
+      .replace(/\0/g, '\\0');   // Null character
   }
 
   /**
-   * 转换颜色值为 gui_rgb() 格式
+   * Convert color value to gui_rgb() format
    */
   private convertColor(color?: string): string {
     if (!color) return 'APP_COLOR_BLACK';

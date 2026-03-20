@@ -1,5 +1,5 @@
 /**
- * hg_svg 组件代码生成器
+ * hg_svg component code generator
  */
 import { Component } from '../../../hml/types';
 import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';
@@ -11,14 +11,14 @@ export class SvgGenerator implements ComponentCodeGenerator {
     const { x, y } = component.position;
     
     let src = component.data?.src || '';
-    // 去掉 assets/ 前缀
+    // Strip assets/ prefix
     src = src.replace(/^assets\//, '');
-    // 确保路径以 / 开头
+    // Ensure path starts with /
     if (!src.startsWith('/')) {
       src = '/' + src;
     }
 
-    // 使用 gui_svg_create_from_file 创建 SVG
+    // Create SVG using gui_svg_create_from_file
     return `${indentStr}${component.id} = gui_svg_create_from_file(${parentRef}, "${component.name}", "${src}", ${x}, ${y});\n`;
   }
 
@@ -26,12 +26,12 @@ export class SvgGenerator implements ComponentCodeGenerator {
     const indentStr = '    '.repeat(indent);
     let code = '';
 
-    // 缩放
+    // Scale
     if (component.style?.scale !== undefined) {
       code += `${indentStr}gui_svg_set_scale((gui_svg_t *)${component.id}, ${component.style.scale}f);\n`;
     }
 
-    // 透明度
+    // Opacity
     if (component.style?.opacity !== undefined) {
       code += `${indentStr}gui_svg_set_opacity((gui_svg_t *)${component.id}, ${component.style.opacity});\n`;
     }

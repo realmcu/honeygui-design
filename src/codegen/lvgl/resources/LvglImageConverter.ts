@@ -1,6 +1,6 @@
 /**
- * LVGL 图片资源转换器
- * 将项目中使用的图片转换为 LVGL 内置 C 数组格式
+ * LVGL image resource converter
+ * Converts project images to LVGL built-in C array format
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -12,18 +12,18 @@ export class LvglImageConverter {
   private builtinImageVarMap: Map<string, string> = new Map();
   private builtinImageVars: string[] = [];
 
-  /** 获取内置图片变量名 */
+  /** Get built-in image variable name */
   getBuiltinImageVar(source: string): string | undefined {
     return this.builtinImageVarMap.get(normalizeImageKey(source));
   }
 
-  /** 获取所有内置图片变量名列表 */
+  /** Get list of all built-in image variable names */
   getBuiltinImageVarList(): string[] {
     return this.builtinImageVars;
   }
 
   /**
-   * 准备内置图片资源：将项目中使用的图片转换为 LVGL 内置 C 数组格式
+   * Prepare built-in image resources: convert project images to LVGL built-in C array format
    */
   prepare(components: Component[], srcDir: string, lvglDir: string): void {
     this.builtinImageVarMap.clear();
@@ -31,7 +31,7 @@ export class LvglImageConverter {
 
     const toolPath = this.findLvglImageTool();
     if (!toolPath) {
-      console.warn('LVGL 图片转换工具未找到，跳过图片内置转换');
+      console.warn('LVGL image conversion tool not found, skipping built-in image conversion');
       return;
     }
 
@@ -51,7 +51,7 @@ export class LvglImageConverter {
     for (const imgSrc of images) {
       const inputPath = this.resolveImagePath(projectRoot, imgSrc);
       if (!inputPath) {
-        console.warn(`图片文件不存在，跳过: ${imgSrc}`);
+        console.warn(`Image file not found, skipping: ${imgSrc}`);
         continue;
       }
 
@@ -66,7 +66,7 @@ export class LvglImageConverter {
   }
 
   /**
-   * 收集所有组件中使用的图片源
+   * Collect all image sources used by components
    */
   private collectImageSources(components: Component[]): string[] {
     const imageExts = new Set(['.png', '.jpg', '.jpeg', '.bmp', '.webp', '.gif']);
@@ -98,7 +98,7 @@ export class LvglImageConverter {
   }
 
   /**
-   * 查找 LVGLImage.py 转换工具
+   * Find LVGLImage.py conversion tool
    */
   private findLvglImageTool(): string | null {
     const candidates = [
@@ -116,7 +116,7 @@ export class LvglImageConverter {
   }
 
   /**
-   * 解析图片的绝对路径
+   * Resolve absolute path for an image
    */
   private resolveImagePath(projectRoot: string, source: string): string | null {
     let normalized = source.replace(/\\/g, '/').trim();
@@ -140,7 +140,7 @@ export class LvglImageConverter {
   }
 
   /**
-   * 使用 LVGLImage.py 将图片转换为 LVGL C 数组
+   * Convert image to LVGL C array using LVGLImage.py
    */
   private convertImageToLvgl(
     toolPath: string,
@@ -158,7 +158,7 @@ export class LvglImageConverter {
       tempPngPath = path.join(outputDir, `_temp_${varName}.png`);
       const convertSuccess = this.convertToPng(inputPath, tempPngPath);
       if (!convertSuccess) {
-        console.warn(`图片格式转换失败: ${inputPath}`);
+        console.warn(`Image format conversion failed: ${inputPath}`);
         return false;
       }
       actualInputPath = tempPngPath;
@@ -188,13 +188,13 @@ export class LvglImageConverter {
     }
 
     if (!success) {
-      console.warn(`图片转换失败: ${inputPath}`);
+      console.warn(`Image conversion failed: ${inputPath}`);
     }
     return success;
   }
 
   /**
-   * 使用 Pillow 将图片转换为 PNG 格式
+   * Convert image to PNG format using Pillow
    */
   private convertToPng(inputPath: string, outputPath: string): boolean {
     const script = `from PIL import Image; img = Image.open(r'${inputPath.replace(/'/g, "\\'")}'); img.convert('RGBA').save(r'${outputPath.replace(/'/g, "\\'")}', 'PNG')`;
@@ -214,7 +214,7 @@ export class LvglImageConverter {
   }
 
   /**
-   * 清理之前生成的图片 C 文件
+   * Clean up previously generated image C files
    */
   private cleanupGeneratedImages(lvglDir: string): void {
     if (!fs.existsSync(lvglDir)) {

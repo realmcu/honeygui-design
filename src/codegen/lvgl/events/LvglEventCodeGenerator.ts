@@ -1,16 +1,16 @@
 /**
- * LVGL 事件代码生成器接口
- * 定义各组件类型的事件回调生成规范
+ * LVGL event code generator interface
+ * Defines event callback generation specification for each component type
  */
 import { Component } from '../../../hml/types';
 
 export interface LvglEventCodeGenerator {
-  /** 生成事件绑定代码（在 ui_create 函数体内，由组件生成器调用） */
+  /** Generate event binding code (inside ui_create function body, called by component generator) */
   generateEventBindings(component: Component): string;
 
-  /** 收集需要生成的回调函数名列表 */
+  /** Collect list of callback function names to generate */
   collectCallbackFunctions(component: Component): string[];
 
-  /** 获取回调函数实现代码（static void 格式，用于解析为 CallbackImpl） */
+  /** Get callback function implementation code (static void format, parsed into CallbackImpl) */
   getEventCallbackImpl(component: Component): string[];
 }

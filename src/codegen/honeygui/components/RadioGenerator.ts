@@ -1,6 +1,6 @@
 /**
- * hg_radio 组件代码生成器
- * TODO: 实现单选框特定的代码生成逻辑
+ * hg_radio component code generator
+ * TODO: Implement radio button-specific code generation logic
  */
 import { Component } from '../../../hml/types';
 import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';
@@ -11,7 +11,7 @@ export class RadioGenerator implements ComponentCodeGenerator {
     const parentRef = context.getParentRef(component);
     const { x, y, width, height } = component.position;
 
-    // TODO: 实现单选框创建逻辑
+    // TODO: Implement radio button creation logic
     return `${indentStr}// TODO: ${component.id} = gui_radio_create(${parentRef}, "${component.name}", ${x}, ${y}, ${width}, ${height});\n`;
   }
 

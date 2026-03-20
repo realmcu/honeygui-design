@@ -1,13 +1,14 @@
 /**
- * LVGL 组件代码生成器抽象基类
- * 封装位置计算、尺寸解析等公共逻辑，消除各组件生成器中的重复代码
+ * LVGL component code generator abstract base class
+ * Encapsulates common logic for position calculation and size resolution,
+ * eliminating duplicate code across component generators
  */
 import { Component } from '../../../hml/types';
 import { LvglComponentCodeGenerator, LvglGeneratorContext } from '../LvglComponentGenerator';
 
 export abstract class LvglBaseGenerator implements LvglComponentCodeGenerator {
   /**
-   * 从 Component 解析最终位置（含 transform.translateX/translateY 偏移）
+   * Resolve final position from Component (including transform.translateX/translateY offsets)
    */
   protected resolvePosition(component: Component): { x: number; y: number } {
     const tx = Number(component.style?.transform?.translateX || 0);
@@ -19,7 +20,7 @@ export abstract class LvglBaseGenerator implements LvglComponentCodeGenerator {
   }
 
   /**
-   * 从 Component 解析尺寸（最小值 1）
+   * Resolve size from Component (minimum value 1)
    */
   protected resolveSize(component: Component): { width: number; height: number } {
     return {
@@ -29,7 +30,7 @@ export abstract class LvglBaseGenerator implements LvglComponentCodeGenerator {
   }
 
   /**
-   * 生成 lv_obj_set_pos + lv_obj_set_size 两行代码
+   * Generate lv_obj_set_pos + lv_obj_set_size two lines of code
    */
   protected generatePositionAndSize(component: Component): string {
     const { x, y } = this.resolvePosition(component);
@@ -39,14 +40,14 @@ export abstract class LvglBaseGenerator implements LvglComponentCodeGenerator {
     return code;
   }
 
-  /** 子类必须实现：生成组件创建 + 属性设置代码 */
+  /** Subclasses must implement: generate component creation + property setup code */
   abstract generateCreation(
     component: Component, parentRef: string, ctx: LvglGeneratorContext
   ): string;
 
-  /** 可选：生成事件回调函数代码 */
+  /** Optional: generate event callback function code */
   generateEventCallbacks?(components: Component[]): string;
 
-  /** 可选：生成全局样式/变量定义 */
+  /** Optional: generate global style/variable definitions */
   generateGlobalDefinitions?(components: Component[]): string;
 }

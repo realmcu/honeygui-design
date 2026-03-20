@@ -1,26 +1,26 @@
 /**
- * 代码生成工具函数
+ * Code generation utility functions
  */
 
 import * as path from 'path';
 
 /**
- * 根据HML文件路径计算C代码输出目录
- * 规则：ui/xxx/ -> src/
+ * Calculate C code output directory from HML file path
+ * Rule: ui/xxx/ -> src/
  * 
- * @param hmlFilePath HML文件的完整路径
- * @param projectRoot 项目根目录
- * @returns 输出目录路径（src/）
+ * @param hmlFilePath Full path of the HML file
+ * @param projectRoot Project root directory
+ * @returns Output directory path (src/)
  */
 export function getOutputDir(hmlFilePath: string, projectRoot: string): string {
   return path.join(projectRoot, 'src');
 }
 
 /**
- * 从文件路径提取文件名（不含扩展名）
+ * Extract filename (without extension) from a file path
  * 
- * @param filePath 文件路径
- * @returns 文件名（不含扩展名）
+ * @param filePath File path
+ * @returns Filename without extension
  * 
  * @example
  * getBaseName('/path/to/main.hml') // 'main'
@@ -30,11 +30,11 @@ export function getBaseName(filePath: string): string {
 }
 
 /**
- * 查找项目根目录
- * 向上查找包含 package.json 或 .git 的目录
+ * Find project root directory
+ * Traverse upward to find a directory containing package.json or .git
  * 
- * @param startPath 起始路径
- * @returns 项目根目录，如果未找到则返回起始路径的父目录
+ * @param startPath Starting path
+ * @returns Project root directory, or parent of startPath if not found
  */
 export function findProjectRoot(startPath: string): string {
   let currentPath = startPath;

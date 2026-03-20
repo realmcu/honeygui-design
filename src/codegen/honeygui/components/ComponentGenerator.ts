@@ -1,26 +1,26 @@
 /**
- * 组件代码生成器接口
+ * Component code generator interface
  */
 import { Component } from '../../../hml/types';
 
 export interface ComponentCodeGenerator {
   /**
-   * 生成组件创建代码
+   * Generate component creation code
    */
   generateCreation(component: Component, indent: number, context: GeneratorContext): string;
 
   /**
-   * 生成属性设置代码
+   * Generate property setter code
    */
   generatePropertySetters(component: Component, indent: number, context: GeneratorContext): string;
 }
 
 /**
- * 生成器上下文
+ * Generator context
  */
 export interface GeneratorContext {
   componentMap: Map<string, Component>;
   getParentRef(component: Component): string;
-  projectRoot?: string;  // 项目根目录，用于读取资源文件
-  generateTimerBindings?: (component: Component, indent: number) => string;  // 定时器绑定代码生成方法
+  projectRoot?: string;  // Project root directory for reading asset files
+  generateTimerBindings?: (component: Component, indent: number) => string;  // Timer binding code generation method
 }

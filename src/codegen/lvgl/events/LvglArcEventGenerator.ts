@@ -1,6 +1,6 @@
 /**
- * hg_arc 事件生成器
- * 生成 LV_EVENT_VALUE_CHANGED 回调
+ * hg_arc event generator
+ * Generates LV_EVENT_VALUE_CHANGED callback
  */
 import { Component } from '../../../hml/types';
 import { LvglEventCodeGenerator } from './LvglEventCodeGenerator';

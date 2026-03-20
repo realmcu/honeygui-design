@@ -1,12 +1,12 @@
 /**
- * LVGL C代码生成器
- * 从组件树生成调用LVGL API的C代码
+ * LVGL C code generator
+ * Generates C code calling LVGL APIs from a component tree
  *
- * 架构说明：
- * - 主生成器只负责文件输出和调度
- * - 各组件的代码生成逻辑在 components/ 目录下
- * - 资源转换逻辑在 resources/ 目录下
- * - 工具函数在 LvglUtils.ts 中
+ * Architecture:
+ * - Main generator handles file output and orchestration only
+ * - Component code generation logic is in components/ directory
+ * - Resource conversion logic is in resources/ directory
+ * - Utility functions are in LvglUtils.ts
  */
 
 import * as fs from 'fs';
@@ -36,14 +36,14 @@ export class LvglCCodeGenerator implements ICodeGenerator {
     this.resourceManager = new LvglResourceManager();
   }
 
-  // 文件生成器
+  // File generators
   private headerFileGenerator = new LvglHeaderFileGenerator();
   private sourceFileGenerator = new LvglSourceFileGenerator();
   private entryFileGenerator = new LvglEntryFileGenerator();
   private callbackFileGenerator = new LvglCallbackFileGenerator();
 
   /**
-   * 生成所有代码文件
+   * Generate all code files
    */
   async generate(): Promise<CodeGenResult> {
     try {
@@ -56,16 +56,16 @@ export class LvglCCodeGenerator implements ICodeGenerator {
         fs.mkdirSync(lvglDir, { recursive: true });
       }
 
-      // 资源预处理
+      // Resource preprocessing
       this.resourceManager.prepare(this.components, srcDir, lvglDir);
 
-      // 准备共享数据
+      // Prepare shared data
       const orderedComponents = this.getCreationOrder();
       const ctx = this.createContext();
       const imageVars = this.resourceManager.getImageVarList();
       const fontVars = this.resourceManager.getFontVarList();
 
-      // 通过文件生成器生成内容
+      // Generate content via file generators
       const headerFile = path.join(lvglDir, `${designName}_lvgl_ui.h`);
       const sourceFile = path.join(lvglDir, `${designName}_lvgl_ui.c`);
       const entryHeaderFile = path.join(lvglDir, 'lvgl_generated_ui.h');
@@ -78,7 +78,7 @@ export class LvglCCodeGenerator implements ICodeGenerator {
 
       files.push(headerFile, sourceFile, entryHeaderFile, entrySourceFile);
 
-      // 生成回调文件（含保护区机制）
+      // Generate callback files (with protected area mechanism)
       const callbackImpls = this.collectCallbackImpls(orderedComponents);
       if (callbackImpls.length > 0) {
         const callbackHeaderFile = path.join(lvglDir, `${designName}_lvgl_callbacks.h`);
@@ -90,7 +90,7 @@ export class LvglCCodeGenerator implements ICodeGenerator {
 
         fs.writeFileSync(callbackHeaderFile, generatedHeader, 'utf-8');
 
-        // 回调实现文件：如果已存在则合并保护区，保留用户代码
+        // Callback implementation file: merge protected areas to preserve user code if file exists
         if (fs.existsSync(callbackSourceFile)) {
           try {
             const existing = fs.readFileSync(callbackSourceFile, 'utf-8');
@@ -118,7 +118,7 @@ export class LvglCCodeGenerator implements ICodeGenerator {
   }
 
   /**
-   * 创建生成器上下文（供各组件生成器使用）
+   * Create generator context (used by component generators)
    */
   private createContext(): LvglGeneratorContext {
     return {
@@ -132,7 +132,7 @@ export class LvglCCodeGenerator implements ICodeGenerator {
   }
 
   /**
-   * 按 z-index 排序的组件创建顺序（深度优先）
+   * Component creation order sorted by z-index (depth-first)
    */
   private getCreationOrder(): Component[] {
     const childrenMap = new Map<string | null, Component[]>();
@@ -171,7 +171,7 @@ export class LvglCCodeGenerator implements ICodeGenerator {
 
     walk(null);
 
-    // 确保所有组件都被包含
+    // Ensure all components are included
     this.components.forEach(component => {
       if (!visited.has(component.id)) {
         ordered.push(component);
@@ -190,7 +190,7 @@ export class LvglCCodeGenerator implements ICodeGenerator {
   }
 
   /**
-   * 从事件生成器工厂收集回调函数实现信息
+   * Collect callback function implementations from event generator factory
    */
   private collectCallbackImpls(orderedComponents: Component[]): CallbackImpl[] {
     const impls: CallbackImpl[] = [];
@@ -201,7 +201,7 @@ export class LvglCCodeGenerator implements ICodeGenerator {
 
       const callbackCodes = eventGenerator.getEventCallbackImpl(component);
       for (const callbackCode of callbackCodes) {
-        // 解析 static void xxx(lv_event_t * e) { ... } 块
+        // Parse static void xxx(lv_event_t * e) { ... } block
         const funcRegex = /static void (\w+)\(lv_event_t \* e\)\n\{([\s\S]*?)\n\}\n?$/;
         const match = funcRegex.exec(callbackCode);
         if (match) {
@@ -218,7 +218,7 @@ export class LvglCCodeGenerator implements ICodeGenerator {
   }
 
   /**
-   * 向上查找祖先容器的背景色
+   * Look up ancestor container's background color
    */
   private getAncestorBackgroundColor(component: Component): string | null {
     let current: Component | undefined = component;

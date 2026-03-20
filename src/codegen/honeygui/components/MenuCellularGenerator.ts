@@ -1,6 +1,6 @@
 /**
- * hg_menu_cellular 组件代码生成器
- * 生成蜂窝菜单控件的 C 代码
+ * hg_menu_cellular component code generator
+ * Generates C code for cellular menu control
  */
 import { Component } from '../../../hml/types';
 import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';
@@ -31,7 +31,7 @@ export class MenuCellularGenerator implements ComponentCodeGenerator {
     let code = '';
 
     if (iconImages.length !== 0) {
-      // 生成字符串路径数组
+      // Generate icon path array
       code += `${indentStr}const void *${component.id}_icons[] = {\n`;
       iconImages.forEach((iconPath, index) => {
         const binPath = this.convertToBinPath(iconPath);
@@ -43,12 +43,12 @@ export class MenuCellularGenerator implements ComponentCodeGenerator {
       code += `${indentStr}${component.id} = gui_menu_cellular_create(${parentRef}, ${iconSize}, ${component.id}_icons, ${iconImages.length}, IMG_SRC_FILESYS);\n`;
     }
 
-    // 偏移量条件生成
+    // Conditional offset generation
     if (offsetX !== 0 || offsetY !== 0) {
       code += `${indentStr}gui_menu_cellular_offset(${component.id}, ${offsetX}, ${offsetY});\n`;
     }
 
-    // 生成 gui_menu_cellular_on_click（仅当至少有一个 target 配置时）
+    // Generate gui_menu_cellular_on_click (only when at least one target is configured)
     const hasAnyAction = iconActions.some(a => a && a.target && a.target.trim() !== '');
     if (hasAnyAction && iconImages.length > 0) {
       const count = iconImages.length;
@@ -75,8 +75,8 @@ export class MenuCellularGenerator implements ComponentCodeGenerator {
   }
 
   /**
-   * 生成 switch_view 回调函数（写入 *_ui.c）
-   * 每个配置了跳转目标的图标生成一个独立的回调函数
+   * Generate switch_view callback functions (written to *_ui.c)
+   * Each icon with a configured target gets an independent callback function
    */
   generateSwitchViewCallbacks(component: Component): string {
     const iconActions: IconAction[] = Array.isArray(component.data?.iconActions)
@@ -110,15 +110,15 @@ export class MenuCellularGenerator implements ComponentCodeGenerator {
   }
 
   /**
-   * 获取图标 switch_view 回调函数名
+   * Get icon switch_view callback function name
    */
   getSwitchViewCallbackName(componentId: string, iconIndex: number): string {
     return `${componentId}_icon_${iconIndex}_switch_view_cb`;
   }
 
   /**
-   * 将图片路径转换为 .bin 路径
-   * 规则：扩展名替换为 .bin，去除 assets/ 前缀，路径以 / 开头
+   * Convert image path to .bin path
+   * Rules: replace extension with .bin, strip assets/ prefix, ensure path starts with /
    */
   convertToBinPath(src: string): string {
     if (!src) { return ''; }

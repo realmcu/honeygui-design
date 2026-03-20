@@ -1,12 +1,13 @@
 /**
- * LVGL 通用样式代码生成模块
- * 集中处理 backgroundColor、opacity、borderRadius、borderWidth、padding 等通用样式属性的 LVGL 代码生成
+ * LVGL common style code generation module
+ * Centralized handling of backgroundColor, opacity, borderRadius, borderWidth, padding
+ * and other common style properties for LVGL code generation
  */
 import { parseColorHex, parseColorAlpha } from './LvglUtils';
 
 export class LvglStyleGenerator {
   /**
-   * 生成背景色代码：lv_obj_set_style_bg_color + lv_obj_set_style_bg_opa
+   * Generate background color code: lv_obj_set_style_bg_color + lv_obj_set_style_bg_opa
    */
   static generateBackgroundColor(id: string, bgColor: string): string {
     const hex = parseColorHex(bgColor);
@@ -17,7 +18,7 @@ export class LvglStyleGenerator {
   }
 
   /**
-   * 生成透明度代码：lv_obj_set_style_bg_opa（钳位到 [0, 255]）
+   * Generate opacity code: lv_obj_set_style_bg_opa (clamped to [0, 255])
    */
   static generateOpacity(id: string, opacity: number): string {
     const clamped = Math.max(0, Math.min(255, Math.round(opacity)));
@@ -25,7 +26,7 @@ export class LvglStyleGenerator {
   }
 
   /**
-   * 生成圆角代码：lv_obj_set_style_radius（钳位到 min(w/2, h/2)）
+   * Generate border radius code: lv_obj_set_style_radius (clamped to min(w/2, h/2))
    */
   static generateBorderRadius(id: string, radius: number, width: number, height: number): string {
     const maxRadius = Math.min(width / 2, height / 2);
@@ -34,14 +35,14 @@ export class LvglStyleGenerator {
   }
 
   /**
-   * 生成边框宽度代码：lv_obj_set_style_border_width
+   * Generate border width code: lv_obj_set_style_border_width
    */
   static generateBorderWidth(id: string, borderWidth: number): string {
     return `    lv_obj_set_style_border_width(${id}, ${Math.round(borderWidth)}, LV_PART_MAIN);\n`;
   }
 
   /**
-   * 生成内边距代码：lv_obj_set_style_pad_all
+   * Generate padding code: lv_obj_set_style_pad_all
    */
   static generatePadding(id: string, padding: number): string {
     return `    lv_obj_set_style_pad_all(${id}, ${Math.round(padding)}, LV_PART_MAIN);\n`;

@@ -1,5 +1,5 @@
 /**
- * hg_3d 组件代码生成器
+ * hg_3d component code generator
  */
 import { Component } from '../../../hml/types';
 import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';
@@ -7,7 +7,7 @@ import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';
 export class Model3DGenerator implements ComponentCodeGenerator {
 
   /**
-   * 生成全局变换回调和动画更新回调
+   * Generate global transform callback and animation update callback
    */
   generateCallbacks(component: Component): string {
     const modelPath = component.data?.modelPath || '';
@@ -20,7 +20,7 @@ export class Model3DGenerator implements ComponentCodeGenerator {
     const callbackName = `${component.id}_global_cb`;
     const updateCallbackName = `${component.id}_update_animation`;
     
-    // 相机和世界坐标配置
+    // Camera and world coordinate configuration
     const cameraPosX = (component.data?.cameraPosX as number) ?? 0;
     const cameraPosY = (component.data?.cameraPosY as number) ?? 0;
     const cameraPosZ = (component.data?.cameraPosZ as number) ?? 0;
@@ -31,22 +31,22 @@ export class Model3DGenerator implements ComponentCodeGenerator {
     const worldY = (component.data?.worldY as number) ?? 0;
     const worldZ = (component.data?.worldZ as number) ?? 30;
     
-    // 交互动画配置
+    // Interactive animation configuration
     const touchRotationEnabled = component.data?.touchRotationEnabled as boolean ?? false;
     const touchRotationAxis = (component.data?.touchRotationAxis as string) ?? 'y';
     const touchRotationSensitivity = Number(component.data?.touchRotationSensitivity ?? 5.0);
     const autoRotationEnabled = component.data?.autoRotationEnabled as boolean ?? false;
     const autoRotationAxis = (component.data?.autoRotationAxis as string) ?? 'y';
-    const autoRotationSpeed = Number(component.data?.autoRotationSpeed ?? 1.0); // 角度/帧
+    const autoRotationSpeed = Number(component.data?.autoRotationSpeed ?? 1.0); // degrees/frame
     
     let code = '';
     
-    // 如果启用了交互动画，生成静态变量和更新回调
+    // Generate static variables and update callback if interactive animation is enabled
     if (touchRotationEnabled || autoRotationEnabled) {
       code += `// ${component.name} animation state\n`;
       code += `static float ${component.id}_rot_angle = 0.0f;\n\n`;
       
-      // 生成更新回调
+      // Generate update callback
       code += `static void ${updateCallbackName}(void *param) {\n`;
       code += `    (void)param;\n`;
       
@@ -54,7 +54,7 @@ export class Model3DGenerator implements ComponentCodeGenerator {
         code += `    touch_info_t *tp = tp_get_info();\n\n`;
         code += `    if (tp->pressed || tp->pressing) {\n`;
         
-        // 根据轴向生成不同的代码，确保浮点数格式正确
+        // Generate axis-specific code, ensure correct float format
         const sensitivity = touchRotationSensitivity.toFixed(1);
         if (touchRotationAxis === 'x') {
           code += `        ${component.id}_rot_angle += tp->deltaY / ${sensitivity}f;\n`;
@@ -75,29 +75,29 @@ export class Model3DGenerator implements ComponentCodeGenerator {
       code += `}\n\n`;
     }
     
-    // 生成全局变换回调
+    // Generate global transform callback
     code += `static void ${callbackName}(l3_model_base_t *this) {\n`;
     code += `    l3_camera_UVN_initialize(&this->camera, l3_4d_point(${cameraPosX}, ${cameraPosY}, ${cameraPosZ}), l3_4d_point(${cameraLookX}, ${cameraLookY}, ${cameraLookZ}), 1, 32767, 90, this->viewPortWidth, this->viewPortHeight);\n`;
     
-    // 获取静态旋转角度
+    // Get static rotation angles
     const staticRotationX = (component.data?.rotationX as number) ?? 0;
     const staticRotationY = (component.data?.rotationY as number) ?? 0;
     const staticRotationZ = (component.data?.rotationZ as number) ?? 0;
     
-    // 根据动画轴向生成不同的世界坐标初始化
+    // Generate world initialization based on animation axis
     if (touchRotationEnabled || autoRotationEnabled) {
       const axisMap = { x: 0, y: 1, z: 2 };
       const axis = touchRotationEnabled ? touchRotationAxis : autoRotationAxis;
       const axisIndex = axisMap[axis as keyof typeof axisMap] ?? 1;
       
-      // 初始化旋转数组（使用静态旋转角度作为基础）
+      // Initialize rotation array (using static rotation angles as base)
       const rotations = [staticRotationX.toString(), staticRotationY.toString(), staticRotationZ.toString()];
-      // 在动画轴向上叠加动态旋转
+      // Add dynamic rotation on the animation axis
       rotations[axisIndex] = `${staticRotationX !== 0 || staticRotationY !== 0 || staticRotationZ !== 0 ? rotations[axisIndex] + ' + ' : ''}${component.id}_rot_angle`;
       
       code += `    l3_world_initialize(&this->world, ${worldX}, ${worldY}, ${worldZ}, ${rotations[0]}, ${rotations[1]}, ${rotations[2]}, 5);\n`;
     } else {
-      // 没有动画时，直接使用静态旋转角度
+      // No animation, use static rotation angles directly
       code += `    l3_world_initialize(&this->world, ${worldX}, ${worldY}, ${worldZ}, ${staticRotationX}, ${staticRotationY}, ${staticRotationZ}, 5);\n`;
     }
     
@@ -115,7 +115,7 @@ export class Model3DGenerator implements ComponentCodeGenerator {
     const drawType = component.data?.drawType || 'L3_DRAW_FRONT_AND_SORT';
     const ext = modelPath.split('.').pop()?.toLowerCase();
 
-    // 去掉 assets/ 前缀，确保路径以 / 开头
+    // Strip assets/ prefix, ensure path starts with /
     let vfsPath = modelPath.replace(/^assets\//, '');
     if (!vfsPath.startsWith('/')) {
       vfsPath = '/' + vfsPath;
@@ -127,7 +127,7 @@ export class Model3DGenerator implements ComponentCodeGenerator {
       const callbackName = `${component.id}_global_cb`;
       const updateCallbackName = `${component.id}_update_animation`;
 
-      // 将模型文件路径转换为 bin 文件路径
+      // Convert model file path to bin file path
       const pathParts = vfsPath.split('/');
       const fileName = pathParts[pathParts.length - 1];
       const baseName = fileName.replace(/\.(obj|gltf)$/i, '');
@@ -141,7 +141,7 @@ export class Model3DGenerator implements ComponentCodeGenerator {
       code += `${indentStr}l3_set_global_transform(${component.id}_model, (l3_global_transform_cb)${callbackName});\n`;
       code += `${indentStr}gui_lite3d_t *${component.id} = gui_lite3d_create(${parentRef}, "${component.name}", ${component.id}_model, 0, 0, ${width}, ${height});\n`;
       
-      // 如果启用了交互动画，添加定时器
+      // Add timer if interactive animation is enabled
       const touchRotationEnabled = component.data?.touchRotationEnabled as boolean ?? false;
       const autoRotationEnabled = component.data?.autoRotationEnabled as boolean ?? false;
       
@@ -159,7 +159,7 @@ export class Model3DGenerator implements ComponentCodeGenerator {
     const indentStr = '    '.repeat(indent);
     let code = '';
 
-    // 可见性
+    // Visibility
     if (component.visible !== undefined) {
       code += `${indentStr}gui_obj_show((gui_obj_t *)${component.id}, ${component.visible ? 'true' : 'false'});\n`;
     }

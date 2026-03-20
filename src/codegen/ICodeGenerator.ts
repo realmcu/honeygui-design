@@ -1,6 +1,6 @@
 /**
- * 代码生成器接口
- * 支持多种GUI引擎的代码生成
+ * Code generator interface
+ * Supports code generation for multiple GUI engines
  */
 
 import { Component } from '../hml/types';
@@ -8,8 +8,8 @@ import { Component } from '../hml/types';
 export type OverwritePolicy = 'always' | 'once' | 'protected';
 
 export interface CodeGenOptions {
-  srcDir: string;           // src 根目录
-  designName: string;       // 设计名称（用于文件命名）
+  srcDir: string;           // Root src directory
+  designName: string;       // Design name (used for file naming)
   enableProtectedAreas?: boolean;
 }
 
@@ -20,17 +20,17 @@ export interface CodeGenResult {
 }
 
 /**
- * 代码生成器接口
+ * Code generator interface
  */
 export interface ICodeGenerator {
   /**
-   * 生成所有代码文件
+   * Generate all code files
    */
   generate(): Promise<CodeGenResult>;
 }
 
 /**
- * 代码生成器构造函数类型
+ * Code generator constructor type
  */
 export interface ICodeGeneratorConstructor {
   new (components: Component[], options: CodeGenOptions): ICodeGenerator;

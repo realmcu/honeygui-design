@@ -1,12 +1,12 @@
 /**
- * hg_arc 组件代码生成器
- * 支持独立 arc 和 arc group 两种模式
+ * hg_arc component code generator
+ * Supports both standalone arc and arc group modes
  */
 import { Component } from '../../../hml/types';
 import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';
 
 /**
- * Arc Group 信息
+ * Arc group information
  */
 interface ArcGroupInfo {
   name: string;
@@ -16,7 +16,7 @@ interface ArcGroupInfo {
 
 export class ArcGenerator implements ComponentCodeGenerator {
   /**
-   * 收集同一父组件下的所有 arc 群组
+   * Collect all arc groups under the same parent component
    */
   static collectArcGroups(components: Component[]): Map<string, ArcGroupInfo> {
     const groups = new Map<string, ArcGroupInfo>();
@@ -38,7 +38,7 @@ export class ArcGenerator implements ComponentCodeGenerator {
         const group = groups.get(groupKey)!;
         group.arcs.push(comp);
         
-        // 更新包围盒
+        // Update bounding box
         const { x, y, width, height } = comp.position;
         const radius = comp.style?.radius || 40;
         const strokeWidth = comp.style?.strokeWidth || 8;
@@ -67,7 +67,7 @@ export class ArcGenerator implements ComponentCodeGenerator {
   }
 
   /**
-   * 生成 arc group 创建代码
+   * Generate arc group creation code
    */
   static generateGroupCreation(groupKey: string, groupInfo: ArcGroupInfo, parentRef: string, indent: number): string {
     const indentStr = '    '.repeat(indent);
@@ -77,11 +77,11 @@ export class ArcGenerator implements ComponentCodeGenerator {
     let code = `${indentStr}// Arc Group: ${groupInfo.name}\n`;
     code += `${indentStr}gui_arc_group_t *${groupVarName} = gui_arc_group_create(${parentRef}, "${groupInfo.name}", ${Math.floor(x)}, ${Math.floor(y)}, ${Math.ceil(width)}, ${Math.ceil(height)});\n`;
     
-    // 计算群组内的相对坐标
+    // Calculate relative coordinates within group
     const groupCenterX = width / 2;
     const groupCenterY = height / 2;
     
-    // 为每个 arc 生成 add_arc 调用
+    // Generate add_arc call for each arc
     groupInfo.arcs.forEach((arc, index) => {
       const { x: arcX, y: arcY, width: arcW, height: arcH } = arc.position;
       const radius = arc.style?.radius || 40;
@@ -91,7 +91,7 @@ export class ArcGenerator implements ComponentCodeGenerator {
       const opacity = arc.style?.opacity ?? arc.data?.opacity ?? 255;
       const color = ArcGenerator.convertColorWithOpacity(arc.style?.color, opacity);
       
-      // 计算 arc 圆心相对于群组的位置
+      // Calculate arc center position relative to group
       const arcCenterX = (arcX + arcW / 2) - x;
       const arcCenterY = (arcY + arcH / 2) - y;
       
@@ -104,7 +104,7 @@ export class ArcGenerator implements ComponentCodeGenerator {
   }
 
   generateCreation(component: Component, indent: number, context: GeneratorContext): string {
-    // 如果属于群组，跳过独立创建（由群组统一处理）
+    // Skip standalone creation if part of a group (handled by group)
     if (component.data?.arcGroup) {
       return '';
     }
@@ -113,21 +113,21 @@ export class ArcGenerator implements ComponentCodeGenerator {
     const parentRef = context.getParentRef(component);
     const { x, y, width, height } = component.position;
     
-    // 从 style 中获取参数，设置默认值
+    // Get parameters from style with defaults
     const radius = component.style?.radius || 40;
     const startAngle = component.style?.startAngle || 0;
     const endAngle = component.style?.endAngle || 270;
     const strokeWidth = component.style?.strokeWidth || 8;
     
-    // 获取透明度，默认 255（完全不透明）
+    // Get opacity, default 255 (fully opaque)
     const opacity = component.style?.opacity ?? component.data?.opacity ?? 255;
     
-    // 根据透明度选择颜色格式
+    // Select color format based on opacity
     const color = opacity < 255 
       ? ArcGenerator.convertColorWithOpacity(component.style?.color, opacity)
       : this.convertColor(component.style?.color);
 
-    // 重要：gui_arc_create 的 x, y 参数是圆心坐标，不是矩形框左上角
+    // Important: gui_arc_create x, y parameters are center coordinates, not bounding box top-left
     const centerX = x + width / 2;
     const centerY = y + height / 2;
 
@@ -135,7 +135,7 @@ export class ArcGenerator implements ComponentCodeGenerator {
   }
 
   generatePropertySetters(component: Component, indent: number, _context: GeneratorContext): string {
-    // 如果属于群组，跳过（渐变已在群组创建时处理）
+    // Skip if part of a group (gradient handled during group creation)
     if (component.data?.arcGroup) {
       return '';
     }
@@ -143,7 +143,7 @@ export class ArcGenerator implements ComponentCodeGenerator {
     const indentStr = '    '.repeat(indent);
     let code = '';
 
-    // 渐变设置
+    // Gradient settings
     if (component.style?.useGradient && component.data?.gradientStops) {
       const stops = component.data.gradientStops as Array<{ position: number; color: string }>;
       if (stops.length >= 2) {
@@ -163,7 +163,7 @@ export class ArcGenerator implements ComponentCodeGenerator {
       }
     }
 
-    // 可见性
+    // Visibility
     if (component.visible === false) {
       code += `${indentStr}gui_obj_show((gui_obj_t *)${component.id}, false);\n`;
     }
@@ -172,7 +172,7 @@ export class ArcGenerator implements ComponentCodeGenerator {
   }
 
   /**
-   * 转换颜色值为 gui_rgb() 格式
+   * Convert color value to gui_rgb() format
    */
   private convertColor(color?: string): string {
     if (!color) return 'APP_COLOR_WHITE';
@@ -189,7 +189,7 @@ export class ArcGenerator implements ComponentCodeGenerator {
   }
 
   /**
-   * 转换颜色值为 gui_rgba() 格式（带透明度）
+   * Convert color value to gui_rgba() format (with opacity)
    */
   static convertColorWithOpacity(color: string | undefined, opacity: number): string {
     if (!color) {
@@ -208,7 +208,7 @@ export class ArcGenerator implements ComponentCodeGenerator {
   }
 
   /**
-   * 转换颜色值为 gui_rgba() 格式（用于渐变色标）
+   * Convert color value to gui_rgba() format (for gradient stops)
    */
   static convertColorToRgba(color: string): string {
     if (color.startsWith('#')) {

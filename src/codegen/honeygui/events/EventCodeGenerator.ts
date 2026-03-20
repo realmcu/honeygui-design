@@ -1,49 +1,49 @@
 /**
- * 事件代码生成器基类接口
+ * Event code generator base interface
  */
 import { Component } from '../../../hml/types';
 import { EventConfig } from '../../../hml/eventTypes';
 
 export interface EventCodeGenerator {
   /**
-   * 生成事件绑定代码
+   * Generate event binding code
    */
   generateEventBindings(component: Component, indent: number, componentMap: Map<string, Component>): string;
 
   /**
-   * 收集需要生成的回调函数名
+   * Collect callback function names to generate
    */
   collectCallbackFunctions(component: Component): string[];
 
   /**
-   * 获取统一的事件回调实现代码（除 onMessage 外的所有事件）
+   * Get unified event callback implementations (all events except onMessage)
    */
   getEventCallbackImpl?(component: Component, componentMap: Map<string, Component>): string[];
 
   /**
-   * 获取 onMessage 回调的实现代码（可选）
+   * Get onMessage callback implementation (optional)
    */
   getMessageCallbackImpl?(component: Component, componentMap: Map<string, Component>): string[];
 
   /**
-   * 获取按键事件回调的实现代码（可选）
+   * Get key event callback implementation (optional)
    */
   getKeyEventCallbackImpl?(component: Component, componentMap: Map<string, Component>): string[];
 }
 
 /**
- * 事件类型到 GUI_EVENT 的映射
+ * Mapping from event type to GUI_EVENT
  */
 export const EVENT_TYPE_TO_GUI_EVENT: Record<string, string> = {
-  // 触摸事件
+  // Touch events
   'onClick': 'GUI_EVENT_TOUCH_CLICKED',
   'onLongPress': 'GUI_EVENT_TOUCH_LONG',
   'onTouchDown': 'GUI_EVENT_TOUCH_PRESSED',
   'onTouchUp': 'GUI_EVENT_TOUCH_RELEASED',
-  // 按键事件
+  // Key events
   'onKeyShortPress': 'GUI_EVENT_KB_SHORT_PRESSED',
   'onKeyLongPress': 'GUI_EVENT_KB_LONG_PRESSED',
-  // 滑动事件
+  // Swipe events
   'onSwipeLeft': 'GUI_EVENT_TOUCH_MOVE_LEFT',
   'onSwipeRight': 'GUI_EVENT_TOUCH_MOVE_RIGHT',
   'onSwipeUp': 'GUI_EVENT_TOUCH_MOVE_UP',
@@ -51,7 +51,7 @@ export const EVENT_TYPE_TO_GUI_EVENT: Record<string, string> = {
 };
 
 /**
- * 事件类型到回调函数名后缀的映射
+ * Mapping from event type to callback function name suffix
  */
 export const EVENT_TYPE_TO_CALLBACK_SUFFIX: Record<string, string> = {
   'onClick': 'clicked',
@@ -67,10 +67,10 @@ export const EVENT_TYPE_TO_CALLBACK_SUFFIX: Record<string, string> = {
 };
 
 /**
- * 生成基于事件类型的回调函数名
- * @param componentId 组件ID
- * @param eventType 事件类型
- * @param index 索引（同一事件类型可能有多个回调）
+ * Generate callback function name based on event type
+ * @param componentId Component ID
+ * @param eventType Event type
+ * @param index Index (multiple callbacks may exist for the same event type)
  */
 export function generateEventCallbackName(componentId: string, eventType: string, index: number): string {
   const suffix = EVENT_TYPE_TO_CALLBACK_SUFFIX[eventType] || 'event';
@@ -78,47 +78,47 @@ export function generateEventCallbackName(componentId: string, eventType: string
 }
 
 /**
- * 生成 onMessage 回调函数名
+ * Generate onMessage callback function name
  */
 export function getMessageCallbackName(component: Component, eventConfig: EventConfig, eventIndex: number): string {
-  // 优先使用用户指定的 handler
+  // Prefer user-specified handler
   if (eventConfig.handler) {
     return eventConfig.handler;
   }
-  // 自动生成：{组件id}_msg_cb_{序号}
+  // Auto-generate: {componentId}_msg_cb_{index}
   return `${component.id}_msg_cb_${eventIndex}`;
 }
 
 /**
- * 生成基于事件类型的回调实现（用于 controlTimer 等动作）
+ * Generate event-type-based callback implementation (for controlTimer actions etc.)
  */
 export function generateControlTimerCallbackImpl(component: Component, componentMap: Map<string, Component>): string[] {
   const impls: string[] = [];
   if (!component.eventConfigs) return impls;
 
-  // 为每个事件类型维护独立的索引
+  // Maintain independent index per event type
   const eventTypeIndexMap = new Map<string, number>();
 
   component.eventConfigs.forEach(eventConfig => {
     if (eventConfig.type === 'onMessage') return;
 
-    // 跳过按键事件（按键事件的 controlTimer 在 generateKeyEventCallbackImpl 中处理）
+    // Skip key events (controlTimer for key events is handled in generateKeyEventCallbackImpl)
     if ((eventConfig.type === 'onKeyShortPress' || eventConfig.type === 'onKeyLongPress') && eventConfig.keyName) {
       return;
     }
 
-    // 检查是否有 controlTimer 动作
+    // Check for controlTimer actions
     const controlTimerActions = eventConfig.actions.filter(a => 
       a.type === 'controlTimer' && a.timerTargets && a.timerTargets.length > 0
     );
 
     if (controlTimerActions.length === 0) return;
 
-    // 获取当前事件类型的索引
+    // Get the index for the current event type
     const currentIndex = eventTypeIndexMap.get(eventConfig.type) || 0;
     eventTypeIndexMap.set(eventConfig.type, currentIndex + controlTimerActions.length);
 
-    // 为每个 controlTimer 动作生成独立的回调函数
+    // Generate independent callback for each controlTimer action
     controlTimerActions.forEach((action, actionIndex) => {
       const callbackName = generateEventCallbackName(component.id, eventConfig.type, currentIndex + actionIndex);
 
@@ -128,11 +128,11 @@ export function generateControlTimerCallbackImpl(component: Component, component
         const targetComp = componentMap.get(target.componentId);
         if (!targetComp) return;
 
-        // 检查是否是计时标签
+        // Check if this is a timer label
         const isTimerLabel = targetComp.type === 'hg_timer_label';
 
         if (isTimerLabel) {
-          // 计时标签的启停控制（使用生成的控制函数）
+          // Timer label start/stop control (using generated control functions)
           if (target.action === 'start') {
             callbackBody += `    ${target.componentId}_start();\n`;
           } else if (target.action === 'stop') {
@@ -141,7 +141,7 @@ export function generateControlTimerCallbackImpl(component: Component, component
             callbackBody += `    ${target.componentId}_reset();\n`;
           }
         } else {
-          // 普通定时器的启停控制
+          // Regular timer start/stop control
           const timers = targetComp.data?.timers;
           if (!timers || !Array.isArray(timers)) return;
 
@@ -149,7 +149,7 @@ export function generateControlTimerCallbackImpl(component: Component, component
           if (!timer) return;
 
           if (target.action === 'start') {
-            // 开启定时器
+            // Start timer
             const callback = timer.mode === 'preset' 
               ? `${target.componentId}_${timer.id}_cb`
               : (timer.callback || `${target.componentId}_timer_cb`);
@@ -157,7 +157,7 @@ export function generateControlTimerCallbackImpl(component: Component, component
             callbackBody += `    gui_obj_create_timer(GUI_BASE(${target.componentId}), ${timer.interval}, ${timer.reload ? 'true' : 'false'}, ${callback});\n`;
             callbackBody += `    gui_obj_start_timer(GUI_BASE(${target.componentId}));\n`;
           } else if (target.action === 'stop') {
-            // 关闭定时器
+            // Stop timer
             callbackBody += `    if (GUI_BASE(${target.componentId})->timer) {\n`;
             callbackBody += `        gui_obj_stop_timer(GUI_BASE(${target.componentId}));\n`;
             callbackBody += `    }\n`;
@@ -173,24 +173,24 @@ export function generateControlTimerCallbackImpl(component: Component, component
 }
 
 /**
- * 生成 onMessage 回调实现的公共函数
+ * Common function for generating onMessage callback implementations
  */
 export function generateMessageCallbackImpl(component: Component, componentMap: Map<string, Component>): string[] {
   const impls: string[] = [];
   if (!component.eventConfigs) return impls;
 
-  // 统计 onMessage 事件的序号
+  // Track onMessage event index
   let msgIndex = 0;
   component.eventConfigs.forEach(eventConfig => {
     if (eventConfig.type !== 'onMessage' || !eventConfig.message) return;
 
-    // 如果有 handler 属性，使用它作为回调函数名
+    // Use handler property as callback name if available
     const callbackName = eventConfig.handler || getMessageCallbackName(component, eventConfig, msgIndex);
     msgIndex++;
     
     let body = '';
 
-    // 如果有 actions，生成对应的代码
+    // Generate corresponding code if actions exist
     if (eventConfig.actions && eventConfig.actions.length > 0) {
       eventConfig.actions.forEach(action => {
         if (action.type === 'callFunction' && action.functionName) {
@@ -204,7 +204,7 @@ export function generateMessageCallbackImpl(component: Component, componentMap: 
         } else if (action.type === 'sendMessage' && action.message) {
           body += `    gui_msg_publish("${action.message}", data, len);\n`;
         } else if (action.type === 'controlTimer' && action.timerTargets && action.timerTargets.length > 0) {
-          // 控制动画定时器
+          // Control animation timer
           action.timerTargets.forEach(target => {
             const targetComp = componentMap.get(target.componentId);
             if (!targetComp) return;
@@ -216,7 +216,7 @@ export function generateMessageCallbackImpl(component: Component, componentMap: 
             if (!timer) return;
             
             if (target.action === 'start') {
-              // 开启定时器
+              // Start timer
               const callback = timer.mode === 'preset' 
                 ? `${target.componentId}_${timer.id}_cb`
                 : (timer.callback || `${target.componentId}_timer_cb`);
@@ -224,7 +224,7 @@ export function generateMessageCallbackImpl(component: Component, componentMap: 
               body += `    gui_obj_create_timer(GUI_BASE(${target.componentId}), ${timer.interval}, ${timer.reload ? 'true' : 'false'}, ${callback});\n`;
               body += `    gui_obj_start_timer(GUI_BASE(${target.componentId}));\n`;
             } else if (target.action === 'stop') {
-              // 关闭定时器
+              // Stop timer
               body += `    if (GUI_BASE(${target.componentId})->timer) {\n`;
               body += `        gui_obj_stop_timer(GUI_BASE(${target.componentId}));\n`;
               body += `    }\n`;
@@ -234,7 +234,7 @@ export function generateMessageCallbackImpl(component: Component, componentMap: 
       });
     }
 
-    // 如果没有 actions 或 body 为空，生成 TODO 注释
+    // Generate TODO comment if no actions or body is empty
     if (!body) {
       body = `    // TODO: Implement message handling logic\n`;
     }
@@ -252,15 +252,15 @@ ${body}}`);
 }
 
 /**
- * 生成按键事件回调实现的公共函数
- * 同一个组件的同类型按键事件（短按/长按）只生成一个回调函数
- * 在回调函数内部通过 strcmp(e->indev_name, "按键名") 来区分不同按键
+ * Common function for generating key event callback implementations.
+ * Same-type key events (short/long press) on the same component generate only one callback.
+ * Different keys are distinguished via strcmp(e->indev_name, "keyName") inside the callback.
  */
 export function generateKeyEventCallbackImpl(component: Component, componentMap: Map<string, Component>): string[] {
   const impls: string[] = [];
   if (!component.eventConfigs) return impls;
 
-  // 按事件类型分组（onKeyShortPress 和 onKeyLongPress）
+  // Group by event type (onKeyShortPress and onKeyLongPress)
   const keyEventGroups = new Map<string, EventConfig[]>();
   
   component.eventConfigs.forEach(eventConfig => {
@@ -274,7 +274,7 @@ export function generateKeyEventCallbackImpl(component: Component, componentMap:
     keyEventGroups.get(eventConfig.type)!.push(eventConfig);
   });
 
-  // 为每种事件类型生成一个回调函数
+  // Generate one callback per event type
   let keyEventIndex = 0;
   keyEventGroups.forEach((eventConfigs, eventType) => {
     const callbackName = `${component.id}_key_${keyEventIndex}_cb`;
@@ -282,12 +282,12 @@ export function generateKeyEventCallbackImpl(component: Component, componentMap:
 
     let callbackBody = '';
 
-    // 为每个按键名生成 if-else 分支
+    // Generate if-else branches for each key name
     eventConfigs.forEach((eventConfig, index) => {
       const isFirst = index === 0;
       const isLast = index === eventConfigs.length - 1;
 
-      // 生成条件判断
+      // Generate condition check
       if (isFirst) {
         callbackBody += `    // Check key name\n`;
         callbackBody += `    if (strcmp(e->indev_name, "${eventConfig.keyName}") == 0)\n    {\n`;
@@ -295,7 +295,7 @@ export function generateKeyEventCallbackImpl(component: Component, componentMap:
         callbackBody += `    else if (strcmp(e->indev_name, "${eventConfig.keyName}") == 0)\n    {\n`;
       }
 
-      // 生成动作代码
+      // Generate action code
       if (eventConfig.actions && eventConfig.actions.length > 0) {
         eventConfig.actions.forEach(action => {
           if (action.type === 'callFunction' && action.functionName) {
@@ -309,16 +309,16 @@ export function generateKeyEventCallbackImpl(component: Component, componentMap:
           } else if (action.type === 'sendMessage' && action.message) {
             callbackBody += `        gui_msg_publish("${action.message}", NULL, 0);\n`;
           } else if (action.type === 'controlTimer' && action.timerTargets && action.timerTargets.length > 0) {
-            // 控制动画定时器
+            // Control animation timer
             action.timerTargets.forEach(target => {
               const targetComp = componentMap.get(target.componentId);
               if (!targetComp) return;
 
-              // 检查是否是计时标签
+              // Check if this is a timer label
               const isTimerLabel = targetComp.type === 'hg_label' && targetComp.data?.isTimerLabel === true;
 
               if (isTimerLabel) {
-                // 计时标签的启停控制
+                // Timer label start/stop control
                 if (target.action === 'start') {
                   callbackBody += `        gui_obj_create_timer((void *)${target.componentId}, 10, -1, ${target.componentId}_timer_update_cb);\n`;
                   callbackBody += `        gui_obj_start_timer((void *)${target.componentId});\n`;
@@ -328,7 +328,7 @@ export function generateKeyEventCallbackImpl(component: Component, componentMap:
                   callbackBody += `        }\n`;
                 }
               } else {
-                // 普通定时器的启停控制
+                // Regular timer start/stop control
                 const timers = targetComp.data?.timers;
                 if (!timers || !Array.isArray(timers)) return;
 
@@ -352,7 +352,7 @@ export function generateKeyEventCallbackImpl(component: Component, componentMap:
           }
         });
       } else {
-        // 如果没有 actions，生成 TODO 注释
+        // Generate TODO comment if no actions
         callbackBody += `        // TODO: Implement key event handling logic\n`;
       }
 

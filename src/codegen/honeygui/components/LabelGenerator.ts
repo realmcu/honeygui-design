@@ -1,6 +1,6 @@
 /**
- * hg_label 组件代码生成器
- * 纯文本标签，不包含时间功能
+ * hg_label component code generator
+ * Plain text label without time functionality
  */
 import * as path from 'path';
 import { Component } from '../../../hml/types';
@@ -13,10 +13,10 @@ export class LabelGenerator implements ComponentCodeGenerator {
     const parentRef = context.getParentRef(component);
     const { x, y, width, height } = component.position;
     
-    // 检查是否启用滚动（注意：可能是字符串 'true' 或布尔值 true）
+    // Check if scrolling is enabled (note: may be string 'true' or boolean true)
     const enableScroll = component.data?.enableScroll === true || component.data?.enableScroll === 'true';
     
-    // 根据是否滚动选择不同的 API
+    // Select API based on scrolling
     const createFunction = enableScroll ? 'gui_scroll_text_create' : 'gui_text_create';
 
     return `${indentStr}${component.id} = ${createFunction}(${parentRef}, "${component.name}", ${x}, ${y}, ${width}, ${height});\n`;
@@ -26,34 +26,34 @@ export class LabelGenerator implements ComponentCodeGenerator {
     let code = '';
     const indentStr = '    '.repeat(indent);
 
-    // 检查是否启用滚动（注意：可能是字符串 'true' 或布尔值 true）
+    // Check if scrolling is enabled (note: may be string 'true' or boolean true)
     const enableScroll = component.data?.enableScroll === true || component.data?.enableScroll === 'true';
     const scrollDirection = component.data?.scrollDirection || 'horizontal';
     const scrollReverse = component.data?.scrollReverse === true || component.data?.scrollReverse === 'true';
 
-    // 获取属性值
+    // Get property values
     const fontSize = component.data?.fontSize || 16;
     const color = component.style?.color || '#ffffff';
     const rgb = this.colorToRgb(color);
     
-    // 普通标签：使用静态文本（需要进行 C 字符串转义）
+    // Plain label: use static text (requires C string escaping)
     const staticText = String(component.data?.text ?? '');
     const escapedText = this.escapeCString(staticText);
     const text = `"${escapedText}"`;
     const textLengthExpr = String(this.getUtf8ByteLength(staticText));
 
-    // 确定字体类型
+    // Determine font type
     const fontType = this.getFontType(component);
     const fontFile = component.data?.fontFile;
 
-    // 根据是否滚动选择不同的 API
+    // Select API based on scrolling
     const widgetCast = enableScroll ? 'gui_scroll_text_t' : 'gui_text_t';
     const setFunction = enableScroll ? 'gui_scroll_text_set' : 'gui_text_set';
     
-    // 设置文本内容和基本属性
+    // Set text content and basic properties
     code += `${indentStr}${setFunction}((${widgetCast} *)${component.id}, ${text}, ${fontType}, gui_rgb(${rgb.r}, ${rgb.g}, ${rgb.b}), ${textLengthExpr}, ${fontSize});\n`;
 
-    // 设置字体文件路径（如果指定了字体文件）
+    // Set font file path (if specified)
     if (fontFile) {
       const convertedFontFile = this.getConvertedFontFileName(component);
       const fontMode = this.getFontMode();
@@ -61,15 +61,15 @@ export class LabelGenerator implements ComponentCodeGenerator {
       code += `${indentStr}${typeSetFunction}((${widgetCast} *)${component.id}, "${convertedFontFile}", ${fontMode});\n`;
     }
 
-    // 对齐方式 - 滚动文本不需要 gui_text_mode_set，因为 gui_scroll_text_scroll_set 有 mode 参数
+    // Text alignment - scroll text doesn't need gui_text_mode_set since gui_scroll_text_scroll_set has mode parameter
     if (!enableScroll) {
       const textMode = this.getTextMode(component);
       code += `${indentStr}gui_text_mode_set((gui_text_t *)${component.id}, ${textMode});\n`;
     }
 
-    // 滚动文本特有：设置滚动参数
+    // Scroll text specific: set scroll parameters
     if (enableScroll) {
-      // 转换滚动方向和对齐模式
+      // Convert scroll direction and alignment mode
       let scrollModeStr: string;
       const vAlign = component.style?.vAlign || 'TOP';
       
@@ -91,25 +91,25 @@ export class LabelGenerator implements ComponentCodeGenerator {
       code += `${indentStr}gui_scroll_text_scroll_set((gui_scroll_text_t *)${component.id}, ${scrollModeStr}, ${startOffset}, ${endOffset}, ${interval}, ${duration});\n`;
     }
 
-    // 字间距
+    // Letter spacing
     const letterSpacing = component.style?.letterSpacing;
     if (letterSpacing !== undefined && letterSpacing !== 0) {
       code += `${indentStr}gui_text_extra_letter_spacing_set((gui_text_t *)${component.id}, ${letterSpacing});\n`;
     }
 
-    // 行间距
+    // Line spacing
     const lineSpacing = component.style?.lineSpacing;
     if (lineSpacing !== undefined && lineSpacing !== 0) {
       code += `${indentStr}gui_text_extra_line_spacing_set((gui_text_t *)${component.id}, ${lineSpacing});\n`;
     }
 
-    // 断词保护
+    // Word break protection
     const wordBreak = component.style?.wordBreak;
     if (wordBreak === true) {
       code += `${indentStr}gui_text_wordwrap_set((gui_text_t *)${component.id}, true);\n`;
     }
 
-    // 可见性
+    // Visibility
     if (component.visible === false) {
       code += `${indentStr}gui_obj_show((gui_obj_t *)${component.id}, false);\n`;
     }
@@ -118,7 +118,7 @@ export class LabelGenerator implements ComponentCodeGenerator {
   }
 
   /**
-   * 根据字体配置确定字体类型
+   * Determine font type based on font configuration
    */
   protected getFontType(component: Component): string {
     const fontType = component.data?.fontType || 'bitmap';
@@ -129,7 +129,7 @@ export class LabelGenerator implements ComponentCodeGenerator {
   }
 
   /**
-   * 根据 hAlign、vAlign 和 wordWrap 生成 TEXT_MODE
+   * Generate TEXT_MODE based on hAlign, vAlign and wordWrap
    */
   protected getTextMode(component: Component): string {
     const hAlign = component.style?.hAlign || 'LEFT';
@@ -172,27 +172,27 @@ export class LabelGenerator implements ComponentCodeGenerator {
   }
 
   /**
-   * 获取字体源模式
+   * Get font source mode
    */
   protected getFontMode(): string {
     return 'FONT_SRC_FILESYS';
   }
 
   /**
-   * 转义 C 字符串中的特殊字符
+   * Escape special characters in C strings
    */
   protected escapeCString(str: string): string {
     return str
-      .replace(/\\/g, '\\\\')   // 反斜杠必须最先处理
-      .replace(/"/g, '\\"')     // 双引号
-      .replace(/\n/g, '\\n')    // 换行符
-      .replace(/\r/g, '\\r')    // 回车符
-      .replace(/\t/g, '\\t')    // 制表符
-      .replace(/\0/g, '\\0');   // 空字符
+      .replace(/\\/g, '\\\\')   // Backslash must be processed first
+      .replace(/"/g, '\\"')     // Double quote
+      .replace(/\n/g, '\\n')    // Newline
+      .replace(/\r/g, '\\r')    // Carriage return
+      .replace(/\t/g, '\\t')    // Tab
+      .replace(/\0/g, '\\0');   // Null character
   }
 
   /**
-   * 计算字符串的 UTF-8 字节长度
+   * Calculate UTF-8 byte length of a string
    */
   protected getUtf8ByteLength(str: string): number {
     let byteLength = 0;
@@ -213,7 +213,7 @@ export class LabelGenerator implements ComponentCodeGenerator {
   }
 
   /**
-   * 将颜色字符串转换为 RGB 对象
+   * Convert color string to RGB object
    */
   protected colorToRgb(color: string): { r: number; g: number; b: number } {
     if (color.startsWith('#')) {
@@ -236,7 +236,7 @@ export class LabelGenerator implements ComponentCodeGenerator {
   }
 
   /**
-   * 根据组件属性生成转换后的字体文件名
+   * Generate converted font filename based on component properties
    */
   protected getConvertedFontFileName(component: Component): string {
     const fontFile = component.data?.fontFile;
@@ -245,7 +245,7 @@ export class LabelGenerator implements ComponentCodeGenerator {
     }
 
     const fontFileName = path.basename(fontFile);
-    // 去掉扩展名，并将 - 替换为 _（与字体转换器保持一致）
+    // Remove extension and replace - with _ (consistent with font converter)
     const fontName = fontFileName.replace(/\.(ttf|otf|woff|woff2)$/i, '').replace(/-/g, '_');
     
     const fontType = component.data?.fontType || 'bitmap';

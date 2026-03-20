@@ -1,5 +1,5 @@
 /**
- * hg_video 组件代码生成器
+ * hg_video component code generator
  */
 import * as path from 'path';
 import { Component } from '../../../hml/types';
@@ -9,10 +9,10 @@ import { ConversionConfigService, VideoFormat } from '../../../services/Conversi
 export class VideoGenerator implements ComponentCodeGenerator {
 
   /**
-   * 解析视频格式配置（处理继承）
-   * @param assetPath 资源路径（可能包含 assets/ 前缀）
-   * @param projectRoot 项目根目录
-   * @returns 解析后的视频格式
+   * Resolve video format configuration (with inheritance)
+   * @param assetPath Asset path (may include assets/ prefix)
+   * @param projectRoot Project root directory
+   * @returns Resolved video format
    */
   private resolveVideoFormat(
     assetPath: string, 
@@ -21,20 +21,20 @@ export class VideoGenerator implements ComponentCodeGenerator {
     const configService = ConversionConfigService.getInstance();
     const config = configService.loadConfig(projectRoot);
     
-    // 规范化路径：去掉 assets/ 前缀，统一使用 / 分隔符
+    // Normalize path: strip assets/ prefix, use / as separator
     let normalizedPath = assetPath.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
     if (normalizedPath.startsWith('assets/')) {
-      normalizedPath = normalizedPath.substring(7); // 去掉 'assets/'
+      normalizedPath = normalizedPath.substring(7); // Strip 'assets/'
     }
     
     const itemSettings = config.items[normalizedPath];
     
-    // 如果有明确配置且不是 inherit，直接使用
+    // Use explicit config if not set to inherit
     if (itemSettings?.videoFormat && itemSettings.videoFormat !== 'inherit') {
       return itemSettings.videoFormat.toLowerCase() as 'mjpeg' | 'avi' | 'h264';
     }
     
-    // 需要继承：查找父级配置
+    // Inherit: look up parent directory config
     const pathParts = normalizedPath.split('/');
     for (let i = pathParts.length - 1; i >= 0; i--) {
       const parentPath = pathParts.slice(0, i).join('/');
@@ -45,12 +45,12 @@ export class VideoGenerator implements ComponentCodeGenerator {
       }
     }
     
-    // 默认返回 mjpeg
+    // Default to mjpeg
     return 'mjpeg';
   }
 
   /**
-   * 获取视频输出扩展名
+   * Get video output file extension
    */
   private getVideoOutputExtension(format: 'mjpeg' | 'avi' | 'h264'): string {
     switch (format) {
@@ -71,16 +71,16 @@ export class VideoGenerator implements ComponentCodeGenerator {
     const autoPlay = component.data?.autoPlay !== false;
     const loop = component.data?.loop === true;
 
-    // 从 conversion.json 读取视频格式（处理继承）
+    // Read video format from conversion.json (with inheritance)
     const format = context.projectRoot 
       ? this.resolveVideoFormat(src, context.projectRoot)
       : 'mjpeg';
 
-    // 根据格式替换扩展名
+    // Replace extension based on format
     const outputExt = this.getVideoOutputExtension(format);
     let videoSrc = src.replace(/\.[^.]+$/i, outputExt);
 
-    // 去掉 assets/ 前缀，确保路径以 / 开头
+    // Strip assets/ prefix, ensure path starts with /
     videoSrc = videoSrc.replace(/^assets\//, '');
     if (!videoSrc.startsWith('/')) {
       videoSrc = '/' + videoSrc;

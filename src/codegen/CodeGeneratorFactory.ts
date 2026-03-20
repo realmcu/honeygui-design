@@ -1,6 +1,6 @@
 /**
- * 代码生成器工厂
- * 根据目标引擎类型创建对应的代码生成器
+ * Code generator factory
+ * Creates the corresponding code generator based on target engine type
  */
 
 import { Component } from '../hml/types';
@@ -11,7 +11,7 @@ import { LvglCCodeGenerator } from './lvgl/LvglCCodeGenerator';
 export type TargetEngine = 'honeygui' | 'lvgl';
 
 /**
- * 代码生成器工厂类
+ * Code generator factory class
  */
 export class CodeGeneratorFactory {
   private static generators: Map<TargetEngine, ICodeGeneratorConstructor> = new Map([
@@ -20,10 +20,10 @@ export class CodeGeneratorFactory {
   ]);
 
   /**
-   * 创建代码生成器实例
-   * @param engine 目标引擎类型
-   * @param components 组件列表
-   * @param options 代码生成选项
+   * Create a code generator instance
+   * @param engine Target engine type
+   * @param components Component list
+   * @param options Code generation options
    */
   static create(
     engine: TargetEngine,
@@ -40,14 +40,14 @@ export class CodeGeneratorFactory {
   }
 
   /**
-   * 获取支持的引擎列表
+   * Get the list of supported engines
    */
   static getSupportedEngines(): TargetEngine[] {
     return Array.from(this.generators.keys());
   }
 
   /**
-   * 检查引擎是否支持
+   * Check if an engine is supported
    */
   static isEngineSupported(engine: string): engine is TargetEngine {
     return this.generators.has(engine as TargetEngine);

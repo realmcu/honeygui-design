@@ -1,5 +1,5 @@
 /**
- * 组件代码生成器工厂
+ * Component code generator factory
  */
 import { ComponentCodeGenerator } from './ComponentGenerator';
 import { ViewGenerator } from './ViewGenerator';
@@ -35,12 +35,12 @@ export class ComponentGeneratorFactory {
   private static defaultGenerator = new DefaultGenerator();
 
   static {
-    // 容器组件
+    // Container components
     this.generators.set('hg_view', new ViewGenerator());
     this.generators.set('hg_window', new WindowGenerator());
     this.generators.set('hg_menu_cellular', new MenuCellularGenerator());
     
-    // 基础控件
+    // Basic controls
     this.generators.set('hg_button', new ButtonGenerator());
     this.generators.set('hg_label', new LabelGenerator());
     this.generators.set('hg_time_label', new TimeLabelGenerator());
@@ -51,16 +51,16 @@ export class ComponentGeneratorFactory {
     this.generators.set('hg_checkbox', new CheckboxGenerator());
     this.generators.set('hg_radio', new RadioGenerator());
     
-    // 高级控件
+    // Advanced controls
     this.generators.set('hg_canvas', new CanvasGenerator());
     this.generators.set('hg_list', new ListGenerator());
     
-    // 多媒体
+    // Multimedia
     this.generators.set('hg_video', new VideoGenerator());
     this.generators.set('hg_3d', new Model3DGenerator());
     this.generators.set('hg_lottie', new LottieGenerator());
     
-    // 图形
+    // Graphics
     this.generators.set('hg_arc', new ArcGenerator());
     this.generators.set('hg_circle', new CircleGenerator());
     this.generators.set('hg_rect', new RectGenerator());

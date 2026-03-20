@@ -1,12 +1,12 @@
 /**
- * LVGL 入口文件生成器
- * 从 LvglCCodeGenerator.generateEntryHeader() 和 generateEntrySource() 提取
- * 生成 lvgl_generated_ui.h 和 lvgl_generated_ui.c 内容
+ * LVGL entry file generator
+ * Extracted from LvglCCodeGenerator.generateEntryHeader() and generateEntrySource()
+ * Generates lvgl_generated_ui.h and lvgl_generated_ui.c content
  */
 
 export class LvglEntryFileGenerator {
   /**
-   * 生成 lvgl_generated_ui.h 文件内容
+   * Generate lvgl_generated_ui.h file content
    */
   generateHeader(): string {
     let code = `/**\n`;
@@ -28,7 +28,7 @@ export class LvglEntryFileGenerator {
   }
 
   /**
-   * 生成 lvgl_generated_ui.c 文件内容
+   * Generate lvgl_generated_ui.c file content
    */
   generateSource(designName: string): string {
     let code = `/**\n`;

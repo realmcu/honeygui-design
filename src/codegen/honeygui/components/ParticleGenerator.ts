@@ -1,5 +1,5 @@
 /**
- * hg_particle 粒子效果组件代码生成器
+ * hg_particle particle effect component code generator
  */
 import { Component } from '../../../hml/types';
 import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';
@@ -15,7 +15,7 @@ export class ParticleGenerator implements ComponentCodeGenerator {
   }
 
   generatePropertySetters(_component: Component, _indent: number, _context: GeneratorContext): string {
-    // 粒子组件无额外属性设置
+    // No additional property setters for particle component
     return '';
   }
 }

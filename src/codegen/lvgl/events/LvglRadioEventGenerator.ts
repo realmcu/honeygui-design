@@ -1,6 +1,6 @@
 /**
- * hg_radio 事件生成器
- * 从 LvglRadioGenerator.generateEventCallbacks() 迁移
+ * hg_radio event generator
+ * Migrated from LvglRadioGenerator.generateEventCallbacks()
  */
 import { Component } from '../../../hml/types';
 import { LvglEventCodeGenerator } from './LvglEventCodeGenerator';

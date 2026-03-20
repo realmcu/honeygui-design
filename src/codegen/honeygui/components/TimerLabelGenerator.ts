@@ -1,14 +1,14 @@
 /**
- * 计时器标签组件代码生成器
- * 继承自 LabelGenerator，专门处理计时器功能
+ * Timer label component code generator
+ * Extends LabelGenerator, handles timer functionality
  * 
- * 参考实现：HoneyGUI/example/application/watch_turnkey_410_502/app_stopwatch.c
- * 核心机制：
- * 1. 全局变量存储计时器状态（time_count, timer_running）
- * 2. 定时器回调每 10ms 更新一次计时器值（gui_obj_create_timer(obj, 10, -1, callback)）
- * 3. 回调中通过 time_count += 10 更新计时器（正计时）或 time_count -= 10（倒计时）
- * 4. 控制函数（start/stop/reset）管理计时器状态
- * 5. 按钮事件调用控制函数，而不是操作显示/隐藏
+ * Reference: HoneyGUI/example/application/watch_turnkey_410_502/app_stopwatch.c
+ * Core mechanism:
+ * 1. Global variables store timer state (time_count, timer_running)
+ * 2. Timer callback updates every 10ms (gui_obj_create_timer(obj, 10, -1, callback))
+ * 3. Callback updates via time_count += 10 (count-up) or time_count -= 10 (countdown)
+ * 4. Control functions (start/stop/reset) manage timer state
+ * 5. Button events call control functions instead of toggling show/hide
  */
 import { Component } from '../../../hml/types';
 import { GeneratorContext } from './ComponentGenerator';
@@ -21,10 +21,10 @@ export class TimerLabelGenerator extends LabelGenerator {
     const parentRef = context.getParentRef(component);
     const { x, y, width, height } = component.position;
     
-    // 检查是否启用滚动
+    // Check if scrolling is enabled
     const enableScroll = component.data?.enableScroll === true || component.data?.enableScroll === 'true';
     
-    // 根据是否滚动选择不同的 API
+    // Select API based on scrolling
     const createFunction = enableScroll ? 'gui_scroll_text_create' : 'gui_text_create';
 
     return `${indentStr}${component.id} = ${createFunction}(${parentRef}, "${component.name}", ${x}, ${y}, ${width}, ${height});\n`;
@@ -34,33 +34,33 @@ export class TimerLabelGenerator extends LabelGenerator {
     let code = '';
     const indentStr = '    '.repeat(indent);
 
-    // 检查是否启用滚动
+    // Check if scrolling is enabled
     const enableScroll = component.data?.enableScroll === true || component.data?.enableScroll === 'true';
     const scrollDirection = component.data?.scrollDirection || 'horizontal';
     const scrollReverse = component.data?.scrollReverse === true || component.data?.scrollReverse === 'true';
 
-    // 获取属性值
+    // Get property values
     const fontSize = component.data?.fontSize || 16;
     const color = component.style?.color || '#ffffff';
     const rgb = this.colorToRgb(color);
     
-    // 计时器模式：使用全局变量
+    // Timer mode: use global variables
     const varName = `${component.id}_time_str`;
     const text = varName;
     const textLengthExpr = `strlen(${varName})`;
 
-    // 确定字体类型
+    // Determine font type
     const fontType = this.getFontType(component);
     const fontFile = component.data?.fontFile;
 
-    // 根据是否滚动选择不同的 API
+    // Select API based on scrolling
     const widgetCast = enableScroll ? 'gui_scroll_text_t' : 'gui_text_t';
     const setFunction = enableScroll ? 'gui_scroll_text_set' : 'gui_text_set';
     
-    // 设置文本内容和基本属性
+    // Set text content and basic properties
     code += `${indentStr}${setFunction}((${widgetCast} *)${component.id}, ${text}, ${fontType}, gui_rgb(${rgb.r}, ${rgb.g}, ${rgb.b}), ${textLengthExpr}, ${fontSize});\n`;
 
-    // 设置字体文件路径（如果指定了字体文件）
+    // Set font file path (if specified)
     if (fontFile) {
       const convertedFontFile = this.getConvertedFontFileName(component);
       const fontMode = this.getFontMode();
@@ -68,13 +68,13 @@ export class TimerLabelGenerator extends LabelGenerator {
       code += `${indentStr}${typeSetFunction}((${widgetCast} *)${component.id}, "${convertedFontFile}", ${fontMode});\n`;
     }
 
-    // 对齐方式 - 滚动文本不需要 gui_text_mode_set
+    // Text alignment - scroll text doesn't need gui_text_mode_set
     if (!enableScroll) {
       const textMode = this.getTextMode(component);
       code += `${indentStr}gui_text_mode_set((gui_text_t *)${component.id}, ${textMode});\n`;
     }
 
-    // 滚动文本特有：设置滚动参数
+    // Scroll text specific: set scroll parameters
     if (enableScroll) {
       let scrollModeStr: string;
       const vAlign = component.style?.vAlign || 'TOP';
@@ -97,35 +97,35 @@ export class TimerLabelGenerator extends LabelGenerator {
       code += `${indentStr}gui_scroll_text_scroll_set((gui_scroll_text_t *)${component.id}, ${scrollModeStr}, ${startOffset}, ${endOffset}, ${interval}, ${duration});\n`;
     }
 
-    // 字间距
+    // Letter spacing
     const letterSpacing = component.style?.letterSpacing;
     if (letterSpacing !== undefined && letterSpacing !== 0) {
       code += `${indentStr}gui_text_extra_letter_spacing_set((gui_text_t *)${component.id}, ${letterSpacing});\n`;
     }
 
-    // 行间距
+    // Line spacing
     const lineSpacing = component.style?.lineSpacing;
     if (lineSpacing !== undefined && lineSpacing !== 0) {
       code += `${indentStr}gui_text_extra_line_spacing_set((gui_text_t *)${component.id}, ${lineSpacing});\n`;
     }
 
-    // 断词保护
+    // Word break protection
     const wordBreak = component.style?.wordBreak;
     if (wordBreak === true) {
       code += `${indentStr}gui_text_wordwrap_set((gui_text_t *)${component.id}, true);\n`;
     }
 
-    // 可见性
+    // Visibility
     if (component.visible === false) {
       code += `${indentStr}gui_obj_show((gui_obj_t *)${component.id}, false);\n`;
     }
 
-    // 计时器模式：创建定时器（间隔 10ms，无限循环）
+    // Timer mode: create timer (10ms interval, infinite loop)
     code += `${indentStr}// Create timer (interval 10ms, infinite loop)\n`;
     code += `${indentStr}gui_obj_create_timer((gui_obj_t *)${component.id}, 10, -1, ${component.id}_timer_cb);\n`;
     
-    // 根据 autoStart 决定是否立即启动
-    const autoStart = component.data?.timerAutoStart !== false; // 默认自动启动
+    // Determine whether to auto-start
+    const autoStart = component.data?.timerAutoStart !== false; // Auto-start by default
     if (autoStart) {
       code += `${indentStr}${component.id}_start();\n`;
     }
@@ -134,28 +134,28 @@ export class TimerLabelGenerator extends LabelGenerator {
   }
 
   /**
-   * 生成计时器相关的全局变量和回调函数
-   * 参考 app_stopwatch.c 的实现方式
+   * Generate timer-related global variables and callback functions
+   * Based on app_stopwatch.c implementation
    */
   generateTimerGlobals(component: Component): string {
     let code = '';
     const varName = `${component.id}_time_str`;
     
-    // 获取计时器配置（兼容 timerFormat 和 timerDisplayFormat）
-    const timerType = component.data?.timerType || 'stopwatch'; // stopwatch 或 countdown
+    // Get timer configuration (compatible with timerFormat and timerDisplayFormat)
+    const timerType = component.data?.timerType || 'stopwatch'; // stopwatch or countdown
     const displayFormat = component.data?.timerFormat || component.data?.timerDisplayFormat || 'HH:MM:SS';
-    const initialValue = component.data?.timerInitialValue || 0; // 毫秒
+    const initialValue = component.data?.timerInitialValue || 0; // milliseconds
     
-    // 计算初始显示字符串
+    // Calculate initial display string
     const initialDisplay = this.formatTime(initialValue, displayFormat);
     
-    // 全局变量：计时器状态
+    // Global variables: timer state
     code += `// ${component.id} timer global variables\n`;
     code += `static uint32_t ${component.id}_time_count = ${initialValue}; // milliseconds\n`;
     code += `static bool ${component.id}_timer_running = false;\n`;
     code += `static char ${varName}[16] = "${initialDisplay}";\n\n`;
     
-    // 格式化函数：根据显示格式生成时间字符串
+    // Format function: generate time string based on display format
     code += `// ${component.id} format time string\n`;
     code += `static void ${component.id}_format_time(void)\n`;
     code += `{\n`;
@@ -188,7 +188,7 @@ export class TimerLabelGenerator extends LabelGenerator {
     
     code += `}\n\n`;
     
-    // 定时器回调函数：每 10ms 更新一次
+    // Timer callback function: updates every 10ms
     code += `// ${component.id} timer callback (called every 10ms)\n`;
     code += `static void ${component.id}_timer_cb(void *obj)\n`;
     code += `{\n`;
@@ -197,7 +197,7 @@ export class TimerLabelGenerator extends LabelGenerator {
     code += `    }\n\n`;
     
     if (timerType === 'countdown') {
-      // 倒计时模式
+      // Countdown mode
       code += `    // Countdown mode\n`;
       code += `    if (${component.id}_time_count >= 10) {\n`;
       code += `        ${component.id}_time_count -= 10;\n`;
@@ -207,7 +207,7 @@ export class TimerLabelGenerator extends LabelGenerator {
       code += `        gui_obj_stop_timer((gui_obj_t *)obj);\n`;
       code += `    }\n`;
     } else {
-      // 正计时模式（stopwatch）
+      // Count-up mode (stopwatch)
       code += `    // Count-up mode\n`;
       code += `    ${component.id}_time_count += 10;\n`;
     }
@@ -217,7 +217,7 @@ export class TimerLabelGenerator extends LabelGenerator {
     code += `    gui_text_content_set((gui_text_t *)obj, ${varName}, strlen(${varName}));\n`;
     code += `}\n\n`;
     
-    // 控制函数：启动计时器
+    // Control function: start timer
     code += `// ${component.id} start timer\n`;
     code += `void ${component.id}_start(void)\n`;
     code += `{\n`;
@@ -225,7 +225,7 @@ export class TimerLabelGenerator extends LabelGenerator {
     code += `    gui_obj_start_timer((gui_obj_t *)${component.id});\n`;
     code += `}\n\n`;
     
-    // 控制函数：停止计时器
+    // Control function: stop timer
     code += `// ${component.id} stop timer\n`;
     code += `void ${component.id}_stop(void)\n`;
     code += `{\n`;
@@ -233,7 +233,7 @@ export class TimerLabelGenerator extends LabelGenerator {
     code += `    gui_obj_stop_timer((gui_obj_t *)${component.id});\n`;
     code += `}\n\n`;
     
-    // 控制函数：重置计时器
+    // Control function: reset timer
     code += `// ${component.id} reset timer\n`;
     code += `void ${component.id}_reset(void)\n`;
     code += `{\n`;
@@ -247,7 +247,7 @@ export class TimerLabelGenerator extends LabelGenerator {
   }
 
   /**
-   * 生成计时器控制函数的头文件声明
+   * Generate timer control function header declarations
    */
   generateTimerHeaders(component: Component): string {
     let code = '';
@@ -259,7 +259,7 @@ export class TimerLabelGenerator extends LabelGenerator {
   }
 
   /**
-   * 格式化时间（用于生成初始显示字符串）
+   * Format time (for generating initial display string)
    */
   private formatTime(ms: number, format: string): string {
     const hours = Math.floor(ms / 3600000);

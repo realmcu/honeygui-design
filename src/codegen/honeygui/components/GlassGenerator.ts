@@ -1,6 +1,6 @@
 /**
- * hg_glass 组件代码生成器
- * 玻璃效果组件，使用 gui_glass_create_from_fs 创建
+ * hg_glass component code generator
+ * Glass effect component, created via gui_glass_create_from_fs
  */
 import { Component } from '../../../hml/types';
 import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';
@@ -13,16 +13,16 @@ export class GlassGenerator implements ComponentCodeGenerator {
     const { x, y } = component.position;
 
     const src = component.data?.src || '';
-    // 将 .glass 扩展名替换为 .bin
+    // Replace .glass extension with .bin
     let binSrc = src.replace(/\.glass$/i, '.bin');
-    // 去掉 assets/ 前缀
+    // Strip assets/ prefix
     binSrc = binSrc.replace(/^assets\//, '');
-    // 确保路径以 / 开头
+    // Ensure path starts with /
     if (!binSrc.startsWith('/')) {
       binSrc = '/' + binSrc;
     }
 
-    // gui_glass_create_from_fs(父控件指针, "组件名", "文件路径", x, y, 0, 0)
+    // gui_glass_create_from_fs(parent, "name", "file_path", x, y, 0, 0)
     return `${indentStr}${component.id} = gui_glass_create_from_fs(${parentRef}, "${component.name}", "${binSrc}", ${x}, ${y}, 0, 0);\n`;
   }
 
@@ -30,17 +30,17 @@ export class GlassGenerator implements ComponentCodeGenerator {
     let code = '';
     const indentStr = '    '.repeat(indent);
 
-    // Movable 属性 - 启用按压事件
+    // Movable - enable press event
     if (component.data?.movable) {
       code += `${indentStr}gui_glass_enable_pressing_envent((gui_glass_t *)${component.id});\n`;
     }
 
-    // Click 属性 - 启用点击事件
+    // Click - enable click event
     if (component.data?.click) {
       code += `${indentStr}gui_glass_enable_click_event((gui_glass_t *)${component.id});\n`;
     }
 
-    // 可见性
+    // Visibility
     if (component.visible !== undefined && !component.visible) {
       code += `${indentStr}gui_obj_show((gui_obj_t *)${component.id}, false);\n`;
     }

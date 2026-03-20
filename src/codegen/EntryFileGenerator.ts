@@ -3,24 +3,24 @@ import * as path from 'path';
 import { RomfsConfig } from '../common/RomfsConfig';
 
 /**
- * 入口文件生成器
- * 生成项目级别的入口文件 {ProjectName}Entry.c
+ * Entry file generator
+ * Generates the project-level entry file {ProjectName}Entry.c
  */
 export class EntryFileGenerator {
     /**
-     * 生成入口文件
-     * @param srcDir src 目录路径
-     * @param projectName 项目名称
+     * Generate the entry file
+     * @param srcDir Path to the src directory
+     * @param projectName Project name
      */
     static generate(srcDir: string, projectName: string): string {
-        // 确保目录存在
+        // Ensure the directory exists
         if (!fs.existsSync(srcDir)) {
             fs.mkdirSync(srcDir, { recursive: true });
         }
 
         const entryFile = path.join(srcDir, `${projectName}Entry.c`);
         
-        // 只在首次生成时创建
+        // Only create on first generation
         if (fs.existsSync(entryFile)) {
             return entryFile;
         }

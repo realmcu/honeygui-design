@@ -1,6 +1,6 @@
 /**
- * hg_time_label 组件代码生成器
- * 继承自 LabelGenerator，专门处理时间格式显示
+ * hg_time_label component code generator
+ * Extends LabelGenerator, handles time format display
  */
 import { Component } from '../../../hml/types';
 import { GeneratorContext } from './ComponentGenerator';
@@ -15,19 +15,19 @@ export class TimeLabelGenerator extends LabelGenerator {
     
     const timeFormat = component.data?.timeFormat || 'HH:mm:ss';
     
-    // 检查是否是拆分时间格式
+    // Check if split time format
     if (timeFormat === 'HH:mm-split') {
       return this.generateSplitTimeCreation(component, indent, context);
     }
 
-    // 时间标签不支持滚动，使用普通 text
+    // Time label does not support scrolling, use plain text
     return `${indentStr}${component.id} = gui_text_create(${parentRef}, "${component.name}", ${x}, ${y}, ${width}, ${height});\n`;
   }
 
   generatePropertySetters(component: Component, indent: number, _context: GeneratorContext): string {
     const timeFormat = component.data?.timeFormat || 'HH:mm:ss';
     
-    // 拆分时间格式的属性设置在 generateSplitTimeCreation 中已完成
+    // Split time format properties are already set in generateSplitTimeCreation
     if (timeFormat === 'HH:mm-split') {
       return '';
     }
@@ -35,53 +35,53 @@ export class TimeLabelGenerator extends LabelGenerator {
     let code = '';
     const indentStr = '    '.repeat(indent);
 
-    // 获取属性值
+    // Get property values
     const fontSize = component.data?.fontSize || 16;
     const color = component.style?.color || '#ffffff';
     const rgb = this.colorToRgb(color);
     
-    // 时间标签：使用全局变量，长度动态计算
+    // Time label: use global variable with dynamic length calculation
     const varName = `${component.id}_time_str`;
     const text = varName;
     const textLengthExpr = `strlen(${varName})`;
 
-    // 确定字体类型
+    // Determine font type
     const fontType = this.getFontType(component);
     const fontFile = component.data?.fontFile;
 
-    // 设置文本内容和基本属性
+    // Set text content and basic properties
     code += `${indentStr}gui_text_set((gui_text_t *)${component.id}, ${text}, ${fontType}, gui_rgb(${rgb.r}, ${rgb.g}, ${rgb.b}), ${textLengthExpr}, ${fontSize});\n`;
 
-    // 设置字体文件路径（如果指定了字体文件）
+    // Set font file path (if specified)
     if (fontFile) {
       const convertedFontFile = this.getConvertedFontFileName(component);
       const fontMode = this.getFontMode();
       code += `${indentStr}gui_text_type_set((gui_text_t *)${component.id}, "${convertedFontFile}", ${fontMode});\n`;
     }
 
-    // 对齐方式
+    // Text alignment
     const textMode = this.getTextMode(component);
     code += `${indentStr}gui_text_mode_set((gui_text_t *)${component.id}, ${textMode});\n`;
 
-    // 字间距
+    // Letter spacing
     const letterSpacing = component.style?.letterSpacing;
     if (letterSpacing !== undefined && letterSpacing !== 0) {
       code += `${indentStr}gui_text_extra_letter_spacing_set((gui_text_t *)${component.id}, ${letterSpacing});\n`;
     }
 
-    // 行间距
+    // Line spacing
     const lineSpacing = component.style?.lineSpacing;
     if (lineSpacing !== undefined && lineSpacing !== 0) {
       code += `${indentStr}gui_text_extra_line_spacing_set((gui_text_t *)${component.id}, ${lineSpacing});\n`;
     }
 
-    // 断词保护
+    // Word break protection
     const wordBreak = component.style?.wordBreak;
     if (wordBreak === true) {
       code += `${indentStr}gui_text_wordwrap_set((gui_text_t *)${component.id}, true);\n`;
     }
 
-    // 可见性
+    // Visibility
     if (component.visible === false) {
       code += `${indentStr}gui_obj_show((gui_obj_t *)${component.id}, false);\n`;
     }
@@ -90,7 +90,7 @@ export class TimeLabelGenerator extends LabelGenerator {
   }
 
   /**
-   * 生成拆分时间格式的代码（小时、冒号、分钟 + 呼吸灯动画）
+   * Generate split time format code (hours, colon, minutes + breathing animation)
    */
   private generateSplitTimeCreation(component: Component, indent: number, context: GeneratorContext): string {
     const indentStr = '    '.repeat(indent);
@@ -100,10 +100,10 @@ export class TimeLabelGenerator extends LabelGenerator {
     const color = component.style?.color || '#ffffff';
     const rgb = this.colorToRgb(color);
     
-    // 高度直接使用字体大小
+    // Use font size directly as height
     const height = Number(fontSize);
     
-    // 检查是否启用换行
+    // Check if word wrap is enabled
     const wordWrap = component.style?.wordWrap || false;
     
     const numX = Number(x);
@@ -111,7 +111,7 @@ export class TimeLabelGenerator extends LabelGenerator {
     const numWidth = Number(width);
     
     if (wordWrap) {
-      // 换行模式：小时在第一行，冒号和分钟在第二行
+      // Wrap mode: hours on first line, colon and minutes on second line
       const fontSizeNum = Number(component.data?.fontSize) || 16;
       const digitCharWidth = Math.floor(fontSizeNum * 0.5);
       const twoDigitsWidth = digitCharWidth * 2;
@@ -134,7 +134,7 @@ export class TimeLabelGenerator extends LabelGenerator {
       return this.generateSplitTimeWithWrap(component, indent, context, 
         hourX, hourY, hourWidth, colonX, colonY, colonWidth, minX, minY, minWidth, fontSizeNum);
     } else {
-      // 不换行模式：小时、冒号、分钟在同一行
+      // No-wrap mode: hours, colon, minutes on same line
       const colonWidth = Math.max(Math.floor(Number(fontSize) / 4), 20);
       const halfWidth = Math.floor((numWidth - colonWidth) / 2);
       const hourWidth = halfWidth;
@@ -149,7 +149,7 @@ export class TimeLabelGenerator extends LabelGenerator {
   }
 
   /**
-   * 生成换行模式的拆分时间代码
+   * Generate split time code in wrap mode
    */
   private generateSplitTimeWithWrap(
     component: Component, indent: number, context: GeneratorContext,
@@ -171,7 +171,7 @@ export class TimeLabelGenerator extends LabelGenerator {
     
     let code = '';
     
-    // 生成小时 label
+    // Generate hour label
     code += `${indentStr}// Split time - hour\n`;
     code += `${indentStr}${component.id}_hour = gui_text_create(${parentRef}, "${component.name}_hour", ${hourX}, ${hourY}, ${hourWidth}, ${height});\n`;
     code += `${indentStr}gui_text_set(${component.id}_hour, ${component.id}_time_str, ${fontType}, gui_rgb(${rgb.r}, ${rgb.g}, ${rgb.b}), 2, ${fontSize});\n`;
@@ -189,7 +189,7 @@ export class TimeLabelGenerator extends LabelGenerator {
       code += `${indentStr}gui_text_extra_line_spacing_set(${component.id}_hour, ${lineSpacing});\n`;
     }
     
-    // 生成冒号 label
+    // Generate colon label
     code += `${indentStr}// Split time - colon (with breathing animation)\n`;
     code += `${indentStr}${component.id}_colon = gui_text_create(${parentRef}, "${component.name}_colon", ${colonX}, ${colonY}, ${colonWidth}, ${height});\n`;
     code += `${indentStr}gui_text_set(${component.id}_colon, ":", ${fontType}, gui_rgb(${rgb.r}, ${rgb.g}, ${rgb.b}), 1, ${fontSize});\n`;
@@ -198,7 +198,7 @@ export class TimeLabelGenerator extends LabelGenerator {
     }
     code += `${indentStr}gui_text_mode_set(${component.id}_colon, CENTER);\n`;
     
-    // 生成分钟 label
+    // Generate minute label
     code += `${indentStr}// Split time - minute\n`;
     code += `${indentStr}${component.id}_min = gui_text_create(${parentRef}, "${component.name}_min", ${minX}, ${minY}, ${minWidth}, ${height});\n`;
     code += `${indentStr}gui_text_set(${component.id}_min, ${component.id}_time_str + 3, ${fontType}, gui_rgb(${rgb.r}, ${rgb.g}, ${rgb.b}), 2, ${fontSize});\n`;
@@ -214,7 +214,7 @@ export class TimeLabelGenerator extends LabelGenerator {
       code += `${indentStr}gui_text_extra_line_spacing_set(${component.id}_min, ${lineSpacing});\n`;
     }
     
-    // 创建定时器
+    // Create timers
     code += `${indentStr}// Colon breathing animation timer\n`;
     code += `${indentStr}gui_obj_create_timer(GUI_BASE(${component.id}_colon), 50, true, ${component.id}_breath_anim_cb);\n`;
     code += `${indentStr}// Time update timer\n`;
@@ -225,7 +225,7 @@ export class TimeLabelGenerator extends LabelGenerator {
   }
 
   /**
-   * 生成不换行模式的拆分时间代码
+   * Generate split time code in no-wrap mode
    */
   private generateSplitTimeInline(
     component: Component, indent: number, context: GeneratorContext,
@@ -247,7 +247,7 @@ export class TimeLabelGenerator extends LabelGenerator {
     
     let code = '';
     
-    // 生成小时 label
+    // Generate hour label
     code += `${indentStr}// Split time - hour\n`;
     code += `${indentStr}${component.id}_hour = gui_text_create(${parentRef}, "${component.name}_hour", ${hourX}, ${hourY}, ${hourWidth}, ${height});\n`;
     code += `${indentStr}gui_text_set(${component.id}_hour, ${component.id}_time_str, ${fontType}, gui_rgb(${rgb.r}, ${rgb.g}, ${rgb.b}), 2, ${fontSize});\n`;
@@ -265,7 +265,7 @@ export class TimeLabelGenerator extends LabelGenerator {
       code += `${indentStr}gui_text_extra_line_spacing_set(${component.id}_hour, ${lineSpacing});\n`;
     }
     
-    // 生成冒号 label
+    // Generate colon label
     code += `${indentStr}// Split time - colon (with breathing animation)\n`;
     code += `${indentStr}${component.id}_colon = gui_text_create(${parentRef}, "${component.name}_colon", ${colonX}, ${colonY}, ${colonWidth}, ${height});\n`;
     code += `${indentStr}gui_text_set(${component.id}_colon, ":", ${fontType}, gui_rgb(${rgb.r}, ${rgb.g}, ${rgb.b}), 1, ${fontSize});\n`;
@@ -274,7 +274,7 @@ export class TimeLabelGenerator extends LabelGenerator {
     }
     code += `${indentStr}gui_text_mode_set(${component.id}_colon, LEFT);\n`;
     
-    // 生成分钟 label
+    // Generate minute label
     code += `${indentStr}// Split time - minute\n`;
     code += `${indentStr}${component.id}_min = gui_text_create(${parentRef}, "${component.name}_min", ${minX}, ${minY}, ${minWidth}, ${height});\n`;
     code += `${indentStr}gui_text_set(${component.id}_min, ${component.id}_time_str + 3, ${fontType}, gui_rgb(${rgb.r}, ${rgb.g}, ${rgb.b}), 2, ${fontSize});\n`;
@@ -290,7 +290,7 @@ export class TimeLabelGenerator extends LabelGenerator {
       code += `${indentStr}gui_text_extra_line_spacing_set(${component.id}_min, ${lineSpacing});\n`;
     }
     
-    // 创建定时器
+    // Create timers
     code += `${indentStr}// Colon breathing animation timer\n`;
     code += `${indentStr}gui_obj_create_timer(GUI_BASE(${component.id}_colon), 50, true, ${component.id}_breath_anim_cb);\n`;
     code += `${indentStr}// Time update timer\n`;

@@ -1,6 +1,6 @@
 /**
- * hg_gif 组件代码生成器
- * GIF 动画控件，使用 gui_gif_create_from_fs 创建
+ * hg_gif component code generator
+ * GIF animation control, created via gui_gif_create_from_fs
  */
 import { Component } from '../../../hml/types';
 import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';
@@ -13,11 +13,11 @@ export class GifGenerator implements ComponentCodeGenerator {
     const { x, y, width, height } = component.position;
 
     const src = component.data?.src || '';
-    // GIF 文件会被转换成 .bin 格式
+    // GIF files are converted to .bin format
     let binPath = src.replace(/\.gif$/i, '.bin');
-    // 去掉 assets/ 前缀
+    // Strip assets/ prefix
     binPath = binPath.replace(/^assets\//, '');
-    // 确保路径以 / 开头
+    // Ensure path starts with /
     if (!binPath.startsWith('/')) {
       binPath = '/' + binPath;
     }
@@ -29,40 +29,40 @@ export class GifGenerator implements ComponentCodeGenerator {
     let code = '';
     const indentStr = '    '.repeat(indent);
 
-    // 1. 高质量渲染设置
+    // 1. High quality rendering
     if (component.data?.highQuality === true) {
       code += `${indentStr}gui_gif_set_quality((gui_gif_t *)${component.id}, true);\n`;
     }
 
-    // 2. 变换属性
+    // 2. Transform properties
     const transform = component.style?.transform;
     
-    // 检查是否有显式的变换
+    // Check for explicit transforms
     const hasRotation = transform?.rotation !== undefined && transform.rotation !== 0;
     const hasExplicitScale = (transform?.scaleX !== undefined && transform.scaleX !== 1.0) || 
                              (transform?.scaleY !== undefined && transform.scaleY !== 1.0);
     const hasExplicitFocus = transform?.focusX !== undefined || transform?.focusY !== undefined;
     
-    // 检查是否需要自动缩放（显示尺寸与原始图片尺寸不同）
-    // GIF 暂不支持自动缩放，因为无法获取原始尺寸
+    // Check if auto-scaling is needed (display size differs from original)
+    // GIF does not support auto-scaling as original size cannot be determined
     const needScale = hasExplicitScale;
     
-    // 如果有旋转、缩放或显式设置了 focus，需要设置变换
+    // Apply transform if rotation, scale, or explicit focus is set
     if (hasRotation || needScale || hasExplicitFocus) {
-      // 1. 平移（translate）
-      // 如果用户显式设置了非零的 translateX/translateY，使用设置值
-      // 否则，如果有旋转或设置了 focus，自动设置为补偿 focus 点的偏移
+      // 1. Translation
+      // Use explicit non-zero translateX/translateY if set
+      // Otherwise, auto-compensate for focus point offset on rotation/focus
       const tx = transform?.translateX ?? 0;
       const ty = transform?.translateY ?? 0;
       const hasNonZeroTranslate = tx !== 0 || ty !== 0;
       
       if (hasNonZeroTranslate) {
-        // 用户设置了非零的平移值
+        // Non-zero translation values set by user
         code += `${indentStr}gui_gif_translate((gui_gif_t *)${component.id}, ${tx.toFixed(1)}f, ${ty.toFixed(1)}f);\n`;
       } else if (hasRotation || hasExplicitFocus) {
-        // 有旋转或设置了 focus，自动平移来补偿 focus 点
+        // Auto-translate to compensate for focus point on rotation/focus
         if (hasExplicitFocus) {
-          // 用户设置了 focus，平移到 focus 点
+          // Focus set by user, translate to focus point
           const focusX = transform.focusX ?? 0;
           const focusY = transform.focusY ?? 0;
           if (needScale) {
@@ -73,7 +73,7 @@ export class GifGenerator implements ComponentCodeGenerator {
             code += `${indentStr}gui_gif_translate((gui_gif_t *)${component.id}, ${focusX.toFixed(1)}f, ${focusY.toFixed(1)}f);\n`;
           }
         } else {
-          // 没有设置 focus，平移到图片中心
+          // No focus set, translate to image center
           if (needScale) {
             const scaleX = transform?.scaleX ?? 1.0;
             const scaleY = transform?.scaleY ?? 1.0;
@@ -84,26 +84,26 @@ export class GifGenerator implements ComponentCodeGenerator {
         }
       }
 
-      // 2. 变换中心点（focus）
-      // 如果用户显式设置了 focusX/focusY，使用设置值
-      // 否则，如果有旋转，自动设置为图片中心
+      // 2. Transform center point (focus)
+      // Use explicit focusX/focusY if set
+      // Otherwise, auto-set to image center on rotation
       
       if (hasExplicitFocus) {
-        // 使用用户设置的 focus 值（未设置的维度使用 0）
+        // Use user-set focus values (default to 0 for unset dimensions)
         const focusX = (transform.focusX ?? 0).toFixed(1);
         const focusY = (transform.focusY ?? 0).toFixed(1);
         code += `${indentStr}gui_gif_set_focus((gui_gif_t *)${component.id}, ${focusX}f, ${focusY}f);\n`;
       } else if (hasRotation) {
-        // 有旋转但没有设置 focus，自动设置为图片中心
+        // Rotation without explicit focus, auto-set to image center
         code += `${indentStr}gui_gif_set_focus((gui_gif_t *)${component.id}, gui_gif_get_width((gui_gif_t *)${component.id}) / 2.0f, gui_gif_get_height((gui_gif_t *)${component.id}) / 2.0f);\n`;
       }
 
-      // 3. 旋转
+      // 3. Rotation
       if (hasRotation) {
         code += `${indentStr}gui_gif_rotation((gui_gif_t *)${component.id}, ${transform!.rotation!.toFixed(1)}f);\n`;
       }
 
-      // 4. 缩放
+      // 4. Scale
       if (needScale) {
         const scaleX = transform?.scaleX ?? 1.0;
         const scaleY = transform?.scaleY ?? 1.0;
@@ -112,7 +112,7 @@ export class GifGenerator implements ComponentCodeGenerator {
         }
       }
     } else if (transform?.translateX !== undefined || transform?.translateY !== undefined) {
-      // 只有平移，没有旋转和缩放（只有非零时才生成代码）
+      // Translation only, no rotation or scale (generate only for non-zero values)
       const tx = transform.translateX ?? 0;
       const ty = transform.translateY ?? 0;
       if (tx !== 0 || ty !== 0) {
@@ -120,18 +120,18 @@ export class GifGenerator implements ComponentCodeGenerator {
       }
     }
 
-    // 3. 透明度
+    // 3. Opacity
     if (transform?.opacity !== undefined && transform.opacity !== 255) {
       code += `${indentStr}gui_gif_set_opacity((gui_gif_t *)${component.id}, ${Math.round(transform.opacity)});\n`;
     }
 
-    // 4. 混合模式
+    // 4. Blend mode
     const blendMode = component.data?.blendMode;
     if (blendMode && blendMode !== 'IMG_FILTER_BLACK') {
       code += `${indentStr}gui_gif_set_mode((gui_gif_t *)${component.id}, ${blendMode});\n`;
     }
 
-    // 5. 可见性
+    // 5. Visibility
     if (component.visible !== undefined) {
       code += `${indentStr}gui_obj_show((gui_obj_t *)${component.id}, ${component.visible ? 'true' : 'false'});\n`;
     }

@@ -1,5 +1,5 @@
 /**
- * 默认组件代码生成器（通用）
+ * Default component code generator (generic)
  */
 import { Component } from '../../../hml/types';
 import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';
@@ -46,7 +46,7 @@ export class DefaultGenerator implements ComponentCodeGenerator {
       }
     });
 
-    // 可见性
+    // Visibility
     if (component.visible !== undefined) {
       code += `${indentStr}gui_obj_show((gui_obj_t *)${component.id}, ${component.visible ? 'true' : 'false'});\n`;
     }

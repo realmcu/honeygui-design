@@ -1,13 +1,13 @@
 /**
- * hg_window 组件代码生成器
- * 对应 HoneyGUI 的 gui_win API
+ * hg_window component code generator
+ * Maps to HoneyGUI gui_win API
  * 
- * 与 hg_view 的区别：
- * - 使用 gui_win_create 而不是 GUI_VIEW_INSTANCE
- * - 支持 blur 效果（gui_win_enable_blur, gui_win_set_blur_degree）
- * - 不支持视图切换功能
+ * Differences from hg_view:
+ * - Uses gui_win_create instead of GUI_VIEW_INSTANCE
+ * - Supports blur effect (gui_win_enable_blur, gui_win_set_blur_degree)
+ * - No view switching support
  * 
- * 句柄类型：gui_obj_t * (在句柄定义时就使用此类型)
+ * Handle type: gui_obj_t * (used directly in handle definition)
  */
 import { Component } from '../../../hml/types';
 import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';
@@ -18,38 +18,38 @@ export class WindowGenerator implements ComponentCodeGenerator {
     const indentStr = '    '.repeat(indent);
     const parentRef = context.getParentRef(component);
     
-    // 获取位置和尺寸
+    // Get position and dimensions
     const { x, y, width, height } = component.position;
     
-    // 获取 blur 相关属性
+    // Get blur-related properties
     const enableBlur = component.data?.enableBlur ?? false;
-    const blurDegree = component.data?.blurDegree ?? 225; // 默认值 225
+    const blurDegree = component.data?.blurDegree ?? 225; // Default: 225
     
     let code = '';
     
-    // 创建 window
+    // Create window
     code += `${indentStr}${component.id} = gui_win_create(${parentRef}, "${component.id}", ${x}, ${y}, ${width}, ${height});\n`;
     
-    // 设置 blur 效果
+    // Set blur effect
     if (enableBlur) {
       code += `${indentStr}gui_win_enable_blur((gui_win_t *)${component.id}, true);\n`;
       code += `${indentStr}gui_win_set_blur_degree((gui_win_t *)${component.id}, ${blurDegree});\n`;
     }
     
-    // 设置可见属性（与 hg_image 保持一致）
+    // Set visibility (consistent with hg_image)
     if (component.visible !== undefined) {
       code += `${indentStr}gui_obj_show((gui_obj_t *)${component.id}, ${component.visible ? 'true' : 'false'});\n`;
     }
 
-    // 生成定时器绑定代码（在子组件之前）
+    // Generate timer binding code (before child components)
     if (context.generateTimerBindings) {
       code += context.generateTimerBindings(component, indent);
     }
 
     
-    // Window 中的时间标签初始化代码
-    // 注意：不生成 time_t now 和 struct tm *t 的声明，因为它们已经在 view 的 switch_in 函数中声明了
-    // 这里只生成 sprintf 调用来初始化时间字符串
+    // Time label initialization code in window
+    // Note: Do not declare time_t now and struct tm *t here, as they are already declared in view's switch_in function
+    // Only generate sprintf calls to initialize time strings
     const timeLabels = this.collectTimeLabels(component, context);
     if (timeLabels.length > 0) {
       code += `\n${indentStr}// Initialize time strings (using now and t variables declared in view)\n`;
@@ -64,19 +64,19 @@ export class WindowGenerator implements ComponentCodeGenerator {
       code += `${indentStr}}\n`;
     }
     
-    // 子组件创建代码由主生成器处理（通过 childrenCode 回调）
+    // Child component creation handled by main generator (via childrenCode callback)
     code += `__CHILDREN_PLACEHOLDER__`;
     
-    // 事件绑定代码占位符（由主生成器填充）
+    // Event binding code placeholder (filled by main generator)
     code += `__EVENT_BINDINGS_PLACEHOLDER__`;
     
-    // 为所有带时间格式的 label 创建定时器
+    // Create timers for all labels with time format
     if (timeLabels.length > 0) {
       code += `\n${indentStr}// Create time update timer\n`;
       timeLabels.forEach(labelId => {
         const labelComp = context.componentMap.get(labelId);
         const timeFormat = labelComp?.data?.timeFormat;
-        // 跳过拆分时间格式（已在 LabelGenerator 中创建定时器）
+        // Skip split time format (timer already created in LabelGenerator)
         if (timeFormat === 'HH:mm-split') {
           return;
         }
@@ -89,23 +89,23 @@ export class WindowGenerator implements ComponentCodeGenerator {
   }
 
   generatePropertySetters(_component: Component, _indent: number, _context: GeneratorContext): string {
-    // window 组件的属性在创建时已设置
+    // Window component properties are set during creation
     return '';
   }
 
   /**
-   * 收集当前 window 下所有时间标签组件
+   * Collect all time label components under current window
    */
   private collectTimeLabels(component: Component, context: GeneratorContext): string[] {
     const timeLabels: string[] = [];
     
     const collectRecursive = (comp: Component) => {
-      // 检查当前组件是否是时间标签
+      // Check if current component is a time label
       if (comp.type === 'hg_time_label') {
         timeLabels.push(comp.id);
       }
       
-      // 递归检查子组件
+      // Recursively check child components
       if (comp.children) {
         comp.children.forEach(childId => {
           const child = context.componentMap.get(childId);
@@ -121,7 +121,7 @@ export class WindowGenerator implements ComponentCodeGenerator {
   }
 
   /**
-   * 根据时间格式获取定时器间隔（毫秒）
+   * Get timer interval in milliseconds based on time format
    */
   private getTimerInterval(timeFormat?: string): number {
     if (!timeFormat) return 500;
@@ -129,22 +129,22 @@ export class WindowGenerator implements ComponentCodeGenerator {
     switch (timeFormat) {
       case 'HH:mm:ss':
       case 'YYYY-MM-DD HH:mm:ss':
-        return 500; // 带秒：500ms
+        return 500; // With seconds: 500ms
       case 'HH:mm':
       case 'MM-DD HH:mm':
-        return 30000; // 只有时分：30秒
+        return 30000; // Hours/minutes only: 30s
       case 'HH':
       case 'mm':
-        return 30000; // 只有小时或分钟：30秒
+        return 30000; // Hours or minutes only: 30s
       case 'YYYY-MM-DD':
-        return 60000; // 只有日期：60秒
+        return 60000; // Date only: 60s
       default:
         return 500;
     }
   }
 
   /**
-   * 根据时间格式获取 sprintf 格式化代码
+   * Get sprintf format code based on time format
    */
   private getTimeFormatCode(timeFormat?: string): { format: string; args: string } {
     switch (timeFormat) {
@@ -154,7 +154,7 @@ export class WindowGenerator implements ComponentCodeGenerator {
           args: 't->tm_hour, t->tm_min, t->tm_sec'
         };
       case 'HH:mm':
-      case 'HH:mm-split':  // 拆分时间格式使用相同的格式
+      case 'HH:mm-split':  // Split time format uses same format
         return {
           format: '%02d:%02d',
           args: 't->tm_hour, t->tm_min'

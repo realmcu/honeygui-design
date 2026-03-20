@@ -1,13 +1,13 @@
 /**
- * hg_checkbox 事件代码生成器
- * TODO: 实现复选框特定的事件处理逻辑（如 onChange 等）
+ * hg_checkbox event code generator.
+ * TODO: Implement checkbox-specific event handling logic (e.g. onChange).
  */
 import { Component } from '../../../hml/types';
 import { EventCodeGenerator } from './EventCodeGenerator';
 
 export class CheckboxEventGenerator implements EventCodeGenerator {
   generateEventBindings(_component: Component, _indent: number, _componentMap: Map<string, Component>): string {
-    // TODO: 实现复选框事件绑定
+    // TODO: Implement checkbox event bindings
     return '';
   }
 

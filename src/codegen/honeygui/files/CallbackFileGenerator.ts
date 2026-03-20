@@ -1,6 +1,6 @@
 /**
- * 回调文件生成器
- * 负责生成 callbacks.h 和 callbacks.c 文件
+ * Callback file generator
+ * Generates callbacks.h and callbacks.c files
  */
 import { Component } from '../../../hml/types';
 import { EventGeneratorFactory } from '../events';
@@ -9,31 +9,31 @@ import { getMessageCallbackName, generateEventCallbackName } from '../events/Eve
 export class CallbackFileGenerator {
   private components: Component[];
   private componentMap: Map<string, Component>;
-  private allComponents: Component[]; // 包含所有嵌套组件的扁平数组
+  private allComponents: Component[]; // Flat array containing all nested components
 
   constructor(components: Component[]) {
     this.components = components;
     this.componentMap = new Map(components.map(c => [c.id, c]));
-    // 递归收集所有组件（包括嵌套的）
+    // Recursively collect all components (including nested ones)
     this.allComponents = this.flattenComponents(components);
   }
 
   /**
-   * 递归展开所有组件（包括嵌套在容器内的子组件）
-   * 特别处理 list_item：包含 list_item 本身及其所有子组件
+   * Recursively flatten all components (including children nested in containers)
+   * Handles list_item specially: includes the list_item itself and all its children
    */
   private flattenComponents(components: Component[]): Component[] {
     const visited = new Set<string>();
     const result: Component[] = [];
     
     const traverse = (comp: Component) => {
-      // 防止重复访问
+      // Prevent duplicate visits
       if (visited.has(comp.id)) return;
       visited.add(comp.id);
       
       result.push(comp);
       
-      // 递归处理子组件（包括 list_item 的子组件）
+      // Recursively process children (including list_item children)
       if (comp.children && comp.children.length > 0) {
         comp.children.forEach(childId => {
           const child = this.componentMap.get(childId);
@@ -49,9 +49,9 @@ export class CallbackFileGenerator {
   }
 
   /**
-   * 生成回调头文件
-   * @param baseName 设计名称
-   * @param existingCallbacksC 现有的 callbacks.c 文件内容（可选），用于提取自定义函数声明
+   * Generate callback header file
+   * @param baseName Design name
+   * @param existingCallbacksC Existing callbacks.c content (optional), used to extract custom function declarations
    */
   generateHeader(baseName: string, existingCallbacksC?: string): string {
     const guardName = `${baseName.toUpperCase()}_CALLBACKS_H`;
@@ -64,7 +64,7 @@ export class CallbackFileGenerator {
 
 `;
 
-    // 为拆分时间组件添加 extern 声明
+    // Add extern declarations for split time components
     const splitTimeLabels = this.allComponents.filter(c => 
       c.type === 'hg_time_label' && c.data?.timeFormat === 'HH:mm-split'
     );
@@ -79,15 +79,15 @@ export class CallbackFileGenerator {
       code += `\n`;
     }
 
-    // 收集所有有定时器的组件，为它们声明计数器
+    // Collect all components with timers to declare counters
     const componentsWithTimers = this.allComponents.filter(c => {
-      // 新版：有 timers 数组
+      // New format: has timers array
       if (c.data?.timers && Array.isArray(c.data.timers) && c.data.timers.length > 0) {
-        return true;  // 所有有定时器的组件都需要计数器
+        return true;  // All components with timers need counters
       }
-      // 旧版：有 timerEnabled
+      // Legacy format: has timerEnabled
       if (c.data?.timerEnabled === true) {
-        return true;  // 所有有定时器的组件都需要计数器
+        return true;  // All components with timers need counters
       }
       return false;
     });
@@ -107,20 +107,20 @@ export class CallbackFileGenerator {
     
     callbackFunctions.forEach(funcName => {
       if (msgCallbackNames.has(funcName)) {
-        // onMessage 回调签名不同
+        // onMessage callback has a different signature
         code += `void ${funcName}(gui_obj_t *obj, const char *topic, void *data, uint16_t len);\n`;
       } else {
         code += `void ${funcName}(void *obj, gui_event_t *e);\n`;
       }
     });
 
-    // 添加时间更新回调声明
+    // Add time update callback declarations
     const timeUpdateFuncNames = this.collectTimeUpdateCallbackNames();
     timeUpdateFuncNames.forEach(funcName => {
       code += `void ${funcName}(void *p);\n`;
     });
 
-    // 添加用户配置的定时器回调声明
+    // Add user-configured timer callback declarations
     const timerCallbackNames = this.collectTimerCallbackNames();
     if (timerCallbackNames.length > 0) {
       code += `\n// User-configured timer callback function declarations\n`;
@@ -129,7 +129,7 @@ export class CallbackFileGenerator {
       });
     }
 
-    // 添加双态按钮状态回调声明
+    // Add toggle button state callback declarations
     const toggleButtonCallbacks = this.collectToggleButtonCallbackNames();
     if (toggleButtonCallbacks.length > 0) {
       code += `\n// Toggle button state callback function declarations\n`;
@@ -139,7 +139,7 @@ export class CallbackFileGenerator {
       });
     }
 
-    // 从 callbacks.c 的保护区提取自定义函数并生成声明
+    // Extract custom functions from callbacks.c protected area and generate declarations
     if (existingCallbacksC) {
       const customFunctions = this.extractCustomFunctionDeclarations(existingCallbacksC);
       if (customFunctions.length > 0) {
@@ -158,19 +158,19 @@ export class CallbackFileGenerator {
   }
 
   /**
-   * 生成回调实现文件
-   * @param baseName 设计名称
-   * @param existingContent 现有文件内容（可选），用于检查已存在的函数
+   * Generate callback implementation file
+   * @param baseName Design name
+   * @param existingContent Existing file content (optional), used to check for existing functions
    */
   generateImplementation(baseName: string, existingContent?: string): string {
-    // 收集所有时间标签和计时器标签（使用 allComponents）
+    // Collect all time labels and timer labels (using allComponents)
     const timeLabels = this.allComponents.filter(c => c.type === 'hg_time_label');
     const timerLabels = this.allComponents.filter(c => c.type === 'hg_label' && c.data?.isTimerLabel === true);
     
-    // 提取现有文件中 custom_functions 保护区的函数名
+    // Extract function names from the custom_functions protected area in existing file
     const existingFunctions = existingContent ? this.extractFunctionNamesFromProtectedArea(existingContent) : new Set<string>();
     
-    // 检查是否需要 tp_algo.h（用于抬起区域检测）
+    // Check if tp_algo.h is needed (for touch release area detection)
     const needsTpAlgo = this.checkNeedsTpAlgo();
     
     let code = `#include "${baseName}_callbacks.h"
@@ -181,14 +181,14 @@ export class CallbackFileGenerator {
 #include <time.h>
 `;
 
-    // 如果需要抬起区域检测，添加 tp_algo.h
+    // Add tp_algo.h if touch release area detection is needed
     if (needsTpAlgo) {
       code += `#include "tp_algo.h"\n`;
     }
 
     code += `\n`;
 
-    // 为每个时间标签声明外部全局变量（在 UI 文件中定义）
+    // Declare extern global variables for each time label (defined in UI file)
     if (timeLabels.length > 0) {
       code += `// Time string global variables (defined in UI file)\n`;
       timeLabels.forEach(label => {
@@ -198,7 +198,7 @@ export class CallbackFileGenerator {
       code += `\n`;
     }
 
-    // 为每个计时器标签声明外部全局变量（在 UI 文件中定义）
+    // Declare extern global variables for each timer label (defined in UI file)
     if (timerLabels.length > 0) {
       code += `// Timer string global variables (defined in UI file)\n`;
       timerLabels.forEach(label => {
@@ -209,15 +209,15 @@ export class CallbackFileGenerator {
       code += `\n`;
     }
 
-    // 定义定时动画计数器变量
+    // Define timer animation counter variables
     const componentsWithTimers = this.allComponents.filter(c => {
-      // 新版：有 timers 数组
+      // New format: has timers array
       if (c.data?.timers && Array.isArray(c.data.timers) && c.data.timers.length > 0) {
-        return true;  // 所有有定时器的组件都需要计数器
+        return true;  // All components with timers need counters
       }
-      // 旧版：有 timerEnabled
+      // Legacy format: has timerEnabled
       if (c.data?.timerEnabled === true) {
-        return true;  // 所有有定时器的组件都需要计数器
+        return true;  // All components with timers need counters
       }
       return false;
     });
@@ -232,25 +232,25 @@ export class CallbackFileGenerator {
 
     code += `// Event callback function implementations\n\n`;
 
-    // 收集统一的事件回调实现（除 onMessage 外的所有事件）
+    // Collect unified event callback implementations (all events except onMessage)
     const eventCallbackImpls = this.collectEventCallbackImpls(existingFunctions);
     eventCallbackImpls.forEach(impl => {
       code += impl + '\n\n';
     });
 
-    // 收集 onMessage 回调实现（跳过已存在的）
+    // Collect onMessage callback implementations (skip existing ones)
     const messageImpls = this.collectMessageCallbackImpls(existingFunctions);
     messageImpls.forEach(impl => {
       code += impl + '\n\n';
     });
 
-    // 生成时间更新回调
+    // Generate time update callbacks
     const timeUpdateImpls = this.collectTimeUpdateCallbackImpls();
     timeUpdateImpls.forEach(impl => {
       code += impl + '\n\n';
     });
 
-    // 生成预设定时器回调实现（跳过已存在的）
+    // Generate preset timer callback implementations (skip existing ones)
     const timerCallbackImpls = this.collectTimerCallbackImpls(existingFunctions);
     if (timerCallbackImpls.length > 0) {
       code += `// Preset timer callback functions\n\n`;
@@ -259,7 +259,7 @@ export class CallbackFileGenerator {
       });
     }
 
-    // 生成双态按钮状态回调
+    // Generate toggle button state callbacks
     const toggleButtonImpls = this.collectToggleButtonCallbackImpls();
     if (toggleButtonImpls.length > 0) {
       code += `// Toggle button state callback functions\n\n`;
@@ -277,19 +277,19 @@ export class CallbackFileGenerator {
   }
 
   /**
-   * 从 custom_functions 保护区提取已存在的函数名
+   * Extract existing function names from the custom_functions protected area
    */
   private extractFunctionNamesFromProtectedArea(content: string): Set<string> {
     const functionNames = new Set<string>();
     
-    // 提取 custom_functions 保护区内容
+    // Extract custom_functions protected area content
     const regex = /\/\* @protected start custom_functions \*\/([\s\S]*?)\/\* @protected end custom_functions \*\//;
     const match = content.match(regex);
     
     if (match && match[1]) {
       const protectedContent = match[1];
       
-      // 匹配函数定义：void function_name(...) 或 static void function_name(...)
+      // Match function definitions: void function_name(...) or static void function_name(...)
       const funcRegex = /(?:static\s+)?void\s+(\w+)\s*\(/g;
       let funcMatch;
       
@@ -302,13 +302,13 @@ export class CallbackFileGenerator {
   }
 
   /**
-   * 从 callbacks.c 的 custom_functions 保护区提取自定义函数声明
-   * 返回函数声明数组（不包含函数体）
+   * Extract custom function declarations from the custom_functions protected area in callbacks.c
+   * Returns an array of function declarations (without function bodies)
    */
   private extractCustomFunctionDeclarations(content: string): string[] {
     const declarations: string[] = [];
     
-    // 提取 custom_functions 保护区内容
+    // Extract custom_functions protected area content
     const regex = /\/\* @protected start custom_functions \*\/([\s\S]*?)\/\* @protected end custom_functions \*\//;
     const match = content.match(regex);
     
@@ -318,15 +318,15 @@ export class CallbackFileGenerator {
     
     const protectedContent = match[1];
     
-    // 匹配函数定义（包括 static）
-    // 支持多种返回类型：void, int, char*, gui_obj_t*, 等
+    // Match function definitions (including static)
+    // Support multiple return types: void, int, char*, gui_obj_t*, etc.
     const funcRegex = /((?:static\s+)?(?:void|int|char\s*\*|gui_obj_t\s*\*|uint8_t|uint16_t|uint32_t|int8_t|int16_t|int32_t|bool)\s+\w+\s*\([^)]*\))/g;
     let funcMatch;
     
     while ((funcMatch = funcRegex.exec(protectedContent)) !== null) {
       const declaration = funcMatch[1].trim();
       
-      // 跳过 static 函数（静态函数不需要在头文件中声明）
+      // Skip static functions (no header declaration needed)
       if (declaration.startsWith('static ')) {
         continue;
       }
@@ -338,12 +338,12 @@ export class CallbackFileGenerator {
   }
 
   /**
-   * 收集所有需要生成的回调函数名
+   * Collect all callback function names to be generated
    */
   collectCallbackFunctions(): string[] {
     const functions = new Set<string>();
 
-    // 使用 allComponents 而不是 components，包含所有嵌套组件
+    // Use allComponents instead of components to include all nested components
     this.allComponents.forEach(component => {
       const generator = EventGeneratorFactory.getGenerator(component.type);
       generator.collectCallbackFunctions(component).forEach(fn => functions.add(fn));
@@ -353,23 +353,23 @@ export class CallbackFileGenerator {
   }
 
   /**
-   * 收集所有统一的事件回调实现（除 onMessage 外的所有事件）
-   * @param existingFunctions 已存在的函数名集合（从 custom_functions 保护区提取）
+   * Collect all unified event callback implementations (all events except onMessage)
+   * @param existingFunctions Set of existing function names (extracted from custom_functions protected area)
    */
   private collectEventCallbackImpls(existingFunctions: Set<string> = new Set()): string[] {
-    const impls = new Map<string, string>(); // 使用 Map 去重，key 为函数名
+    const impls = new Map<string, string>(); // Use Map for deduplication, keyed by function name
 
     this.allComponents.forEach(component => {
       const generator = EventGeneratorFactory.getGenerator(component.type);
       
-      // 收集普通事件回调实现
+      // Collect regular event callback implementations
       if (generator.getEventCallbackImpl) {
         generator.getEventCallbackImpl(component, this.componentMap).forEach(impl => {
-          // 提取函数名作为 key
+          // Extract function name as key
           const match = impl.match(/void\s+(\w+)\s*\(/);
           if (match) {
             const funcName = match[1];
-            // 跳过已存在于 custom_functions 保护区的函数
+            // Skip functions already in the custom_functions protected area
             if (!existingFunctions.has(funcName)) {
               impls.set(funcName, impl);
             }
@@ -377,14 +377,14 @@ export class CallbackFileGenerator {
         });
       }
       
-      // 收集按键事件回调实现
+      // Collect key event callback implementations
       if (generator.getKeyEventCallbackImpl) {
         generator.getKeyEventCallbackImpl(component, this.componentMap).forEach(impl => {
-          // 提取函数名作为 key
+          // Extract function name as key
           const match = impl.match(/void\s+(\w+)\s*\(/);
           if (match) {
             const funcName = match[1];
-            // 跳过已存在于 custom_functions 保护区的函数
+            // Skip functions already in the custom_functions protected area
             if (!existingFunctions.has(funcName)) {
               impls.set(funcName, impl);
             }
@@ -397,21 +397,21 @@ export class CallbackFileGenerator {
   }
 
   /**
-   * 收集所有 onMessage 回调实现
-   * @param existingFunctions 已存在的函数名集合（从 custom_functions 保护区提取）
+   * Collect all onMessage callback implementations
+   * @param existingFunctions Set of existing function names (extracted from custom_functions protected area)
    */
   private collectMessageCallbackImpls(existingFunctions: Set<string> = new Set()): string[] {
-    const impls = new Map<string, string>(); // 使用 Map 去重，key 为函数名
+    const impls = new Map<string, string>(); // Use Map for deduplication, keyed by function name
 
     this.allComponents.forEach(component => {
       const generator = EventGeneratorFactory.getGenerator(component.type);
       if (generator.getMessageCallbackImpl) {
         generator.getMessageCallbackImpl(component, this.componentMap).forEach(impl => {
-          // 提取函数名作为 key
+          // Extract function name as key
           const match = impl.match(/void\s+(\w+)\s*\(/);
           if (match) {
             const funcName = match[1];
-            // 跳过已存在于 custom_functions 保护区的函数
+            // Skip functions already in the custom_functions protected area
             if (!existingFunctions.has(funcName)) {
               impls.set(funcName, impl);
             }
@@ -424,7 +424,7 @@ export class CallbackFileGenerator {
   }
 
   /**
-   * 收集所有 onMessage 回调函数名
+   * Collect all onMessage callback function names
    */
   private collectMessageCallbackNames(): string[] {
     const names: string[] = [];
@@ -444,12 +444,12 @@ export class CallbackFileGenerator {
   }
 
   /**
-   * 收集所有时间更新回调实现
+   * Collect all time update callback implementations
    */
   private collectTimeUpdateCallbackImpls(): string[] {
-    const impls = new Map<string, string>(); // 使用 Map 去重，key 为函数名
+    const impls = new Map<string, string>(); // Use Map for deduplication, keyed by function name
 
-    // 时间标签的更新回调
+    // Time label update callbacks
     this.allComponents.forEach(component => {
       if (component.type === 'hg_time_label') {
         const timeFormat = component.data?.timeFormat || 'HH:mm:ss';
@@ -459,7 +459,7 @@ export class CallbackFileGenerator {
       }
     });
 
-    // 计时器标签的更新回调
+    // Timer label update callbacks
     this.allComponents.forEach(component => {
       if (component.type === 'hg_label' && component.data?.isTimerLabel === true) {
         const timerFormat = component.data?.timerFormat || 'HH:MM:SS';
@@ -474,7 +474,7 @@ export class CallbackFileGenerator {
   }
 
   /**
-   * 收集所有时间更新回调函数名
+   * Collect all time update callback function names
    */
   private collectTimeUpdateCallbackNames(): string[] {
     const names: string[] = [];
@@ -483,7 +483,7 @@ export class CallbackFileGenerator {
       if (component.type === 'hg_time_label') {
         names.push(`${component.id}_time_update_cb`);
       }
-      // 计时器标签的更新回调
+      // Timer label update callbacks
       if (component.type === 'hg_label' && component.data?.isTimerLabel === true) {
         names.push(`${component.id}_timer_update_cb`);
       }
@@ -493,34 +493,34 @@ export class CallbackFileGenerator {
   }
 
   /**
-   * 收集所有用户配置的定时器回调函数名
+   * Collect all user-configured timer callback function names
    */
   private collectTimerCallbackNames(): string[] {
     const names = new Set<string>();
 
     this.allComponents.forEach(component => {
-      // 支持新版 timers 数组
+      // Support new timers array format
       if (component.data?.timers && Array.isArray(component.data.timers)) {
         component.data.timers.forEach((timer: any) => {
-          // 预设动作模式：支持 segments（多段动画）或 actions（单段动画）
+          // Preset action mode: supports segments (multi-segment) or actions (single-segment)
           if (timer.mode === 'preset' && ((timer.segments && timer.segments.length > 0) || (timer.actions && timer.actions.length > 0))) {
-            // 预设动作模式：使用定时器 ID 生成回调函数名
+            // Preset action mode: generate callback name using timer ID
             names.add(`${component.id}_${timer.id}_cb`);
           } else if (timer.mode === 'custom' && timer.callback) {
-            // 自定义函数模式
+            // Custom function mode
             names.add(timer.callback);
           }
         });
       }
-      // 兼容旧版单定时器格式
+      // Backward compatible with legacy single timer format
       else if (component.data?.timerEnabled === true) {
         const timerMode = component.data.timerMode || 'custom';
         
         if (timerMode === 'preset' && component.data.timerActions && component.data.timerActions.length > 0) {
-          // 预设动作模式：使用自动生成的回调函数名
+          // Preset action mode: use auto-generated callback name
           names.add(`${component.id}_preset_timer_cb`);
         } else if (timerMode === 'custom' && component.data.timerCallback) {
-          // 自定义函数模式
+          // Custom function mode
           names.add(component.data.timerCallback);
         }
       }
@@ -530,28 +530,28 @@ export class CallbackFileGenerator {
   }
 
   /**
-   * 收集所有用户配置的定时器回调实现
-   * @param existingFunctions 已存在的函数名集合（从 custom_functions 保护区提取）
+   * Collect all user-configured timer callback implementations
+   * @param existingFunctions Set of existing function names (extracted from custom_functions protected area)
    */
   private collectTimerCallbackImpls(existingFunctions: Set<string> = new Set()): string[] {
     const impls = new Map<string, string>();
 
     this.allComponents.forEach(component => {
-      // 支持新版 timers 数组
+      // Support new timers array format
       if (component.data?.timers && Array.isArray(component.data.timers)) {
         component.data.timers.forEach((timer: any) => {
-          // 预设动作模式：支持 segments（多段动画）或 actions（单段动画）
+          // Preset action mode: supports segments (multi-segment) or actions (single-segment)
           if (timer.mode === 'preset' && ((timer.segments && timer.segments.length > 0) || (timer.actions && timer.actions.length > 0))) {
-            // 预设动作模式：生成自动实现的回调函数
+            // Preset action mode: generate auto-implemented callback function
             const callback = `${component.id}_${timer.id}_cb`;
             if (!impls.has(callback)) {
               const impl = this.generatePresetTimerCallbackFromConfig(component, timer);
               impls.set(callback, impl);
             }
           } else if (timer.mode === 'custom' && timer.callback) {
-            // 自定义函数模式：生成能调用保护区实现的回调
+            // Custom function mode: generate callback invoking protected area implementation
             const callback = timer.callback;
-            // 跳过已存在于 custom_functions 保护区的函数
+            // Skip functions already in the custom_functions protected area
             if (!impls.has(callback) && !existingFunctions.has(callback)) {
               const timerName = timer.name || timer.id;
               const implFuncName = `${callback}_impl`;
@@ -584,21 +584,21 @@ void ${callback}(void *obj)
           }
         });
       }
-      // 兼容旧版单定时器格式
+      // Backward compatible with legacy single timer format
       else if (component.data?.timerEnabled === true) {
         const timerMode = component.data.timerMode || 'custom';
         
         if (timerMode === 'preset' && component.data.timerActions && component.data.timerActions.length > 0) {
-          // 预设动作模式：生成自动实现的回调函数
+          // Preset action mode: generate auto-implemented callback function
           const callback = `${component.id}_preset_timer_cb`;
           if (!impls.has(callback)) {
             const impl = this.generatePresetTimerCallback(component);
             impls.set(callback, impl);
           }
         } else if (timerMode === 'custom' && component.data.timerCallback) {
-          // 自定义函数模式：生成能调用保护区实现的回调
+          // Custom function mode: generate callback invoking protected area implementation
           const callback = component.data.timerCallback;
-          // 跳过已存在于 custom_functions 保护区的函数
+          // Skip functions already in the custom_functions protected area
           if (!impls.has(callback) && !existingFunctions.has(callback)) {
             const implFuncName = `${callback}_impl`;
             const impl = `void ${callback}(void *obj)
@@ -631,7 +631,7 @@ void ${callback}(void *obj)
   }
 
   /**
-   * 生成预设动作的定时器回调函数
+   * Generate preset action timer callback function
    */
   private generatePresetTimerCallback(component: Component): string {
     const callback = `${component.id}_preset_timer_cb`;
@@ -640,7 +640,7 @@ void ${callback}(void *obj)
     const interval = component.data?.timerInterval || 1000;
     const stopOnComplete = component.data?.timerStopOnComplete !== false;
     
-    // 计算 cnt_max
+    // Calculate cnt_max
     const cntMax = Math.ceil(duration / interval);
     
     const cntVarName = `${component.id}_timer_cnt`;
@@ -650,10 +650,10 @@ void ${callback}(void *obj)
     code += `    const uint16_t cnt_max = ${cntMax};\n`;
     code += `    \n`;
     
-    // 为每个动作生成代码
+    // Generate code for each action
     actions.forEach((action: any) => {
       if (action.type === 'position') {
-        // 调整位置动作
+        // Position adjustment action
         code += `    // Adjust position: (${action.fromX}, ${action.fromY}) -> (${action.toX}, ${action.toY})\n`;
         code += `    const int16_t x_origin = ${action.fromX};\n`;
         code += `    const int16_t y_origin = ${action.fromY};\n`;
@@ -664,7 +664,7 @@ void ${callback}(void *obj)
         code += `    gui_obj_move(target, x_cur, y_cur);\n`;
         code += `    \n`;
       } else if (action.type === 'size') {
-        // 调整大小动作（仅支持 hg_window）
+        // Size adjustment action (hg_window only)
         code += `    // Adjust size: (${action.fromW}, ${action.fromH}) -> (${action.toW}, ${action.toH})\n`;
         code += `    const int16_t w_origin = ${action.fromW};\n`;
         code += `    const int16_t h_origin = ${action.fromH};\n`;
@@ -676,12 +676,12 @@ void ${callback}(void *obj)
         code += `    target->h = h_cur;\n`;
         code += `    \n`;
       } else if (action.type === 'opacity') {
-        // 调整透明度动作
+        // Opacity adjustment action
         code += `    // Adjust opacity: ${action.from} -> ${action.to}\n`;
         code += `    const uint8_t opacity_origin = ${action.from};\n`;
         code += `    const uint8_t opacity_target = ${action.to};\n`;
         code += `    int16_t opacity_cur = opacity_origin + (opacity_target - opacity_origin) * ${cntVarName} / cnt_max;\n`;
-        // hg_image 使用 gui_img_set_opacity，其他组件使用 target->opacity_value
+        // hg_image uses gui_img_set_opacity, other components use target->opacity_value
         if (component.type === 'hg_image') {
           code += `    gui_img_set_opacity((gui_img_t *)target, opacity_cur);\n`;
         } else {
@@ -689,7 +689,7 @@ void ${callback}(void *obj)
         }
         code += `    \n`;
       } else if (action.type === 'rotation') {
-        // 调整旋转动作（仅支持 hg_image）
+        // Rotation adjustment action (hg_image only)
         code += `    // Adjust rotation: ${action.angleOrigin}° -> ${action.angleTarget}°\n`;
         code += `    const float angle_origin = ${action.angleOrigin};\n`;
         code += `    const float angle_target = ${action.angleTarget};\n`;
@@ -697,7 +697,7 @@ void ${callback}(void *obj)
         code += `    gui_img_rotation((gui_img_t *)target, angle_cur);\n`;
         code += `    \n`;
       } else if (action.type === 'scale') {
-        // 调整缩放动作（仅支持 hg_image）
+        // Scale adjustment action (hg_image only)
         code += `    // Adjust scale: (${action.zoomXOrigin}, ${action.zoomYOrigin}) -> (${action.zoomXTarget}, ${action.zoomYTarget})\n`;
         code += `    const float zoom_x_origin = ${action.zoomXOrigin};\n`;
         code += `    const float zoom_x_target = ${action.zoomXTarget};\n`;
@@ -708,17 +708,17 @@ void ${callback}(void *obj)
         code += `    gui_img_scale((gui_img_t *)target, zoom_x_cur, zoom_y_cur);\n`;
         code += `    \n`;
       } else if (action.type === 'setFocus') {
-        // 设置焦点动作（适配所有组件）
+        // Set focus action (applies to all components)
         code += `    // Set focus\n`;
         code += `    gui_obj_focus_set(target);\n`;
         code += `    \n`;
       }
     });
     
-    // 增加计数器
+    // Increment counter
     code += `    ${cntVarName}++;\n`;
     
-    // 到达总时间后的处理
+    // Handle completion after reaching total duration
     if (stopOnComplete) {
       code += `    if (${cntVarName} >= cnt_max) {\n`;
       code += `        gui_obj_stop_timer(target);\n`;
@@ -736,7 +736,7 @@ void ${callback}(void *obj)
   }
 
   /**
-   * 从 TimerConfig 生成预设动作的定时器回调函数（支持多段动画）
+   * Generate preset action timer callback from TimerConfig (supports multi-segment animation)
    */
   private generatePresetTimerCallbackFromConfig(component: Component, timer: any): string {
     const callback = `${component.id}_${timer.id}_cb`;
@@ -745,17 +745,17 @@ void ${callback}(void *obj)
     const stopOnComplete = timer.stopOnComplete !== false;
     const timerName = timer.name || timer.id;
     
-    // 如果有多段动画，使用新的多段动画生成逻辑
+    // If multi-segment animation exists, use multi-segment generation logic
     if (segments.length > 0) {
       return this.generateMultiSegmentTimerCallback(component, timer, callback, timerName, interval, stopOnComplete, segments);
     }
     
-    // 否则使用旧的单段动画逻辑（兼容旧版）
+    // Otherwise use legacy single-segment animation logic
     const actions = timer.actions || [];
     const duration = timer.duration || 1000;
     const delayStart = timer.delayStart || 0;
     
-    // 计算 cnt_max 和 cnt_wait
+    // Calculate cnt_max and cnt_wait
     const cntMax = Math.ceil(duration / interval);
     const cntWait = Math.ceil(delayStart / interval);
     
@@ -770,7 +770,7 @@ void ${callback}(void *obj)\n{\n`;
     code += `    gui_obj_t *target = (gui_obj_t *)obj;\n`;
     code += `    const uint16_t cnt_max = ${cntMax};\n`;
     
-    // 如果有延时启动，添加 cnt_wait
+    // Add cnt_wait if delayed start is configured
     if (delayStart > 0) {
       code += `    const uint16_t cnt_wait = ${cntWait}; // Delay start: ${delayStart}ms\n`;
       code += `    \n`;
@@ -784,20 +784,20 @@ void ${callback}(void *obj)\n{\n`;
       code += `    \n`;
     }
     
-    // 为每个动作生成代码
+    // Generate code for each action
     actions.forEach((action: any) => {
       code += this.generateActionCode(action, delayStart > 0, cntVarName, 'cnt_wait', 'cnt_max', component);
     });
     
-    // 增加计数器
+    // Increment counter
     code += `    ${cntVarName}++;\n`;
     
-    // 如果启用了日志，添加 gui_log 打印
+    // Add gui_log output if logging is enabled
     if (timer.enableLog) {
       code += `    gui_log("${callback}: cnt=%d\\n", ${cntVarName});\n`;
     }
     
-    // 到达总时间后的处理
+    // Handle completion after reaching total duration
     const totalCnt = delayStart > 0 ? `cnt_wait + cnt_max` : `cnt_max`;
     if (stopOnComplete) {
       code += `    if (${cntVarName} >= ${totalCnt}) {\n`;
@@ -816,7 +816,7 @@ void ${callback}(void *obj)\n{\n`;
   }
 
   /**
-   * 生成多段动画的定时器回调函数
+   * Generate multi-segment animation timer callback function
    */
   private generateMultiSegmentTimerCallback(
     component: Component,
@@ -827,7 +827,7 @@ void ${callback}(void *obj)\n{\n`;
     stopOnComplete: boolean,
     segments: any[]
   ): string {
-    // 计算每段的 cnt_max
+    // Calculate cnt_max for each segment
     const segmentCntMaxes = segments.map(seg => Math.ceil(seg.duration / interval));
     const totalCntMax = segmentCntMaxes.reduce((sum, cnt) => sum + cnt, 0);
     
@@ -844,7 +844,7 @@ void ${callback}(void *obj)\n{\n`;
     code += `    const uint16_t total_cnt_max = ${totalCntMax};\n`;
     code += `    \n`;
     
-    // 为每段生成边界常量
+    // Generate boundary constants for each segment
     let cumulativeCnt = 0;
     segments.forEach((seg, idx) => {
       const segCntMax = segmentCntMaxes[idx];
@@ -854,29 +854,29 @@ void ${callback}(void *obj)\n{\n`;
     });
     code += `    \n`;
     
-    // cnt++ 在判断前执行
+    // Increment cnt before condition check
     code += `    ${cntVarName}++;\n`;
     
-    // 如果启用了日志，添加 gui_log 打印
+    // Add gui_log output if logging is enabled
     if (timer.enableLog) {
       code += `    gui_log("${callback}: cnt=%d\\n", ${cntVarName});\n`;
     }
     
     code += `    \n`;
     
-    // 为每段生成条件分支（使用 if-else 提高效率）
+    // Generate conditional branches for each segment (using if-else for efficiency)
     segments.forEach((seg, idx) => {
       const actions = seg.actions || [];
       const ifKeyword = idx === 0 ? 'if' : 'else if';
       
       if (actions.length === 0) {
-        // 空段（等待）
+        // Empty segment (wait)
         code += `    // Segment ${idx + 1}: Wait ${seg.duration}ms\n`;
         code += `    ${ifKeyword} (${cntVarName} > seg${idx}_start && ${cntVarName} <= seg${idx}_end) {\n`;
         code += `        // No action, just wait\n`;
         code += `    }\n`;
       } else {
-        // 检查是否所有动作都不需要段内计数器（跳转界面、更换图片、设置可见性、切换定时动画、设置焦点、无初始值的颜色设置等）
+        // Check if all actions need no segment counter (view switch, image change, visibility, timer toggle, focus, color without initial value, etc.)
         const allNoSegCounter = actions.every((action: any) => 
           action.type === 'switchView' || 
           action.type === 'changeImage' || 
@@ -887,21 +887,21 @@ void ${callback}(void *obj)\n{\n`;
           (action.type === 'bgColor' && !action.bgColorFrom)
         );
         
-        // 有动作的段
+        // Segment with actions
         code += `    // Segment ${idx + 1}: ${seg.duration}ms, ${actions.length} action(s)\n`;
         code += `    ${ifKeyword} (${cntVarName} > seg${idx}_start && ${cntVarName} <= seg${idx}_end) {\n`;
         
-        // 只有在需要渐变计算时才生成段内计数器
+        // Only generate segment counter when interpolation is needed
         if (!allNoSegCounter) {
           code += `        uint16_t seg_cnt = ${cntVarName} - seg${idx}_start;\n`;
           code += `        const uint16_t seg_cnt_max = seg${idx}_end - seg${idx}_start;\n`;
           code += `        \n`;
         }
         
-        // 为每个动作生成代码
+        // Generate code for each action
         actions.forEach((action: any) => {
           const actionCode = this.generateActionCode(action, false, 'seg_cnt', '', 'seg_cnt_max', component);
-          // 缩进处理
+          // Handle indentation
           const indentedCode = actionCode.split('\n').map(line => line ? `        ${line}` : line).join('\n');
           code += indentedCode;
         });
@@ -912,7 +912,7 @@ void ${callback}(void *obj)\n{\n`;
     
     code += `    \n`;
     
-    // 到达总时间后的处理
+    // Handle completion after reaching total duration
     if (stopOnComplete) {
       code += `    if (${cntVarName} >= total_cnt_max) {\n`;
       code += `        gui_obj_stop_timer(target);\n`;
@@ -930,26 +930,26 @@ void ${callback}(void *obj)\n{\n`;
   }
 
   /**
-   * 生成单个动作的代码
+   * Generate code for a single action
    */
   private generateActionCode(action: any, hasDelay: boolean, cntVar: string, waitVar: string, maxVar: string, component?: Component): string {
     let code = '';
     const progressExpr = hasDelay ? `(${cntVar} - ${waitVar}) / ${maxVar}` : `${cntVar} / ${maxVar}`;
     
     if (action.type === 'visibility') {
-      // 设置可见性动作
-      const visible = action.visible !== false; // 默认为 true
+      // Set visibility action
+      const visible = action.visible !== false; // Defaults to true
       code += `    // Set visibility: ${visible ? 'show' : 'hide'}\n`;
       code += `    gui_obj_show(target, ${visible ? 'true' : 'false'});\n`;
       code += `    \n`;
     } else if (action.type === 'changeImage') {
-      // 更换图片动作（仅支持 hg_image）
+      // Change image action (hg_image only)
       let imagePath = action.imagePath || '';
-      // 去掉 assets/ 前缀，只保留后面的路径
+      // Strip assets/ prefix, keep remaining path
       if (imagePath.startsWith('assets/')) {
-        imagePath = imagePath.substring(6); // 去掉 'assets/'
+        imagePath = imagePath.substring(6); // Remove 'assets/' prefix
       }
-      // 将路径后缀改为 .bin
+      // Change file extension to .bin
       if (imagePath && !imagePath.endsWith('.bin')) {
         imagePath = imagePath.replace(/\.[^.]+$/, '.bin');
       }
@@ -958,10 +958,10 @@ void ${callback}(void *obj)\n{\n`;
       code += `    gui_img_refresh_size((gui_img_t *)target);\n`;
       code += `    \n`;
     } else if (action.type === 'imageSequence') {
-      // 图片序列动作（仅支持 hg_image）
+      // Image sequence action (hg_image only)
       const imageSequence = action.imageSequence || [];
       if (imageSequence.length > 0) {
-        // 处理图片路径：去掉 assets/ 前缀，改为 .bin 后缀
+        // Process image paths: strip assets/ prefix, change extension to .bin
         const processedPaths = imageSequence.map((path: string) => {
           let processed = path;
           if (processed.startsWith('assets/')) {
@@ -985,7 +985,7 @@ void ${callback}(void *obj)\n{\n`;
         code += `    \n`;
       }
     } else if (action.type === 'switchView') {
-      // 跳转界面动作
+      // Switch view action
       const targetName = action.target || 'unknown_view';
       const switchOutStyle = action.switchOutStyle || 'SWITCH_OUT_TO_LEFT_USE_TRANSLATION';
       const switchInStyle = action.switchInStyle || 'SWITCH_IN_FROM_RIGHT_USE_TRANSLATION';
@@ -993,10 +993,10 @@ void ${callback}(void *obj)\n{\n`;
       code += `    gui_view_switch_direct(gui_view_get_current(), "${targetName}", ${switchOutStyle}, ${switchInStyle});\n`;
       code += `    \n`;
     } else if (action.type === 'switchTimer') {
-      // 切换定时动画动作（新版：支持多个定时器控制）
+      // Timer toggle action (new: supports multiple timer controls)
       const timerTargets = action.timerTargets || [];
       
-      // 兼容旧版：如果没有 timerTargets 但有 timerId，转换为新格式
+      // Backward compatible: convert timerId to timerTargets format if needed
       if (timerTargets.length === 0 && action.timerId) {
         timerTargets.push({
           timerId: action.timerId,
@@ -1015,7 +1015,7 @@ void ${callback}(void *obj)\n{\n`;
         const timerId = target.timerId;
         const timerAction = target.action;
         
-        // 查找目标定时器配置
+        // Find target timer configuration
         const targetTimer = component?.data?.timers?.find((t: any) => t.id === timerId);
         if (!targetTimer) {
           code += `    // Warning: Timer animation ${timerId} not found\n`;
@@ -1025,8 +1025,8 @@ void ${callback}(void *obj)\n{\n`;
         const timerName = targetTimer.name || targetTimer.id;
         
         if (timerAction === 'start') {
-          // 启动定时器
-          // 生成回调函数名
+          // Start timer
+          // Generate callback function name
           let callback: string;
           if (targetTimer.mode === 'preset') {
             callback = `${component?.id}_${targetTimer.id}_cb`;
@@ -1040,12 +1040,12 @@ void ${callback}(void *obj)\n{\n`;
           code += `    // Start timer animation: ${timerName}\n`;
           code += `    ${component?.id}_timer_cnt = 0; // Reset counter\n`;
           code += `    gui_obj_create_timer(target, ${targetTimer.interval}, ${targetTimer.reload !== false ? 'true' : 'false'}, ${callback});\n`;
-          // 如果目标定时器没有设置立即运行，则调用 gui_obj_start_timer
+          // Call gui_obj_start_timer if the target timer is not set to run immediately
           if (!targetTimer.runImmediately) {
             code += `    gui_obj_start_timer(target);\n`;
           }
         } else if (timerAction === 'stop') {
-          // 停止定时器
+          // Stop timer
           code += `    // Stop timer animation: ${timerName}\n`;
           code += `    gui_obj_stop_timer(target);\n`;
         }
@@ -1054,7 +1054,7 @@ void ${callback}(void *obj)\n{\n`;
       code += `    return; // Return immediately after timer control\n`;
       code += `    \n`;
     } else if (action.type === 'position') {
-      // 调整位置动作
+      // Position adjustment action
       code += `    // Adjust position: (${action.fromX}, ${action.fromY}) -> (${action.toX}, ${action.toY})\n`;
       code += `    const int16_t x_origin = ${action.fromX};\n`;
       code += `    const int16_t y_origin = ${action.fromY};\n`;
@@ -1065,7 +1065,7 @@ void ${callback}(void *obj)\n{\n`;
       code += `    gui_obj_move(target, x_cur, y_cur);\n`;
       code += `    \n`;
     } else if (action.type === 'size') {
-      // 调整大小动作（仅支持 hg_window）
+      // Size adjustment action (hg_window only)
       code += `    // Adjust size: (${action.fromW}, ${action.fromH}) -> (${action.toW}, ${action.toH})\n`;
       code += `    const int16_t w_origin = ${action.fromW};\n`;
       code += `    const int16_t h_origin = ${action.fromH};\n`;
@@ -1077,12 +1077,12 @@ void ${callback}(void *obj)\n{\n`;
       code += `    target->h = h_cur;\n`;
       code += `    \n`;
     } else if (action.type === 'opacity') {
-      // 调整透明度动作
+      // Opacity adjustment action
       code += `    // Adjust opacity: ${action.from} -> ${action.to}\n`;
       code += `    const uint8_t opacity_origin = ${action.from};\n`;
       code += `    const uint8_t opacity_target = ${action.to};\n`;
       code += `    int16_t opacity_cur = opacity_origin + (opacity_target - opacity_origin) * ${progressExpr};\n`;
-      // hg_image 使用 gui_img_set_opacity，其他组件使用 target->opacity_value
+      // hg_image uses gui_img_set_opacity, other components use target->opacity_value
       if (component?.type === 'hg_image') {
         code += `    gui_img_set_opacity((gui_img_t *)target, opacity_cur);\n`;
       } else {
@@ -1090,7 +1090,7 @@ void ${callback}(void *obj)\n{\n`;
       }
       code += `    \n`;
     } else if (action.type === 'rotation') {
-      // 调整旋转动作（仅支持 hg_image）
+      // Rotation adjustment action (hg_image only)
       code += `    // Adjust rotation: ${action.angleOrigin}° -> ${action.angleTarget}°\n`;
       code += `    const float angle_origin = ${action.angleOrigin};\n`;
       code += `    const float angle_target = ${action.angleTarget};\n`;
@@ -1098,7 +1098,7 @@ void ${callback}(void *obj)\n{\n`;
       code += `    gui_img_rotation((gui_img_t *)target, angle_cur);\n`;
       code += `    \n`;
     } else if (action.type === 'scale') {
-      // 调整缩放动作（仅支持 hg_image）
+      // Scale adjustment action (hg_image only)
       code += `    // Adjust scale: (${action.zoomXOrigin}, ${action.zoomYOrigin}) -> (${action.zoomXTarget}, ${action.zoomYTarget})\n`;
       code += `    const float zoom_x_origin = ${action.zoomXOrigin};\n`;
       code += `    const float zoom_x_target = ${action.zoomXTarget};\n`;
@@ -1109,9 +1109,9 @@ void ${callback}(void *obj)\n{\n`;
       code += `    gui_img_scale((gui_img_t *)target, zoom_x_cur, zoom_y_cur);\n`;
       code += `    \n`;
     } else if (action.type === 'fgColor') {
-      // 调整前景色动作（仅支持 hg_image）
+      // Foreground color adjustment action (hg_image only)
       if (action.fgColorFrom) {
-        // 有初始值，需要计算渐变
+        // Has initial value, calculate interpolation
         code += `    // Adjust foreground color: ${action.fgColorFrom} -> ${action.fgColorTo}\n`;
         code += `    const uint32_t fg_color_from = ${action.fgColorFrom};\n`;
         code += `    const uint32_t fg_color_to = ${action.fgColorTo};\n`;
@@ -1132,15 +1132,15 @@ void ${callback}(void *obj)\n{\n`;
         code += `    uint32_t fg_color_cur = (a_cur << 24) | (r_cur << 16) | (g_cur << 8) | b_cur;\n`;
         code += `    gui_img_a8_recolor((gui_img_t *)target, fg_color_cur);\n`;
       } else {
-        // 没有初始值，直接设置目标值
+        // No initial value, set target value directly
         code += `    // Set foreground color: ${action.fgColorTo}\n`;
         code += `    gui_img_a8_recolor((gui_img_t *)target, ${action.fgColorTo});\n`;
       }
       code += `    \n`;
     } else if (action.type === 'bgColor') {
-      // 调整背景色动作（仅支持 hg_image）
+      // Background color adjustment action (hg_image only)
       if (action.bgColorFrom) {
-        // 有初始值，需要计算渐变
+        // Has initial value, calculate interpolation
         code += `    // Adjust background color: ${action.bgColorFrom} -> ${action.bgColorTo}\n`;
         code += `    const uint32_t bg_color_from = ${action.bgColorFrom};\n`;
         code += `    const uint32_t bg_color_to = ${action.bgColorTo};\n`;
@@ -1161,13 +1161,13 @@ void ${callback}(void *obj)\n{\n`;
         code += `    uint32_t bg_color_cur = (a_cur << 24) | (r_cur << 16) | (g_cur << 8) | b_cur;\n`;
         code += `    gui_img_a8_fix_bg((gui_img_t *)target, bg_color_cur);\n`;
       } else {
-        // 没有初始值，直接设置目标值
+        // No initial value, set target value directly
         code += `    // Set background color: ${action.bgColorTo}\n`;
         code += `    gui_img_a8_fix_bg((gui_img_t *)target, ${action.bgColorTo});\n`;
       }
       code += `    \n`;
     } else if (action.type === 'setFocus') {
-      // 设置焦点动作（适配所有组件）
+      // Set focus action (applies to all components)
       code += `    // Set focus\n`;
       code += `    gui_obj_focus_set(target);\n`;
       code += `    \n`;
@@ -1177,7 +1177,7 @@ void ${callback}(void *obj)\n{\n`;
   }
 
   /**
-   * 检查是否需要 tp_algo.h（用于抬起区域检测）
+   * Check if tp_algo.h is needed (for touch release area detection)
    */
   private checkNeedsTpAlgo(): boolean {
     return this.allComponents.some(component => {
@@ -1189,15 +1189,15 @@ void ${callback}(void *obj)\n{\n`;
   }
 
   /**
-   * 获取时间格式对应的缓冲区大小
+   * Get buffer size for the specified time format
    */
   private getTimeBufferSize(timeFormat?: string): number {
     switch (timeFormat) {
       case 'HH:mm:ss': return 10;  // "HH:MM:SS\0" = 9
-      case 'HH:mm': return 10;      // "HH:MM\0" = 6，留余量
-      case 'HH': return 4;           // "HH\0" = 3，留余量
-      case 'mm': return 4;           // "mm\0" = 3，留余量
-      case 'HH:mm-split': return 10; // 拆分时间格式，与 HH:mm 相同，需要访问 str+3
+      case 'HH:mm': return 10;      // "HH:MM\0" = 6，with extra margin
+      case 'HH': return 4;           // "HH\0" = 3，with extra margin
+      case 'mm': return 4;           // "mm\0" = 3，with extra margin
+      case 'HH:mm-split': return 10; // Split time format, same as HH:mm, needs access to str+3
       case 'YYYY-MM-DD': return 12; // "YYYY-MM-DD\0" = 11
       case 'YYYY-MM-DD HH:mm:ss': return 22; // "YYYY-MM-DD HH:MM:SS\0" = 20
       case 'MM-DD HH:mm': return 16; // "MM-DD HH:MM\0" = 13
@@ -1206,7 +1206,7 @@ void ${callback}(void *obj)\n{\n`;
   }
 
   /**
-   * 获取计时器格式对应的缓冲区大小
+   * Get buffer size for the specified timer format
    */
   private getTimerBufferSize(timerFormat?: string): number {
     switch (timerFormat) {
@@ -1219,8 +1219,8 @@ void ${callback}(void *obj)\n{\n`;
   }
 
   /**
-   * 生成时间更新回调函数
-   * 使用全局变量存储时间字符串（与 SDK 保持一致）
+   * Generate time update callback function
+   * Uses global variables to store time strings (consistent with SDK)
    */
   private generateTimeUpdateCallback(componentId: string, timeFormat: string): string {
     let formatStr = '';
@@ -1230,7 +1230,7 @@ void ${callback}(void *obj)\n{\n`;
         formatStr = '%02d:%02d:%02d';
         break;
       case 'HH:mm':
-      case 'HH:mm-split':  // 拆分时间格式使用相同的格式字符串
+      case 'HH:mm-split':  // Split time format uses the same format string
         formatStr = '%02d:%02d';
         break;
       case 'HH':
@@ -1255,7 +1255,7 @@ void ${callback}(void *obj)\n{\n`;
     let code = `void ${componentId}_time_update_cb(void *p)\n`;
     code += `{\n`;
     
-    // 拆分时间格式需要特殊处理
+    // Split time format requires special handling
     if (timeFormat === 'HH:mm-split') {
       code += `    GUI_UNUSED(p);\n`;
       code += `    \n`;
@@ -1279,7 +1279,7 @@ void ${callback}(void *obj)\n{\n`;
       code += `        gui_text_content_set(${componentId}_min, ${componentId}_time_str + 3, 2);\n`;
       code += `    }\n`;
     } else {
-      // 普通时间格式处理
+      // Standard time format handling
       code += `    GUI_UNUSED(p);\n`;
       code += `    \n`;
       code += `    time_t now = time(NULL);\n`;
@@ -1290,7 +1290,7 @@ void ${callback}(void *obj)\n{\n`;
       code += `    }\n`;
       code += `    \n`;
 
-      // 根据格式生成不同的 sprintf 调用
+      // Generate different sprintf calls based on format
       if (timeFormat === 'HH:mm:ss') {
         code += `    sprintf(${componentId}_time_str, "${formatStr}", t->tm_hour, t->tm_min, t->tm_sec);\n`;
       } else if (timeFormat === 'HH:mm') {
@@ -1317,15 +1317,15 @@ void ${callback}(void *obj)\n{\n`;
   }
 
   /**
-   * 生成计时器更新回调函数
-   * 用于正计时/倒计时功能
-   * 参考秒表实现，使用毫秒级计数
+   * Generate timer update callback function
+   * Used for stopwatch/countdown functionality
+   * Based on stopwatch implementation, using millisecond-level counting
    */
   private generateTimerUpdateCallback(componentId: string, timerFormat: string, timerType: string): string {
     let formatStr = '';
     let formatLogic = '';
 
-    // 根据格式生成格式化逻辑（使用毫秒级计数）
+    // Generate formatting logic based on format (using millisecond counting)
     switch (timerFormat) {
       case 'HH:MM:SS':
         formatStr = '%02u:%02u:%02u';
@@ -1372,11 +1372,11 @@ void ${callback}(void *obj)\n{\n`;
     code += `    \n`;
     
     if (timerType === 'stopwatch') {
-      // 正计时：参考秒表实现
+      // Stopwatch: based on stopwatch implementation
       code += `    // Stopwatch: increment time on each call (assuming timer interval is 10ms)\n`;
       code += `    ${componentId}_timer_value += 10;\n`;
     } else {
-      // 倒计时：每次调用减少时间
+      // Countdown: decrement time on each call
       code += `    // Countdown: decrement time on each call (assuming timer interval is 10ms)\n`;
       code += `    if (${componentId}_timer_value > 10) {\n`;
       code += `        ${componentId}_timer_value -= 10;\n`;
@@ -1399,7 +1399,7 @@ void ${callback}(void *obj)\n{\n`;
   }
 
   /**
-   * 收集所有双态按钮回调函数名
+   * Collect all toggle button callback function names
    */
   private collectToggleButtonCallbackNames(): Array<{ onCallback: string; offCallback: string }> {
     const callbacks: Array<{ onCallback: string; offCallback: string }> = [];
@@ -1420,7 +1420,7 @@ void ${callback}(void *obj)\n{\n`;
   }
 
   /**
-   * 收集所有双态按钮回调实现
+   * Collect all toggle button callback implementations
    */
   private collectToggleButtonCallbackImpls(): string[] {
     const impls: string[] = [];
@@ -1429,47 +1429,47 @@ void ${callback}(void *obj)\n{\n`;
       if (component.type === 'hg_button') {
         const toggleMode = component.data?.toggleMode === true || component.data?.toggleMode === 'true';
         if (toggleMode) {
-          // 检查是否指定了控制目标
+          // Check if a control target is specified
           const controlTarget = component.data?.controlTarget;
           
           let onCallbackBody = '';
           let offCallbackBody = '';
           
           if (controlTarget) {
-            // 如果指定了控制目标，根据目标类型生成相应的回调
+            // If control target specified, generate callbacks based on target type
             const targetComp = this.componentMap.get(controlTarget);
             
             if (targetComp) {
-              // 判断目标类型并生成相应的控制代码
+              // Determine target type and generate corresponding control code
               if (targetComp.type === 'hg_timer_label') {
-                // 计时器标签：使用生成的控制函数
+                // Timer label: use generated control functions
                 onCallbackBody = `    // Start timer\n    ${targetComp.id}_start();`;
                 offCallbackBody = `    // Stop timer\n    ${targetComp.id}_stop();`;
               } else if (targetComp.type === 'hg_label' && targetComp.data?.isTimerLabel === true) {
-                // 旧版计时器标签（向后兼容）：启动/停止计时器
+                // Legacy timer label (backward compatible): start/stop timer
                 onCallbackBody = `    // Start timer\n    gui_obj_start_timer((void *)${targetComp.id});`;
                 offCallbackBody = `    // Stop timer\n    if (GUI_BASE(${targetComp.id})->timer) {\n        gui_obj_stop_timer((void *)${targetComp.id});\n    }`;
               } else if (targetComp.type === 'hg_video') {
-                // 视频播放器：播放/暂停
+                // Video player: play/pause
                 onCallbackBody = `    // Play video\n    // TODO: Implement video play logic\n    // gui_video_play(${targetComp.id});`;
                 offCallbackBody = `    // Pause video\n    // TODO: Implement video pause logic\n    // gui_video_pause(${targetComp.id});`;
               } else {
-                // 其他组件：显示/隐藏控制
+                // Other components: show/hide control
                 onCallbackBody = `    // Show target component\n    gui_obj_show(${targetComp.id}, true);`;
                 offCallbackBody = `    // Hide target component\n    gui_obj_show(${targetComp.id}, false);`;
               }
             } else {
-              // 目标组件不存在
+              // Target component does not exist
               onCallbackBody = `    // Warning: Control target "${controlTarget}" does not exist\n    // TODO: Please check if controlTarget property is correct`;
               offCallbackBody = `    // Warning: Control target "${controlTarget}" does not exist\n    // TODO: Please check if controlTarget property is correct`;
             }
           } else {
-            // 如果没有指定控制目标，查找同一个 view 中所有 timerAutoStart=false 的计时标签
+            // If no control target specified, find all timer labels with timerAutoStart=false in the same view
             const parentView = this.findParentView(component);
             const timerLabels = parentView ? this.findTimerLabelsInView(parentView) : [];
             
             if (timerLabels.length > 0) {
-              // 找到了计时标签，生成计时器控制代码
+              // Found timer labels, generate timer control code
               onCallbackBody = timerLabels.map(label => {
                 if (label.type === 'hg_timer_label') {
                   return `    // Start timer\n    ${label.id}_start();`;
@@ -1485,7 +1485,7 @@ void ${callback}(void *obj)\n{\n`;
                 }
               }).join('\n');
             } else {
-              // 没有找到任何控制目标，生成通用模板
+              // No control targets found, generate generic template
               onCallbackBody = `    // TODO: Implement ON state business logic\n    // Hint: Set "Control Target" in button properties to specify control target\n    // Example: music_player_play();`;
               offCallbackBody = `    // TODO: Implement OFF state business logic\n    // Hint: Set "Control Target" in button properties to specify control target\n    // Example: music_player_pause();`;
             }
@@ -1522,10 +1522,10 @@ ${offCallbackBody}
   }
 
   /**
-   * 查找组件所在的父 view
+   * Find the parent view containing the component
    */
   private findParentView(component: Component): Component | null {
-    // 遍历所有组件，找到包含该组件的 view
+    // Iterate all components to find the view containing this component
     for (const comp of this.allComponents) {
       if ((comp.type === 'hg_view' || comp.type === 'hg_window') && 
           comp.children && comp.children.includes(component.id)) {
@@ -1536,21 +1536,21 @@ ${offCallbackBody}
   }
 
   /**
-   * 查找 view 中所有设置了 timerAutoStart=false 的计时标签
+   * Find all timer labels with timerAutoStart=false in the view
    */
   private findTimerLabelsInView(view: Component): Component[] {
     const timerLabels: Component[] = [];
     
     if (!view.children) return timerLabels;
     
-    // 遍历 view 的所有子组件
+    // Iterate all children of the view
     view.children.forEach(childId => {
       const child = this.componentMap.get(childId);
       if (child) {
-        // 支持新版 hg_timer_label 和旧版 hg_label (isTimerLabel=true)
+        // Support new hg_timer_label and legacy hg_label (isTimerLabel=true)
         const isTimerLabel = child.type === 'hg_timer_label' || 
                             (child.type === 'hg_label' && child.data?.isTimerLabel === true);
-        const autoStart = child.data?.timerAutoStart !== false; // 默认自动启动
+        const autoStart = child.data?.timerAutoStart !== false; // Auto-start by default
         
         if (isTimerLabel && !autoStart) {
           timerLabels.push(child);

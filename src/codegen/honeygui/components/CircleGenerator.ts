@@ -1,5 +1,5 @@
 /**
- * hg_circle 组件代码生成器
+ * hg_circle component code generator
  */
 import { Component } from '../../../hml/types';
 import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';
@@ -10,14 +10,14 @@ export class CircleGenerator implements ComponentCodeGenerator {
     const parentRef = context.getParentRef(component);
     const { x, y, width, height } = component.position;
     
-    // 从 style 中获取参数，设置默认值
+    // Get parameters from style with defaults
     const radius = component.style?.radius || 40;
     
-    // 获取透明度，默认 255（完全不透明）
-    // opacity 优先从 style 读取，兼容从 data 读取
+    // Get opacity, default 255 (fully opaque)
+    // Read from style first, fallback to data
     const opacity = component.style?.opacity ?? component.data?.opacity ?? 255;
     
-    // 检查是否是双态按键，如果是则使用初始状态对应的颜色
+    // Check for dual-state button, use color corresponding to initial state
     let color: string;
     const buttonMode = component.data?.buttonMode;
     if (buttonMode === 'dual-state') {
@@ -30,15 +30,15 @@ export class CircleGenerator implements ComponentCodeGenerator {
         ? this.convertColorWithOpacity(stateColor, opacity)
         : this.convertColor(stateColor);
     } else {
-      // 普通圆形使用 fillColor
+      // Plain circle uses fillColor
       color = opacity < 255 
         ? this.convertColorWithOpacity(component.style?.fillColor, opacity)
         : this.convertColor(component.style?.fillColor);
     }
 
-    // 重要：gui_circle_create 的 x, y 参数是圆心坐标，不是矩形框左上角
-    // 设计器中存储的是矩形框左上角，需要转换为圆心坐标
-    // 矩形框中心 = 左上角 + 宽度/2
+    // Important: gui_circle_create x, y parameters are center coordinates, not bounding box top-left
+    // Designer stores bounding box top-left, need to convert to center coordinates
+    // Center = top-left + width/2
     const centerX = x + width / 2;
     const centerY = y + height / 2;
 
@@ -49,9 +49,9 @@ export class CircleGenerator implements ComponentCodeGenerator {
     const indentStr = '    '.repeat(indent);
     let code = '';
 
-    // 注意：透明度已在 gui_rgba 中设置，不再单独设置 opacity_value
+    // Note: opacity already set in gui_rgba, no separate opacity_value needed
 
-    // 渐变设置
+    // Gradient settings
     if (component.style?.useGradient && component.data?.gradientStops) {
       const stops = component.data.gradientStops as Array<{ position: number; color: string }>;
       if (stops.length >= 2) {
@@ -62,7 +62,7 @@ export class CircleGenerator implements ComponentCodeGenerator {
         if (gradientType === 'radial') {
           code += `${indentStr}gui_circle_set_radial_gradient(${component.id});\n`;
         } else {
-          // 角度渐变
+          // Angular gradient
           const startAngle = component.data?.gradientStartAngle ?? 0;
           const endAngle = component.data?.gradientEndAngle ?? 360;
           code += `${indentStr}gui_circle_set_angular_gradient(${component.id}, ${startAngle}, ${endAngle});\n`;
@@ -70,7 +70,7 @@ export class CircleGenerator implements ComponentCodeGenerator {
         
         stops.forEach(stop => {
           const color = this.convertColorToRgba(stop.color);
-          // 确保 position 是浮点数格式（如 0.0f 而不是 0f）
+          // Ensure position is float format (e.g. 0.0f not 0f)
           const position = Number.isInteger(stop.position) 
             ? `${stop.position}.0f` 
             : `${stop.position}f`;
@@ -79,7 +79,7 @@ export class CircleGenerator implements ComponentCodeGenerator {
       }
     }
 
-    // 可见性
+    // Visibility
     if (component.visible === false) {
       code += `${indentStr}gui_obj_show((gui_obj_t *)${component.id}, false);\n`;
     }
@@ -88,7 +88,7 @@ export class CircleGenerator implements ComponentCodeGenerator {
   }
 
   /**
-   * 生成按键效果的事件绑定
+   * Generate button effect event bindings
    */
   generateEventBinding(component: Component, indent: number): string {
     const buttonMode = component.data?.buttonMode;
@@ -111,7 +111,7 @@ export class CircleGenerator implements ComponentCodeGenerator {
   }
 
   /**
-   * 生成按键效果的回调函数（与 RectGenerator 类似）
+   * Generate button effect callback functions (similar to RectGenerator)
    */
   generateButtonCallback(component: Component): string {
     const buttonMode = component.data?.buttonMode;
@@ -137,7 +137,7 @@ export class CircleGenerator implements ComponentCodeGenerator {
     const offColorRgba = this.convertColorToRgba(offColor);
 
     return `
-// ${component.id} 双态按键回调
+// ${component.id} dual-state button callback
 static bool ${component.id}_state = ${initialState ? 'true' : 'false'};
 
 void ${component.id}_button_cb(void *obj, gui_event_t *e)
@@ -169,7 +169,7 @@ void ${component.id}_set_state(bool state) {
     const releasedOpacity = component.data?.buttonReleasedOpacity || 255;
 
     return `
-// ${component.id} 透明度按键回调
+// ${component.id} opacity button callback
 
 void ${component.id}_button_press_cb(void *obj, gui_event_t *e)
 {
@@ -190,12 +190,12 @@ void ${component.id}_button_release_cb(void *obj, gui_event_t *e)
   }
 
   /**
-   * 转换颜色值为 gui_rgb() 格式
+   * Convert color value to gui_rgb() format
    */
   private convertColor(color?: string): string {
     if (!color) return 'APP_COLOR_WHITE';
     
-    // 如果是 #RRGGBB 格式
+    // If in #RRGGBB format
     if (color.startsWith('#')) {
       const hex = color.substring(1);
       const r = parseInt(hex.substring(0, 2), 16);
@@ -204,12 +204,12 @@ void ${component.id}_button_release_cb(void *obj, gui_event_t *e)
       return `gui_rgb(${r}, ${g}, ${b})`;
     }
     
-    // 如果已经是 APP_COLOR_ 或 gui_rgb() 格式，直接返回
+    // If already in APP_COLOR_ or gui_rgb() format, return as-is
     return color;
   }
 
   /**
-   * 转换颜色值为 gui_rgba() 格式（带透明度）
+   * Convert color value to gui_rgba() format (with opacity)
    */
   private convertColorWithOpacity(color: string | undefined, opacity: number): string {
     if (!color) {
@@ -228,7 +228,7 @@ void ${component.id}_button_release_cb(void *obj, gui_event_t *e)
   }
 
   /**
-   * 转换颜色值为 gui_rgba() 格式（用于渐变色标）
+   * Convert color value to gui_rgba() format (for gradient stops)
    */
   private convertColorToRgba(color: string): string {
     if (color.startsWith('#')) {
@@ -236,7 +236,7 @@ void ${component.id}_button_release_cb(void *obj, gui_event_t *e)
       const r = parseInt(hex.substring(0, 2), 16);
       const g = parseInt(hex.substring(2, 4), 16);
       const b = parseInt(hex.substring(4, 6), 16);
-      // 默认完全不透明
+      // Default fully opaque
       return `gui_rgba(${r}, ${g}, ${b}, 255)`;
     }
     

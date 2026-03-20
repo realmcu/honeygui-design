@@ -1,13 +1,13 @@
 /**
- * hg_canvas 事件代码生成器
- * TODO: 实现画布特定的事件处理逻辑
+ * hg_canvas event code generator.
+ * TODO: Implement canvas-specific event handling logic.
  */
 import { Component } from '../../../hml/types';
 import { EventCodeGenerator } from './EventCodeGenerator';
 
 export class CanvasEventGenerator implements EventCodeGenerator {
   generateEventBindings(_component: Component, _indent: number, _componentMap: Map<string, Component>): string {
-    // TODO: 实现画布事件绑定
+    // TODO: Implement canvas event bindings
     return '';
   }
 

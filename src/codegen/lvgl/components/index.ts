@@ -1,5 +1,5 @@
 /**
- * LVGL 组件代码生成器工厂
+ * LVGL component code generator factory
  */
 import { LvglComponentCodeGenerator } from '../LvglComponentGenerator';
 import { LvglViewGenerator } from './LvglViewGenerator';
@@ -23,11 +23,11 @@ export class LvglComponentGeneratorFactory {
   private static defaultGenerator = new LvglDefaultGenerator();
 
   static {
-    // 容器组件
+    // Container components
     this.generators.set('hg_view', new LvglViewGenerator());
     this.generators.set('hg_window', new LvglWindowGenerator());
 
-    // 基础控件
+    // Basic controls
     this.generators.set('hg_image', new LvglImageGenerator());
     this.generators.set('hg_label', new LvglLabelGenerator());
     this.generators.set('hg_button', new LvglButtonGenerator());
@@ -35,12 +35,12 @@ export class LvglComponentGeneratorFactory {
     this.generators.set('hg_checkbox', new LvglCheckboxGenerator());
     this.generators.set('hg_radio', new LvglRadioGenerator());
 
-    // 图形控件
+    // Graphics controls
     this.generators.set('hg_arc', new LvglArcGenerator());
     this.generators.set('hg_rect', new LvglRectGenerator());
     this.generators.set('hg_circle', new LvglCircleGenerator());
 
-    // 多媒体控件
+    // Multimedia controls
     this.generators.set('hg_video', new LvglVideoGenerator());
     this.generators.set('hg_lottie', new LvglLottieGenerator());
     this.generators.set('hg_3d', new Lvgl3DGenerator());
@@ -51,7 +51,7 @@ export class LvglComponentGeneratorFactory {
   }
 
   /**
-   * 获取所有已注册的生成器（用于批量生成事件回调和全局定义）
+   * Get all registered generators (for batch generation of event callbacks and global definitions)
    */
   static getAllGenerators(): Map<string, LvglComponentCodeGenerator> {
     return this.generators;

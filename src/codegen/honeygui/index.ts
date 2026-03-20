@@ -1,12 +1,12 @@
 /**
- * HoneyGUI代码生成器模块入口
+ * HoneyGUI code generator module entry point
  */
 
 export { HoneyGuiCCodeGenerator, Component, CodeGenOptions, CodeGenResult } from './HoneyGuiCCodeGenerator';
 export { HoneyGuiApiMapper, HoneyGuiApiMapping, PropertySetter, EventHandler } from './HoneyGuiApiMapper';
 
 /**
- * 便捷函数：从组件数组生成C代码
+ * Convenience function: generate C code from a component array
  */
 import { HoneyGuiCCodeGenerator, Component, CodeGenOptions, CodeGenResult } from './HoneyGuiCCodeGenerator';
 

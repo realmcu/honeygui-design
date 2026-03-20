@@ -1,6 +1,6 @@
 /**
- * hg_input 事件生成器
- * 生成 LV_EVENT_VALUE_CHANGED 和 LV_EVENT_READY 回调
+ * hg_input event generator
+ * Generates LV_EVENT_VALUE_CHANGED and LV_EVENT_READY callbacks
  */
 import { Component } from '../../../hml/types';
 import { LvglEventCodeGenerator } from './LvglEventCodeGenerator';

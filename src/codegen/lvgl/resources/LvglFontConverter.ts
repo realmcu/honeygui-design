@@ -1,6 +1,6 @@
 /**
- * LVGL 字体资源转换器
- * 将项目中使用的 TTF 字体转换为 LVGL C 格式
+ * LVGL font resource converter
+ * Converts project TTF fonts to LVGL C format
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -12,19 +12,19 @@ export class LvglFontConverter {
   private builtinFontVarMap: Map<string, string> = new Map();
   private builtinFontVars: string[] = [];
 
-  /** 获取转换后的字体变量名 */
+  /** Get converted font variable name */
   getBuiltinFontVar(fontFile: string, fontSize: number): string | null {
     const key = normalizeFontKey(fontFile, fontSize);
     return this.builtinFontVarMap.get(key) || null;
   }
 
-  /** 获取所有内置字体变量名列表 */
+  /** Get list of all built-in font variable names */
   getBuiltinFontVarList(): string[] {
     return this.builtinFontVars;
   }
 
   /**
-   * 准备内置字体资源
+   * Prepare built-in font resources
    */
   prepare(components: Component[], srcDir: string, lvglDir: string): void {
     this.builtinFontVarMap.clear();
@@ -46,7 +46,7 @@ export class LvglFontConverter {
     for (const config of fontConfigs) {
       const inputPath = this.resolveFontPath(projectRoot, assetsDir, config.fontFile);
       if (!inputPath) {
-        console.warn(`字体文件不存在，跳过: ${config.fontFile}`);
+        console.warn(`Font file not found, skipping: ${config.fontFile}`);
         continue;
       }
 
@@ -61,7 +61,7 @@ export class LvglFontConverter {
   }
 
   /**
-   * 收集所有 hg_label 组件中使用的字体配置
+   * Collect font configurations used by all hg_label components
    */
   private collectFontConfigs(components: Component[]): Array<{ fontFile: string; fontSize: number; characters: string }> {
     const fontExts = new Set(['.ttf', '.otf', '.woff', '.woff2']);
@@ -109,7 +109,7 @@ export class LvglFontConverter {
   }
 
   /**
-   * 构建字符集：合并用户文本中的字符和基本 ASCII 字符
+   * Build character set: merge characters from user text with basic ASCII characters
    */
   private buildCharacterSet(userChars: Set<string>): string {
     const chars = new Set<string>();
@@ -123,7 +123,7 @@ export class LvglFontConverter {
   }
 
   /**
-   * 解析字体文件的绝对路径
+   * Resolve absolute path for a font file
    */
   private resolveFontPath(projectRoot: string, assetsDir: string, fontFile: string): string | null {
     let normalized = fontFile.replace(/\\/g, '/').trim();
@@ -146,7 +146,7 @@ export class LvglFontConverter {
   }
 
   /**
-   * 使用 lv_font_conv 将字体转换为 LVGL C 格式
+   * Convert font to LVGL C format using lv_font_conv
    */
   private convertFontToLvgl(
     inputPath: string,
@@ -177,14 +177,14 @@ export class LvglFontConverter {
       });
 
       if (result.status === 0) {
-        console.log(`字体转换成功: ${varName}`);
+        console.log(`Font conversion succeeded: ${varName}`);
         return true;
       } else {
-        console.warn(`字体转换失败 ${varName}: ${result.stderr || result.error}`);
+        console.warn(`Font conversion failed ${varName}: ${result.stderr || result.error}`);
         return false;
       }
     } catch (error) {
-      console.warn(`字体转换异常 ${varName}: ${error}`);
+      console.warn(`Font conversion error ${varName}: ${error}`);
       return false;
     }
   }

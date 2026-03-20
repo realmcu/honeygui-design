@@ -1,17 +1,17 @@
 /**
- * hg_view 组件代码生成器
- * 使用 GUI_VIEW_INSTANCE 宏生成视图代码
+ * hg_view component code generator
+ * Generates view code using the GUI_VIEW_INSTANCE macro
  */
 import { Component } from '../../../hml/types';
 import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';
 
-// 事件类型到 GUI_EVENT 的映射（用于 view 的 switch 事件）
-// 注意：按键事件（onKeyShortPress, onKeyLongPress）应使用 gui_obj_add_event_cb 而不是 gui_view_switch_on_event
+// Event type to GUI_EVENT mapping (for view switch events)
+// Note: Key events (onKeyShortPress, onKeyLongPress) should use gui_obj_add_event_cb, not gui_view_switch_on_event
 const VIEW_SWITCH_EVENT_MAP: Record<string, string> = {
-  // 触摸事件
+  // Touch events
   'onClick': 'GUI_EVENT_TOUCH_CLICKED',
   'onLongPress': 'GUI_EVENT_TOUCH_LONG',
-  // 滑动事件
+  // Swipe events
   'onSwipeLeft': 'GUI_EVENT_TOUCH_MOVE_LEFT',
   'onSwipeRight': 'GUI_EVENT_TOUCH_MOVE_RIGHT',
   'onSwipeUp': 'GUI_EVENT_TOUCH_MOVE_UP',
@@ -23,39 +23,39 @@ export class ViewGenerator implements ComponentCodeGenerator {
   generateCreation(component: Component, indent: number, context: GeneratorContext): string {
     const indentStr = '    '.repeat(indent);
     const name = component.name;
-    // 正确处理 residentMemory：支持 boolean 和 string 类型
+    // Handle residentMemory correctly: support both boolean and string types
     const residentMemoryValue = component.data?.residentMemory;
     const residentMemory = residentMemoryValue === true || residentMemoryValue === 'true';
-    // 动画步长默认值为屏幕高度的 1/10
+    // Default animation step is 1/10 of screen height
     const defaultAnimateStep = Math.round(component.position.height / 10);
     const animateStep = component.data?.animateStep ?? defaultAnimateStep;
-    // 透明度默认值为 255（完全不透明），确保转换为数字类型
-    // 优先从 data 读取，兼容从 style 读取
+    // Default opacity 255 (fully opaque), ensure numeric type
+    // Read from data first, fallback to style
     const opacityValue = component.data?.opacity ?? component.style?.opacity;
     const opacity = opacityValue !== undefined ? Number(opacityValue) : 255;
 
     let code = '';
     
-    // 生成 switch_out 回调
+    // Generate switch_out callback
     code += `${indentStr}static void ${name}_switch_out(gui_view_t *view)\n`;
     code += `${indentStr}{\n`;
     code += `${indentStr}    GUI_UNUSED(view);\n`;
     code += `${indentStr}}\n\n`;
     
-    // 生成 switch_in 回调
+    // Generate switch_in callback
     code += `${indentStr}static void ${name}_switch_in(gui_view_t *view)\n`;
     code += `${indentStr}{\n`;
     
-    // 设置动画步长（总是设置，使用默认值或用户配置值）
+    // Set animation step (always set, using default or user-configured value)
     code += `${indentStr}    // Set animation step\n`;
     code += `${indentStr}    gui_view_set_animate_step(view, ${animateStep});\n`;
     code += '\n';
     
-    // 设置透明度
+    // Set opacity
     code += `${indentStr}    // Set opacity\n`;
     code += `${indentStr}    gui_view_set_opacity(view, ${opacity});\n`;
     
-    // 为 hg_view 自己的定时器生成绑定代码（放在设置函数之后）
+    // Generate timer binding code for hg_view (placed after setter calls)
     const viewTimerBindings = this.generateViewTimerBindings(component, indent + 1);
     if (viewTimerBindings.trim()) {
       code += '\n';
@@ -64,23 +64,23 @@ export class ViewGenerator implements ComponentCodeGenerator {
     
     code += '\n';
     
-    // 注册视图切换事件
+    // Register view switch events
     const switchViewEvents = this.extractSwitchViewEvents(component, context);
     if (switchViewEvents.length > 0) {
       switchViewEvents.forEach(({ guiEvent, targetName, switchOutStyle, switchInStyle }) => {
         code += `${indentStr}    gui_view_switch_on_event(view, "${targetName}", ${switchOutStyle}, ${switchInStyle}, ${guiEvent});\n`;
       });
     } else {
-      // 没有视图切换事件时添加 GUI_UNUSED
+      // Add GUI_UNUSED when no view switch events
       code += `${indentStr}    GUI_UNUSED(view);\n`;
     }
     
-    // 初始化时间字符串变量（在函数开头统一声明，避免重复定义）
-    // 收集所有时间标签（包括 window 中的），以确保 now 和 t 变量被声明
+    // Initialize time string variables (declare once at function start to avoid duplicates)
+    // Collect all time labels (including those in windows) to ensure now and t variables are declared
     const allTimeLabels = this.collectAllTimeLabels(component, context);
     const hasTimeLabels = allTimeLabels.length > 0;
     
-    // 只初始化 view 直接子组件中的时间标签（不包括 window 中的）
+    // Initialize time labels only from direct view children (excluding those in windows)
     const viewTimeLabels = this.collectViewTimeLabels(component, context);
     
     if (hasTimeLabels) {
@@ -101,19 +101,19 @@ export class ViewGenerator implements ComponentCodeGenerator {
       code += '\n';
     }
     
-    // 子组件创建代码由主生成器处理（通过 childrenCode 回调）
+    // Child component creation handled by main generator (via childrenCode callback)
     code += `__CHILDREN_PLACEHOLDER__`;
     
-    // 事件绑定代码占位符（由主生成器填充）
+    // Event binding code placeholder (filled by main generator)
     code += `__EVENT_BINDINGS_PLACEHOLDER__`;
     
-    // 为 view 直接子组件中的时间标签创建定时器（window 中的由 WindowGenerator 处理）
+    // Create timers for time labels in direct view children (those in windows are handled by WindowGenerator)
     if (viewTimeLabels.length > 0) {
       code += `\n${indentStr}    // Create time update timer\n`;
       viewTimeLabels.forEach(labelId => {
         const labelComp = context.componentMap.get(labelId);
         const timeFormat = labelComp?.data?.timeFormat;
-        // 跳过拆分时间格式（已在 LabelGenerator 中创建定时器）
+        // Skip split time format (timer already created in LabelGenerator)
         if (timeFormat === 'HH:mm-split') {
           return;
         }
@@ -124,19 +124,19 @@ export class ViewGenerator implements ComponentCodeGenerator {
     
     code += `${indentStr}}\n`;
     
-    // GUI_VIEW_INSTANCE 宏调用（第二个参数为常驻内存标志）
+    // GUI_VIEW_INSTANCE macro call (second parameter is resident memory flag)
     code += `${indentStr}GUI_VIEW_INSTANCE("${name}", ${residentMemory ? 'true' : 'false'}, ${name}_switch_in, ${name}_switch_out);\n`;
 
     return code;
   }
 
   generatePropertySetters(_component: Component, _indent: number, _context: GeneratorContext): string {
-    // view 组件没有额外的属性设置
+    // View component has no additional property setters
     return '';
   }
 
   /**
-   * 从 eventConfigs 中提取 switchView 事件
+   * Extract switchView events from eventConfigs
    */
   private extractSwitchViewEvents(component: Component, context: GeneratorContext): Array<{
     guiEvent: string;
@@ -175,19 +175,19 @@ export class ViewGenerator implements ComponentCodeGenerator {
   }
 
   /**
-   * 收集所有时间标签（包括 window 中的）
-   * 用于判断是否需要声明 now 和 t 变量
+   * Collect all time labels (including those in windows)
+   * Used to determine whether now and t variables need to be declared
    */
   private collectAllTimeLabels(component: Component, context: GeneratorContext): string[] {
     const timeLabels: string[] = [];
     
     const collectRecursive = (comp: Component) => {
-      // 检查当前组件是否是时间标签
+      // Check if current component is a time label
       if (comp.type === 'hg_time_label') {
         timeLabels.push(comp.id);
       }
       
-      // 递归检查所有子组件（包括 hg_window）
+      // Recursively check all child components (including hg_window)
       if (comp.children) {
         comp.children.forEach(childId => {
           const child = context.componentMap.get(childId);
@@ -203,19 +203,19 @@ export class ViewGenerator implements ComponentCodeGenerator {
   }
 
   /**
-   * 收集 view 直接子组件中的时间标签（不包括 window 中的）
-   * 用于生成初始化代码和定时器
+   * Collect time labels from direct view children (excluding those in windows)
+   * Used for generating initialization code and timers
    */
   private collectViewTimeLabels(component: Component, context: GeneratorContext): string[] {
     const timeLabels: string[] = [];
     
     const collectRecursive = (comp: Component) => {
-      // 检查当前组件是否是时间标签
+      // Check if current component is a time label
       if (comp.type === 'hg_time_label') {
         timeLabels.push(comp.id);
       }
       
-      // 递归检查子组件，但跳过 hg_window
+      // Recursively check child components, but skip hg_window
       if (comp.children) {
         comp.children.forEach(childId => {
           const child = context.componentMap.get(childId);
@@ -231,7 +231,7 @@ export class ViewGenerator implements ComponentCodeGenerator {
   }
 
   /**
-   * 根据时间格式获取定时器间隔（毫秒）
+   * Get timer interval in milliseconds based on time format
    */
   private getTimerInterval(timeFormat?: string): number {
     if (!timeFormat) return 500;
@@ -239,22 +239,22 @@ export class ViewGenerator implements ComponentCodeGenerator {
     switch (timeFormat) {
       case 'HH:mm:ss':
       case 'YYYY-MM-DD HH:mm:ss':
-        return 500; // 带秒：500ms
+        return 500; // With seconds: 500ms
       case 'HH:mm':
       case 'MM-DD HH:mm':
-        return 30000; // 只有时分：30秒
+        return 30000; // Hours/minutes only: 30s
       case 'HH':
       case 'mm':
-        return 30000; // 只有小时或分钟：30秒
+        return 30000; // Hours or minutes only: 30s
       case 'YYYY-MM-DD':
-        return 60000; // 只有日期：60秒
+        return 60000; // Date only: 60s
       default:
         return 500;
     }
   }
 
   /**
-   * 根据时间格式获取 sprintf 格式化代码
+   * Get sprintf format code based on time format
    */
   private getTimeFormatCode(timeFormat?: string): { format: string; args: string } {
     switch (timeFormat) {
@@ -264,7 +264,7 @@ export class ViewGenerator implements ComponentCodeGenerator {
           args: 't->tm_hour, t->tm_min, t->tm_sec'
         };
       case 'HH:mm':
-      case 'HH:mm-split':  // 拆分时间格式使用相同的格式
+      case 'HH:mm-split':  // Split time format uses same format
         return {
           format: '%02d:%02d',
           args: 't->tm_hour, t->tm_min'
@@ -303,8 +303,8 @@ export class ViewGenerator implements ComponentCodeGenerator {
   }
 
   /**
-   * 为 hg_view 组件生成定时器绑定代码
-   * 使用函数入参 view 而不是组件名称
+   * Generate timer binding code for hg_view component
+   * Uses function parameter view instead of component name
    */
   private generateViewTimerBindings(component: Component, indent: number): string {
     const indentStr = '    '.repeat(indent);
@@ -317,7 +317,7 @@ export class ViewGenerator implements ComponentCodeGenerator {
     let code = '';
     const name = component.name;
     
-    // 过滤出启用的定时器
+    // Filter enabled timers
     const enabledTimers = timers.filter((timer: any) => timer.enabled !== false);
     
     if (enabledTimers.length === 0) {
@@ -330,16 +330,16 @@ export class ViewGenerator implements ComponentCodeGenerator {
       const interval = timer.interval || 1000;
       const reload = timer.reload !== false;
       
-      // 确定回调函数名
+      // Determine callback function name
       let callbackName: string;
       if (timer.mode === 'custom' && timer.callback) {
         callbackName = timer.callback;
       } else {
-        // preset 模式或没有指定回调函数，使用自动生成的名称
+        // Preset mode or no callback specified, use auto-generated name
         callbackName = `${name}_timer_${index}_cb`;
       }
       
-      // 使用 view 作为变量名（转换为 gui_obj_t*）
+      // Use view as variable name (cast to gui_obj_t*)
       code += `${indentStr}gui_obj_create_timer((gui_obj_t *)view, ${interval}, ${reload ? 'true' : 'false'}, ${callbackName});\n`;
       code += `${indentStr}gui_obj_start_timer((gui_obj_t *)view);\n`;
     });

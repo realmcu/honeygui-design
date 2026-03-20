@@ -1,8 +1,8 @@
 /**
- * hg_claw_face 组件代码生成器
+ * hg_claw_face component code generator
  *
  * API: gui_openclaw_emoji_create
- * 依赖库: lib/gui_openclaw（代码生成时自动拷贝到输出目录）
+ * Dependency: lib/gui_openclaw (auto-copied to output directory during code generation)
  */
 import { Component } from '../../../hml/types';
 import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';

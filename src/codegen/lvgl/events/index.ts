@@ -1,6 +1,6 @@
 /**
- * LVGL 事件生成器工厂
- * 注册各组件类型对应的事件生成器
+ * LVGL event generator factory
+ * Registers event generators for each component type
  */
 import { LvglEventCodeGenerator } from './LvglEventCodeGenerator';
 import { LvglButtonEventGenerator } from './LvglButtonEventGenerator';
@@ -20,17 +20,17 @@ export class LvglEventGeneratorFactory {
     this.generators.set('hg_radio', new LvglRadioEventGenerator());
   }
 
-  /** 获取指定组件类型的事件生成器，无则返回 undefined */
+  /** Get event generator for the specified component type, or undefined if none */
   static getGenerator(componentType: string): LvglEventCodeGenerator | undefined {
     return this.generators.get(componentType);
   }
 
-  /** 获取所有已注册的事件生成器 */
+  /** Get all registered event generators */
   static getAllGenerators(): Map<string, LvglEventCodeGenerator> {
     return this.generators;
   }
 
-  /** 判断组件类型是否有事件生成器 */
+  /** Check if a component type has an event generator */
   static hasGenerator(componentType: string): boolean {
     return this.generators.has(componentType);
   }

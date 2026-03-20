@@ -1,13 +1,13 @@
 /**
- * hg_3d 事件代码生成器
- * TODO: 实现 3D 模型特定的事件处理逻辑
+ * hg_3d event code generator.
+ * TODO: Implement 3D model-specific event handling logic.
  */
 import { Component } from '../../../hml/types';
 import { EventCodeGenerator } from './EventCodeGenerator';
 
 export class Model3DEventGenerator implements EventCodeGenerator {
   generateEventBindings(_component: Component, _indent: number, _componentMap: Map<string, Component>): string {
-    // TODO: 实现 3D 模型事件绑定
+    // TODO: Implement 3D model event bindings
     return '';
   }
 

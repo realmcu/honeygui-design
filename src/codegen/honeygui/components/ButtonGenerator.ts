@@ -1,7 +1,7 @@
 /**
- * hg_button 组件代码生成器
- * 使用 gui_img 控件实现双态图片按钮
- * 通过 gui_img_set_src 切换图片实现状态转换
+ * hg_button component code generator
+ * Implements dual-state image button using gui_img control
+ * State transitions via gui_img_set_src image switching
  */
 import { Component } from '../../../hml/types';
 import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';
@@ -15,28 +15,28 @@ export class ButtonGenerator implements ComponentCodeGenerator {
     const parentRef = context.getParentRef(component);
     const { x, y, width, height } = component.position;
 
-    // 检查是否是双态模式（兼容 boolean 和字符串 "true"）
+    // Check for toggle mode (compatible with boolean and string "true")
     const toggleMode = component.data?.toggleMode === true || component.data?.toggleMode === 'true';
     
     if (toggleMode) {
-      // 双态模式：使用 gui_img 创建图片按钮
-      // 创建时先用 off 图片占位，随后根据运行时状态变量设置正确图片
+      // Toggle mode: create image button using gui_img
+      // Initially use off image as placeholder, then set correct image based on runtime state
       const imageOn = component.data?.imageOn || '';
       const imageOff = component.data?.imageOff || '';
       const binOn = this.convertToBinPath(imageOn);
       const binOff = this.convertToBinPath(imageOff);
 
-      // 创建控件（用 off 图片作为占位）
+      // Create widget (using off image as placeholder)
       let code = `${indentStr}${component.id} = gui_img_create_from_fs(${parentRef}, "${component.name}", "${binOff}", ${x}, ${y}, ${width}, ${height});\n`;
-      // 根据运行时状态变量决定初始显示的图片（页面重入时恢复上次状态）
+      // Set initial image based on runtime state variable (restore state on page re-entry)
       code += `${indentStr}if (${component.id}_state) {\n`;
       code += `${indentStr}    gui_img_set_src((gui_img_t *)${component.id}, "${binOn}", IMG_SRC_FILESYS);\n`;
       code += `${indentStr}}\n`;
       return code;
     }
 
-    // 普通模式：也使用 gui_img（SDK 没有 gui_button）
-    // 如果有文本，可以考虑用 gui_text 叠加
+    // Normal mode: also uses gui_img (SDK has no gui_button)
+    // Consider overlaying gui_text for text content
     return `${indentStr}// Normal button not supported, please use toggle mode\n${indentStr}// ${component.id} = gui_img_create_from_fs(${parentRef}, "${component.name}", "", ${x}, ${y}, ${width}, ${height});\n`;
   }
 
@@ -44,13 +44,13 @@ export class ButtonGenerator implements ComponentCodeGenerator {
     const indentStr = '    '.repeat(indent);
     let code = '';
 
-    // 检查是否是双态模式
+    // Check for toggle mode
     const toggleMode = component.data?.toggleMode === true || component.data?.toggleMode === 'true';
     if (!toggleMode) {
       return code;
     }
 
-    // 自动缩放：如果按钮尺寸与图片原始尺寸不同，添加缩放代码
+    // Auto-scale: add scaling code if button size differs from original image size
     const { width, height } = component.position;
     const imageSize = this.getImageSize(component, context);
     
@@ -64,8 +64,8 @@ export class ButtonGenerator implements ComponentCodeGenerator {
   }
 
   /**
-   * 获取图片的原始尺寸
-   * 从资源配置中读取图片尺寸信息
+   * Get original image dimensions
+   * Read image size info from asset configuration
    */
   private getImageSize(component: Component, context: GeneratorContext): { width: number; height: number } | null {
     const toggleMode = component.data?.toggleMode === true || component.data?.toggleMode === 'true';
@@ -73,7 +73,7 @@ export class ButtonGenerator implements ComponentCodeGenerator {
       return null;
     }
 
-    // 获取初始状态对应的图片路径
+    // Get image path for initial state
     const initialState = component.data?.initialState === 'on';
     const imageOn = component.data?.imageOn || '';
     const imageOff = component.data?.imageOff || '';
@@ -83,27 +83,27 @@ export class ButtonGenerator implements ComponentCodeGenerator {
       return null;
     }
 
-    // 从 context 中获取项目根目录
+    // Get project root from context
     let projectRoot = context.projectRoot;
     if (!projectRoot) {
       return null;
     }
 
-    // 如果 projectRoot 是 .preview 目录，需要向上一级找到真正的项目根目录
+    // If projectRoot is .preview directory, go up one level to find actual project root
     if (projectRoot.endsWith('.preview')) {
       projectRoot = path.dirname(projectRoot);
     }
 
-    // 构建图片的完整路径
+    // Build full image path
     const fullImagePath = path.join(projectRoot, imagePath);
     
-    // 检查文件是否存在
+    // Check if file exists
     if (!fs.existsSync(fullImagePath)) {
       return null;
     }
 
     try {
-      // 读取图片文件的头部信息来获取尺寸
+      // Read image file header to get dimensions
       const buffer = fs.readFileSync(fullImagePath);
       return this.parseImageSize(buffer, imagePath);
     } catch (err) {
@@ -113,20 +113,20 @@ export class ButtonGenerator implements ComponentCodeGenerator {
   }
 
   /**
-   * 解析图片尺寸（支持 PNG, JPEG, BMP）
+   * Parse image dimensions (supports PNG, JPEG, BMP)
    */
   private parseImageSize(buffer: Buffer, filename: string): { width: number; height: number } | null {
     const ext = path.extname(filename).toLowerCase();
 
     if (ext === '.png') {
-      // PNG: 读取 IHDR chunk
+      // PNG: read IHDR chunk
       if (buffer.length >= 24 && buffer.toString('ascii', 1, 4) === 'PNG') {
         const width = buffer.readUInt32BE(16);
         const height = buffer.readUInt32BE(20);
         return { width, height };
       }
     } else if (ext === '.jpg' || ext === '.jpeg') {
-      // JPEG: 查找 SOF0 marker
+      // JPEG: find SOF0 marker
       let offset = 2;
       while (offset < buffer.length - 9) {
         if (buffer[offset] === 0xFF) {
@@ -137,7 +137,7 @@ export class ButtonGenerator implements ComponentCodeGenerator {
             const width = buffer.readUInt16BE(offset + 7);
             return { width, height };
           }
-          // 跳过这个 segment
+          // Skip this segment
           const segmentLength = buffer.readUInt16BE(offset + 2);
           offset += 2 + segmentLength;
         } else {
@@ -145,7 +145,7 @@ export class ButtonGenerator implements ComponentCodeGenerator {
         }
       }
     } else if (ext === '.bmp') {
-      // BMP: 读取 DIB header
+      // BMP: read DIB header
       if (buffer.length >= 26) {
         const width = buffer.readInt32LE(18);
         const height = Math.abs(buffer.readInt32LE(22));
@@ -157,11 +157,11 @@ export class ButtonGenerator implements ComponentCodeGenerator {
   }
 
   /**
-   * 生成双态按钮的回调函数
-   * 使用 gui_img_set_src 切换图片，并将 onClick 事件的 actions 合并在同一个回调中执行
+   * Generate dual-state button callback function
+   * Switches images via gui_img_set_src, merges onClick event actions into the same callback
    */
   generateToggleCallback(component: Component): string {
-    // 检查是否是双态模式（兼容 boolean 和字符串 "true"）
+    // Check for toggle mode (compatible with boolean and string "true")
     const toggleMode = component.data?.toggleMode === true || component.data?.toggleMode === 'true';
     if (!toggleMode) {
       return '';
@@ -172,17 +172,17 @@ export class ButtonGenerator implements ComponentCodeGenerator {
     const binOn = this.convertToBinPath(imageOn);
     const binOff = this.convertToBinPath(imageOff);
 
-    // 用户配置的回调函数名（可为空，空则不调用）
+    // User-configured callback function name (empty means no call)
     const onCallback = component.data?.onCallback || '';
     const offCallback = component.data?.offCallback || '';
 
-    // 生成回调调用代码（为空则不生成）
+    // Generate callback invocation code (skip if empty)
     const onCallLine = onCallback ? `        ${onCallback}(obj, e);\n` : '';
     const offCallLine = offCallback ? `        ${offCallback}(obj, e);\n` : '';
     const onCallLineNull = onCallback ? `        ${onCallback}(NULL, NULL);\n` : '';
     const offCallLineNull = offCallback ? `        ${offCallback}(NULL, NULL);\n` : '';
 
-    // 收集 onClick 事件的 actions，合并到 toggle_cb 中
+    // Collect onClick event actions, merge into toggle_cb
     const onClickActions = (component.eventConfigs || [])
       .filter(e => e.type === 'onClick')
       .flatMap(e => e.actions || []);
@@ -192,7 +192,7 @@ export class ButtonGenerator implements ComponentCodeGenerator {
       : '';
 
     return `
-// ${component.id} 双态按钮回调
+// ${component.id} dual-state button callback
 static bool ${component.id}_state = ${component.data?.initialState === 'on' ? 'true' : 'false'};
 
 void ${component.id}_toggle_cb(void *obj, gui_event_t *e)
@@ -200,10 +200,10 @@ void ${component.id}_toggle_cb(void *obj, gui_event_t *e)
     GUI_UNUSED(obj);
     GUI_UNUSED(e);
     
-    // 切换状态
+    // Toggle state
     ${component.id}_state = !${component.id}_state;
     
-    // 根据状态切换图片并调用对应回调
+    // Switch image based on state and call corresponding callback
     if (${component.id}_state) {
         gui_img_set_src((gui_img_t *)${component.id}, "${binOn}", IMG_SRC_FILESYS);
 ${onCallLine}    } else {
@@ -211,13 +211,13 @@ ${onCallLine}    } else {
 ${offCallLine}    }
 ${extraCode}}
 
-// 获取当前状态
+// Get current state
 bool ${component.id}_get_state(void)
 {
     return ${component.id}_state;
 }
 
-// 设置状态（外部调用）
+// Set state (external call)
 void ${component.id}_set_state(bool state)
 {
     if (${component.id}_state != state) {
@@ -234,10 +234,10 @@ ${offCallLineNull}        }
   }
 
   /**
-   * 将 onClick actions 生成为内联代码（合并进 toggle_cb）
+   * Generate onClick actions as inline code (merged into toggle_cb)
    */
   private generateOnClickActionsCode(actions: any[], component: Component): string {
-    let code = `\n    // onClick 事件动作\n`;
+    let code = `\n    // onClick event actions\n`;
     actions.forEach(action => {
       if (action.type === 'callFunction' && action.functionName) {
         code += `    ${action.functionName}(obj, e);\n`;
@@ -253,26 +253,26 @@ ${offCallLineNull}        }
   }
 
   /**
-   * 生成双态按钮的状态回调函数声明（用于头文件）
-   * 回调函数由用户在 _user.h 中声明，此处不生成
+   * Generate dual-state button state callback declarations (for header file)
+   * Callback functions are declared by user in _user.h, not generated here
    */
   generateCallbackDeclarations(_component: Component): string {
     return '';
   }
 
   /**
-   * 生成双态按钮的状态回调函数实现（用于 callbacks.c）
-   * 回调函数由用户自行实现，此处不生成
+   * Generate dual-state button state callback implementations (for callbacks.c)
+   * Callback functions are implemented by user, not generated here
    */
   generateCallbackImplementations(_component: Component): string {
     return '';
   }
 
   /**
-   * 生成双态按钮的事件绑定
+   * Generate dual-state button event bindings
    */
   generateEventBinding(component: Component, indent: number): string {
-    // 检查是否是双态模式（兼容 boolean 和字符串 "true"）
+    // Check for toggle mode (compatible with boolean and string "true")
     const toggleMode = component.data?.toggleMode === true || component.data?.toggleMode === 'true';
     if (!toggleMode) {
       return '';
@@ -283,16 +283,16 @@ ${offCallLineNull}        }
   }
 
   /**
-   * 转换图片路径为 .bin 格式
+   * Convert image path to .bin format
    */
   private convertToBinPath(src: string): string {
     if (!src) return '';
     
-    // 将图片扩展名替换为 .bin
+    // Replace image extension with .bin
     let binSrc = src.replace(/\.(png|jpe?g|bmp|gif|tiff?|webp)$/i, '.bin');
-    // 去掉 assets/ 前缀
+    // Strip assets/ prefix
     binSrc = binSrc.replace(/^assets\//, '');
-    // 确保路径以 / 开头
+    // Ensure path starts with /
     if (!binSrc.startsWith('/')) {
       binSrc = '/' + binSrc;
     }

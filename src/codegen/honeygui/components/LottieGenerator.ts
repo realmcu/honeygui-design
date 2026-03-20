@@ -1,5 +1,5 @@
 /**
- * hg_lottie 组件代码生成器
+ * hg_lottie component code generator
  */
 import { Component } from '../../../hml/types';
 import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';
@@ -19,17 +19,17 @@ export class LottieGenerator implements ComponentCodeGenerator {
     const indentStr = '    '.repeat(indent);
     let code = '';
 
-    // 自动播放
+    // Auto-play
     if (component.data?.autoplay) {
       code += `${indentStr}${component.id}->playing = 1;\n`;
     }
 
-    // 循环播放
+    // Loop playback
     if (component.data?.loop) {
       code += `${indentStr}${component.id}->loop = 1;\n`;
     }
 
-    // 透明度
+    // Opacity
     if (component.style?.opacity !== undefined) {
       code += `${indentStr}${component.id}->opacity_value = ${component.style.opacity};\n`;
     }

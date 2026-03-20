@@ -1,6 +1,6 @@
 /**
- * hg_list_item 事件代码生成器
- * list_item 的事件在 note_design 回调中生成，需要特殊处理
+ * hg_list_item event code generator.
+ * list_item events are generated in the note_design callback and require special handling.
  */
 import { Component } from '../../../hml/types';
 import { EventCodeGenerator, EVENT_TYPE_TO_GUI_EVENT, generateMessageCallbackImpl, generateControlTimerCallbackImpl, generateEventCallbackName } from './EventCodeGenerator';
@@ -14,43 +14,43 @@ export class ListItemEventGenerator implements EventCodeGenerator {
     const indentStr = '    '.repeat(indent);
     let code = '';
 
-    // 统计 onMessage 事件的序号
+    // Track onMessage event index
     let msgIndex = 0;
     const eventTypeIndexMap = new Map<string, number>();
 
     component.eventConfigs.forEach(eventConfig => {
       if (eventConfig.type === 'onMessage') {
-        // onMessage 事件处理
+        // onMessage event handling
         if (eventConfig.message) {
           const callbackName = eventConfig.handler || `${component.id}_msg_cb_${msgIndex}`;
           msgIndex++;
           code += `${indentStr}gui_msg_subscribe((gui_obj_t *)${component.id}, "${eventConfig.message}", ${callbackName});\n`;
         }
       } else {
-        // 普通触摸/滑动事件
+        // Standard touch/swipe events
         const guiEvent = EVENT_TYPE_TO_GUI_EVENT[eventConfig.type];
         if (!guiEvent) {
           console.warn(`[ListItemEventGenerator] Unknown event type: ${eventConfig.type}`);
           return;
         }
 
-        // 检查是否有 switchView、callFunction 或 controlTimer 动作
+        // Check for switchView, callFunction, or controlTimer actions
         const hasSwitchView = eventConfig.actions.some(a => a.type === 'switchView');
         const hasCallFunction = eventConfig.actions.some(a => a.type === 'callFunction');
         const hasControlTimer = eventConfig.actions.some(a => a.type === 'controlTimer' && a.timerTargets && a.timerTargets.length > 0);
 
         if (hasSwitchView) {
-          // 使用 switchView 回调
+          // Use switchView callback
           const callbackName = `${component.id}_switch_view_cb`;
           code += `${indentStr}gui_obj_add_event_cb(${component.id}, ${callbackName}, ${guiEvent}, NULL);\n`;
         } else if (hasCallFunction) {
-          // 使用用户指定的回调函数
+          // Use user-specified callback function
           const functionName = eventConfig.actions.find(a => a.type === 'callFunction')?.functionName;
           if (functionName) {
             code += `${indentStr}gui_obj_add_event_cb(${component.id}, ${functionName}, ${guiEvent}, NULL);\n`;
           }
         } else if (hasControlTimer) {
-          // 使用 controlTimer 回调
+          // Use controlTimer callback
           const currentIndex = eventTypeIndexMap.get(eventConfig.type) || 0;
           const callbackName = generateEventCallbackName(component.id, eventConfig.type, currentIndex);
           eventTypeIndexMap.set(eventConfig.type, currentIndex + 1);
@@ -66,20 +66,20 @@ export class ListItemEventGenerator implements EventCodeGenerator {
     const functions: string[] = [];
     if (!component.eventConfigs) return functions;
 
-    // 统计 onMessage 事件的序号
+    // Track onMessage event index
     let msgIndex = 0;
     const eventTypeIndexMap = new Map<string, number>();
 
     component.eventConfigs.forEach(eventConfig => {
       if (eventConfig.type === 'onMessage') {
-        // onMessage 回调
+        // onMessage callback
         if (eventConfig.message) {
           const callbackName = eventConfig.handler || `${component.id}_msg_cb_${msgIndex}`;
           msgIndex++;
           functions.push(callbackName);
         }
       } else {
-        // 普通事件回调
+        // Standard event callback
         const hasSwitchView = eventConfig.actions.some(a => a.type === 'switchView');
         const hasCallFunction = eventConfig.actions.some(a => a.type === 'callFunction');
         const hasControlTimer = eventConfig.actions.some(a => a.type === 'controlTimer' && a.timerTargets && a.timerTargets.length > 0);
@@ -149,15 +149,15 @@ ${body}}`);
   }
 
   /**
-   * 生成统一的事件回调实现（除 onMessage 外的所有事件）
+   * Generate unified event callback implementations (all events except onMessage)
    */
   getEventCallbackImpl(component: Component, componentMap: Map<string, Component>): string[] {
     const impls: string[] = [];
     
-    // 生成 switchView 回调
+    // Generate switchView callbacks
     impls.push(...this.getSwitchViewCallbackImpl(component, componentMap));
     
-    // 生成 controlTimer 回调
+    // Generate controlTimer callbacks
     impls.push(...generateControlTimerCallbackImpl(component, componentMap));
     
     return impls;

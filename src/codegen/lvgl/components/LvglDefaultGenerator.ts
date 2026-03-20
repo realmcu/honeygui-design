@@ -1,5 +1,5 @@
 /**
- * 默认（未知类型）组件 LVGL 代码生成器
+ * Default (unknown type) component LVGL code generator
  */
 import { Component } from '../../../hml/types';
 import { LvglGeneratorContext } from '../LvglComponentGenerator';

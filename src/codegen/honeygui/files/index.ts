@@ -1,5 +1,5 @@
 /**
- * 文件生成模块导出
+ * File generator module exports
  */
 export { CallbackFileGenerator } from './CallbackFileGenerator';
 export { UserFileGenerator } from './UserFileGenerator';

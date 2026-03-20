@@ -1,5 +1,5 @@
 /**
- * hg_canvas 组件代码生成器
+ * hg_canvas component code generator
  */
 import { Component } from '../../../hml/types';
 import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';
@@ -17,8 +17,8 @@ export class CanvasGenerator implements ComponentCodeGenerator {
     const indentStr = '    '.repeat(indent);
     let code = '';
 
-    // Canvas 需要设置回调函数来绘制内容
-    // 这里生成注释提示用户设置回调
+    // Canvas requires a callback function to draw content
+    // Generate a comment to remind the user to set the callback
     code += `${indentStr}// TODO: gui_canvas_set_canvas_cb(${component.id}, your_canvas_callback);\n`;
 
     return code;

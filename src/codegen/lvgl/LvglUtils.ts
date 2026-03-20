@@ -1,10 +1,10 @@
 /**
- * LVGL 代码生成工具函数
+ * LVGL code generation utility functions
  */
 import * as path from 'path';
 
 /**
- * 解析颜色字符串的 RGB 十六进制部分（不含 #）
+ * Parse the RGB hex portion of a color string (without #)
  */
 export function parseColorHex(color: string): string {
   const hex = color.replace(/^#/, '').toUpperCase();
@@ -21,8 +21,8 @@ export function parseColorHex(color: string): string {
 }
 
 /**
- * 从颜色字符串中解析 alpha 值（0-255）
- * 支持格式：#RGB, #RGBA, #RRGGBB, #RRGGBBAA
+ * Parse alpha value (0-255) from a color string
+ * Supported formats: #RGB, #RGBA, #RRGGBB, #RRGGBBAA
  */
 export function parseColorAlpha(color: string): number {
   const hex = color.replace(/^#/, '').toUpperCase();
@@ -37,7 +37,7 @@ export function parseColorAlpha(color: string): number {
 }
 
 /**
- * 规范化十六进制颜色值
+ * Normalize a hex color value
  */
 export function normalizeHexColor(value: string, fallback: string): string {
   const raw = (value || '').trim();
@@ -56,7 +56,7 @@ export function normalizeHexColor(value: string, fallback: string): string {
 
 
 /**
- * 转义 C 字符串中的特殊字符
+ * Escape special characters in a C string
  */
 export function escapeCString(value: string): string {
   return value
@@ -65,7 +65,7 @@ export function escapeCString(value: string): string {
 }
 
 /**
- * 根据字体大小选择最接近的 LVGL 内置字体
+ * Select the closest LVGL built-in font by font size
  */
 export function getLvglFontBySize(fontSize: number): string {
   const sizes = [8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48];
@@ -82,7 +82,7 @@ export function getLvglFontBySize(fontSize: number): string {
 }
 
 /**
- * 规范化 LVGL 图片源路径（添加 A: 虚拟驱动器前缀）
+ * Normalize LVGL image source path (add A: virtual drive prefix)
  */
 export function normalizeLvglImageSource(source: string): string {
   const normalized = source.replace(/\\/g, '/').trim();
@@ -100,7 +100,7 @@ export function normalizeLvglImageSource(source: string): string {
 }
 
 /**
- * 规范化视频/Lottie 源路径（OS 原生路径，不走 LVGL 文件系统）
+ * Normalize video/Lottie source path (OS native path, not via LVGL filesystem)
  */
 export function normalizeVideoSource(source: string): string {
   const normalized = source.replace(/\\/g, '/').trim();
@@ -119,7 +119,7 @@ export function normalizeVideoSource(source: string): string {
 }
 
 /**
- * 安全转换为有限数字
+ * Safely convert to a finite number
  */
 export function toFiniteNumber(value: any, fallback: number): number {
   const numeric = Number(value);
@@ -127,7 +127,7 @@ export function toFiniteNumber(value: any, fallback: number): number {
 }
 
 /**
- * 解析渐变色停靠点
+ * Resolve gradient color stops
  */
 export function resolveGradientStops(rawStops: any, fallbackHex: string): Array<{ colorHex: string; frac: number }> {
   if (!Array.isArray(rawStops)) {
@@ -160,7 +160,7 @@ export function resolveGradientStops(rawStops: any, fallbackHex: string): Array<
 }
 
 /**
- * 根据背景色计算高对比度的文字颜色（黑或白）
+ * Calculate high-contrast text color (black or white) based on background color
  */
 export function getContrastTextColor(bgColor: string): string {
   const hex = parseColorHex(bgColor);
@@ -172,7 +172,7 @@ export function getContrastTextColor(bgColor: string): string {
 }
 
 /**
- * 规范化图片源路径用于查找 Map
+ * Normalize image source path for Map lookup
  */
 export function normalizeImageKey(source: string): string {
   return source
@@ -184,7 +184,7 @@ export function normalizeImageKey(source: string): string {
 }
 
 /**
- * 规范化字体 key（fontFile + fontSize 组合）
+ * Normalize font key (fontFile + fontSize combination)
  */
 export function normalizeFontKey(fontFile: string, fontSize: number): string {
   const normalized = fontFile.replace(/\\/g, '/').toLowerCase().trim();
@@ -192,7 +192,7 @@ export function normalizeFontKey(fontFile: string, fontSize: number): string {
 }
 
 /**
- * 构建图片变量名
+ * Build image variable name
  */
 export function buildImageVarName(source: string): string {
   let normalized = source.replace(/\\/g, '/').trim();
@@ -209,7 +209,7 @@ export function buildImageVarName(source: string): string {
 }
 
 /**
- * 构建字体变量名
+ * Build font variable name
  */
 export function buildFontVarName(fontFile: string, fontSize: number): string {
   const baseName = path.basename(fontFile, path.extname(fontFile))

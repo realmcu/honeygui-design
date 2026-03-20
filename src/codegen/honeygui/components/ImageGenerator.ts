@@ -1,5 +1,5 @@
 /**
- * hg_image 组件代码生成器
+ * hg_image component code generator
  */
 import { Component } from '../../../hml/types';
 import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';
@@ -14,11 +14,11 @@ export class ImageGenerator implements ComponentCodeGenerator {
     const { x, y, width, height } = component.position;
 
     const src = component.data?.src || '';
-    // 将图片扩展名替换为 .bin
+    // Replace image extension with .bin
     let binSrc = src.replace(/\.(png|jpe?g|bmp|tiff?|webp)$/i, '.bin');
-    // 去掉 assets/ 前缀
+    // Strip assets/ prefix
     binSrc = binSrc.replace(/^assets\//, '');
-    // 确保路径以 / 开头
+    // Ensure path starts with /
     if (!binSrc.startsWith('/')) {
       binSrc = '/' + binSrc;
     }
@@ -30,13 +30,13 @@ export class ImageGenerator implements ComponentCodeGenerator {
     let code = '';
     const indentStr = '    '.repeat(indent);
 
-    // 1. 渲染模式设置
+    // 1. Blend mode setting
     const blendMode = component.data?.blendMode;
     if (blendMode && blendMode !== 'IMG_FILTER_BLACK') {
       code += `${indentStr}gui_img_set_mode((gui_img_t *)${component.id}, ${blendMode});\n`;
     }
 
-    // 2. A8 图片颜色设置
+    // 2. A8 image color setting
     if (blendMode === 'IMG_2D_SW_FIX_A8_FG' || blendMode === 'IMG_2D_SW_FIX_A8_BGFG') {
       const fgColor = component.data?.fgColor || '0xFFFFFFFF';
       code += `${indentStr}gui_img_a8_recolor((gui_img_t *)${component.id}, ${fgColor});\n`;
@@ -47,26 +47,26 @@ export class ImageGenerator implements ComponentCodeGenerator {
       }
     }
 
-    // 3. 高质量渲染设置
+    // 3. High quality rendering
     if (component.data?.highQuality === true) {
       code += `${indentStr}gui_img_set_quality((gui_img_t *)${component.id}, true);\n`;
     }
 
-    // 4. 裁剪设置
+    // 4. Clip setting
     if (component.data?.needClip === true) {
       code += `${indentStr}((gui_img_t *)${component.id})->need_clip = true;\n`;
     }
 
-    // 获取变换配置
+    // Get transform configuration
     const transform = component.style?.transform;
     
-    // 检查是否有显式的变换
+    // Check for explicit transforms
     const hasRotation = transform?.rotation !== undefined && transform.rotation !== 0;
     const hasExplicitScale = (transform?.scaleX !== undefined && transform.scaleX !== 1.0) || 
                              (transform?.scaleY !== undefined && transform.scaleY !== 1.0);
     const hasExplicitFocus = transform?.focusX !== undefined || transform?.focusY !== undefined;
     
-    // 检查是否需要自动缩放（显示尺寸与原始图片尺寸不同）
+    // Check if auto-scaling is needed (display size differs from original image size)
     let autoScaleX: number | undefined;
     let autoScaleY: number | undefined;
     const { width, height } = component.position;
@@ -78,22 +78,22 @@ export class ImageGenerator implements ComponentCodeGenerator {
     
     const needScale = hasExplicitScale || (autoScaleX !== undefined && autoScaleY !== undefined);
     
-    // 如果有旋转、缩放或显式设置了 focus，需要设置变换
+    // Apply transform if rotation, scale, or explicit focus is set
     if (hasRotation || needScale || hasExplicitFocus) {
-      // 1. 平移（translate）
-      // 如果用户显式设置了非零的 translateX/translateY，使用设置值
-      // 否则，如果有旋转或设置了 focus，自动设置为补偿 focus 点的偏移
+      // 1. Translation
+      // Use explicit non-zero translateX/translateY if set
+      // Otherwise, auto-compensate for focus point offset on rotation/focus
       const tx = transform?.translateX ?? 0;
       const ty = transform?.translateY ?? 0;
       const hasNonZeroTranslate = tx !== 0 || ty !== 0;
       
       if (hasNonZeroTranslate) {
-        // 用户设置了非零的平移值
+        // Non-zero translation values set by user
         code += `${indentStr}gui_img_translate((gui_img_t *)${component.id}, ${tx.toFixed(1)}f, ${ty.toFixed(1)}f);\n`;
       } else if (hasRotation || hasExplicitFocus) {
-        // 有旋转或设置了 focus，自动平移来补偿 focus 点
+        // Auto-translate to compensate for focus point on rotation/focus
         if (hasExplicitFocus) {
-          // 用户设置了 focus，平移到 focus 点
+          // Focus set by user, translate to focus point
           const focusX = transform.focusX ?? 0;
           const focusY = transform.focusY ?? 0;
           if (needScale) {
@@ -104,7 +104,7 @@ export class ImageGenerator implements ComponentCodeGenerator {
             code += `${indentStr}gui_img_translate((gui_img_t *)${component.id}, ${focusX.toFixed(1)}f, ${focusY.toFixed(1)}f);\n`;
           }
         } else {
-          // 没有设置 focus，平移到图片中心
+          // No focus set, translate to image center
           if (needScale) {
             const scaleX = transform?.scaleX ?? autoScaleX ?? 1.0;
             const scaleY = transform?.scaleY ?? autoScaleY ?? 1.0;
@@ -115,26 +115,26 @@ export class ImageGenerator implements ComponentCodeGenerator {
         }
       }
 
-      // 2. 变换中心点（focus）
-      // 如果用户显式设置了 focusX/focusY，使用设置值
-      // 否则，如果有旋转，自动设置为图片中心
+      // 2. Transform center point (focus)
+      // Use explicit focusX/focusY if set
+      // Otherwise, auto-set to image center on rotation
       
       if (hasExplicitFocus) {
-        // 使用用户设置的 focus 值（未设置的维度使用 0）
+        // Use user-set focus values (default to 0 for unset dimensions)
         const focusX = (transform.focusX ?? 0).toFixed(1);
         const focusY = (transform.focusY ?? 0).toFixed(1);
         code += `${indentStr}gui_img_set_focus((gui_img_t *)${component.id}, ${focusX}f, ${focusY}f);\n`;
       } else if (hasRotation) {
-        // 有旋转但没有设置 focus，自动设置为图片中心
+        // Rotation without explicit focus, auto-set to image center
         code += `${indentStr}gui_img_set_focus((gui_img_t *)${component.id}, gui_img_get_width((gui_img_t *)${component.id}) / 2.0f, gui_img_get_height((gui_img_t *)${component.id}) / 2.0f);\n`;
       }
 
-      // 3. 旋转
+      // 3. Rotation
       if (hasRotation) {
         code += `${indentStr}gui_img_rotation((gui_img_t *)${component.id}, ${transform!.rotation!.toFixed(1)}f);\n`;
       }
 
-      // 4. 缩放
+      // 4. Scale
       if (needScale) {
         const scaleX = transform?.scaleX ?? autoScaleX ?? 1.0;
         const scaleY = transform?.scaleY ?? autoScaleY ?? 1.0;
@@ -143,7 +143,7 @@ export class ImageGenerator implements ComponentCodeGenerator {
         }
       }
     } else if (transform?.translateX !== undefined || transform?.translateY !== undefined) {
-      // 只有平移，没有旋转和缩放（只有非零时才生成代码）
+      // Translation only, no rotation or scale (generate only for non-zero values)
       const tx = transform.translateX ?? 0;
       const ty = transform.translateY ?? 0;
       if (tx !== 0 || ty !== 0) {
@@ -151,12 +151,12 @@ export class ImageGenerator implements ComponentCodeGenerator {
       }
     }
 
-    // 5. 透明度
+    // 5. Opacity
     if (transform?.opacity !== undefined && transform.opacity !== 255) {
       code += `${indentStr}gui_img_set_opacity((gui_img_t *)${component.id}, ${Math.round(transform.opacity)});\n`;
     }
 
-    // 可见性
+    // Visibility
     if (component.visible !== undefined) {
       code += `${indentStr}gui_obj_show((gui_obj_t *)${component.id}, ${component.visible ? 'true' : 'false'});\n`;
     }
@@ -165,7 +165,7 @@ export class ImageGenerator implements ComponentCodeGenerator {
   }
 
   /**
-   * 生成按键效果的事件绑定
+   * Generate button effect event bindings
    */
   generateEventBinding(component: Component, indent: number): string {
     const buttonMode = component.data?.buttonMode;
@@ -188,7 +188,7 @@ export class ImageGenerator implements ComponentCodeGenerator {
   }
 
   /**
-   * 生成按键效果的回调函数
+   * Generate button effect callback functions
    */
   generateButtonCallback(component: Component): string {
     const buttonMode = component.data?.buttonMode;
@@ -214,7 +214,7 @@ export class ImageGenerator implements ComponentCodeGenerator {
     const binOff = this.convertToBinPath(offImage);
 
     return `
-// ${component.id} 双态按键回调
+// ${component.id} dual-state button callback
 static bool ${component.id}_state = ${initialState ? 'true' : 'false'};
 
 void ${component.id}_button_cb(void *obj, gui_event_t *e)
@@ -246,7 +246,7 @@ void ${component.id}_set_state(bool state) {
     const maxOpacity = component.data?.buttonBlinkOpacityMax || 255;
 
     return `
-// ${component.id} 闪烁按键回调
+// ${component.id} blink button callback
 
 void ${component.id}_button_press_cb(void *obj, gui_event_t *e)
 {
@@ -267,16 +267,16 @@ void ${component.id}_button_release_cb(void *obj, gui_event_t *e)
   }
 
   /**
-   * 转换图片路径为 .bin 格式
+   * Convert image path to .bin format
    */
   private convertToBinPath(src: string): string {
     if (!src) return '';
     
-    // 将图片扩展名替换为 .bin
+    // Replace image extension with .bin
     let binSrc = src.replace(/\.(png|jpe?g|bmp|tiff?|webp)$/i, '.bin');
-    // 去掉 assets/ 前缀
+    // Strip assets/ prefix
     binSrc = binSrc.replace(/^assets\//, '');
-    // 确保路径以 / 开头
+    // Ensure path starts with /
     if (!binSrc.startsWith('/')) {
       binSrc = '/' + binSrc;
     }
@@ -285,7 +285,7 @@ void ${component.id}_button_release_cb(void *obj, gui_event_t *e)
   }
 
   /**
-   * 获取图片的原始尺寸
+   * Get original image dimensions
    */
   private getImageSize(component: Component, context: GeneratorContext): { width: number; height: number } | null {
     const src = component.data?.src;
@@ -293,27 +293,27 @@ void ${component.id}_button_release_cb(void *obj, gui_event_t *e)
       return null;
     }
 
-    // 从 context 中获取项目根目录
+    // Get project root from context
     let projectRoot = context.projectRoot;
     if (!projectRoot) {
       return null;
     }
 
-    // 如果 projectRoot 是 .preview 目录，需要向上一级找到真正的项目根目录
+    // If projectRoot is .preview directory, go up one level to find actual project root
     if (projectRoot.endsWith('.preview')) {
       projectRoot = path.dirname(projectRoot);
     }
 
-    // 构建图片的完整路径
+    // Build full image path
     const imagePath = path.join(projectRoot, src);
     
-    // 检查文件是否存在
+    // Check if file exists
     if (!fs.existsSync(imagePath)) {
       return null;
     }
 
     try {
-      // 读取图片文件的头部信息来获取尺寸
+      // Read image file header to get dimensions
       const buffer = fs.readFileSync(imagePath);
       return this.parseImageSize(buffer, src);
     } catch (err) {
@@ -323,20 +323,20 @@ void ${component.id}_button_release_cb(void *obj, gui_event_t *e)
   }
 
   /**
-   * 解析图片尺寸（支持 PNG, JPEG, BMP）
+   * Parse image dimensions (supports PNG, JPEG, BMP)
    */
   private parseImageSize(buffer: Buffer, filename: string): { width: number; height: number } | null {
     const ext = path.extname(filename).toLowerCase();
 
     if (ext === '.png') {
-      // PNG: 读取 IHDR chunk
+      // PNG: read IHDR chunk
       if (buffer.length >= 24 && buffer.toString('ascii', 1, 4) === 'PNG') {
         const width = buffer.readUInt32BE(16);
         const height = buffer.readUInt32BE(20);
         return { width, height };
       }
     } else if (ext === '.jpg' || ext === '.jpeg') {
-      // JPEG: 查找 SOF0 marker
+      // JPEG: find SOF0 marker
       let offset = 2;
       while (offset < buffer.length - 9) {
         if (buffer[offset] === 0xFF) {
@@ -352,7 +352,7 @@ void ${component.id}_button_release_cb(void *obj, gui_event_t *e)
         }
       }
     } else if (ext === '.bmp') {
-      // BMP: 读取 DIB header
+      // BMP: read DIB header
       if (buffer.length >= 26 && buffer.toString('ascii', 0, 2) === 'BM') {
         const width = buffer.readInt32LE(18);
         const height = Math.abs(buffer.readInt32LE(22));

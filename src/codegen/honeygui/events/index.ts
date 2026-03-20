@@ -1,5 +1,5 @@
 /**
- * 事件代码生成器工厂
+ * Event code generator factory
  */
 import { EventCodeGenerator } from './EventCodeGenerator';
 import { ViewEventGenerator } from './ViewEventGenerator';
@@ -27,36 +27,36 @@ export class EventGeneratorFactory {
   private static defaultGenerator = new DefaultEventGenerator();
 
   static {
-    // 容器组件
+    // Container components
     this.generators.set('hg_view', new ViewEventGenerator());
     this.generators.set('hg_window', new WindowEventGenerator());
     
-    // 基础控件
+    // Basic controls
     this.generators.set('hg_button', new ButtonEventGenerator());
     this.generators.set('hg_label', new LabelEventGenerator());
-    this.generators.set('hg_time_label', new LabelEventGenerator());  // 时间标签复用标签事件生成器
+    this.generators.set('hg_time_label', new LabelEventGenerator());  // Time label reuses label event generator
     this.generators.set('hg_image', new ImageEventGenerator());
     this.generators.set('hg_input', new InputEventGenerator());
     this.generators.set('hg_checkbox', new CheckboxEventGenerator());
     this.generators.set('hg_radio', new RadioEventGenerator());
     
-    // 高级控件
+    // Advanced controls
     this.generators.set('hg_canvas', new CanvasEventGenerator());
     this.generators.set('hg_list', new ListEventGenerator());
-    this.generators.set('hg_list_item', new ListItemEventGenerator());  // list_item 事件生成器
+    this.generators.set('hg_list_item', new ListItemEventGenerator());  // list_item event generator
     
-    // 多媒体
+    // Multimedia
     this.generators.set('hg_video', new VideoEventGenerator());
     this.generators.set('hg_3d', new Model3DEventGenerator());
     this.generators.set('hg_lottie', new LottieEventGenerator());
     
-    // 图形
+    // Graphics
     this.generators.set('hg_arc', new ArcEventGenerator());
     this.generators.set('hg_circle', new CircleEventGenerator());
     this.generators.set('hg_rect', new RectEventGenerator());
     this.generators.set('hg_svg', new SvgEventGenerator());
     
-    // 蜂窝菜单（使用默认事件生成器）
+    // Cellular menu (uses default event generator)
     this.generators.set('hg_menu_cellular', new DefaultEventGenerator());
   }
 

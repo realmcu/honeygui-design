@@ -1,13 +1,13 @@
 /**
- * LVGL 头文件生成器
- * 从 LvglCCodeGenerator.generateHeader() 提取
- * 生成 {designName}_lvgl_ui.h 内容
+ * LVGL header file generator
+ * Extracted from LvglCCodeGenerator.generateHeader()
+ * Generates {designName}_lvgl_ui.h content
  */
 import { Component } from '../../../hml/types';
 
 export class LvglHeaderFileGenerator {
   /**
-   * 生成 {designName}_lvgl_ui.h 文件内容
+   * Generate {designName}_lvgl_ui.h file content
    */
   generate(designName: string, orderedComponents: Component[]): string {
     const guard = `${designName.toUpperCase()}_LVGL_UI_H`;

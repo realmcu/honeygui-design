@@ -1,6 +1,6 @@
 /**
- * hg_list 组件代码生成器
- * 生成 gui_list_create() 调用和相关属性设置
+ * hg_list component code generator
+ * Generates gui_list_create() calls and related property setters
  */
 import { Component } from '../../../hml/types';
 import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';
@@ -14,11 +14,11 @@ export class ListGenerator implements ComponentCodeGenerator {
       const parentRef = context.getParentRef(component);
       let { x, y, width, height } = component.position;
 
-      // 获取屏幕尺寸（从根 hg_view 获取）
-      let screenWidth = 480;  // 默认值
-      let screenHeight = 272; // 默认值
+      // Get screen dimensions (from root hg_view)
+      let screenWidth = 480;  // Defaults
+      let screenHeight = 272; // Default
       
-      // 查找根 hg_view 组件获取屏幕尺寸
+      // Find root hg_view component to get screen dimensions
       const allComponents = Array.from(context.componentMap.values());
       const rootView = allComponents.find(c => c.type === 'hg_view' && !c.parent);
       if (rootView) {
@@ -26,25 +26,25 @@ export class ListGenerator implements ComponentCodeGenerator {
         screenHeight = rootView.position.height;
       }
 
-      // 边界检查：确保 x + width <= screenWidth
+      // Bounds check: ensure x + width <= screenWidth
       if (x + width > screenWidth) {
         width = Math.max(1, screenWidth - x);
       }
 
-      // 边界检查：确保 y + height <= screenHeight
+      // Bounds check: ensure y + height <= screenHeight
       if (y + height > screenHeight) {
         height = Math.max(1, screenHeight - y);
       }
 
-      // 获取 list 属性
-      // itemWidth 和 itemHeight 在 style group 中，但为了兼容性，同时检查 data 和 style
+      // Get list properties
+      // itemWidth and itemHeight are in style group, but check both data and style for compatibility
       const itemWidth = component.style?.itemWidth ?? component.data?.itemWidth ?? 100;
       const itemHeight = component.style?.itemHeight ?? component.data?.itemHeight ?? 100;
-      const space = component.style?.space ?? component.data?.space ?? 10;  // 默认间距为 10
+      const space = component.style?.space ?? component.data?.space ?? 10;  // Default spacing: 10
       const direction = component.style?.direction ?? component.data?.direction ?? 'VERTICAL';
       const createBar = component.data?.createBar ?? false;
 
-      // 验证必需属性
+      // Validate required properties
       if (!component.id) {
         throw new Error('List component missing required id');
       }
@@ -52,23 +52,23 @@ export class ListGenerator implements ComponentCodeGenerator {
         throw new Error(`List component ${component.id} missing required name`);
       }
 
-      // 根据 direction 确定 note_length
+      // Determine note_length based on direction
       const noteLength = direction === 'VERTICAL' ? itemHeight : itemWidth;
 
-      // 根据 direction 生成 LIST_DIR 枚举值
+      // Generate LIST_DIR enum value based on direction
       const dirEnum = direction === 'VERTICAL' ? 'VERTICAL' : 'HORIZONTAL';
 
-      // 生成 note_design 回调函数名
+      // Generate note_design callback function name
       const noteDesignCallback = `${component.id}_note_design`;
 
-      // 获取样式和数量（需要在创建后立即设置）
+      // Get style and count (must be set immediately after creation)
       const style = component.style?.style ?? 'LIST_CLASSIC';
       const noteNum = component.data?.noteNum ?? 5;
 
-      // 生成创建代码，使用位置与大小中的宽高值
+      // Generate creation code using position and size values
       let code = `${indentStr}${component.id} = gui_list_create(${parentRef}, "${component.name}", ${x}, ${y}, ${width}, ${height}, ${noteLength}, ${space}, ${dirEnum}, ${noteDesignCallback}, NULL, ${createBar ? 'true' : 'false'});\n`;
       
-      // 立即设置样式和数量（必须在创建后立即设置，否则某些样式效果会失效）
+      // Set style and count immediately (must be set right after creation or some styles won't work)
       code += `${indentStr}gui_list_set_style(${component.id}, ${style});\n`;
       code += `${indentStr}gui_list_set_note_num(${component.id}, ${noteNum});\n`;
 
@@ -77,7 +77,7 @@ export class ListGenerator implements ComponentCodeGenerator {
       const errorMsg = error instanceof Error ? error.message : String(error);
       console.error(`[ListGenerator] generateCreation failed for component ${component.id}: ${errorMsg}`);
       
-      // 返回带有错误注释的代码
+      // Return code with error comments
       const indentStr = '    '.repeat(indent);
       return `${indentStr}// ERROR: Failed to generate list creation code for ${component.id}\n` +
              `${indentStr}// Reason: ${errorMsg}\n` +
@@ -90,12 +90,12 @@ export class ListGenerator implements ComponentCodeGenerator {
       const indentStr = '    '.repeat(indent);
       let code = '';
 
-      // 验证组件 ID
+      // Validate component ID
       if (!component.id) {
         throw new Error('List component missing required id');
       }
 
-      // 获取 list 属性（style 和 noteNum 已经在 generateCreation 中设置）
+      // Get list properties (style and noteNum already set in generateCreation)
       const autoAlign = component.data?.autoAlign ?? true;
       const inertia = component.data?.inertia ?? true;
       const loop = component.data?.loop ?? false;
@@ -103,55 +103,55 @@ export class ListGenerator implements ComponentCodeGenerator {
       const outScope = component.data?.outScope ?? 0;
       const style = component.style?.style ?? 'LIST_CLASSIC';
       const cardStackLocation = component.style?.cardStackLocation ?? 0;
-      // 圆环半径：默认值根据方向决定（纵向=宽度，横向=高度）
+      // Circle radius: default depends on direction (vertical=width, horizontal=height)
       const direction = component.style?.direction ?? 'VERTICAL';
       const defaultCircleRadius = direction === 'VERTICAL' ? component.position.width : component.position.height;
       const circleRadius = component.style?.circleRadius ?? defaultCircleRadius;
       const enableAreaDisplay = component.data?.enableAreaDisplay ?? false;
 
-      // 1. 条件生成 gui_list_set_auto_align()（仅当 autoAlign 为 true）
+      // 1. Conditionally generate gui_list_set_auto_align() (only when autoAlign is true)
       if (autoAlign === true) {
         code += `${indentStr}gui_list_set_auto_align(${component.id}, true);\n`;
       }
 
-      // 2. 条件生成 gui_list_set_inertia()（仅当 inertia 为 false）
+      // 2. Conditionally generate gui_list_set_inertia() (only when inertia is false)
       if (inertia === false) {
         code += `${indentStr}gui_list_set_inertia(${component.id}, false);\n`;
       }
 
-      // 3. 条件生成 gui_list_enable_loop()（仅当 loop 为 true）
-      // 循环滚动开启时，超出范围强制为 0，样式不能为 LIST_CARD
+      // 3. Conditionally generate gui_list_enable_loop() (only when loop is true)
+      // When loop scrolling is enabled, out-of-scope is forced to 0, style cannot be LIST_CARD
       if (loop === true) {
         code += `${indentStr}gui_list_enable_loop(${component.id}, true);\n`;
       }
 
-      // 4. 条件生成 gui_list_set_offset()（仅当 offset 非零）
+      // 4. Conditionally generate gui_list_set_offset() (only when offset is non-zero)
       if (offset !== 0) {
         code += `${indentStr}gui_list_set_offset(${component.id}, ${offset});\n`;
       }
 
-      // 5. 条件生成 gui_list_set_out_scope()（仅当 outScope 非零且不是循环模式且不是 LIST_CARD）
-      // 循环滚动或 LIST_CARD 样式时，超出范围必须为 0
+      // 5. Conditionally generate gui_list_set_out_scope() (only when outScope is non-zero, not looping, not LIST_CARD)
+      // Out-of-scope must be 0 for loop scrolling or LIST_CARD style
       if (outScope !== 0 && !loop && style !== 'LIST_CARD') {
         code += `${indentStr}gui_list_set_out_scope(${component.id}, ${outScope});\n`;
       }
 
-      // 6. LIST_CARD 样式特有：设置堆叠位置（总是调用，即使值为0）
+      // 6. LIST_CARD style specific: set stack location (always called, even when value is 0)
       if (style === 'LIST_CARD') {
         code += `${indentStr}gui_list_set_card_stack_location(${component.id}, ${cardStackLocation});\n`;
       }
 
-      // 7. LIST_CIRCLE 样式特有：设置圆环半径（总是调用，使用默认值或用户设置值）
+      // 7. LIST_CIRCLE style specific: set circle radius (always called, using default or user value)
       if (style === 'LIST_CIRCLE') {
         code += `${indentStr}gui_list_set_circle_radius(${component.id}, ${circleRadius});\n`;
       }
 
-      // 8. 条件生成 gui_list_enable_area_display()（仅当 enableAreaDisplay 为 true）
+      // 8. Conditionally generate gui_list_enable_area_display() (only when enableAreaDisplay is true)
       if (enableAreaDisplay === true) {
         code += `${indentStr}gui_list_enable_area_display(${component.id}, true);\n`;
       }
 
-      // 9. 条件生成 gui_list_keep_note_alive()（仅当 keepNoteAlive 为 true）
+      // 9. Conditionally generate gui_list_keep_note_alive() (only when keepNoteAlive is true)
       const keepNoteAlive = component.data?.keepNoteAlive ?? false;
       if (keepNoteAlive === true) {
         code += `${indentStr}gui_list_keep_note_alive(${component.id}, true);\n`;
@@ -162,7 +162,7 @@ export class ListGenerator implements ComponentCodeGenerator {
       const errorMsg = error instanceof Error ? error.message : String(error);
       console.error(`[ListGenerator] generatePropertySetters failed for component ${component.id}: ${errorMsg}`);
       
-      // 返回带有错误注释的代码
+      // Return code with error comments
       const indentStr = '    '.repeat(indent);
       return `${indentStr}// ERROR: Failed to generate list property setters for ${component.id}\n` +
              `${indentStr}// Reason: ${errorMsg}\n` +
@@ -171,24 +171,24 @@ export class ListGenerator implements ComponentCodeGenerator {
   }
 
   /**
-   * 生成 note_design 回调函数
-   * 用于设计每个 list_item 的内容
+   * Generate note_design callback function
+   * Designs the content of each list_item
    */
   generateNoteDesignCallback(component: Component, context: GeneratorContext, getGenerator: (type: string) => ComponentCodeGenerator): string {
     try {
       const callbackName = `${component.id}_note_design`;
       let code = '';
 
-      // 验证组件 ID
+      // Validate component ID
       if (!component.id) {
         throw new Error('List component missing required id');
       }
 
-      // 获取所有 list_item 子组件
+      // Get all list_item child components
       const listItems = this.getAllListItems(component, context);
       
       if (listItems.length === 0) {
-        // 没有 list_item，生成空回调
+        // No list_items, generate empty callback
         code += `// note_design callback function declaration\n`;
         code += `static void ${callbackName}(gui_obj_t *obj, void *param);\n\n`;
         code += `// note_design callback function implementation\n`;
@@ -201,11 +201,11 @@ export class ListGenerator implements ComponentCodeGenerator {
         return code;
       }
 
-      // 生成回调函数声明
+      // Generate callback function declaration
       code += `// note_design callback function declaration\n`;
       code += `static void ${callbackName}(gui_obj_t *obj, void *param);\n\n`;
 
-      // 生成回调函数实现
+      // Generate callback function implementation
       code += `// note_design callback function implementation\n`;
       code += `static void ${callbackName}(gui_obj_t *obj, void *param)\n`;
       code += `{\n`;
@@ -214,7 +214,7 @@ export class ListGenerator implements ComponentCodeGenerator {
       code += `    // Cast obj to gui_list_note_t * type\n`;
       code += `    gui_list_note_t *note = (gui_list_note_t *)obj;\n`;
       
-      // 根据是否开启循环滚动，使用不同的 index 计算方式
+      // Use different index calculation based on loop scrolling mode
       const loop = component.data?.loop ?? false;
       if (loop) {
         code += `    // Loop scroll mode: handle negative index\n`;
@@ -229,23 +229,23 @@ export class ListGenerator implements ComponentCodeGenerator {
       }
       code += `    \n`;
 
-      // 生成 switch-case 结构，根据 index 创建不同的内容
+      // Generate switch-case structure to create different content based on index
       code += `    // Create different list_item content based on index\n`;
       code += `    switch (index)\n`;
       code += `    {\n`;
 
-      // 为每个 list_item 生成一个 case
+      // Generate a case for each list_item
       listItems.forEach((listItem, idx) => {
         code += `    case ${idx}:\n`;
         code += `    {\n`;
         
-        // 生成该 list_item 的子组件
+        // Generate child components for this list_item
         if (listItem.children && listItem.children.length > 0) {
           listItem.children.forEach(childId => {
             const child = context.componentMap.get(childId);
             if (child) {
               try {
-                // 传入 isFirstLevel=true，因为这是 list_item 的直接子组件
+                // Pass isFirstLevel=true since these are direct children of list_item
                 code += this.generateChildComponentCode(child, context, getGenerator, 2, true);
               } catch (childError) {
                 const childErrorMsg = childError instanceof Error ? childError.message : String(childError);
@@ -257,14 +257,14 @@ export class ListGenerator implements ComponentCodeGenerator {
           });
         }
         
-        // 为 list_item 本身生成事件绑定（如果有）
+        // Generate event bindings for list_item itself (if any)
         if (listItem.eventConfigs && listItem.eventConfigs.length > 0) {
           const eventGenerator = EventGeneratorFactory.getGenerator('hg_list_item');
           if (eventGenerator) {
-            // 生成事件绑定代码
+            // Generate event binding code
             let eventCode = eventGenerator.generateEventBindings(listItem, 2, context.componentMap);
-            // 只替换 gui_obj_add_event_cb 的第一个参数（组件引用），保持回调函数名不变
-            // 例如：gui_obj_add_event_cb(list_item_id, callback, ...) -> gui_obj_add_event_cb(obj, callback, ...)
+            // Only replace first argument of gui_obj_add_event_cb (component reference), keep callback name unchanged
+            // e.g.: gui_obj_add_event_cb(list_item_id, callback, ...) -> gui_obj_add_event_cb(obj, callback, ...)
             eventCode = eventCode.replace(
               new RegExp(`gui_obj_add_event_cb\\(${listItem.id},`, 'g'),
               'gui_obj_add_event_cb(obj,'
@@ -281,7 +281,7 @@ export class ListGenerator implements ComponentCodeGenerator {
         code += `    }\n`;
       });
 
-      // 添加 default case
+      // Add default case
       code += `    default:\n`;
       code += `        break;\n`;
       code += `    }\n`;
@@ -293,7 +293,7 @@ export class ListGenerator implements ComponentCodeGenerator {
       const errorMsg = error instanceof Error ? error.message : String(error);
       console.error(`[ListGenerator] generateNoteDesignCallback failed for component ${component.id}: ${errorMsg}`);
       
-      // 返回带有错误注释的回调函数
+      // Return callback function with error comments
       const callbackName = component.id ? `${component.id}_note_design` : 'unknown_note_design';
       return `// ERROR: Failed to generate note_design callback for ${component.id}\n` +
              `// Reason: ${errorMsg}\n` +
@@ -307,7 +307,7 @@ export class ListGenerator implements ComponentCodeGenerator {
   }
 
   /**
-   * 获取所有 list_item 子组件（按顺序）
+   * Get all list_item child components (in order)
    */
   private getAllListItems(listComponent: Component, context: GeneratorContext): Component[] {
     if (!listComponent.children || listComponent.children.length === 0) {
@@ -316,7 +316,7 @@ export class ListGenerator implements ComponentCodeGenerator {
 
     const listItems: Component[] = [];
     
-    // 查找所有 hg_list_item 类型的子组件
+    // Find all child components of type hg_list_item
     for (const childId of listComponent.children) {
       const child = context.componentMap.get(childId);
       if (child && child.type === 'hg_list_item') {
@@ -324,7 +324,7 @@ export class ListGenerator implements ComponentCodeGenerator {
       }
     }
 
-    // 按 index 排序（如果有 index 属性）
+    // Sort by index property (if present)
     listItems.sort((a, b) => {
       const indexA = (a.data?.index as number) ?? 0;
       const indexB = (b.data?.index as number) ?? 0;
@@ -335,7 +335,7 @@ export class ListGenerator implements ComponentCodeGenerator {
   }
 
   /**
-   * 检查组件是否设置了按键事件
+   * Check if component has key events configured
    */
   private hasKeyEvents(component: Component): boolean {
     if (!component.eventConfigs || component.eventConfigs.length === 0) {
@@ -349,12 +349,12 @@ export class ListGenerator implements ComponentCodeGenerator {
   }
 
   /**
-   * 生成子组件的创建代码
-   * @param component 要生成的组件
-   * @param context 生成器上下文（包含父组件引用信息）
-   * @param getGenerator 获取生成器的函数
-   * @param indent 缩进级别
-   * @param isFirstLevel 是否是 list_item 的第一层子组件（第一层使用 note，更深层使用实际父组件）
+   * Generate child component creation code
+   * @param component Component to generate
+   * @param context Generator context (contains parent reference info)
+   * @param getGenerator Function to get the generator
+   * @param indent Indentation level
+   * @param isFirstLevel Whether this is a first-level child of list_item (first level uses note, deeper levels use actual parent)
    */
   private generateChildComponentCode(
     component: Component, 
@@ -367,7 +367,7 @@ export class ListGenerator implements ComponentCodeGenerator {
       const indentStr = '    '.repeat(indent);
       let code = '';
 
-      // 验证组件
+      // Validate component
       if (!component.id) {
         throw new Error('Child component missing required id');
       }
@@ -375,27 +375,27 @@ export class ListGenerator implements ComponentCodeGenerator {
         throw new Error(`Child component ${component.id} missing required type`);
       }
 
-      // 添加注释
+      // Add comment
       code += `${indentStr}// Create ${component.name || component.id} (${component.type})\n`;
 
-      // 决定使用哪个上下文：
-      // - 第一层子组件：使用 note 作为父组件
-      // - 更深层子组件：使用传入的 context（已经包含正确的父组件引用）
+      // Determine which context to use:
+      // - First-level children: use note as parent
+      // - Deeper-level children: use provided context (already contains correct parent reference)
       let effectiveContext: GeneratorContext;
       
       if (isFirstLevel) {
-        // 第一层：强制使用 note
+        // First level: force use note
         effectiveContext = {
           componentMap: context.componentMap,
           getParentRef: (_comp: Component) => '(gui_obj_t *)note',
           projectRoot: context.projectRoot
         };
       } else {
-        // 更深层：使用传入的 context
+        // Deeper level: use provided context
         effectiveContext = context;
       }
 
-      // 使用对应的生成器生成创建代码
+      // Use corresponding generator to generate creation code
       const generator = getGenerator(component.type);
       if (!generator) {
         throw new Error(`No generator found for component type: ${component.type}`);
@@ -403,12 +403,12 @@ export class ListGenerator implements ComponentCodeGenerator {
 
       let creationCode = generator.generateCreation(component, indent, effectiveContext);
       
-      // 对于 hg_view 和 hg_window，需要处理子组件占位符
+      // For hg_view and hg_window, need to handle child component placeholders
       if (component.type === 'hg_view' || component.type === 'hg_window') {
         let childrenCode = '';
         if (component.children && component.children.length > 0) {
           childrenCode += '\n';
-          // 创建新的上下文，将父组件引用更新为当前组件
+          // Create new context with parent reference updated to current component
           const parentId = component.id;
           const nestedContext: GeneratorContext = {
             componentMap: context.componentMap,
@@ -419,7 +419,7 @@ export class ListGenerator implements ComponentCodeGenerator {
             const child = context.componentMap.get(childId);
             if (child) {
               try {
-                // 传入 isFirstLevel=false，因为这些是 window/view 的子组件，不是 list_item 的直接子组件
+                // Pass isFirstLevel=false since these are children of window/view, not direct children of list_item
                 childrenCode += this.generateChildComponentCode(child, nestedContext, getGenerator, indent, false);
               } catch (nestedError) {
                 const nestedErrorMsg = nestedError instanceof Error ? nestedError.message : String(nestedError);
@@ -430,18 +430,18 @@ export class ListGenerator implements ComponentCodeGenerator {
             }
           });
         }
-        // 替换占位符（包括子组件和事件绑定）
+        // Replace placeholders (including children and event bindings)
         creationCode = creationCode.replace(/__CHILDREN_PLACEHOLDER__/g, childrenCode);
-        creationCode = creationCode.replace(/__EVENT_BINDINGS_PLACEHOLDER__/g, ''); // window 在 list 中不需要事件绑定
+        creationCode = creationCode.replace(/__EVENT_BINDINGS_PLACEHOLDER__/g, ''); // Window in list does not need event bindings
         code += creationCode;
       } else {
-        // 普通组件：直接添加创建代码
+        // Regular component: add creation code directly
         code += creationCode;
         
-        // 生成属性设置代码
+        // Generate property setter code
         code += generator.generatePropertySetters(component, indent, effectiveContext);
 
-        // 双态按钮：生成点击事件绑定
+        // Dual-state button: generate click event binding
         if (component.type === 'hg_button' && (component.data?.toggleMode === true || component.data?.toggleMode === 'true')) {
           const buttonGenerator = ComponentGeneratorFactory.getGenerator('hg_button');
           if ('generateEventBinding' in buttonGenerator) {
@@ -449,7 +449,7 @@ export class ListGenerator implements ComponentCodeGenerator {
           }
         }
 
-        // 按键效果：为 rect、circle、image 生成事件绑定
+        // Button effects: generate event bindings for rect, circle, image
         if (['hg_rect', 'hg_circle', 'hg_image'].includes(component.type)) {
           const buttonMode = component.data?.buttonMode;
           if (buttonMode && buttonMode !== 'none') {
@@ -460,20 +460,20 @@ export class ListGenerator implements ComponentCodeGenerator {
           }
         }
 
-        // 生成事件绑定代码
+        // Generate event binding code
         const eventGenerator = EventGeneratorFactory.getGenerator(component.type);
         if (eventGenerator && component.eventConfigs && component.eventConfigs.length > 0) {
           code += eventGenerator.generateEventBindings(component, indent, context.componentMap);
         }
 
-        // 如果组件设置了按键事件，添加焦点设置
+        // Add focus setting if component has key events
         if (this.hasKeyEvents(component)) {
           code += `${indentStr}gui_obj_focus_set((gui_obj_t *)${component.id});\n`;
         }
 
-        // 递归生成子组件（如果有）
+        // Recursively generate child components (if any)
         if (component.children && component.children.length > 0) {
-          // 创建新的上下文，将父组件引用更新为当前组件
+          // Create new context with parent reference updated to current component
           const parentId = component.id;
           const nestedContext: GeneratorContext = {
             componentMap: context.componentMap,
@@ -484,7 +484,7 @@ export class ListGenerator implements ComponentCodeGenerator {
             const child = context.componentMap.get(childId);
             if (child) {
               try {
-                // 传入 isFirstLevel=false，因为这些是普通组件的子组件
+                // Pass isFirstLevel=false since these are children of a regular component
                 code += this.generateChildComponentCode(child, nestedContext, getGenerator, indent, false);
               } catch (nestedError) {
                 const nestedErrorMsg = nestedError instanceof Error ? nestedError.message : String(nestedError);
@@ -502,7 +502,7 @@ export class ListGenerator implements ComponentCodeGenerator {
       const errorMsg = error instanceof Error ? error.message : String(error);
       console.error(`[ListGenerator] generateChildComponentCode failed for component ${component.id}: ${errorMsg}`);
       
-      // 返回带有错误注释的代码
+      // Return code with error comments
       const indentStr = '    '.repeat(indent);
       return `${indentStr}// ERROR: Failed to generate child component code for ${component.id}\n` +
              `${indentStr}// Reason: ${errorMsg}\n`;

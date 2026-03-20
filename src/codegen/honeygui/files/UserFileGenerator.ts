@@ -1,12 +1,12 @@
 /**
- * 用户代码文件生成器
- * 负责生成 user.h 和 user.c 文件（只生成一次）
+ * User code file generator
+ * Generates user.h and user.c files (generated once only)
  */
 
 export class UserFileGenerator {
 
   /**
-   * 生成用户头文件
+   * Generate user header file
    */
   generateHeader(baseName: string): string {
     const guardName = `${baseName.toUpperCase()}_USER_H`;
@@ -17,28 +17,28 @@ export class UserFileGenerator {
 #include "../ui/${baseName}_ui.h"
 
 /**
- * 用户自定义头文件
- * 此文件只生成一次，可自由修改
+ * User-defined header file
+ * This file is generated once only, feel free to modify
  */
 
-// 在此添加自定义声明
+// Add custom declarations here
 
 #endif // ${guardName}
 `;
   }
 
   /**
-   * 生成用户实现文件
+   * Generate user implementation file
    */
   generateImplementation(baseName: string): string {
     return `#include "${baseName}_user.h"
 
 /**
- * 用户自定义实现
- * 此文件只生成一次，可自由修改
+ * User-defined implementation
+ * This file is generated once only, feel free to modify
  */
 
-// 在此添加自定义实现
+// Add custom implementations here
 
 /***
  * Template function

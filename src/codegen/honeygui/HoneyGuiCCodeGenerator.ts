@@ -1,11 +1,11 @@
 /**
- * HoneyGUI C代码生成器
- * 从组件树生成调用HoneyGUI API的C代码
+ * HoneyGUI C Code Generator
+ * Generates C code calling HoneyGUI APIs from a component tree
  * 
- * 文件生成策略（Qt模式 + 保护区）：
- * - *_ui.h/c: 自动生成，每次覆盖（纯UI代码）
- * - *_callbacks.h/c: 只生成一次 + 保护区（事件回调）
- * - 用户代码目录: 只生成一次，用户完全控制
+ * File generation strategy (Qt-style + protected areas):
+ * - *_ui.h/c: Auto-generated, overwritten each time (pure UI code)
+ * - *_callbacks.h/c: Generated once + protected areas (event callbacks)
+ * - User code directory: Generated once, fully user-controlled
  */
 
 import * as fs from 'fs';
@@ -39,7 +39,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
   }
 
   /**
-   * 生成所有代码文件
+   * Generate all code files
    */
   async generate(): Promise<CodeGenResult> {
     try {
@@ -47,7 +47,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       const designName = this.options.designName;
       const srcDir = this.options.srcDir;
 
-      // 创建目录结构
+      // Create directory structure
       const uiDir = path.join(srcDir, 'ui');
       const callbacksDir = path.join(srcDir, 'callbacks');
       const userDir = path.join(srcDir, 'user');
@@ -58,7 +58,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
         }
       });
 
-      // === UI 代码（每次覆盖）===
+      // === UI code (overwritten each time) ===
       const uiHeaderFile = path.join(uiDir, `${designName}_ui.h`);
       fs.writeFileSync(uiHeaderFile, this.generateUiHeader(designName));
       files.push(uiHeaderFile);
@@ -67,34 +67,34 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       fs.writeFileSync(uiImplFile, this.generateUiImplementation(designName));
       files.push(uiImplFile);
 
-      // === 回调代码（保护区）===
+      // === Callback code (protected areas) ===
       const callbackGenerator = new CallbackFileGenerator(this.components);
       const callbackHeaderFile = path.join(callbacksDir, `${designName}_callbacks.h`);
       const callbackImplFile = path.join(callbacksDir, `${designName}_callbacks.c`);
       
-      // 读取现有的 callbacks.c 内容（如果存在）
+      // Read existing callbacks.c content (if exists)
       let existingCallbacksC: string | undefined;
       if (fs.existsSync(callbackImplFile)) {
         existingCallbacksC = fs.readFileSync(callbackImplFile, 'utf-8');
       }
       
-      // 回调头文件：每次覆盖，自动从 callbacks.c 提取自定义函数声明
+      // Callback header: overwritten each time, auto-extracts custom function declarations from callbacks.c
       fs.writeFileSync(callbackHeaderFile, callbackGenerator.generateHeader(designName, existingCallbacksC));
       files.push(callbackHeaderFile);
       
-      // 回调实现文件：保护区合并
+      // Callback implementation: merge with protected areas
       if (!fs.existsSync(callbackImplFile)) {
         fs.writeFileSync(callbackImplFile, callbackGenerator.generateImplementation(designName));
         files.push(callbackImplFile);
       } else if (this.options.enableProtectedAreas) {
         const existing = fs.readFileSync(callbackImplFile, 'utf-8');
-        // 传入现有内容，用于检查已存在的函数
+        // Pass existing content to check for already-existing functions
         const merged = ProtectedAreaMerger.merge(existing, callbackGenerator.generateImplementation(designName, existing));
         fs.writeFileSync(callbackImplFile, merged);
         files.push(callbackImplFile);
       }
 
-      // === 用户代码（只生成一次）===
+      // === User code (generated once only) ===
       const userGenerator = new UserFileGenerator();
       const userHeaderFile = path.join(userDir, `${designName}_user.h`);
       const userImplFile = path.join(userDir, `${designName}_user.c`);
@@ -109,18 +109,18 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
         files.push(userImplFile);
       }
 
-      // 生成 SConscript
+      // Generate SConscript
       SConscriptGenerator.generate(srcDir);
       files.push(path.join(srcDir, 'SConscript'));
 
-      // 如果有地图组件，拷贝 gui_vector_map 库
+      // If map component exists, copy gui_vector_map library
       const hasMapComponent = this.components.some(c => c.type === 'hg_map');
       if (hasMapComponent) {
         const copiedFiles = this.copyVectorMapLibrary(srcDir);
         files.push(...copiedFiles);
       }
 
-      // 如果有 OpenClaw / Claw Face 组件，拷贝 gui_openclaw 库
+      // If OpenClaw / Claw Face component exists, copy gui_openclaw library
       const hasOpenClawComponent = this.components.some(c => c.type === 'hg_openclaw');
       const hasClawFaceComponent = this.components.some(c => c.type === 'hg_claw_face');
       if (hasOpenClawComponent || hasClawFaceComponent) {
@@ -139,7 +139,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
   }
 
   /**
-   * 生成UI头文件（每次覆盖）
+   * Generate UI header file (overwritten each time)
    */
   private generateUiHeader(baseName: string): string {
     const guardName = `${baseName.toUpperCase()}_UI_H`;
@@ -154,12 +154,12 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
     const hasLabel = componentTypes.includes('hg_label');
     const hasArc = componentTypes.includes('hg_arc');
     
-    // 检查是否有 arc group
+    // Check for arc groups
     const hasArcGroup = this.components.some(c => c.type === 'hg_arc' && c.data?.arcGroup);
 
     let code = `/**
- * ${baseName} UI定义（自动生成，请勿手动修改）
- * 生成时间: ${new Date().toISOString()}
+ * ${baseName} UI Definition (Auto-generated, do not modify manually)
+ * Generated at: ${new Date().toISOString()}
  */
 #ifndef ${guardName}
 #define ${guardName}
@@ -178,18 +178,18 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       code += `#include "gui_win.h"\n`;
     }
 
-    // 检查是否有文本相关组件（label, time_label, scroll_text）
+    // Check for text-related components (label, time_label, scroll_text)
     const hasTextComponent = componentTypes.includes('hg_label') || 
                             componentTypes.includes('hg_time_label') || 
                             componentTypes.includes('hg_scroll_text');
     
-    // 如果有文本组件，先包含字体相关头文件
+    // If text components exist, include font-related headers first
     if (hasTextComponent) {
       code += `#include "draw_font.h"\n`;
       code += `#include "font_types.h"\n`;
     }
 
-    // 检查是否有滚动文本
+    // Check for scrolling text
     const hasScrollText = this.components.some(c => c.type === 'hg_label' && (c.data?.enableScroll === true || c.data?.enableScroll === 'true'));
     if (hasScrollText) {
       code += `#include "gui_scroll_text.h"\n`;
@@ -199,7 +199,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       code += `#include "gui_lite3d.h"\n`;
       code += `#include "gui_vfs.h"\n`;
       
-      // 检查是否有启用触摸交互的 3D 模型
+      // Check for 3D models with touch rotation enabled
       const hasTouchRotation = this.components.some(c => 
         c.type === 'hg_3d' && (c.data?.touchRotationEnabled as boolean)
       );
@@ -208,17 +208,17 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       }
     }
 
-    // 矢量地图组件需要 VFS 和 vector_map 头文件
+    // Vector map component requires VFS and vector_map headers
     if (hasMap) {
-      if (!has3D) {  // 避免重复包含 gui_vfs.h
+      if (!has3D) {  // Avoid duplicate inclusion of gui_vfs.h
         code += `#include "gui_vfs.h"\n`;
       }
       code += `#include "gui_vector_map.h"\n`;
     }
 
-    // OpenClaw 组件需要 VFS 和 openclaw 头文件
+    // OpenClaw component requires VFS and openclaw headers
     if (hasOpenClaw) {
-      if (!has3D && !hasMap) {  // 避免重复包含 gui_vfs.h
+      if (!has3D && !hasMap) {  // Avoid duplicate inclusion of gui_vfs.h
         code += `#include "gui_vfs.h"\n`;
       }
       code += `#include "gui_openclaw.h"\n`;
@@ -228,12 +228,12 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       code += `#include "gui_openclaw_emoji.h"\n`;
     }
 
-    // 蜂窝菜单组件头文件
+    // Cellular menu component headers
     if (componentTypes.includes('hg_menu_cellular')) {
       code += `#include "gui_menu_cellular.h"\n`;
     }
     
-    // 如果有 arc group，添加头文件
+    // If arc groups exist, add headers
     if (hasArcGroup) {
       code += `#include "gui_arc_group.h"\n`;
     }
@@ -244,7 +244,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       }
     });
 
-    // 粒子效果组件头文件（根据 particleEffect 值动态生成）
+    // Particle effect component headers (dynamically generated based on particleEffect value)
     const particleComponents = this.components.filter(c => c.type === 'hg_particle');
     if (particleComponents.length > 0) {
       const effectHeaders = new Set<string>();
@@ -257,18 +257,18 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       });
     }
 
-    // 3D 模型不需要外部数据声明（使用 VFS 路径加载 bin 文件）
+    // 3D models do not need external data declarations (load bin files via VFS paths)
 
     code += `\n// Component handle declarations\n`;
 
     this.components.forEach(comp => {
-      // 跳过 hg_view、hg_3d 和 hg_list_item（list_item 由 note_design 回调处理）
+      // Skip hg_view, hg_3d, and hg_list_item (list_item is handled by note_design callback)
       if (comp.type !== 'hg_view' && comp.type !== 'hg_3d' && comp.type !== 'hg_list_item') {
-        // 根据组件类型使用正确的句柄类型
+        // Use the correct handle type based on component type
         const handleType = this.getComponentHandleType(comp);
         code += `extern ${handleType} *${comp.id};\n`;
         
-        // 如果是拆分时间格式的时间标签，添加子组件声明
+        // If split time format time label, add sub-component declarations
         if (comp.type === 'hg_time_label' && comp.data?.timeFormat === 'HH:mm-split') {
           code += `extern gui_text_t *${comp.id}_hour;\n`;
           code += `extern gui_text_t *${comp.id}_colon;\n`;
@@ -277,7 +277,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       }
     });
 
-    // 双态按钮状态管理函数声明
+    // Toggle button state management function declarations
     const toggleButtons = this.components.filter(c => c.type === 'hg_button' && (c.data?.toggleMode === true || c.data?.toggleMode === 'true'));
     if (toggleButtons.length > 0) {
       code += `\n// Toggle button state management function declarations\n`;
@@ -287,7 +287,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       });
     }
 
-    // hg_menu_cellular switch_view 回调函数声明
+    // hg_menu_cellular switch_view callback function declarations
     const menuCellularComponents = this.components.filter(c => c.type === 'hg_menu_cellular');
     if (menuCellularComponents.length > 0) {
       const { MenuCellularGenerator } = require('./components/MenuCellularGenerator');
@@ -307,7 +307,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       });
     }
 
-    // 计时器标签控制函数声明
+    // Timer label control function declarations
     const timerLabels = this.components.filter(c => c.type === 'hg_timer_label');
     if (timerLabels.length > 0) {
       code += `\n`;
@@ -327,23 +327,23 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
   }
 
   /**
-   * 生成UI实现文件（每次覆盖）
+   * Generate UI implementation file (overwritten each time)
    */
   private generateUiImplementation(baseName: string): string {
-    // 收集所有时间标签和计时器标签
+    // Collect all time labels and timer labels
     const timeLabels = this.components.filter(c => c.type === 'hg_time_label');
     const timerLabels = this.components.filter(c => c.type === 'hg_timer_label');
     
     let code = `/**
- * ${baseName} UI实现（自动生成，请勿手动修改）
- * 生成时间: ${new Date().toISOString()}
+ * ${baseName} UI Implementation (Auto-generated, do not modify manually)
+ * Generated at: ${new Date().toISOString()}
  */
 #include "${baseName}_ui.h"
 #include "../callbacks/${baseName}_callbacks.h"
 #include <stddef.h>
 `;
 
-    // 如果有时间标签或计时器标签，添加必要的头文件
+    // If time labels or timer labels exist, add required headers
     if (timeLabels.length > 0) {
       code += `#include <time.h>\n`;
     }
@@ -355,13 +355,13 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
     code += `\n// Component handle definitions\n`;
 
     this.components.forEach(comp => {
-      // 跳过 hg_view、hg_3d 和 hg_list_item（list_item 由 note_design 回调处理）
+      // Skip hg_view, hg_3d, and hg_list_item (list_item is handled by note_design callback)
       if (comp.type !== 'hg_view' && comp.type !== 'hg_3d' && comp.type !== 'hg_list_item') {
-        // 根据组件类型使用正确的句柄类型
+        // Use the correct handle type based on component type
         const handleType = this.getComponentHandleType(comp);
         code += `${handleType} *${comp.id} = NULL;\n`;
         
-        // 如果是拆分时间格式的时间标签，添加子组件定义
+        // If split time format time label, add sub-component definitions
         if (comp.type === 'hg_time_label' && comp.data?.timeFormat === 'HH:mm-split') {
           code += `gui_text_t *${comp.id}_hour = NULL;\n`;
           code += `gui_text_t *${comp.id}_colon = NULL;\n`;
@@ -370,7 +370,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       }
     });
 
-    // 为时间标签生成全局时间字符串变量
+    // Generate global time string variables for time labels
     if (timeLabels.length > 0) {
       code += `\n// Time string global variables\n`;
       timeLabels.forEach(label => {
@@ -379,7 +379,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       });
     }
 
-    // 为计时器标签生成全局变量和回调函数
+    // Generate global variables and callback functions for timer labels
     if (timerLabels.length > 0) {
       code += `\n`;
       timerLabels.forEach(label => {
@@ -392,7 +392,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
 
     code += `\n`;
 
-    // 生成所有双态按钮的回调函数
+    // Generate toggle button callback functions
     const hasToggleButtons = this.components.some(c => c.type === 'hg_button' && (c.data?.toggleMode === true || c.data?.toggleMode === 'true'));
     if (hasToggleButtons) {
       code += `// Toggle button callback functions\n`;
@@ -406,7 +406,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       });
     }
 
-    // 生成 hg_menu_cellular 的 switch_view 回调函数
+    // Generate hg_menu_cellular switch_view callback functions
     const hasMenuCellular = this.components.some(c => c.type === 'hg_menu_cellular');
     if (hasMenuCellular) {
       const { MenuCellularGenerator } = require('./components/MenuCellularGenerator');
@@ -421,7 +421,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       });
     }
 
-    // 生成按键效果的回调函数（rect、circle、image）
+    // Generate button effect callback functions (rect, circle, image)
     const hasButtonEffects = this.components.some(c => 
       ['hg_rect', 'hg_circle', 'hg_image'].includes(c.type) && 
       c.data?.buttonMode && 
@@ -442,7 +442,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       });
     }
 
-    // 生成所有 3D 模型的回调函数（包括动画）
+    // Generate 3D model callback functions (including animations)
     const has3DComponents = this.components.some(c => c.type === 'hg_3d');
     if (has3DComponents) {
       code += `// 3D model callback functions\n`;
@@ -456,9 +456,9 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       });
     }
 
-    // 不再生成独立的 on_switch_in 回调函数，直接在 GUI_VIEW_INSTANCE 的 switch_in 中处理
+    // No longer generate standalone on_switch_in callbacks; handled directly in GUI_VIEW_INSTANCE switch_in
 
-    // 生成所有 list 组件的 note_design 回调函数
+    // Generate note_design callback functions for all list components
     const hasListComponents = this.components.some(c => c.type === 'hg_list');
     if (hasListComponents) {
       code += `// List component note_design callback functions\n`;
@@ -476,7 +476,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       });
     }
 
-    // 生成拆分时间标签的回调函数
+    // Generate split time label callback functions
     const splitTimeLabels = this.components.filter(c => c.type === 'hg_time_label' && c.data?.timeFormat === 'HH:mm-split');
     if (splitTimeLabels.length > 0) {
       code += `// Split time label callback functions\n`;
@@ -494,33 +494,33 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
   }
 
   /**
-   * 递归生成组件树
+   * Recursively generate component tree
    */
   private generateComponentTree(component: Component, indent: number): string {
     let code = '';
     const indentStr = '    '.repeat(indent);
 
-    // 跳过 hg_list_item 组件的生成（它们由 note_design 回调处理）
+    // Skip hg_list_item generation (handled by note_design callback)
     if (component.type === 'hg_list_item') {
       return code;
     }
 
-    // 添加注释
+    // Add comment
     code += `\n${indentStr}// Create ${component.id} (${component.type})\n`;
 
-    // hg_view/hg_window 使用 ViewGenerator
+    // hg_view/hg_window uses ViewGenerator
     if (component.type === 'hg_view' || component.type === 'hg_window') {
       code += this.generateViewComponent(component, indent);
       return code;
     }
 
-    // 普通组件：生成创建代码
+    // Regular component: generate creation code
     code += this.generateComponentCreation(component, indent);
 
-    // 生成属性设置代码
+    // Generate property setter code
     code += this.generatePropertySetters(component, indent);
 
-    // 双态按钮：生成点击事件绑定
+    // Toggle button: generate click event binding
     if (component.type === 'hg_button' && (component.data?.toggleMode === true || component.data?.toggleMode === 'true')) {
       const generator = ComponentGeneratorFactory.getGenerator('hg_button');
       if ('generateEventBinding' in generator) {
@@ -528,7 +528,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       }
     }
 
-    // 按键效果：为 rect、circle、image 生成事件绑定
+    // Button effect: generate event bindings for rect, circle, image
     if (['hg_rect', 'hg_circle', 'hg_image'].includes(component.type)) {
       const buttonMode = component.data?.buttonMode;
       if (buttonMode && buttonMode !== 'none') {
@@ -539,18 +539,18 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       }
     }
 
-    // 生成定时器绑定代码
+    // Generate timer binding code
     code += this.generateTimerBindings(component, indent);
 
-    // 生成事件绑定代码
+    // Generate event binding code
     code += this.generateEventConfigBindings(component, indent);
 
-    // 如果组件设置了按键事件，添加焦点设置
+    // If component has key events configured, set focus
     if (this.hasKeyEvents(component)) {
       code += `${indentStr}gui_obj_focus_set((gui_obj_t *)${component.id});\n`;
     }
 
-    // 递归生成子组件
+    // Recursively generate child components
     if (component.children && component.children.length > 0) {
       component.children.forEach(childId => {
         const child = this.componentMap.get(childId);
@@ -564,7 +564,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
   }
 
   /**
-   * 生成组件创建代码（不包括 hg_view）
+   * Generate component creation code (excluding hg_view)
    */
   private generateComponentCreation(component: Component, indent: number): string {
     const generator = ComponentGeneratorFactory.getGenerator(component.type);
@@ -572,21 +572,21 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
   }
 
   /**
-   * 生成 hg_view/hg_window 组件代码
-   * 使用对应的 Generator 生成，并处理子组件
-   * 子组件按 children 数组顺序生成（即组件树的显示顺序）
-   * 先创建的组件显示在底层，后创建的显示在上层
+   * Generate hg_view/hg_window component code
+   * Uses the corresponding Generator and handles child components
+   * Children are generated in array order (i.e., component tree display order)
+   * Earlier-created components render at the bottom layer, later ones on top
    */
   private generateViewComponent(component: Component, indent: number): string {
     const generator = ComponentGeneratorFactory.getGenerator(component.type);
     let code = generator.generateCreation(component, indent, this.createGeneratorContext());
     
-    // 生成子组件代码（按 children 数组顺序，即组件树显示顺序）
+    // Generate child component code (in children array order, i.e., component tree display order)
     let childrenCode = '';
     if (component.children && component.children.length > 0) {
       childrenCode += '\n';
       
-      // 收集 arc groups
+      // Collect arc groups
       const childComponents = component.children
         .map(id => this.componentMap.get(id))
         .filter((c): c is Component => c !== undefined);
@@ -594,15 +594,15 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       const arcGroups = ArcGenerator.collectArcGroups(childComponents);
       const processedGroups = new Set<string>();
       
-      // 直接使用 children 数组顺序，不做额外排序
-      // 组件树中靠前的组件先创建（显示在底层），靠后的后创建（显示在上层）
+      // Use children array order directly without additional sorting
+      // Earlier components in the tree are created first (bottom layer), later ones on top
       component.children.forEach(childId => {
         const child = this.componentMap.get(childId);
         if (child) {
-          // 检查是否是 arc group 成员
+          // Check if this is an arc group member
           if (child.type === 'hg_arc' && child.data?.arcGroup) {
             const groupKey = `${component.id}_${child.data.arcGroup}`;
-            // 只在第一次遇到该群组时生成群组代码
+            // Only generate group code on first encounter of this group
             if (!processedGroups.has(groupKey) && arcGroups.has(groupKey)) {
               const groupInfo = arcGroups.get(groupKey)!;
               const parentRef = component.type === 'hg_view' ? '(gui_obj_t *)view' : component.id;
@@ -610,11 +610,11 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
               childrenCode += ArcGenerator.generateGroupCreation(groupKey, groupInfo, parentRef, childIndent);
               processedGroups.add(groupKey);
             }
-            // 跳过群组成员的独立生成
+            // Skip standalone generation for group members
             return;
           }
           
-          // hg_window 的子组件缩进需要调整（因为没有 switch_in 回调包裹）
+          // Adjust indentation for hg_window children (no switch_in callback wrapper)
           const childIndent = component.type === 'hg_window' ? indent : indent + 1;
           childrenCode += this.generateComponentTree(child, childIndent);
         }
@@ -629,18 +629,18 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       }
     }
     
-    // 生成事件绑定代码（用于 hg_view 和 hg_window 的 onMessage、按键事件等）
+    // Generate event binding code (for hg_view and hg_window onMessage, key events, etc.)
     let eventBindingsCode = '';
     if (component.type === 'hg_view' || component.type === 'hg_window') {
-      // 对于 hg_view，使用 indent + 1（因为在 switch_in 函数内）
-      // 对于 hg_window，使用 indent（因为直接在父组件内）
+      // For hg_view, use indent + 1 (inside switch_in function)
+      // For hg_window, use indent (directly inside parent component)
       const eventIndent = component.type === 'hg_view' ? indent + 1 : indent;
       eventBindingsCode = this.generateEventConfigBindings(component, eventIndent);
       
-      // 如果组件设置了按键事件，添加焦点设置
+      // If component has key events configured, set focus
       if (this.hasKeyEvents(component)) {
         const indentStr = '    '.repeat(eventIndent);
-        // hg_view 使用 view 变量，hg_window 使用组件 id
+        // hg_view uses view variable, hg_window uses component id
         const targetRef = component.type === 'hg_view' ? '(gui_obj_t *)view' : `(gui_obj_t *)${component.id}`;
         eventBindingsCode += `${indentStr}gui_obj_focus_set(${targetRef});\n`;
       }
@@ -650,7 +650,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       }
     }
     
-    // 替换占位符（使用全局替换以支持多个 window）
+    // Replace placeholders (global replace to support multiple windows)
     code = code.replace(/__CHILDREN_PLACEHOLDER__/g, childrenCode);
     code = code.replace(/__EVENT_BINDINGS_PLACEHOLDER__/g, eventBindingsCode);
     
@@ -658,7 +658,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
   }
 
   /**
-   * 生成属性设置代码
+   * Generate property setter code
    */
   private generatePropertySetters(component: Component, indent: number): string {
     const generator = ComponentGeneratorFactory.getGenerator(component.type);
@@ -666,7 +666,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
   }
 
   /**
-   * 生成事件绑定代码（保留用于向后兼容）
+   * Generate event binding code (retained for backward compatibility)
    */
   private generateEventBindings(component: Component, indent: number): string {
     let code = '';
@@ -686,10 +686,10 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
   }
 
   /**
-   * 创建生成器上下文
+   * Create generator context
    */
   private createGeneratorContext(): GeneratorContext {
-    // 从 srcDir 推导项目根目录（srcDir 的父目录）
+    // Derive project root from srcDir (parent directory of srcDir)
     const projectRoot = path.dirname(this.options.srcDir);
     
     return {
@@ -708,7 +708,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
   }
 
   /**
-   * 生成事件配置绑定代码（基于 eventConfigs）
+   * Generate event config binding code (based on eventConfigs)
    */
   private generateEventConfigBindings(component: Component, indent: number): string {
     const generator = EventGeneratorFactory.getGenerator(component.type);
@@ -716,53 +716,53 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
   }
 
   /**
-   * 生成定时器绑定代码
+   * Generate timer binding code
    */
   private generateTimerBindings(component: Component, indent: number): string {
     const indentStr = '    '.repeat(indent);
     let code = '';
 
-    // 支持新版 timers 数组
+    // Support new timers array format
     if (component.data?.timers && Array.isArray(component.data.timers)) {
       const enabledTimers = component.data.timers.filter((timer: any) => timer.enabled === true);
       
       if (enabledTimers.length > 0) {
         enabledTimers.forEach((timer: any) => {
           let callback: string;
-          // 预设动作模式：支持 segments（多段动画）或 actions（单段动画）
+          // Preset action mode: supports segments (multi-step animation) or actions (single-step animation)
           if (timer.mode === 'preset' && ((timer.segments && timer.segments.length > 0) || (timer.actions && timer.actions.length > 0))) {
-            // 预设动作模式：使用定时器 ID 生成回调函数名
+            // Preset action mode: generate callback function name from timer ID
             callback = `${component.id}_${timer.id}_cb`;
           } else if (timer.mode === 'custom' && timer.callback) {
-            // 自定义函数模式
+            // Custom function mode
             callback = timer.callback;
           } else {
-            return; // 跳过无效配置
+            return; // Skip invalid configuration
           }
           
           const timerName = timer.name || timer.id;
           code += `${indentStr}// Bind timer: ${timerName}\n`;
           code += `${indentStr}gui_obj_create_timer((gui_obj_t *)${component.id}, ${timer.interval}, ${timer.reload !== false ? 'true' : 'false'}, ${callback});\n`;
-          // 如果没有设置立即运行，则调用 gui_obj_start_timer
+          // If not set to run immediately, call gui_obj_start_timer
           if (!timer.runImmediately) {
             code += `${indentStr}gui_obj_start_timer((gui_obj_t *)${component.id});\n`;
           }
         });
       }
     }
-    // 兼容旧版单定时器格式
+    // Backward compatibility with legacy single-timer format
     else if (component.data?.timerEnabled === true) {
       const timerMode = component.data.timerMode || 'custom';
       let callback: string;
       
       if (timerMode === 'preset' && component.data.timerActions && component.data.timerActions.length > 0) {
-        // 预设动作模式：生成自动回调函数名
+        // Preset action mode: generate auto callback function name
         callback = `${component.id}_preset_timer_cb`;
       } else if (timerMode === 'custom' && component.data.timerCallback) {
-        // 自定义函数模式
+        // Custom function mode
         callback = component.data.timerCallback;
       } else {
-        return code; // 无效配置
+        return code; // Invalid configuration
       }
       
       code += `${indentStr}// Bind timer\n`;
@@ -774,7 +774,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
   }
 
   /**
-   * 生成回调头文件
+   * Generate callback header file
    */
   private generateCallbackHeader(baseName: string): string {
     const guardName = `${baseName.toUpperCase()}_CALLBACKS_H`;
@@ -786,7 +786,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
 // Event callback function declarations
 `;
 
-    // 不再生成回调函数声明（视图切换由 SDK 自动处理）
+    // No longer generate callback declarations (view switching handled by SDK automatically)
 
     code += `
 #endif // ${guardName}
@@ -796,7 +796,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
   }
 
   /**
-   * 生成回调实现文件
+   * Generate callback implementation file
    */
   private generateCallbackImplementation(baseName: string): string {
     let code = `#include "${baseName}_callbacks.h"
@@ -807,7 +807,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
 
 `;
 
-    // 生成普通回调函数模板
+    // Generate standard callback function templates
     const callbackFunctions = this.collectCallbackFunctions();
     
     callbackFunctions.forEach(funcName => {
@@ -829,7 +829,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
   }
 
   /**
-   * 收集所有需要生成的回调函数名
+   * Collect all callback function names to be generated
    */
   private collectCallbackFunctions(): string[] {
     const functions = new Set<string>();
@@ -843,12 +843,12 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
   }
 
   /**
-   * 合并保护区代码
+   * Merge protected area code
    */
   private mergeProtectedAreas(existing: string, generated: string): string {
     const protectedAreas = new Map<string, string>();
 
-    // 提取现有文件中的保护区
+    // Extract protected areas from existing file
     const regex = /\/\* @protected start (\w+) \*\/([\s\S]*?)\/\* @protected end \1 \*\//g;
     let match;
 
@@ -856,7 +856,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       protectedAreas.set(match[1], match[2]);
     }
 
-    // 替换生成代码中的保护区
+    // Replace protected areas in generated code
     let result = generated;
     protectedAreas.forEach((content, id) => {
       const pattern = new RegExp(
@@ -870,7 +870,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
   }
 
   /**
-   * 生成拆分时间标签的回调函数
+   * Generate split time label callback functions
    */
   private generateSplitTimeCallbacks(component: Component): string {
     const color = component.style?.color || '#ffffff';
@@ -904,7 +904,7 @@ static void ${component.id}_breath_anim_cb(void *p)
   }
 
   /**
-   * 将颜色字符串转换为 RGB 对象
+   * Convert color string to RGB object
    */
   private colorToRgb(color: string): { r: number; g: number; b: number } {
     if (color.startsWith('#')) {
@@ -923,11 +923,11 @@ static void ${component.id}_breath_anim_cb(void *p)
         };
       }
     }
-    return { r: 255, g: 255, b: 255 };  // 默认白色
+    return { r: 255, g: 255, b: 255 };  // Default white
   }
 
   /**
-   * 获取时间格式对应的缓冲区大小
+   * Get buffer size for the given time format
    */
   private getTimeBufferSize(timeFormat?: string): number {
     switch (timeFormat) {
@@ -935,7 +935,7 @@ static void ${component.id}_breath_anim_cb(void *p)
       case 'HH:mm': return 10;
       case 'HH': return 4;
       case 'mm': return 4;
-      case 'HH:mm-split': return 10;  // 拆分时间格式，需要访问 str+3，所以需要足够空间
+      case 'HH:mm-split': return 10;  // Split time format, needs access to str+3, so requires enough space
       case 'YYYY-MM-DD': return 12;
       case 'YYYY-MM-DD HH:mm:ss': return 22;
       case 'MM-DD HH:mm': return 16;
@@ -944,7 +944,7 @@ static void ${component.id}_breath_anim_cb(void *p)
   }
 
   /**
-   * 获取计时器格式对应的缓冲区大小
+   * Get buffer size for the given timer format
    */
   private getTimerBufferSize(timerFormat?: string): number {
     switch (timerFormat) {
@@ -957,7 +957,7 @@ static void ${component.id}_breath_anim_cb(void *p)
   }
 
   /**
-   * 检查组件是否设置了按键事件
+   * Check if component has key events configured
    */
   private hasKeyEvents(component: Component): boolean {
     if (!component.eventConfigs || component.eventConfigs.length === 0) {
@@ -971,10 +971,10 @@ static void ${component.id}_breath_anim_cb(void *p)
   }
 
   /**
-   * 根据组件类型获取正确的句柄类型
+   * Get the correct handle type based on component type
    */
   private getComponentHandleType(comp: Component): string {
-    // 检查是否启用滚动（滚动文本使用 gui_scroll_text_t）
+    // Check if scrolling is enabled (scrolling text uses gui_scroll_text_t)
     const enableScroll = comp.data?.enableScroll === true || comp.data?.enableScroll === 'true';
     
     switch (comp.type) {
@@ -1011,21 +1011,21 @@ static void ${component.id}_breath_anim_cb(void *p)
       case 'hg_menu_cellular':
         return 'gui_menu_cellular_t';
       default:
-        // 其他未实现的组件使用 gui_obj_t
+        // Other unimplemented components use gui_obj_t
         return 'gui_obj_t';
     }
   }
 
   /**
-   * 拷贝 gui_vector_map 库到生成的代码目录
-   * @param srcDir 源代码目录
-   * @returns 拷贝的文件列表
+   * Copy gui_vector_map library to the generated code directory
+   * @param srcDir Source code directory
+   * @returns List of copied files
    */
   private copyVectorMapLibrary(srcDir: string): string[] {
     const files: string[] = [];
     
-    // 获取插件安装目录
-    // __dirname = out/src/codegen/honeygui，向上四级到项目根目录
+    // Get extension installation directory
+    // __dirname = out/src/codegen/honeygui, go up 4 levels to project root
     const extensionPath = path.join(__dirname, '..', '..', '..', '..');
     const sourceLibDir = path.join(extensionPath, 'lib', 'gui_vector_map');
     const targetLibDir = path.join(srcDir, 'gui_vector_map');
@@ -1035,7 +1035,7 @@ static void ${component.id}_breath_anim_cb(void *p)
     console.log(`[MapGenerator] sourceLibDir: ${sourceLibDir}`);
     console.log(`[MapGenerator] targetLibDir: ${targetLibDir}`);
 
-    // 检查源目录是否存在
+    // Check if source directory exists
     if (!fs.existsSync(sourceLibDir)) {
       console.warn(`[MapGenerator] gui_vector_map library not found at: ${sourceLibDir}`);
       return files;
@@ -1043,12 +1043,12 @@ static void ${component.id}_breath_anim_cb(void *p)
 
     console.log(`[MapGenerator] Source directory exists, copying files...`);
 
-    // 创建目标目录
+    // Create target directory
     if (!fs.existsSync(targetLibDir)) {
       fs.mkdirSync(targetLibDir, { recursive: true });
     }
 
-    // 递归拷贝目录
+    // Recursively copy directory
     this.copyDirRecursive(sourceLibDir, targetLibDir, files);
 
     console.log(`[MapGenerator] Copied ${files.length} files to ${targetLibDir}`);
@@ -1057,7 +1057,7 @@ static void ${component.id}_breath_anim_cb(void *p)
   }
 
   /**
-   * 为当前容器下直接挂载的 clawFace 组件生成 OpenClaw 绑定代码
+   * Generate OpenClaw binding code for clawFace components directly under the current container
    */
   private generateOpenClawEmojiBindings(container: Component, indent: number): string {
     const containerChildren = container.children ?? [];
@@ -1127,7 +1127,7 @@ static void ${component.id}_breath_anim_cb(void *p)
   }
 
   /**
-   * 按组件树顺序收集当前容器子树中的所有组件
+   * Collect all components in the container subtree in component tree order
    */
   private collectSubtreeComponents(container: Component): Component[] {
     const result: Component[] = [];
@@ -1151,7 +1151,7 @@ static void ${component.id}_breath_anim_cb(void *p)
   }
 
   /**
-   * 递归拷贝目录
+   * Recursively copy directory
    */
   private copyDirRecursive(src: string, dest: string, files: string[]): void {
     const entries = fs.readdirSync(src, { withFileTypes: true });
@@ -1173,17 +1173,17 @@ static void ${component.id}_breath_anim_cb(void *p)
   }
 
   /**
-   * 拷贝 gui_openclaw 库到生成的代码目录
-   * @param srcDir 源代码目录
-   * @returns 拷贝的文件列表
+   * Copy gui_openclaw library to the generated code directory
+   * @param srcDir Source code directory
+   * @returns List of copied files
    */
   private copyOpenClawLibrary(srcDir: string): string[] {
     const files: string[] = [];
     
-    // 获取插件安装目录
-    // __dirname = out/src/codegen/honeygui，向上四级到项目根目录
+    // Get extension installation directory
+    // __dirname = out/src/codegen/honeygui, go up 4 levels to project root
     const extensionPath = path.join(__dirname, '..', '..', '..', '..');
-      // 注意：目录名为 gui_openclaw（历史拼写）
+      // Note: directory name is gui_openclaw (historical naming)
     const sourceLibDir = path.join(extensionPath, 'lib', 'gui_openclaw');
     const targetLibDir = path.join(srcDir, 'gui_openclaw');
 
@@ -1192,7 +1192,7 @@ static void ${component.id}_breath_anim_cb(void *p)
     console.log(`[OpenClawGenerator] sourceLibDir: ${sourceLibDir}`);
     console.log(`[OpenClawGenerator] targetLibDir: ${targetLibDir}`);
 
-    // 检查源目录是否存在
+    // Check if source directory exists
     if (!fs.existsSync(sourceLibDir)) {
       console.warn(`[OpenClawGenerator] gui_openclaw library not found at: ${sourceLibDir}`);
       return files;
@@ -1200,12 +1200,12 @@ static void ${component.id}_breath_anim_cb(void *p)
 
     console.log(`[OpenClawGenerator] Source directory exists, copying files...`);
 
-    // 创建目标目录
+    // Create target directory
     if (!fs.existsSync(targetLibDir)) {
       fs.mkdirSync(targetLibDir, { recursive: true });
     }
 
-    // 递归拷贝目录
+    // Recursively copy directory
     this.copyDirRecursive(sourceLibDir, targetLibDir, files);
 
     console.log(`[OpenClawGenerator] Copied ${files.length} files to ${targetLibDir}`);

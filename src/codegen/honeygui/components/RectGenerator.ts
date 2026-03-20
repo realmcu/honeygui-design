@@ -1,5 +1,5 @@
 /**
- * hg_rect 组件代码生成器
+ * hg_rect component code generator
  */
 import { Component } from '../../../hml/types';
 import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';
@@ -10,20 +10,20 @@ export class RectGenerator implements ComponentCodeGenerator {
     const parentRef = context.getParentRef(component);
     const { x, y, width, height } = component.position;
     
-    // 从 style 中获取参数，设置默认值
+    // Get parameters from style with defaults
     let borderRadius = component.style?.borderRadius || 0;
     
-    // 限制圆角半径：不能超过矩形宽度或高度的一半
+    // Limit border radius: cannot exceed half of width or height
     const maxRadius = Math.min(width / 2, height / 2);
     if (borderRadius > maxRadius) {
       borderRadius = maxRadius;
     }
     
-    // 获取透明度，默认 255（完全不透明）
-    // opacity 优先从 style 读取，兼容从 data 读取
+    // Get opacity, default 255 (fully opaque)
+    // Read from style first, fallback to data
     const opacity = component.style?.opacity ?? component.data?.opacity ?? 255;
     
-    // 检查是否是双态按键，如果是则使用初始状态对应的颜色
+    // Check for dual-state button, use color corresponding to initial state
     let fillColor: string;
     const buttonMode = component.data?.buttonMode;
     if (buttonMode === 'dual-state') {
@@ -36,7 +36,7 @@ export class RectGenerator implements ComponentCodeGenerator {
         ? this.convertColorWithOpacity(stateColor, opacity)
         : this.convertColor(stateColor);
     } else {
-      // 普通矩形使用 fillColor
+      // Plain rect uses fillColor
       fillColor = opacity < 255 
         ? this.convertColorWithOpacity(component.style?.fillColor, opacity)
         : this.convertColor(component.style?.fillColor);
@@ -49,15 +49,15 @@ export class RectGenerator implements ComponentCodeGenerator {
     const indentStr = '    '.repeat(indent);
     let code = '';
 
-    // 注意：透明度已在 gui_rgba 中设置，不再单独设置 opacity_value
+    // Note: opacity already set in gui_rgba, no separate opacity_value needed
 
-    // 渐变设置
+    // Gradient settings
     if (component.style?.useGradient && component.data?.gradientStops) {
       const stops = component.data.gradientStops as Array<{ position: number; color: string }>;
       if (stops.length >= 2) {
         const direction = component.style?.gradientDirection || 'horizontal';
         
-        // 映射方向到 SDK 枚举
+        // Map direction to SDK enum
         const directionMap: Record<string, string> = {
           'horizontal': 'RECT_GRADIENT_HORIZONTAL',
           'vertical': 'RECT_GRADIENT_VERTICAL',
@@ -72,7 +72,7 @@ export class RectGenerator implements ComponentCodeGenerator {
         
         stops.forEach(stop => {
           const color = this.convertColorToRgba(stop.color);
-          // 确保 position 是浮点数格式（如 0.0f 而不是 0f）
+          // Ensure position is float format (e.g. 0.0f not 0f)
           const position = Number.isInteger(stop.position) 
             ? `${stop.position}.0f` 
             : `${stop.position}f`;
@@ -81,7 +81,7 @@ export class RectGenerator implements ComponentCodeGenerator {
       }
     }
 
-    // 可见性
+    // Visibility
     if (component.visible === false) {
       code += `${indentStr}gui_obj_show((gui_obj_t *)${component.id}, false);\n`;
     }
@@ -90,7 +90,7 @@ export class RectGenerator implements ComponentCodeGenerator {
   }
 
   /**
-   * 生成按键效果的事件绑定
+   * Generate button effect event bindings
    */
   generateEventBinding(component: Component, indent: number): string {
     const buttonMode = component.data?.buttonMode;
@@ -101,10 +101,10 @@ export class RectGenerator implements ComponentCodeGenerator {
     const indentStr = '    '.repeat(indent);
     
     if (buttonMode === 'dual-state') {
-      // 双态按键：使用点击事件
+      // Dual-state button: use click event
       return `${indentStr}gui_obj_add_event_cb((gui_obj_t *)${component.id}, ${component.id}_button_cb, GUI_EVENT_TOUCH_CLICKED, NULL);\n`;
     } else if (buttonMode === 'opacity') {
-      // 透明度按键：使用按下和松开事件
+      // Opacity button: use press and release events
       let code = '';
       code += `${indentStr}gui_obj_add_event_cb((gui_obj_t *)${component.id}, ${component.id}_button_press_cb, GUI_EVENT_TOUCH_PRESSED, NULL);\n`;
       code += `${indentStr}gui_obj_add_event_cb((gui_obj_t *)${component.id}, ${component.id}_button_release_cb, GUI_EVENT_TOUCH_RELEASED, NULL);\n`;
@@ -115,7 +115,7 @@ export class RectGenerator implements ComponentCodeGenerator {
   }
 
   /**
-   * 生成按键效果的回调函数
+   * Generate button effect callback functions
    */
   generateButtonCallback(component: Component): string {
     const buttonMode = component.data?.buttonMode;
@@ -133,7 +133,7 @@ export class RectGenerator implements ComponentCodeGenerator {
   }
 
   /**
-   * 生成双态按键回调
+   * Generate dual-state button callback
    */
   private generateDualStateCallback(component: Component): string {
     const onColor = component.data?.buttonStateOnColor || '#00FF00';
@@ -144,7 +144,7 @@ export class RectGenerator implements ComponentCodeGenerator {
     const offColorRgba = this.convertColorToRgba(offColor);
 
     return `
-// ${component.id} 双态按键回调
+// ${component.id} dual-state button callback
 static bool ${component.id}_state = ${initialState ? 'true' : 'false'};
 
 void ${component.id}_button_cb(void *obj, gui_event_t *e)
@@ -152,10 +152,10 @@ void ${component.id}_button_cb(void *obj, gui_event_t *e)
     GUI_UNUSED(obj);
     GUI_UNUSED(e);
     
-    // 切换状态
+    // Toggle state
     ${component.id}_state = !${component.id}_state;
     
-    // 根据状态切换颜色
+    // Switch color based on state
     if (${component.id}_state) {
         gui_rect_set_color((gui_rect_t *)${component.id}, ${onColorRgba});
     } else {
@@ -163,13 +163,13 @@ void ${component.id}_button_cb(void *obj, gui_event_t *e)
     }
 }
 
-// 获取当前状态
+// Get current state
 bool ${component.id}_get_state(void)
 {
     return ${component.id}_state;
 }
 
-// 设置状态（外部调用）
+// Set state (external call)
 void ${component.id}_set_state(bool state)
 {
     if (${component.id}_state != state) {
@@ -186,16 +186,16 @@ void ${component.id}_set_state(bool state)
   }
 
   /**
-   * 生成透明度按键回调（按下变暗，松开恢复）
+   * Generate opacity button callback (dim on press, restore on release)
    */
   private generateOpacityCallback(component: Component): string {
     const pressedOpacity = component.data?.buttonPressedOpacity || 128;
     const releasedOpacity = component.data?.buttonReleasedOpacity || 255;
 
     return `
-// ${component.id} 透明度按键回调
+// ${component.id} opacity button callback
 
-// 按下时改变透明度
+// Change opacity on press
 void ${component.id}_button_press_cb(void *obj, gui_event_t *e)
 {
     GUI_UNUSED(obj);
@@ -204,7 +204,7 @@ void ${component.id}_button_press_cb(void *obj, gui_event_t *e)
     gui_rect_set_opacity((gui_rounded_rect_t *)${component.id}, ${pressedOpacity});
 }
 
-// 松开时恢复透明度
+// Restore opacity on release
 void ${component.id}_button_release_cb(void *obj, gui_event_t *e)
 {
     GUI_UNUSED(obj);
@@ -216,7 +216,7 @@ void ${component.id}_button_release_cb(void *obj, gui_event_t *e)
   }
 
   /**
-   * 转换颜色值为 gui_rgb() 格式
+   * Convert color value to gui_rgb() format
    */
   private convertColor(color?: string): string {
     if (!color) return 'APP_COLOR_WHITE';
@@ -233,7 +233,7 @@ void ${component.id}_button_release_cb(void *obj, gui_event_t *e)
   }
 
   /**
-   * 转换颜色值为 gui_rgba() 格式（带透明度）
+   * Convert color value to gui_rgba() format (with opacity)
    */
   private convertColorWithOpacity(color: string | undefined, opacity: number): string {
     if (!color) {
@@ -252,7 +252,7 @@ void ${component.id}_button_release_cb(void *obj, gui_event_t *e)
   }
 
   /**
-   * 转换颜色值为 gui_rgba() 格式（用于渐变色标）
+   * Convert color value to gui_rgba() format (for gradient stops)
    */
   private convertColorToRgba(color: string): string {
     if (color.startsWith('#')) {
@@ -260,7 +260,7 @@ void ${component.id}_button_release_cb(void *obj, gui_event_t *e)
       const r = parseInt(hex.substring(0, 2), 16);
       const g = parseInt(hex.substring(2, 4), 16);
       const b = parseInt(hex.substring(4, 6), 16);
-      // 默认完全不透明
+      // Default fully opaque
       return `gui_rgba(${r}, ${g}, ${b}, 255)`;
     }
     

@@ -1,6 +1,6 @@
 /**
- * hg_button 事件生成器
- * 从 LvglButtonGenerator.generateEventCallbacks() 迁移
+ * hg_button event generator
+ * Migrated from LvglButtonGenerator.generateEventCallbacks()
  */
 import { Component } from '../../../hml/types';
 import { LvglEventCodeGenerator } from './LvglEventCodeGenerator';

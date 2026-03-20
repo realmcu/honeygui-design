@@ -1,25 +1,25 @@
 /**
- * HoneyGUI API映射器
- * 负责将设计器组件类型映射到HoneyGUI API调用
+ * HoneyGUI API Mapper
+ * Maps designer component types to HoneyGUI API calls
  */
 
 export interface PropertySetter {
-  property: string;      // 组件属性名
-  apiFunction: string;   // HoneyGUI API函数名
-  valueTransform?: (value: any) => string;  // 值转换函数
+  property: string;      // Component property name
+  apiFunction: string;   // HoneyGUI API function name
+  valueTransform?: (value: any) => string;  // Value transform function
 }
 
 export interface EventHandler {
-  event: string;         // 事件名称
-  apiFunction: string;   // HoneyGUI API函数名
+  event: string;         // Event name
+  apiFunction: string;   // HoneyGUI API function name
 }
 
 export interface HoneyGuiApiMapping {
-  componentType: string;           // 组件类型
-  createFunction: string;          // 创建函数名
-  propertySetters: PropertySetter[];  // 属性设置函数列表
-  eventHandlers: EventHandler[];      // 事件处理函数列表
-  includeHeader?: string;          // 需要包含的头文件
+  componentType: string;           // Component type
+  createFunction: string;          // Create function name
+  propertySetters: PropertySetter[];  // Property setter function list
+  eventHandlers: EventHandler[];      // Event handler function list
+  includeHeader?: string;          // Required include header file
 }
 
 export class HoneyGuiApiMapper {
@@ -31,19 +31,19 @@ export class HoneyGuiApiMapper {
   }
 
   /**
-   * 初始化组件到API的映射关系
+   * Initialize component-to-API mappings
    */
   private initMappings(): void {
-    // 视图容器
+    // View container
     this.mappings.set('hg_view', {
       componentType: 'hg_view',
-      createFunction: 'GUI_VIEW_INSTANCE',  // 使用宏而非函数
-      propertySetters: [],  // view 不需要属性设置
+      createFunction: 'GUI_VIEW_INSTANCE',  // Uses macro instead of function
+      propertySetters: [],  // View does not need property setters
       eventHandlers: [],
       includeHeader: 'gui_view.h'
     });
 
-    // 按钮（双态模式使用 gui_img 实现）
+    // Button (dual-state mode implemented via gui_img)
     this.mappings.set('hg_button', {
       componentType: 'hg_button',
       createFunction: 'gui_img_create_from_fs',
@@ -54,7 +54,7 @@ export class HoneyGuiApiMapper {
       includeHeader: 'gui_img.h'
     });
 
-    // 文本标签
+    // Text label
     this.mappings.set('hg_label', {
       componentType: 'hg_label',
       createFunction: 'gui_text_create',
@@ -68,7 +68,7 @@ export class HoneyGuiApiMapper {
       includeHeader: 'gui_text.h'
     });
 
-    // 时间标签（复用 label 的配置）
+    // Time label (reuses label configuration)
     this.mappings.set('hg_time_label', {
       componentType: 'hg_time_label',
       createFunction: 'gui_text_create',
@@ -82,7 +82,7 @@ export class HoneyGuiApiMapper {
       includeHeader: 'gui_text.h'
     });
 
-    // 滚动文本（基于 gui_text）
+    // Scroll text (based on gui_text)
     this.mappings.set('hg_scroll_text', {
       componentType: 'hg_scroll_text',
       createFunction: 'gui_scroll_text_create',
@@ -97,18 +97,18 @@ export class HoneyGuiApiMapper {
       includeHeader: 'gui_scroll_text.h'
     });
 
-    // 图片
+    // Image
     this.mappings.set('hg_image', {
       componentType: 'hg_image',
-      createFunction: 'gui_img_create_from_fs',  // 使用支持文件系统的创建函数
+      createFunction: 'gui_img_create_from_fs',  // Uses filesystem-aware create function
       propertySetters: [
-        // { property: 'src', apiFunction: 'gui_img_set_attribute' } // 移除旧的设置方式
+        // { property: 'src', apiFunction: 'gui_img_set_attribute' } // Removed legacy setter
       ],
       eventHandlers: [],
       includeHeader: 'gui_img.h'
     });
 
-    // GIF 动画
+    // GIF animation
     this.mappings.set('hg_gif', {
       componentType: 'hg_gif',
       createFunction: 'gui_gif_create_from_fs',
@@ -117,7 +117,7 @@ export class HoneyGuiApiMapper {
       includeHeader: 'gui_gif.h'
     });
 
-    // 输入框
+    // Input field
     this.mappings.set('hg_input', {
       componentType: 'hg_input',
       createFunction: 'gui_text_create',
@@ -129,7 +129,7 @@ export class HoneyGuiApiMapper {
       includeHeader: 'gui_text.h'
     });
 
-    // 开关
+    // Switch
     this.mappings.set('hg_switch', {
       componentType: 'hg_switch',
       createFunction: 'gui_switch_create',
@@ -142,7 +142,7 @@ export class HoneyGuiApiMapper {
       includeHeader: 'gui_switch.h'
     });
 
-    // 滑块
+    // Slider
     this.mappings.set('hg_slider', {
       componentType: 'hg_slider',
       createFunction: 'gui_seekbar_create',
@@ -157,26 +157,26 @@ export class HoneyGuiApiMapper {
       includeHeader: 'gui_seekbar.h'
     });
 
-    // 3D模型
+    // 3D model
     this.mappings.set('hg_3d', {
       componentType: 'hg_3d',
-      createFunction: 'gui_3d_create',  // 需要根据文件类型选择l3_create_obj_model或l3_create_gltf_model
+      createFunction: 'gui_3d_create',  // Selects l3_create_obj_model or l3_create_gltf_model based on file type
       propertySetters: [],
       eventHandlers: [],
       includeHeader: 'gui_lite3d.h'
     });
 
-    // 视频
-    // 注意：frameRate 和 autoPlay 已在 HoneyGuiCCodeGenerator.ts 的视频组件专门处理中生成
+    // Video
+    // Note: frameRate and autoPlay are handled in HoneyGuiCCodeGenerator.ts video component processing
     this.mappings.set('hg_video', {
       componentType: 'hg_video',
-      createFunction: 'gui_video_create_from_fs',  // 使用支持文件系统的创建函数
-      propertySetters: [],  // 属性设置在 generateComponentCreate 中专门处理
+      createFunction: 'gui_video_create_from_fs',  // Uses filesystem-aware create function
+      propertySetters: [],  // Property setters are handled in generateComponentCreate
       eventHandlers: [],
       includeHeader: 'gui_video.h'
     });
 
-    // 圆弧
+    // Arc
     this.mappings.set('hg_arc', {
       componentType: 'hg_arc',
       createFunction: 'gui_arc_create',
@@ -193,7 +193,7 @@ export class HoneyGuiApiMapper {
       includeHeader: 'gui_arc.h'
     });
 
-    // 圆形
+    // Circle
     this.mappings.set('hg_circle', {
       componentType: 'hg_circle',
       createFunction: 'gui_circle_create',
@@ -207,7 +207,7 @@ export class HoneyGuiApiMapper {
       includeHeader: 'gui_circle.h'
     });
 
-    // 矩形
+    // Rectangle
     this.mappings.set('hg_rect', {
       componentType: 'hg_rect',
       createFunction: 'gui_rect_create',
@@ -221,16 +221,16 @@ export class HoneyGuiApiMapper {
       includeHeader: 'gui_rect.h'
     });
 
-    // 列表控件
+    // List widget
     this.mappings.set('hg_list', {
       componentType: 'hg_list',
       createFunction: 'gui_list_create',
-      propertySetters: [],  // 属性设置在 ListGenerator 中专门处理
+      propertySetters: [],  // Property setters are handled in ListGenerator
       eventHandlers: [],
       includeHeader: 'gui_list.h'
     });
 
-    // 玻璃效果
+    // Glass effect
     this.mappings.set('hg_glass', {
       componentType: 'hg_glass',
       createFunction: 'gui_glass_create_from_fs',
@@ -239,7 +239,7 @@ export class HoneyGuiApiMapper {
       includeHeader: 'gui_glass.h'
     });
 
-    // 矢量地图
+    // Vector map
     this.mappings.set('hg_map', {
       componentType: 'hg_map',
       createFunction: 'gui_vector_map_create_from_mem',
@@ -248,7 +248,7 @@ export class HoneyGuiApiMapper {
       includeHeader: 'gui_vector_map.h'
     });
 
-    // OpenClaw AI 对话组件
+    // OpenClaw AI conversation component
     this.mappings.set('hg_openclaw', {
       componentType: 'hg_openclaw',
       createFunction: 'gui_openclaw_create_from_mem',
@@ -267,14 +267,14 @@ export class HoneyGuiApiMapper {
   }
 
   /**
-   * 获取组件的API映射
+   * Get API mapping for a component
    */
   getMapping(componentType: string): HoneyGuiApiMapping | null {
     return this.mappings.get(componentType) || null;
   }
 
   /**
-   * 获取所有需要包含的头文件
+   * Get all required header files
    */
   getRequiredHeaders(componentTypes: string[]): string[] {
     const headers = new Set<string>();
@@ -288,7 +288,7 @@ export class HoneyGuiApiMapper {
   }
 
   /**
-   * 颜色转换为十六进制
+   * Convert color to hexadecimal
    */
   private colorToHex(color: string): string {
     if (color.startsWith('#')) {
@@ -307,9 +307,9 @@ export class HoneyGuiApiMapper {
   }
 
   /**
-   * 颜色转换为 gui_rgba 宏调用（与 SDK 示例代码一致）
-   * @param color 颜色字符串
-   * @param opacity 可选的透明度覆盖值 (0-255)
+   * Convert color to gui_rgba macro call (consistent with SDK examples)
+   * @param color Color string
+   * @param opacity Optional opacity override value (0-255)
    */
   public colorToGuiColor(color: string, opacity?: number): string {
     let r = 0, g = 0, b = 0, a = 255;
@@ -338,17 +338,17 @@ export class HoneyGuiApiMapper {
       }
     }
     
-    // 如果提供了 opacity 参数，使用它覆盖颜色中的 alpha 值
+    // If opacity parameter is provided, use it to override the alpha value
     if (opacity !== undefined) {
       a = Math.max(0, Math.min(255, Math.round(opacity)));
     }
     
-    // 使用 gui_rgba 宏（与 SDK 示例代码一致）
+    // Use gui_rgba macro (consistent with SDK examples)
     return `gui_rgba(${r}, ${g}, ${b}, ${a})`;
   }
 
   /**
-   * 添加自定义映射
+   * Add custom mapping
    */
   addCustomMapping(mapping: HoneyGuiApiMapping): void {
     this.mappings.set(mapping.componentType, mapping);

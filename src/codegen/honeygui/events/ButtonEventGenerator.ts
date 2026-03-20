@@ -1,7 +1,7 @@
 /**
- * hg_button 事件代码生成器
- * 双态按钮的 onClick 事件不单独绑定（toggle_cb 已占用 GUI_EVENT_TOUCH_CLICKED），
- * 而是将 onClick actions 合并进 toggle_cb 中统一执行。
+ * hg_button event code generator.
+ * Toggle button's onClick event is not bound separately (toggle_cb already occupies GUI_EVENT_TOUCH_CLICKED),
+ * instead onClick actions are merged into toggle_cb for unified execution.
  */
 import { Component } from '../../../hml/types';
 import { DefaultEventGenerator } from './DefaultEventGenerator';
@@ -10,7 +10,7 @@ import { EVENT_TYPE_TO_GUI_EVENT, getMessageCallbackName } from './EventCodeGene
 export class ButtonEventGenerator extends DefaultEventGenerator {
 
   /**
-   * 双态模式下跳过 onClick 的独立绑定（toggle_cb 已处理 GUI_EVENT_TOUCH_CLICKED）
+   * Skip independent onClick binding in toggle mode (toggle_cb already handles GUI_EVENT_TOUCH_CLICKED)
    */
   generateEventBindings(component: Component, indent: number, componentMap: Map<string, Component>): string {
     const isToggle = component.data?.toggleMode === true || component.data?.toggleMode === 'true';
@@ -18,7 +18,7 @@ export class ButtonEventGenerator extends DefaultEventGenerator {
       return super.generateEventBindings(component, indent, componentMap);
     }
 
-    // 双态模式：跳过 onClick，其余事件正常绑定
+    // Toggle mode: skip onClick, bind other events normally
     if (!component.eventConfigs || component.eventConfigs.length === 0) {
       return '';
     }
@@ -36,7 +36,7 @@ export class ButtonEventGenerator extends DefaultEventGenerator {
         return;
       }
 
-      // 双态模式下跳过 onClick（已由 toggle_cb 处理）
+      // Skip onClick in toggle mode (handled by toggle_cb)
       if (isToggle && eventConfig.type === 'onClick') {
         return;
       }
@@ -55,7 +55,7 @@ export class ButtonEventGenerator extends DefaultEventGenerator {
   }
 
   /**
-   * 双态模式下跳过 onClick 的回调实现（actions 已合并进 toggle_cb）
+   * Skip onClick callback implementation in toggle mode (actions merged into toggle_cb)
    */
   getEventCallbackImpl(component: Component, componentMap: Map<string, Component>): string[] {
     const isToggle = component.data?.toggleMode === true || component.data?.toggleMode === 'true';
@@ -63,7 +63,7 @@ export class ButtonEventGenerator extends DefaultEventGenerator {
       return super.getEventCallbackImpl(component, componentMap);
     }
 
-    // 双态模式：过滤掉 onClick，其余事件正常生成
+    // Toggle mode: filter out onClick, generate other events normally
     const filtered = { ...component, eventConfigs: (component.eventConfigs || []).filter(e => e.type !== 'onClick') };
     return super.getEventCallbackImpl(filtered as Component, componentMap);
   }
@@ -74,7 +74,7 @@ export class ButtonEventGenerator extends DefaultEventGenerator {
       return super.collectCallbackFunctions(component);
     }
 
-    // 双态模式：过滤掉 onClick
+    // Toggle mode: filter out onClick
     const filtered = { ...component, eventConfigs: (component.eventConfigs || []).filter(e => e.type !== 'onClick') };
     return super.collectCallbackFunctions(filtered as Component);
   }

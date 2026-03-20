@@ -1,5 +1,5 @@
 /**
- * hg_3d 组件 LVGL 代码生成器
+ * hg_3d component LVGL code generator
  */
 import { Component } from '../../../hml/types';
 import { LvglGeneratorContext } from '../LvglComponentGenerator';

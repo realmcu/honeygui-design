@@ -1,23 +1,23 @@
 /**
- * LVGL 回调文件生成器
- * 生成独立的回调代码文件，每个回调函数体内包含保护区标记
+ * LVGL callback file generator
+ * Generates standalone callback code files with protected area markers inside each callback body
  */
 
-/** 回调函数实现描述 */
+/** Callback function implementation descriptor */
 export interface CallbackImpl {
-  /** 回调函数名，如 "btn1_event_cb" */
+  /** Callback function name, e.g. "btn1_event_cb" */
   name: string;
-  /** C 函数签名，如 "void btn1_event_cb(lv_event_t * e)" */
+  /** C function signature, e.g. "void btn1_event_cb(lv_event_t * e)" */
   signature: string;
-  /** 默认函数体（不含保护区标记，不含外层花括号） */
+  /** Default function body (without protected area markers, without outer braces) */
   body: string;
 }
 
 export class LvglCallbackFileGenerator {
   /**
-   * 生成 {designName}_lvgl_callbacks.h
-   * @param designName 设计名称
-   * @param callbackFunctions 回调函数名列表
+   * Generate {designName}_lvgl_callbacks.h
+   * @param designName Design name
+   * @param callbackFunctions Callback function name list
    */
   generateHeader(designName: string, callbackFunctions: string[]): string {
     const guard = `${designName.toUpperCase()}_LVGL_CALLBACKS_H`;
@@ -37,9 +37,9 @@ export class LvglCallbackFileGenerator {
   }
 
   /**
-   * 生成 {designName}_lvgl_callbacks.c（含保护区标记）
-   * @param designName 设计名称
-   * @param callbackImpls 回调函数实现列表
+   * Generate {designName}_lvgl_callbacks.c (with protected area markers)
+   * @param designName Design name
+   * @param callbackImpls Callback function implementation list
    */
   generateImplementation(designName: string, callbackImpls: CallbackImpl[]): string {
     let code = `/**\n`;

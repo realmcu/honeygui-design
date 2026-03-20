@@ -1,10 +1,10 @@
 /**
- * hg_rect 事件代码生成器
- * 使用 DefaultEventGenerator 的统一实现
+ * hg_rect event code generator.
+ * Uses DefaultEventGenerator's unified implementation.
  */
 import { DefaultEventGenerator } from './DefaultEventGenerator';
 
 export class RectEventGenerator extends DefaultEventGenerator {
-  // 继承 DefaultEventGenerator 的所有方法
-  // 如果需要矩形特定的逻辑，可以在这里覆盖方法
+  // Inherits all methods from DefaultEventGenerator
+  // Override methods here if rect-specific logic is needed
 }

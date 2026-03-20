@@ -1,6 +1,6 @@
 /**
- * hg_checkbox 事件生成器
- * 从 LvglCheckboxGenerator.generateEventCallbacks() 迁移
+ * hg_checkbox event generator
+ * Migrated from LvglCheckboxGenerator.generateEventCallbacks()
  */
 import { Component } from '../../../hml/types';
 import { LvglEventCodeGenerator } from './LvglEventCodeGenerator';
