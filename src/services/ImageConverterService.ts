@@ -33,11 +33,8 @@ export interface ConvertResult {
 }
 
 export class ImageConverterService {
-    private converter: ImageConverter;
-
     constructor(sdkPath?: string) {
         // SDK path 不再需要，但保留参数以兼容现有代码
-        this.converter = new ImageConverter();
     }
 
     /**
@@ -104,28 +101,32 @@ export class ImageConverterService {
                 return await this.convertWithAdaptiveCompression(inputPath, outputPath, pixelFormat, opts);
             }
 
+            // 为每次转换创建新的 ImageConverter 实例，避免并行转换时压缩器状态互相干扰
+            const converter = new ImageConverter();
+
             // 设置压缩算法
             if (opts.compression && opts.compression !== 'none') {
                 switch (opts.compression) {
                     case 'rle':
-                        this.converter.setCompressor(new RLECompression());
+                        converter.setCompressor(new RLECompression());
                         break;
                     case 'fastlz':
-                        this.converter.setCompressor(new FastLzCompression());
+                        converter.setCompressor(new FastLzCompression());
                         break;
                     case 'yuv':
-                        this.converter.setCompressor(new YUVCompression(
+                        converter.setCompressor(new YUVCompression(
                             opts.yuvSampleMode || 'yuv422',
                             opts.yuvBlurBits || 0,
                             opts.yuvFastlz || false
                         ));
                         break;
+                    default:
+                        console.log(`[ImageConverter] Unknown compression type: ${opts.compression}`);
                 }
             } else {
-                this.converter.setCompressor(undefined);
             }
 
-            await this.converter.convert(inputPath, outputPath, pixelFormat, { dither: opts.dither });
+            await converter.convert(inputPath, outputPath, pixelFormat, { dither: opts.dither });
             return { success: true, inputPath, outputPath };
         } catch (error: any) {
             return { success: false, inputPath, outputPath, error: error.message };
@@ -150,8 +151,8 @@ export class ImageConverterService {
 
         // 先生成不压缩的版本作为基准
         const noCompressPath = outputPath + '.nocompress.tmp';
-        this.converter.setCompressor(undefined);
-        await this.converter.convert(inputPath, noCompressPath, pixelFormat, { dither });
+        const converterNoCompress = new ImageConverter();
+        await converterNoCompress.convert(inputPath, noCompressPath, pixelFormat, { dither });
         let bestPath = noCompressPath;
         let bestSize = fs.statSync(noCompressPath).size;
         let bestName = 'none';
@@ -160,8 +161,9 @@ export class ImageConverterService {
         for (const candidate of candidates) {
             const tmpPath = outputPath + `.${candidate.name}.tmp`;
             try {
-                this.converter.setCompressor(candidate.compressor);
-                await this.converter.convert(inputPath, tmpPath, pixelFormat, { dither });
+                const converterWithCompress = new ImageConverter();
+                converterWithCompress.setCompressor(candidate.compressor);
+                await converterWithCompress.convert(inputPath, tmpPath, pixelFormat, { dither });
                 const size = fs.statSync(tmpPath).size;
                 if (size < bestSize) {
                     // 删除之前的最优临时文件
@@ -188,9 +190,6 @@ export class ImageConverterService {
             fs.unlinkSync(outputPath);
         }
         fs.renameSync(bestPath, outputPath);
-
-        // 清理可能残留的临时文件
-        this.converter.setCompressor(undefined);
 
         return { success: true, inputPath, outputPath };
     }
