@@ -4,6 +4,7 @@ import { t } from '../../i18n';
 import { TimerConfig, TimerAction, AnimationSegment } from '../../../hml/types';
 import { SWITCH_OUT_STYLES, SWITCH_IN_STYLES } from '../../../hml/eventTypes';
 import { useDesignerStore } from '../../store';
+import { ChevronDown, ChevronRight, Trash2 } from 'lucide-react';
 
 interface TimerPropertiesProps {
   componentId: string;
@@ -386,9 +387,21 @@ const TimerPresetMode: React.FC<{
   getAvailableViews: () => Array<{ id: string; name: string; file: string }>;
 }> = ({ timer, componentType, onUpdate, getAvailableViews }) => {
   const segments = timer.segments || [];
-  const [expandedSegmentIndex, setExpandedSegmentIndex] = useState<number | null>(
-    segments.length > 0 ? 0 : null
+  const [expandedSegments, setExpandedSegments] = useState<Set<number>>(
+    () => new Set(segments.length > 0 ? [0] : [])
   );
+
+  const toggleSegmentExpand = (index: number) => {
+    setExpandedSegments(prev => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
+  };
   
   // 获取当前组件的所有定时动画（从父组件传递）
   const componentId = useDesignerStore((state) => state.selectedComponent);
@@ -402,7 +415,7 @@ const TimerPresetMode: React.FC<{
       actions: [],
     };
     onUpdate({ segments: [...segments, newSegment] });
-    setExpandedSegmentIndex(segments.length);
+    setExpandedSegments(prev => new Set(prev).add(segments.length));
   };
 
   const handleUpdateSegment = (index: number, updates: Partial<AnimationSegment>) => {
@@ -414,11 +427,14 @@ const TimerPresetMode: React.FC<{
   const handleDeleteSegment = (index: number) => {
     const newSegments = segments.filter((_, i) => i !== index);
     onUpdate({ segments: newSegments });
-    if (expandedSegmentIndex === index && newSegments.length > 0) {
-      setExpandedSegmentIndex(0);
-    } else if (expandedSegmentIndex !== null && expandedSegmentIndex > index) {
-      setExpandedSegmentIndex(expandedSegmentIndex - 1);
-    }
+    setExpandedSegments(prev => {
+      const next = new Set<number>();
+      for (const idx of prev) {
+        if (idx < index) next.add(idx);
+        else if (idx > index) next.add(idx - 1);
+      }
+      return next;
+    });
   };
 
   // 拖拽相关状态
@@ -461,16 +477,24 @@ const TimerPresetMode: React.FC<{
     
     onUpdate({ segments: newSegments });
 
-    // 更新展开状态
-    if (expandedSegmentIndex === draggedSegmentIndex) {
-      setExpandedSegmentIndex(dropIndex);
-    } else if (expandedSegmentIndex !== null) {
-      if (draggedSegmentIndex < expandedSegmentIndex && dropIndex >= expandedSegmentIndex) {
-        setExpandedSegmentIndex(expandedSegmentIndex - 1);
-      } else if (draggedSegmentIndex > expandedSegmentIndex && dropIndex <= expandedSegmentIndex) {
-        setExpandedSegmentIndex(expandedSegmentIndex + 1);
+    // Update expanded indices after reorder
+    setExpandedSegments(prev => {
+      const next = new Set<number>();
+      for (const idx of prev) {
+        if (idx === draggedSegmentIndex) {
+          next.add(dropIndex);
+        } else {
+          let newIdx = idx;
+          if (draggedSegmentIndex < idx && dropIndex >= idx) {
+            newIdx = idx - 1;
+          } else if (draggedSegmentIndex > idx && dropIndex <= idx) {
+            newIdx = idx + 1;
+          }
+          next.add(newIdx);
+        }
       }
-    }
+      return next;
+    });
 
     setDraggedSegmentIndex(null);
     setDragOverSegmentIndex(null);
@@ -533,6 +557,89 @@ const TimerPresetMode: React.FC<{
         </div>
       )}
 
+      {/* 时间轴可视化 */}
+      {segments.length > 0 && totalDuration > 0 && (
+        <div style={{ marginBottom: '12px' }}>
+          <div style={{ 
+            display: 'flex', 
+            height: '32px', 
+            borderRadius: '4px', 
+            overflow: 'hidden',
+            border: '1px solid var(--vscode-panel-border)',
+          }}>
+            {segments.map((segment, idx) => {
+              const widthPercent = (segment.duration / totalDuration) * 100;
+              const isExpanded = expandedSegments.has(idx);
+              const hue = (idx * 137) % 360;
+              return (
+                <div
+                  key={idx}
+                  onClick={() => toggleSegmentExpand(idx)}
+                  title={`${t('Segment')} ${idx + 1}: ${segment.duration}ms, ${segment.actions.length} ${t('actions')}`}
+                  style={{
+                    width: `${widthPercent}%`,
+                    minWidth: '16px',
+                    height: '100%',
+                    background: `hsla(${hue}, 50%, ${isExpanded ? '40%' : '30%'}, ${isExpanded ? 0.9 : 0.6})`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    borderRight: idx < segments.length - 1 ? '1px solid var(--vscode-panel-border)' : 'none',
+                    transition: 'background 0.15s ease',
+                    position: 'relative',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <span style={{ 
+                    fontSize: '10px', 
+                    fontWeight: 'bold', 
+                    color: '#fff', 
+                    textShadow: '0 0 3px rgba(0,0,0,0.5)',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {widthPercent > 12 ? `S${idx + 1}` : ''}
+                  </span>
+                  {widthPercent > 25 && segment.actions.length > 0 && (
+                    <span style={{ 
+                      fontSize: '8px', 
+                      color: 'rgba(255,255,255,0.7)', 
+                      marginLeft: '3px',
+                      textShadow: '0 0 2px rgba(0,0,0,0.5)',
+                    }}>
+                      ×{segment.actions.length}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {/* 时间刻度 - 每段时长 */}
+          <div style={{ display: 'flex', marginTop: '2px' }}>
+            {segments.map((segment, idx) => {
+              const widthPercent = (segment.duration / totalDuration) * 100;
+              return (
+                <span
+                  key={idx}
+                  style={{
+                    width: `${widthPercent}%`,
+                    minWidth: '16px',
+                    fontSize: '9px',
+                    opacity: 0.6,
+                    textAlign: 'center',
+                    overflow: 'hidden',
+                    whiteSpace: 'nowrap',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  {widthPercent > 10 ? `${segment.duration}ms` : ''}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* 动画段列表 */}
       {segments.map((segment, segmentIndex) => (
         <div
@@ -555,12 +662,14 @@ const TimerPresetMode: React.FC<{
           {/* 段头部 */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
             <div
-              style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, cursor: 'pointer' }}
+              onClick={() => toggleSegmentExpand(segmentIndex)}
             >
               <span 
                 draggable
                 onDragStart={(e) => handleDragStart(e, segmentIndex)}
                 onDragEnd={handleDragEnd}
+                onClick={(e) => e.stopPropagation()}
                 style={{ 
                   fontSize: '14px', 
                   opacity: 0.6, 
@@ -572,46 +681,41 @@ const TimerPresetMode: React.FC<{
               >
                 ⋮⋮
               </span>
-              <span 
-                style={{ fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}
-                onClick={() => setExpandedSegmentIndex(expandedSegmentIndex === segmentIndex ? null : segmentIndex)}
-              >
+              <span style={{ display: 'flex', alignItems: 'center', opacity: 0.7 }}>
+                {expandedSegments.has(segmentIndex) ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              </span>
+              <span style={{ fontSize: '11px', fontWeight: 'bold' }}>
                 {t('Segment')} {segmentIndex + 1}
               </span>
-              <span 
-                style={{ fontSize: '10px', opacity: 0.7, cursor: 'pointer' }}
-                onClick={() => setExpandedSegmentIndex(expandedSegmentIndex === segmentIndex ? null : segmentIndex)}
-              >
+              <span style={{ fontSize: '10px', opacity: 0.7 }}>
                 ({segment.duration}ms, {segment.actions.length} {t('actions')})
               </span>
-              <span 
-                style={{ fontSize: '12px', opacity: 0.7, cursor: 'pointer' }}
-                onClick={() => setExpandedSegmentIndex(expandedSegmentIndex === segmentIndex ? null : segmentIndex)}
-              >
-                {expandedSegmentIndex === segmentIndex ? '▼' : '▶'}
-              </span>
             </div>
-            <button
+            <span
               onClick={(e) => {
                 e.stopPropagation();
                 handleDeleteSegment(segmentIndex);
               }}
               style={{
-                padding: '2px 8px',
-                background: 'var(--vscode-button-secondaryBackground)',
-                color: 'var(--vscode-button-secondaryForeground)',
-                border: 'none',
-                borderRadius: '2px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '20px',
+                height: '20px',
                 cursor: 'pointer',
-                fontSize: '10px',
+                opacity: 0.6,
+                borderRadius: '2px',
+                marginLeft: '12px',
+                flexShrink: 0,
               }}
+              title={t('Remove')}
             >
-              {t('Remove')}
-            </button>
+              <Trash2 size={13} />
+            </span>
           </div>
 
           {/* 段详细配置 */}
-          {expandedSegmentIndex === segmentIndex && (
+          {expandedSegments.has(segmentIndex) && (
             <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--vscode-panel-border)' }}>
               {/* 持续时间 */}
               <div style={{ marginBottom: '8px' }}>
