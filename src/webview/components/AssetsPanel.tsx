@@ -813,17 +813,19 @@ const AssetsPanel: React.FC = () => {
     e.stopPropagation();
     setIsDragOver(false);
 
+    const baseRelativePath = currentPath.length > 0 ? currentPath.join('/') : '';
+
     // 简化逻辑：拖拽什么就拷贝什么
     if (e.dataTransfer.items) {
       const items = Array.from(e.dataTransfer.items);
       for (const item of items) {
         const entry = item.webkitGetAsEntry?.();
         if (entry) {
-          await processEntry(entry, '');
+          await processEntry(entry, baseRelativePath);
         }
       }
     } else if (e.dataTransfer.files) {
-      Array.from(e.dataTransfer.files).forEach(file => processFile(file, ''));
+      Array.from(e.dataTransfer.files).forEach(file => processFile(file, baseRelativePath));
     }
   };
 
