@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { PropertyEditor } from './PropertyEditor';
 import { t } from '../../i18n';
 import { TimerConfig, TimerAction, AnimationSegment } from '../../../hml/types';
 import { SWITCH_OUT_STYLES, SWITCH_IN_STYLES } from '../../../hml/eventTypes';
 import { useDesignerStore } from '../../store';
-import { ChevronDown, ChevronRight, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Trash2, Download } from 'lucide-react';
 
 interface TimerPropertiesProps {
   componentId: string;
@@ -45,9 +45,19 @@ export const TimerProperties: React.FC<TimerPropertiesProps> = ({
   // 添加新定时动画
   const handleAddTimer = () => {
     const timerIndex = timers.length;
+    // Avoid duplicate name
+    const existingNames = new Set(timers.map(t => t.name));
+    let newName = `${t('Animation')} ${timerIndex + 1}`;
+    if (existingNames.has(newName)) {
+      let suffix = timerIndex + 2;
+      while (existingNames.has(`${t('Animation')} ${suffix}`)) {
+        suffix++;
+      }
+      newName = `${t('Animation')} ${suffix}`;
+    }
     const newTimer: TimerConfig = {
       id: `timer_${timerIndex}`,
-      name: `${t('Animation')} ${timerIndex + 1}`,
+      name: newName,
       enabled: timers.length === 0,
       interval: 1000,
       reload: true,
@@ -61,6 +71,66 @@ export const TimerProperties: React.FC<TimerPropertiesProps> = ({
     };
     onUpdate([...timers, newTimer]);
     setExpandedTimerId(newTimer.id);
+  };
+
+  // Import animation state
+  const [showImportPicker, setShowImportPicker] = useState(false);
+  const importPickerRef = useRef<HTMLDivElement>(null);
+
+  // Close import picker on outside click
+  useEffect(() => {
+    if (!showImportPicker) return;
+    const handler = (e: MouseEvent) => {
+      if (importPickerRef.current && !importPickerRef.current.contains(e.target as Node)) {
+        setShowImportPicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showImportPicker]);
+
+  // Get all components that have animations (including current for duplication)
+  const importSources = React.useMemo(() => {
+    return components
+      .filter(c => c.data?.timers && c.data.timers.length > 0)
+      .sort((a, b) => {
+        // Current component first
+        if (a.id === componentId) return -1;
+        if (b.id === componentId) return 1;
+        return 0;
+      })
+      .map(c => ({
+        id: c.id,
+        name: c.name || c.id,
+        type: c.type,
+        timers: c.data!.timers!,
+        isSelf: c.id === componentId,
+      }));
+  }, [components, componentId]);
+
+  // Handle importing an animation from another component
+  const handleImportAnimation = (sourceTimer: TimerConfig) => {
+    const timerIndex = timers.length;
+    // Check for duplicate name and auto-rename
+    const existingNames = new Set(timers.map(t => t.name));
+    let importedName = sourceTimer.name || `${t('Animation')} ${timerIndex + 1}`;
+    if (existingNames.has(importedName)) {
+      let suffix = 2;
+      while (existingNames.has(`${importedName} (${suffix})`)) {
+        suffix++;
+      }
+      importedName = `${importedName} (${suffix})`;
+    }
+    const imported: TimerConfig = {
+      ...JSON.parse(JSON.stringify(sourceTimer)),
+      id: `timer_${timerIndex}`,
+      name: importedName,
+      callback: `${componentId}_timer_${timerIndex}_cb`,
+      enabled: false,
+    };
+    onUpdate([...timers, imported]);
+    setExpandedTimerId(imported.id);
+    setShowImportPicker(false);
   };
 
   // 删除定时动画
@@ -183,12 +253,19 @@ export const TimerProperties: React.FC<TimerPropertiesProps> = ({
                   }}
                   onClick={(e) => e.stopPropagation()}
                   placeholder={t('Animation Name')}
+                  title={
+                    timers.some(t => t.id !== timer.id && t.name === timer.name && timer.name)
+                      ? t('Duplicate animation name')
+                      : undefined
+                  }
                   style={{
                     flex: 1,
                     padding: '4px 8px',
                     backgroundColor: 'var(--vscode-input-background)',
                     color: 'var(--vscode-input-foreground)',
-                    border: '1px solid var(--vscode-input-border)',
+                    border: timers.some(t => t.id !== timer.id && t.name === timer.name && timer.name)
+                      ? '1px solid var(--vscode-errorForeground)'
+                      : '1px solid var(--vscode-input-border)',
                     borderRadius: '2px',
                     fontSize: '12px',
                   }}
@@ -357,23 +434,103 @@ export const TimerProperties: React.FC<TimerPropertiesProps> = ({
           </div>
         ))}
 
-        {/* 添加定时动画按钮 */}
-        <button
-          onClick={handleAddTimer}
-          style={{
-            width: '100%',
-            marginTop: '8px',
-            padding: '6px 12px',
-            background: 'var(--vscode-button-background)',
-            color: 'var(--vscode-button-foreground)',
-            border: 'none',
-            borderRadius: '2px',
-            cursor: 'pointer',
-            fontSize: '12px',
-          }}
-        >
-          + {t('Add Animation')}
-        </button>
+        {/* 添加/导入动画按钮 */}
+        <div style={{ display: 'flex', gap: '6px', marginTop: '8px', position: 'relative' }}>
+          <button
+            onClick={handleAddTimer}
+            style={{
+              flex: 1,
+              padding: '6px 12px',
+              background: 'var(--vscode-button-background)',
+              color: 'var(--vscode-button-foreground)',
+              border: 'none',
+              borderRadius: '2px',
+              cursor: 'pointer',
+              fontSize: '12px',
+            }}
+          >
+            + {t('Add Animation')}
+          </button>
+          <button
+            onClick={() => setShowImportPicker(!showImportPicker)}
+            disabled={importSources.length === 0}
+            title={importSources.length === 0 ? t('No animations available to import') : t('Import Animation')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '6px 10px',
+              background: 'var(--vscode-button-secondaryBackground)',
+              color: 'var(--vscode-button-secondaryForeground)',
+              border: 'none',
+              borderRadius: '2px',
+              cursor: importSources.length === 0 ? 'not-allowed' : 'pointer',
+              fontSize: '12px',
+              opacity: importSources.length === 0 ? 0.5 : 1,
+              gap: '4px',
+            }}
+          >
+            <Download size={13} />
+            {t('Import')}
+          </button>
+
+          {/* Import picker dropdown */}
+          {showImportPicker && (
+            <div
+              ref={importPickerRef}
+              style={{
+                position: 'absolute',
+                top: '100%',
+                right: 0,
+                zIndex: 100,
+                marginTop: '4px',
+                width: '100%',
+                maxHeight: '240px',
+                overflowY: 'auto',
+                background: 'var(--vscode-dropdown-background)',
+                border: '1px solid var(--vscode-dropdown-border)',
+                borderRadius: '4px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+              }}
+            >
+              {importSources.map(source => (
+                <div key={source.id}>
+                  <div style={{
+                    padding: '6px 10px',
+                    fontSize: '10px',
+                    fontWeight: 'bold',
+                    opacity: 0.6,
+                    borderBottom: '1px solid var(--vscode-panel-border)',
+                    background: 'var(--vscode-editor-background)',
+                  }}>
+                    {source.name} ({source.type}){source.isSelf ? ` - ${t('Current')}` : ''}
+                  </div>
+                  {source.timers.map((timer, idx) => (
+                    <div
+                      key={`${source.id}-${idx}`}
+                      onClick={() => handleImportAnimation(timer)}
+                      style={{
+                        padding: '6px 10px 6px 20px',
+                        fontSize: '11px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--vscode-list-hoverBackground)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      <span>{timer.name || `${t('Animation')} ${idx + 1}`}</span>
+                      <span style={{ fontSize: '9px', opacity: 0.5 }}>
+                        {timer.segments?.length || 0} {t('segments')}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
