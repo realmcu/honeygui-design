@@ -14,10 +14,56 @@ import { ConversionConfigService } from '../services/ConversionConfigService';
  */
 export class AssetManager extends EventEmitter {
     private readonly _panel: vscode.WebviewPanel;
+    private _assetsWatcher: vscode.FileSystemWatcher | undefined;
+    private _watchedAssetsDir: string | undefined;
+    private _refreshDebounceTimer: NodeJS.Timeout | undefined;
+    private _currentFilePath: string | undefined;
 
     constructor(panel: vscode.WebviewPanel) {
         super();
         this._panel = panel;
+    }
+
+    /**
+     * Dispose file watcher resources
+     */
+    public dispose(): void {
+        this._assetsWatcher?.dispose();
+        this._assetsWatcher = undefined;
+        if (this._refreshDebounceTimer) {
+            clearTimeout(this._refreshDebounceTimer);
+            this._refreshDebounceTimer = undefined;
+        }
+    }
+
+    /**
+     * Setup FileSystemWatcher on assets directory
+     */
+    private setupAssetsWatcher(assetsDir: string): void {
+        // Already watching the same directory
+        if (this._watchedAssetsDir === assetsDir && this._assetsWatcher) {
+            return;
+        }
+
+        // Dispose old watcher
+        this._assetsWatcher?.dispose();
+
+        const pattern = new vscode.RelativePattern(assetsDir, '**/*');
+        this._assetsWatcher = vscode.workspace.createFileSystemWatcher(pattern);
+        this._watchedAssetsDir = assetsDir;
+
+        const debouncedRefresh = () => {
+            if (this._refreshDebounceTimer) {
+                clearTimeout(this._refreshDebounceTimer);
+            }
+            this._refreshDebounceTimer = setTimeout(() => {
+                this.handleLoadAssets(this._currentFilePath);
+            }, 500);
+        };
+
+        this._assetsWatcher.onDidCreate(debouncedRefresh);
+        this._assetsWatcher.onDidDelete(debouncedRefresh);
+        this._assetsWatcher.onDidChange(debouncedRefresh);
     }
 
     /**
@@ -28,6 +74,8 @@ export class AssetManager extends EventEmitter {
             if (!currentFilePath) {
                 return;
             }
+
+            this._currentFilePath = currentFilePath;
 
             const projectRoot = ProjectUtils.findProjectRoot(currentFilePath);
             if (!projectRoot) {
@@ -41,6 +89,9 @@ export class AssetManager extends EventEmitter {
             if (!fs.existsSync(assetsDir)) {
                 fs.mkdirSync(assetsDir, { recursive: true });
             }
+
+            // Setup file watcher on assets directory
+            this.setupAssetsWatcher(assetsDir);
 
             // 递归扫描assets目录
             const assets = this.scanAssetsDirectory(assetsDir, assetsDir);

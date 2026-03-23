@@ -1555,9 +1555,15 @@ const App: React.FC = () => {
 
           {/* Tab Content */}
           <div className="tab-content">
-            {activeTab === 'components' && <ComponentLibrary onComponentDragStart={() => {}} onCreateComponent={handleCreateComponentFromLibrary} />}
-            {activeTab === 'assets' && <AssetsPanel />}
-            {activeTab === 'tree' && <ComponentTree onContextMenu={handleComponentContextMenu} />}
+            <div style={{ display: activeTab === 'components' ? 'contents' : 'none' }}>
+              <ComponentLibrary onComponentDragStart={() => {}} onCreateComponent={handleCreateComponentFromLibrary} />
+            </div>
+            <div style={{ display: activeTab === 'assets' ? 'contents' : 'none' }}>
+              <AssetsPanel />
+            </div>
+            <div style={{ display: activeTab === 'tree' ? 'contents' : 'none' }}>
+              <ComponentTree onContextMenu={handleComponentContextMenu} />
+            </div>
           </div>
         </div>
 
