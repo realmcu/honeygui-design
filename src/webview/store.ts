@@ -863,11 +863,11 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   },
 
   selectComponent: (id) => {
-    set({ selectedComponent: id, selectedComponents: id ? [id] : [] });
+    set({ selectedComponent: id, selectedComponents: id ? [id] : [], selectedAsset: id ? null : get().selectedAsset });
     // 保存选中状态
     get().saveViewState();
   },
-  setSelectedComponents: (ids) => set({ selectedComponents: ids, selectedComponent: ids.length ? ids[0] : null }),
+  setSelectedComponents: (ids) => set({ selectedComponents: ids, selectedComponent: ids.length ? ids[0] : null, selectedAsset: ids.length ? null : get().selectedAsset }),
   addToSelection: (id) => {
     const current = get().selectedComponents;
     if (!current.includes(id)) set({ selectedComponents: [...current, id] });

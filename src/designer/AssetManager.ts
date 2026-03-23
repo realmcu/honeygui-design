@@ -1218,6 +1218,63 @@ export class AssetManager extends EventEmitter {
     }
 
     /**
+     * Get asset file metadata (dimensions, file size) for display in config panel
+     */
+    public async handleGetAssetMetadata(
+        relativePath: string,
+        currentFilePath: string | undefined
+    ): Promise<void> {
+        try {
+            if (!currentFilePath) {
+                return;
+            }
+
+            const projectRoot = ProjectUtils.findProjectRoot(currentFilePath);
+            if (!projectRoot) {
+                return;
+            }
+
+            const assetsDir = ProjectUtils.getAssetsDir(projectRoot);
+            const absolutePath = path.join(assetsDir, relativePath);
+
+            if (!fs.existsSync(absolutePath)) {
+                return;
+            }
+
+            const stats = fs.statSync(absolutePath);
+            const ext = path.extname(absolutePath).toLowerCase();
+            const imageExts = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.svg'];
+            const videoExts = ['.mp4', '.avi', '.mov', '.mkv', '.webm'];
+
+            const metadata: any = {
+                relativePath,
+                fileSize: stats.size,
+            };
+
+            if (imageExts.includes(ext)) {
+                const size = this.getImageSize(absolutePath);
+                if (size.width > 0 && size.height > 0) {
+                    metadata.width = size.width;
+                    metadata.height = size.height;
+                }
+            } else if (videoExts.includes(ext)) {
+                const size = await this.getVideoSizeAsync(absolutePath);
+                if (size.width > 0 && size.height > 0) {
+                    metadata.width = size.width;
+                    metadata.height = size.height;
+                }
+            }
+
+            this._panel.webview.postMessage({
+                command: 'assetMetadata',
+                metadata
+            });
+        } catch (error) {
+            logger.error(`[AssetManager] Failed to get asset metadata: ${error}`);
+        }
+    }
+
+    /**
      * 处理获取图片尺寸请求
      */
     public handleGetImageSize(

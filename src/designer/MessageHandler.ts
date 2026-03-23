@@ -337,6 +337,13 @@ export class MessageHandler {
                 break;
                 break;
 
+            case 'getAssetMetadata':
+                this._assetManager.handleGetAssetMetadata(
+                    message.relativePath,
+                    this._fileManager.currentFilePath
+                );
+                break;
+
             case 'getImageSize':
                 this._assetManager.handleGetImageSize(
                     message.imagePath,

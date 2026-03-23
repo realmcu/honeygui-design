@@ -3,7 +3,7 @@
  * 用于配置文件夹和图片的目标格式、压缩方式等
  */
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDesignerStore } from '../store';
 import { t } from '../i18n';
 import {
@@ -24,6 +24,12 @@ const VIDEO_EXTS = ['mp4', 'avi', 'mov', 'mkv', 'webm'];
 
 // 字体文件扩展名
 const FONT_EXTS = ['ttf', 'otf', 'woff', 'woff2'];
+
+// 图片文件扩展名
+const IMAGE_EXTS = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'svg'];
+
+// 支持显示尺寸的文件类型
+const DIMENSION_EXTS = [...IMAGE_EXTS, ...VIDEO_EXTS];
 
 // 文件夹可用的格式选项
 const FOLDER_FORMAT_OPTIONS: { value: TargetFormat; label: string }[] = [
@@ -165,6 +171,12 @@ const getBlurLabel = (blur: YuvBlur): string => {
   return blur;
 };
 
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
 interface ConversionConfigPanelProps {
   // Props can be extended if needed
 }
@@ -189,6 +201,50 @@ const ConversionConfigPanel: React.FC<ConversionConfigPanelProps> = () => {
     if (!selectedAsset || isFolder) return false;
     const ext = selectedAsset.name.split('.').pop()?.toLowerCase() || '';
     return FONT_EXTS.includes(ext);
+  }, [selectedAsset, isFolder]);
+
+  // Asset metadata (dimensions, file size)
+  const [assetMetadata, setAssetMetadata] = useState<{
+    width?: number;
+    height?: number;
+    fileSize?: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!selectedAsset || isFolder) {
+      setAssetMetadata(null);
+      return;
+    }
+
+    const ext = selectedAsset.name.split('.').pop()?.toLowerCase() || '';
+    const hasDimensions = DIMENSION_EXTS.includes(ext);
+
+    if (!hasDimensions) {
+      // For non-image/video files, show file size only
+      setAssetMetadata(selectedAsset.size ? { fileSize: selectedAsset.size } : null);
+      return;
+    }
+
+    setAssetMetadata(null);
+
+    const relativePath = selectedAsset.relativePath || selectedAsset.name;
+    window.vscodeAPI?.postMessage({
+      command: 'getAssetMetadata',
+      relativePath,
+    });
+
+    const handler = (event: MessageEvent) => {
+      const msg = event.data;
+      if (msg.command === 'assetMetadata' && msg.metadata?.relativePath === relativePath) {
+        setAssetMetadata({
+          width: msg.metadata.width,
+          height: msg.metadata.height,
+          fileSize: msg.metadata.fileSize,
+        });
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
   }, [selectedAsset, isFolder]);
 
   // 获取当前资源的配置
@@ -944,6 +1000,16 @@ const ConversionConfigPanel: React.FC<ConversionConfigPanelProps> = () => {
           </div>
           {selectedAsset.relativePath && (
             <div className="asset-path">{selectedAsset.relativePath}</div>
+          )}
+          {!isFolder && assetMetadata && (
+            <div className="asset-metadata">
+              {assetMetadata.width && assetMetadata.height && (
+                <span className="asset-meta-item">{assetMetadata.width} × {assetMetadata.height} px</span>
+              )}
+              {assetMetadata.fileSize != null && (
+                <span className="asset-meta-item">{formatFileSize(assetMetadata.fileSize)}</span>
+              )}
+            </div>
           )}
         </div>
 

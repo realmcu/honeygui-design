@@ -61,6 +61,27 @@
   word-break: break-all;
 }
 
+.asset-metadata {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.asset-meta-item {
+  display: inline-flex;
+  align-items: center;
+}
+
+.asset-meta-item + .asset-meta-item::before {
+  content: '·';
+  margin-right: 10px;
+  color: var(--vscode-descriptionForeground);
+  opacity: 0.6;
+}
+
 /* Config groups */
 .config-group {
   margin-bottom: 20px;
