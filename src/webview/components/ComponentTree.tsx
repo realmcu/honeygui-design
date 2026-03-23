@@ -349,7 +349,7 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
 
   return (
     <div 
-      className={`tree-node ${isSelected ? 'selected' : ''} ${isDragOver && dropPosition ? `drag-${dropPosition}` : ''}`}
+      className={`tree-node ${isSelected ? 'selected' : ''} ${isDragOver && dropPosition ? `drag-${dropPosition}` : ''} ${!component.visible ? 'hidden-component' : ''}`}
       draggable={canDrag(component)}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}

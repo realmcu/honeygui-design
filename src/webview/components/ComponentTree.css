@@ -161,6 +161,23 @@
   background-color: var(--vscode-list-hoverBackground);
 }
 
+/* Hidden component dimming */
+.tree-node.hidden-component > .tree-node-content .tree-node-icon,
+.tree-node.hidden-component > .tree-node-content .tree-node-label {
+  opacity: 0.4;
+}
+
+.tree-node.hidden-component > .tree-node-content .tree-node-actions {
+  opacity: 0.5;
+}
+
+/* Children of hidden component: inherited dimming (lighter) */
+.tree-node.hidden-component .tree-children .tree-node-content .tree-node-icon,
+.tree-node.hidden-component .tree-children .tree-node-content .tree-node-label {
+  opacity: 0.45;
+  font-style: italic;
+}
+
 /* Tree children */
 .tree-children {
   margin-left: 16px;
