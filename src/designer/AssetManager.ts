@@ -557,6 +557,12 @@ export class AssetManager extends EventEmitter {
             // 重命名物理文件
             fs.renameSync(fullOldPath, fullNewPath);
             
+            // Update alwaysConvert paths in project.json
+            this.updateAlwaysConvertPath(projectRoot, oldPath, newPath);
+
+            // Update conversion.json item paths
+            this.updateConversionConfigPath(projectRoot, oldPath, newPath);
+
             if (updatedCount > 0) {
                 vscode.window.showInformationMessage(
                     vscode.l10n.t('Renamed successfully, updated {0} references', updatedCount)
@@ -570,6 +576,79 @@ export class AssetManager extends EventEmitter {
         } catch (error) {
             logger.error(`重命名资源文件失败: ${error}`);
             vscode.window.showErrorMessage(vscode.l10n.t('Failed to rename asset file'));
+        }
+    }
+
+    /**
+     * Update alwaysConvert paths in project.json after rename
+     */
+    private updateAlwaysConvertPath(projectRoot: string, oldPath: string, newPath: string): void {
+        try {
+            const projectConfigPath = path.join(projectRoot, 'project.json');
+            if (!fs.existsSync(projectConfigPath)) {
+                return;
+            }
+
+            const config = JSON.parse(fs.readFileSync(projectConfigPath, 'utf-8'));
+            if (!config.alwaysConvert) {
+                return;
+            }
+
+            let updated = false;
+            for (const category of ['images', 'videos', 'models', 'fonts']) {
+                const list: string[] | undefined = config.alwaysConvert[category];
+                if (!list) continue;
+                const idx = list.indexOf(oldPath);
+                if (idx >= 0) {
+                    list[idx] = newPath;
+                    updated = true;
+                }
+            }
+
+            if (updated) {
+                fs.writeFileSync(projectConfigPath, JSON.stringify(config, null, 2), 'utf-8');
+                this._panel.webview.postMessage({
+                    command: 'alwaysConvertUpdated',
+                    alwaysConvert: config.alwaysConvert
+                });
+            }
+        } catch (error) {
+            logger.error(`[AssetManager] Failed to update alwaysConvert after rename: ${error}`);
+        }
+    }
+
+    /**
+     * Update conversion.json item paths after rename
+     */
+    private updateConversionConfigPath(projectRoot: string, oldPath: string, newPath: string): void {
+        try {
+            const configPath = path.join(projectRoot, 'conversion.json');
+            if (!fs.existsSync(configPath)) {
+                return;
+            }
+
+            const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+            if (!config.items) {
+                return;
+            }
+
+            // Normalize paths for matching
+            const normalizedOld = oldPath.replace(/\\/g, '/');
+            const normalizedNew = newPath.replace(/\\/g, '/');
+
+            if (config.items[normalizedOld] !== undefined) {
+                config.items[normalizedNew] = config.items[normalizedOld];
+                delete config.items[normalizedOld];
+                fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
+
+                // Notify frontend to reload config
+                this._panel.webview.postMessage({
+                    command: 'conversionConfigLoaded',
+                    config
+                });
+            }
+        } catch (error) {
+            logger.error(`[AssetManager] Failed to update conversion config after rename: ${error}`);
         }
     }
 
