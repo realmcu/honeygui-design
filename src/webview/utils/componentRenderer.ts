@@ -54,17 +54,18 @@ export const calculateComponentStyle = (
   let overflowValue: string | undefined;
   
   if (isContainer) {
-    // 拖拽时：如果被拖拽的组件是当前容器的子组件，则 overflow: visible
+    // 拖拽时：如果被拖拽的组件是当前容器的子组件（且未启用 needClip），则 overflow: visible
     const isDraggingChild = draggedComponentId && allComponents?.some(
-      c => c.id === draggedComponentId && c.parent === component.id
+      c => c.id === draggedComponentId && c.parent === component.id && !c.data?.needClip
     );
     // 检查是否有子组件设置了 showOverflow
     const hasChildWithOverflow = allComponents?.some(
       c => c.parent === component.id && c.showOverflow
     );
-    // 检查是否有子组件超出容器范围
+    // 检查是否有子组件超出容器范围（排除启用了 needClip 的子组件，它们应被裁剪）
     const hasOverflowingChild = allComponents?.some(c => {
       if (c.parent !== component.id) return false;
+      if (c.data?.needClip) return false;
       const childRight = c.position.x + c.position.width;
       const childBottom = c.position.y + c.position.height;
       return c.position.x < 0 || c.position.y < 0 || 
@@ -76,7 +77,7 @@ export const calculateComponentStyle = (
     overflowValue = (isDraggingChild || hasChildWithOverflow || (hasOverflowingChild && editingMode === 'select')) 
       ? 'visible' 
       : 'hidden';
-  } else if (borderRadiusValue) {
+  }else if (borderRadiusValue) {
     overflowValue = 'hidden';
   }
 
