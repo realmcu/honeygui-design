@@ -416,95 +416,148 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
                 </div>
               ) : (
                 <div className="param-row">
-                  <label>{t('Select target component and action (one timer per component)')}</label>
-                  <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid var(--vscode-input-border)', borderRadius: '2px', padding: '8px' }}>
-                    {timerComponents.map(comp => {
-                      // 找到该组件当前选中的定时器
-                      const selectedTimer = action.timerTargets?.find(t => t.componentId === comp.id);
-                      
-                      return (
-                        <div key={comp.id} style={{ marginBottom: '12px', padding: '8px', background: 'var(--vscode-editor-background)', borderRadius: '4px', border: '1px solid var(--vscode-panel-border)' }}>
-                          <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '12px', color: 'var(--vscode-foreground)' }}>{comp.name}</div>
-                          {comp.timers.map(timer => {
-                            const isSelected = selectedTimer?.timerIndex === timer.index;
-                            const timerAction = selectedTimer?.action || 'start';
-                            
-                            return (
-                              <div key={timer.id} style={{ marginLeft: '12px', marginBottom: '8px', padding: '6px', background: 'var(--vscode-input-background)', borderRadius: '2px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                  <input
-                                    type="radio"
-                                    name={`timer-${comp.id}-${eventIndex}-${actionIndex}`}
-                                    checked={isSelected}
-                                    onChange={(e) => {
-                                      if (e.target.checked) {
-                                        const currentTargets = action.timerTargets || [];
-                                        // 移除该组件的其他定时器选择，添加新选择
-                                        const newTargets = [
-                                          ...currentTargets.filter(t => t.componentId !== comp.id),
-                                          { componentId: comp.id, timerIndex: timer.index, action: 'start' as const }
-                                        ];
-                                        handleActionUpdate(eventIndex, actionIndex, { timerTargets: newTargets });
-                                      }
-                                    }}
-                                    style={{ cursor: 'pointer' }}
-                                  />
-                                  <span style={{ fontSize: '11px', flex: 1 }}>{timer.name}</span>
-                                  {isSelected && (
-                                    <select
-                                      value={timerAction}
-                                      onChange={(e) => {
-                                        const currentTargets = action.timerTargets || [];
-                                        const newTargets = currentTargets.map(t => 
-                                          (t.componentId === comp.id && t.timerIndex === timer.index)
-                                            ? { ...t, action: e.target.value as 'start' | 'stop' }
-                                            : t
-                                        );
-                                        handleActionUpdate(eventIndex, actionIndex, { timerTargets: newTargets });
-                                      }}
-                                      onClick={(e) => e.stopPropagation()}
-                                      style={{
-                                        padding: '2px 6px',
-                                        fontSize: '10px',
-                                        backgroundColor: 'var(--vscode-dropdown-background)',
-                                        color: 'var(--vscode-dropdown-foreground)',
-                                        border: '1px solid var(--vscode-dropdown-border)',
-                                        borderRadius: '2px',
-                                        cursor: 'pointer',
-                                      }}
-                                    >
-                                      <option value="start">{t('Enable')}</option>
-                                      <option value="stop">{t('Disable')}</option>
-                                    </select>
-                                  )}
-                                </div>
+                  <label>{t('Animation Targets')}</label>
+
+                  {/* Already added timer targets list */}
+                  {(action.timerTargets || []).length > 0 && (
+                    <div style={{ marginBottom: '8px' }}>
+                      {(action.timerTargets || []).map((target, targetIdx) => {
+                        const comp = timerComponents.find(c => c.id === target.componentId);
+                        const timerInfo = comp?.timers.find(t => t.index === target.timerIndex);
+                        const compName = comp?.name || target.componentId;
+                        const timerName = timerInfo?.name || `${t('Animation')} ${(target.timerIndex || 0) + 1}`;
+
+                        return (
+                          <div key={targetIdx} style={{
+                            padding: '8px',
+                            marginBottom: '4px',
+                            background: 'var(--vscode-editor-background)',
+                            borderRadius: '4px',
+                            border: '1px solid var(--vscode-panel-border)',
+                          }}>
+                            {/* Header: component + animation on separate lines + delete */}
+                            <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: '6px' }}>
+                              <div style={{ flex: 1, fontSize: '11px' }}>
+                                <div style={{ opacity: 0.6, marginBottom: '2px' }}>{compName}</div>
+                                <div style={{ fontWeight: 600 }}>{timerName}</div>
                               </div>
-                            );
-                          })}
-                          {/* 添加"不选择"选项 */}
-                          <div style={{ marginLeft: '12px', marginBottom: '8px', padding: '6px', background: 'var(--vscode-input-background)', borderRadius: '2px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <input
-                                type="radio"
-                                name={`timer-${comp.id}-${eventIndex}-${actionIndex}`}
-                                checked={!selectedTimer}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    const currentTargets = action.timerTargets || [];
-                                    // 移除该组件的所有定时器选择
-                                    const newTargets = currentTargets.filter(t => t.componentId !== comp.id);
-                                    handleActionUpdate(eventIndex, actionIndex, { timerTargets: newTargets });
-                                  }
+                              <button
+                                onClick={() => {
+                                  const newTargets = (action.timerTargets || []).filter((_, i) => i !== targetIdx);
+                                  handleActionUpdate(eventIndex, actionIndex, { timerTargets: newTargets });
                                 }}
-                                style={{ cursor: 'pointer' }}
-                              />
-                              <span style={{ fontSize: '11px', opacity: 0.7 }}>{t('timer.none' as any)}</span>
+                                style={{
+                                  padding: '0 4px',
+                                  background: 'none',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  color: 'var(--vscode-errorForeground)',
+                                  fontSize: '14px',
+                                  lineHeight: 1,
+                                  opacity: 0.7,
+                                }}
+                                title={t('Remove')}
+                              >
+                                ×
+                              </button>
+                            </div>
+                            {/* Enable/Disable radio buttons */}
+                            <div style={{ display: 'flex', gap: '12px', marginLeft: '2px' }}>
+                              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', cursor: 'pointer' }}>
+                                <input
+                                  type="radio"
+                                  name={`timer-action-${eventIndex}-${actionIndex}-${targetIdx}`}
+                                  checked={target.action === 'start'}
+                                  onChange={() => {
+                                    const newTargets = [...(action.timerTargets || [])];
+                                    newTargets[targetIdx] = { ...newTargets[targetIdx], action: 'start' };
+                                    handleActionUpdate(eventIndex, actionIndex, { timerTargets: newTargets });
+                                  }}
+                                  style={{ cursor: 'pointer' }}
+                                />
+                                {t('Enable')}
+                              </label>
+                              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', cursor: 'pointer' }}>
+                                <input
+                                  type="radio"
+                                  name={`timer-action-${eventIndex}-${actionIndex}-${targetIdx}`}
+                                  checked={target.action === 'stop'}
+                                  onChange={() => {
+                                    const newTargets = [...(action.timerTargets || [])];
+                                    newTargets[targetIdx] = { ...newTargets[targetIdx], action: 'stop' };
+                                    handleActionUpdate(eventIndex, actionIndex, { timerTargets: newTargets });
+                                  }}
+                                  style={{ cursor: 'pointer' }}
+                                />
+                                {t('Disable')}
+                              </label>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Add animation dropdown */}
+                  {(() => {
+                    // Filter out already-added targets
+                    const addedKeys = new Set(
+                      (action.timerTargets || []).map(t => `${t.componentId}:${t.timerIndex}`)
+                    );
+                    const availableOptions: { componentId: string; compName: string; timerIndex: number; timerName: string }[] = [];
+                    timerComponents.forEach(comp => {
+                      comp.timers.forEach(timer => {
+                        if (!addedKeys.has(`${comp.id}:${timer.index}`)) {
+                          availableOptions.push({
+                            componentId: comp.id,
+                            compName: comp.name,
+                            timerIndex: timer.index,
+                            timerName: timer.name,
+                          });
+                        }
+                      });
+                    });
+
+                    return availableOptions.length > 0 ? (
+                      <select
+                        value=""
+                        onChange={(e) => {
+                          if (!e.target.value) return;
+                          const [compId, idxStr] = e.target.value.split('::');
+                          const newTarget = {
+                            componentId: compId,
+                            timerIndex: parseInt(idxStr),
+                            action: 'start' as const,
+                          };
+                          const newTargets = [...(action.timerTargets || []), newTarget];
+                          handleActionUpdate(eventIndex, actionIndex, { timerTargets: newTargets });
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '4px 6px',
+                          fontSize: '11px',
+                          backgroundColor: 'var(--vscode-dropdown-background)',
+                          color: 'var(--vscode-dropdown-foreground)',
+                          border: '1px solid var(--vscode-dropdown-border)',
+                          borderRadius: '2px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <option value="">+ {t('Add Animation Target')}...</option>
+                        {availableOptions.map(opt => (
+                          <option key={`${opt.componentId}::${opt.timerIndex}`} value={`${opt.componentId}::${opt.timerIndex}`}>
+                            {opt.compName} / {opt.timerName}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span style={{ fontSize: '10px', opacity: 0.5 }}>
+                        {(action.timerTargets || []).length > 0
+                          ? t('All animations added')
+                          : ''}
+                      </span>
+                    );
+                  })()}
                 </div>
               )}
             </>
