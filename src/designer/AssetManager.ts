@@ -19,6 +19,9 @@ export class AssetManager extends EventEmitter {
     private _refreshDebounceTimer: NodeJS.Timeout | undefined;
     private _currentFilePath: string | undefined;
 
+    // Remember last used directory for file open dialogs
+    private static _lastImagePickerDir: string | undefined;
+
     constructor(panel: vscode.WebviewPanel) {
         super();
         this._panel = panel;
@@ -34,6 +37,32 @@ export class AssetManager extends EventEmitter {
             clearTimeout(this._refreshDebounceTimer);
             this._refreshDebounceTimer = undefined;
         }
+    }
+
+    /**
+     * Get default URI for file open dialog (last used dir > assets dir > undefined)
+     */
+    private getDefaultDialogUri(currentFilePath: string | undefined): vscode.Uri | undefined {
+        if (AssetManager._lastImagePickerDir && fs.existsSync(AssetManager._lastImagePickerDir)) {
+            return vscode.Uri.file(AssetManager._lastImagePickerDir);
+        }
+        if (currentFilePath) {
+            const projectRoot = ProjectUtils.findProjectRoot(currentFilePath);
+            if (projectRoot) {
+                const assetsDir = path.join(projectRoot, 'assets');
+                if (fs.existsSync(assetsDir)) {
+                    return vscode.Uri.file(assetsDir);
+                }
+            }
+        }
+        return undefined;
+    }
+
+    /**
+     * Remember selected file/folder path for next dialog
+     */
+    private static rememberPath(selectedPath: string, isFolder: boolean): void {
+        AssetManager._lastImagePickerDir = isFolder ? selectedPath : path.dirname(selectedPath);
     }
 
     /**
@@ -885,6 +914,7 @@ export class AssetManager extends EventEmitter {
                 canSelectFiles: true,
                 canSelectFolders: false,
                 canSelectMany: false,
+                defaultUri: this.getDefaultDialogUri(currentFilePath),
                 filters: {
                     'Images': ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'webp', 'bin']
                 },
@@ -895,6 +925,8 @@ export class AssetManager extends EventEmitter {
             if (fileUri && fileUri.length > 0) {
                 const filePath = fileUri[0].fsPath;
                 const fileName = path.basename(filePath);
+
+                AssetManager.rememberPath(filePath, false);
                 
                 if (!currentFilePath) {
                     vscode.window.showErrorMessage(vscode.l10n.t('Cannot determine project path'));
@@ -993,13 +1025,16 @@ export class AssetManager extends EventEmitter {
                 canSelectFiles: false,
                 canSelectFolders: true,
                 canSelectMany: false,
+                defaultUri: this.getDefaultDialogUri(currentFilePath),
                 openLabel: vscode.l10n.t('Select Folder')
             };
 
             const folderUri = await vscode.window.showOpenDialog(options);
             if (folderUri && folderUri.length > 0) {
                 const folderPath = folderUri[0].fsPath;
-                
+
+                AssetManager.rememberPath(folderPath, true);
+
                 if (!currentFilePath) {
                     vscode.window.showErrorMessage(vscode.l10n.t('Cannot determine project path'));
                     return;
@@ -1105,12 +1140,15 @@ export class AssetManager extends EventEmitter {
                 canSelectFiles: false,
                 canSelectFolders: true,
                 canSelectMany: false,
+                defaultUri: this.getDefaultDialogUri(currentFilePath),
                 openLabel: vscode.l10n.t('Select Folder')
             };
 
             const folderUri = await vscode.window.showOpenDialog(options);
             if (folderUri && folderUri.length > 0) {
                 const folderPath = folderUri[0].fsPath;
+
+                AssetManager.rememberPath(folderPath, true);
 
                 if (!currentFilePath) {
                     vscode.window.showErrorMessage(vscode.l10n.t('Cannot determine project path'));
@@ -1203,6 +1241,7 @@ export class AssetManager extends EventEmitter {
                 canSelectFiles: true,
                 canSelectFolders: false,
                 canSelectMany: false,
+                defaultUri: this.getDefaultDialogUri(currentFilePath),
                 filters: {
                     'Glass Shape': ['glass']
                 },
@@ -1213,6 +1252,8 @@ export class AssetManager extends EventEmitter {
             if (fileUri && fileUri.length > 0) {
                 const filePath = fileUri[0].fsPath;
                 const fileName = path.basename(filePath);
+
+                AssetManager.rememberPath(filePath, false);
                 
                 if (!currentFilePath) {
                     vscode.window.showErrorMessage('无法确定项目路径');
@@ -1253,6 +1294,7 @@ export class AssetManager extends EventEmitter {
                 canSelectFiles: true,
                 canSelectFolders: false,
                 canSelectMany: false,
+                defaultUri: this.getDefaultDialogUri(currentFilePath),
                 filters: {
                     'Font Files': ['ttf', 'otf', 'woff', 'woff2']
                 },
@@ -1263,6 +1305,8 @@ export class AssetManager extends EventEmitter {
             if (fileUri && fileUri.length > 0) {
                 const filePath = fileUri[0].fsPath;
                 const fileName = path.basename(filePath);
+
+                AssetManager.rememberPath(filePath, false);
 
                 if (!currentFilePath) {
                     vscode.window.showErrorMessage('无法确定项目路径');
@@ -1303,6 +1347,7 @@ export class AssetManager extends EventEmitter {
                 canSelectFiles: true,
                 canSelectFolders: false,
                 canSelectMany: false,
+                defaultUri: this.getDefaultDialogUri(currentFilePath),
                 filters: {
                     'Map Files': ['trmap']
                 },
@@ -1313,6 +1358,8 @@ export class AssetManager extends EventEmitter {
             if (fileUri && fileUri.length > 0) {
                 const filePath = fileUri[0].fsPath;
                 const fileName = path.basename(filePath);
+
+                AssetManager.rememberPath(filePath, false);
 
                 if (!currentFilePath) {
                     vscode.window.showErrorMessage('无法确定项目路径');
