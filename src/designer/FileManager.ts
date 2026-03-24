@@ -102,8 +102,8 @@ export class FileManager {
             // 解析并更新 hmlController（与正常加载一致）
             this._hmlController.parseContent(previousContent);
             
-            // 写入文件（与正常保存一致，使用 fs.writeFileSync）
-            fs.writeFileSync(this._filePath, previousContent, 'utf8');
+            // 通过 VSCode TextDocument API 写入，保持版本同步，防止 "content is newer" 冲突
+            await this._writeViaTextDocument(this._filePath, previousContent);
             
             // 更新快照
             this._lastSerializedSnapshot = previousContent;
@@ -142,8 +142,8 @@ export class FileManager {
             // 解析并更新 hmlController
             this._hmlController.parseContent(nextContent);
             
-            // 写入文件
-            fs.writeFileSync(this._filePath, nextContent, 'utf8');
+            // 通过 VSCode TextDocument API 写入，保持版本同步
+            await this._writeViaTextDocument(this._filePath, nextContent);
             
             // 更新快照
             this._lastSerializedSnapshot = nextContent;
@@ -158,6 +158,28 @@ export class FileManager {
             return false;
         } finally {
             this._isInUndoRedo = false;
+        }
+    }
+    
+    /**
+     * 通过 VSCode TextDocument API 写入文件
+     * 使用 WorkspaceEdit + document.save() 替代直接 fs.writeFileSync()
+     * 防止 TextDocument 版本与磁盘文件不同步导致的 "content is newer" 冲突
+     */
+    private async _writeViaTextDocument(filePath: string, content: string): Promise<void> {
+        const transactionId = this._saveManager.beginTransaction(filePath, content);
+        try {
+            const uri = vscode.Uri.file(filePath);
+            const doc = await vscode.workspace.openTextDocument(uri);
+            const wsEdit = new vscode.WorkspaceEdit();
+            wsEdit.replace(uri, new vscode.Range(
+                doc.positionAt(0),
+                doc.positionAt(doc.getText().length)
+            ), content);
+            await vscode.workspace.applyEdit(wsEdit);
+            await doc.save();
+        } finally {
+            this._saveManager.endTransaction();
         }
     }
     
