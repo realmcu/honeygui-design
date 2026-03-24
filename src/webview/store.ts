@@ -14,6 +14,7 @@ import {
   ResizeType
 } from './utils/alignmentUtils';
 import { generateComponentId } from './utils/componentNaming';
+import { findComponentsWithBrokenRefs } from './utils/componentUtils';
 
 // ============ 层级调整辅助函数 ============
 
@@ -784,6 +785,15 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       if (cleanedCount > 0) {
         message += `，已清理 ${cleanedCount} 个视图切换引用`;
       }
+
+      // 检测断裂的动画引用
+      const brokenRefs = findComponentsWithBrokenRefs(get().components);
+      if (brokenRefs.size > 0) {
+        const brokenIds = Array.from(brokenRefs);
+        message += `\n⚠ 以下控件存在断裂的事件引用: ${brokenIds.join(', ')}`;
+        console.warn(`[事件引用] 删除 ${id} 后产生断裂引用，受影响控件:`, brokenIds);
+      }
+
       vscodeAPI.postMessage({ command: 'notify', text: message });
     }
     get().saveToFile();
@@ -857,6 +867,15 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       if (cleanedCount > 0) {
         message += `，已清理 ${cleanedCount} 个视图切换引用`;
       }
+
+      // 检测断裂的动画引用
+      const brokenRefs = findComponentsWithBrokenRefs(get().components);
+      if (brokenRefs.size > 0) {
+        const brokenIds = Array.from(brokenRefs);
+        message += `\n⚠ 以下控件存在断裂的事件引用: ${brokenIds.join(', ')}`;
+        console.warn(`[事件引用] 批量删除后产生断裂引用，受影响控件:`, brokenIds);
+      }
+
       vscodeAPI.postMessage({ command: 'notify', text: message });
     }
     get().saveToFile();

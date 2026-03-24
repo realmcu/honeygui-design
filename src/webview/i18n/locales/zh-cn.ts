@@ -450,6 +450,8 @@ const zhCN = {
   'Animation Targets': '动画目标',
   'Add Animation Target': '添加动画目标',
   'All animations added': '所有动画已添加',
+  'Broken reference': '引用已断裂（目标已删除）',
+  'Broken event reference': '存在断裂的事件引用',
   'Enable': '开启',
   'Disable': '关闭',
   'timer.none': '不选择',

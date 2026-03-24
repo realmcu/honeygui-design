@@ -88,3 +88,67 @@ export const findComponentAtPosition = (
   
   return targetContainer;
 };
+
+/**
+ * 检测有断裂事件引用的组件
+ * 返回有问题的组件 ID 集合
+ */
+export function findComponentsWithBrokenRefs(components: Component[]): Set<string> {
+  const componentIds = new Set(components.map(c => c.id));
+  const broken = new Set<string>();
+
+  for (const comp of components) {
+    if (!comp.eventConfigs) continue;
+
+    for (const eventConfig of comp.eventConfigs) {
+      for (const action of eventConfig.actions) {
+        // 检查 controlTimer 引用
+        if (action.type === 'controlTimer' && action.timerTargets) {
+          for (const target of action.timerTargets) {
+            if (!componentIds.has(target.componentId)) {
+              broken.add(comp.id);
+              break;
+            }
+            const targetComp = components.find(c => c.id === target.componentId);
+            if (target.timerIndex !== undefined && targetComp) {
+              // hg_timer_label 只有一个隐含的定时器
+              if (targetComp.type === 'hg_timer_label' && target.timerIndex === 0) continue;
+              const timers = targetComp.data?.timers;
+              if (!timers || !Array.isArray(timers) || !timers[target.timerIndex]) {
+                broken.add(comp.id);
+                break;
+              }
+            }
+          }
+        }
+        // 检查 switchView 引用
+        if (action.type === 'switchView' && action.target) {
+          if (!componentIds.has(action.target)) {
+            broken.add(comp.id);
+          }
+        }
+        if (broken.has(comp.id)) break;
+      }
+      if (broken.has(comp.id)) break;
+    }
+  }
+
+  return broken;
+}
+
+/**
+ * 检查单个 timerTarget 引用是否断裂
+ */
+export function isTimerTargetBroken(
+  target: { componentId: string; timerIndex?: number },
+  components: Component[]
+): boolean {
+  const targetComp = components.find(c => c.id === target.componentId);
+  if (!targetComp) return true;
+  if (target.timerIndex !== undefined) {
+    if (targetComp.type === 'hg_timer_label' && target.timerIndex === 0) return false;
+    const timers = targetComp.data?.timers;
+    if (!timers || !Array.isArray(timers) || !timers[target.timerIndex]) return true;
+  }
+  return false;
+}

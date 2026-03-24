@@ -218,3 +218,17 @@
   background-color: var(--vscode-editor-dropBackground);
   border: 1px dashed var(--vscode-focusBorder);
 }
+
+/* Broken event reference warning */
+.tree-node.broken-ref > .tree-node-content .tree-node-label {
+  color: var(--vscode-errorForeground, #f44336);
+}
+
+.tree-warning-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 4px;
+  color: var(--vscode-editorWarning-foreground, #cca700);
+  flex-shrink: 0;
+}

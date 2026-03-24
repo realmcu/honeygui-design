@@ -17,6 +17,7 @@ import {
   KEY_NAMES,
 } from '../../../hml/eventTypes';
 import { t } from '../../i18n';
+import { isTimerTargetBroken } from '../../utils/componentUtils';
 import { TimerProperties } from './TimerProperties';
 import './EventsPanel.css';
 
@@ -422,24 +423,27 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
                   {(action.timerTargets || []).length > 0 && (
                     <div style={{ marginBottom: '8px' }}>
                       {(action.timerTargets || []).map((target, targetIdx) => {
+                        const isBroken = isTimerTargetBroken(target, components);
                         const comp = timerComponents.find(c => c.id === target.componentId);
                         const timerInfo = comp?.timers.find(t => t.index === target.timerIndex);
-                        const compName = comp?.name || target.componentId;
-                        const timerName = timerInfo?.name || `${t('Animation')} ${(target.timerIndex || 0) + 1}`;
+                        const compName = isBroken ? `${target.componentId} ⚠` : (comp?.name || target.componentId);
+                        const timerName = isBroken
+                          ? t('Broken reference')
+                          : (timerInfo?.name || `${t('Animation')} ${(target.timerIndex || 0) + 1}`);
 
                         return (
                           <div key={targetIdx} style={{
                             padding: '8px',
                             marginBottom: '4px',
-                            background: 'var(--vscode-editor-background)',
+                            background: isBroken ? 'var(--vscode-inputValidation-errorBackground, rgba(255,0,0,0.1))' : 'var(--vscode-editor-background)',
                             borderRadius: '4px',
-                            border: '1px solid var(--vscode-panel-border)',
+                            border: isBroken ? '1px solid var(--vscode-errorForeground, #f44336)' : '1px solid var(--vscode-panel-border)',
                           }}>
                             {/* Header: component + animation on separate lines + delete */}
                             <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: '6px' }}>
                               <div style={{ flex: 1, fontSize: '11px' }}>
-                                <div style={{ opacity: 0.6, marginBottom: '2px' }}>{compName}</div>
-                                <div style={{ fontWeight: 600 }}>{timerName}</div>
+                                <div style={{ opacity: isBroken ? 1 : 0.6, marginBottom: '2px', color: isBroken ? 'var(--vscode-errorForeground, #f44336)' : undefined }}>{compName}</div>
+                                <div style={{ fontWeight: 600, color: isBroken ? 'var(--vscode-errorForeground, #f44336)' : undefined }}>{timerName}</div>
                               </div>
                               <button
                                 onClick={() => {

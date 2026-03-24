@@ -450,6 +450,8 @@ const en = {
   'Animation Targets': 'Animation Targets',
   'Add Animation Target': 'Add Animation Target',
   'All animations added': 'All animations added',
+  'Broken reference': 'Broken reference (target deleted)',
+  'Broken event reference': 'Has broken event references',
   'Enable': 'Enable',
   'Disable': 'Disable',
   'timer.none': 'None',

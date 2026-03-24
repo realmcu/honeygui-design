@@ -1,7 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useDesignerStore } from '../store';
-import { ChevronDown, ChevronRight, Eye, EyeOff, Lock, Unlock } from 'lucide-react';
+import { ChevronDown, ChevronRight, Eye, EyeOff, Lock, Unlock, AlertTriangle } from 'lucide-react';
 import { componentIconMap } from './ComponentLibrary';
+import { findComponentsWithBrokenRefs } from '../utils/componentUtils';
 import { t } from '../i18n';
 import './ComponentTree.css';
 
@@ -14,6 +15,9 @@ const TreeExpandContext = React.createContext<TreeExpandContextType>({
   collapsedNodes: new Set(),
   toggleCollapse: () => {},
 });
+
+// 断裂引用 Context
+const BrokenRefsContext = React.createContext<Set<string>>(new Set());
 
 interface ComponentTreeNodeProps {
   componentId: string;
@@ -39,6 +43,8 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
   const [dropPosition, setDropPosition] = useState<'before' | 'after' | 'inside' | null>(null);
 
   const { collapsedNodes, toggleCollapse } = React.useContext(TreeExpandContext);
+  const brokenRefComponents = React.useContext(BrokenRefsContext);
+  const hasBrokenRef = brokenRefComponents.has(componentId);
   const isExpanded = !collapsedNodes.has(componentId);
 
   const component = components.find(c => c.id === componentId);
@@ -351,7 +357,7 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
 
   return (
     <div 
-      className={`tree-node ${isSelected ? 'selected' : ''} ${isDragOver && dropPosition ? `drag-${dropPosition}` : ''} ${!component.visible ? 'hidden-component' : ''}`}
+      className={`tree-node ${isSelected ? 'selected' : ''} ${isDragOver && dropPosition ? `drag-${dropPosition}` : ''} ${!component.visible ? 'hidden-component' : ''} ${hasBrokenRef ? 'broken-ref' : ''}`}
       draggable={canDrag(component)}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
@@ -376,6 +382,12 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
         <div className="tree-node-icon">{getComponentIcon()}</div>
 
         <div className="tree-node-label">{getComponentDisplayName()}</div>
+
+        {hasBrokenRef && (
+          <div className="tree-warning-icon" title={t('Broken event reference')}>
+            <AlertTriangle size={14} />
+          </div>
+        )}
 
         <div className="tree-node-actions">
           <div
@@ -487,6 +499,9 @@ const ComponentTree: React.FC<{ onContextMenu?: (e: React.MouseEvent, componentI
 
   const expandContextValue = React.useMemo(() => ({ collapsedNodes, toggleCollapse }), [collapsedNodes, toggleCollapse]);
 
+  // 计算有断裂引用的组件集合
+  const brokenRefComponents = useMemo(() => findComponentsWithBrokenRefs(components), [components]);
+
   // 拖拽时的自动滚动
   const scrollTimerRef = React.useRef<number | null>(null);
   const isDraggingRef = React.useRef(false);
@@ -565,6 +580,7 @@ const ComponentTree: React.FC<{ onContextMenu?: (e: React.MouseEvent, componentI
 
   return (
     <TreeExpandContext.Provider value={expandContextValue}>
+    <BrokenRefsContext.Provider value={brokenRefComponents}>
     <div className="component-tree">
       {allHmlFiles && allHmlFiles.length > 1 && (
         <div className="tree-file-selector">
@@ -601,6 +617,7 @@ const ComponentTree: React.FC<{ onContextMenu?: (e: React.MouseEvent, componentI
         )}
       </div>
     </div>
+    </BrokenRefsContext.Provider>
     </TreeExpandContext.Provider>
   );
 };
