@@ -58,8 +58,6 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
 
   // 判断是否可以拖拽
   const canDrag = (comp: NonNullable<typeof component>) => {
-    // hg_list_item 不能拖拽（由 list 控件自动管理）
-    if (comp.type === 'hg_list_item') return false;
     return true;
   };
 
@@ -254,6 +252,10 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
     if (position === 'inside') {
       // hg_view 只能在顶层排序，不能拖入其他容器
       if (draggedComp.type === 'hg_view') {
+        return;
+      }
+      // hg_list_item 只能通过 before/after 排序，不能拖入容器内部
+      if (draggedComp.type === 'hg_list_item') {
         return;
       }
       // 作为子节点

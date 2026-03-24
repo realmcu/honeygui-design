@@ -279,6 +279,11 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
       onComponentSelect(componentId);
     }
 
+    // hg_list_item（note）位置由 list 自动管理，不允许在画布上拖动
+    if (component.type === 'hg_list_item') {
+      return;
+    }
+
     // 查找可拖拽的组件（如果当前组件被锁定，向上查找父组件）
     let draggableComponent: Component | undefined = component;
     while (draggableComponent && draggableComponent.locked && draggableComponent.parent) {

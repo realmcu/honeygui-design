@@ -1687,6 +1687,71 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
         zIndex: index
       }));
       
+      // 如果是 hg_list_item，交换子组件树而不是交换位置
+      // 保持每个 item 的位置、index 不变，交换 children 内容，并按位置重命名 item id
+      const isListItem = reordered.length > 0 && reordered[0].type === 'hg_list_item';
+      if (isListItem && parentId) {
+        // siblings[i] = 位置 i 的 item（位置/index 不变）
+        // reordered[i] = 新顺序第 i 位，即位置 i 应该显示的内容来源
+        // 目标：
+        //   1. siblings[i] 的 children = reordered[i] 的原始 children
+        //   2. 子控件的 parent 更新为新的 item id
+        //   3. item id 按位置重命名为 ${listId}_item_${i}
+        
+        // 第一步：确定每个位置的新 item id（按位置顺序重命名）
+        // 用临时 id 避免重命名冲突
+        const tempPrefix = `__tmp_reorder_${Date.now()}_`;
+        const finalIds = siblings.map((_, i) => `${parentId}_item_${i}`);
+        const tempIds = siblings.map((_, i) => `${tempPrefix}${i}`);
+        
+        // 建立映射：旧 item id → 临时 id → 最终 id
+        const oldToTemp = new Map<string, string>();
+        const tempToFinal = new Map<string, string>();
+        siblings.forEach((item, i) => {
+          oldToTemp.set(item.id, tempIds[i]);
+          tempToFinal.set(tempIds[i], finalIds[i]);
+        });
+        
+        // 建立内容映射：位置 i 的 item（siblings[i]）应该显示 reordered[i] 的 children
+        // 子控件的新 parent = 位置 i 的最终 id（finalIds[i]）
+        const itemNewChildren = new Map<string, string[]>(); // 旧 item id → new children ids
+        const childNewParent = new Map<string, string>();    // child id → new parent final id
+        siblings.forEach((posItem, i) => {
+          const contentSource = reordered[i];
+          const originalChildren = contentSource.children || [];
+          itemNewChildren.set(posItem.id, originalChildren);
+          originalChildren.forEach(childId => {
+            childNewParent.set(childId, finalIds[i]);
+          });
+        });
+        
+        // 第二步：一次性更新所有组件
+        const newComponents = state.components.map(comp => {
+          // 更新 list_item 本身：新 id + 新 children
+          const tempId = oldToTemp.get(comp.id);
+          if (tempId !== undefined) {
+            const finalId = tempToFinal.get(tempId)!;
+            return {
+              ...comp,
+              id: finalId,
+              name: finalId,
+              children: itemNewChildren.get(comp.id) || [],
+            };
+          }
+          // 更新子控件的 parent 引用
+          if (childNewParent.has(comp.id)) {
+            return { ...comp, parent: childNewParent.get(comp.id)! };
+          }
+          // 更新父 list 的 children 数组（按位置顺序，使用最终 id）
+          if (comp.id === parentId) {
+            return { ...comp, children: finalIds };
+          }
+          return comp;
+        });
+        
+        return { components: newComponents };
+      }
+      
       // 重建整个 components 数组，保持新的顺序
       const siblingIds = new Set(siblings.map(s => s.id));
       const newComponents: typeof state.components = [];
