@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef } from 'react';
 import { PropertyEditorProps } from './types';
 
 const inputStyle: React.CSSProperties = {
@@ -21,35 +21,12 @@ export const PropertyEditor: React.FC<PropertyEditorProps> = ({
   hint,
   min,
   max,
+  step,
   placeholder
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const colorTextRef = useRef<HTMLInputElement>(null);
   const disabledStyle = disabled ? { opacity: 0.6, cursor: 'not-allowed' } : {};
-
-  // 处理滚轮事件，防止在输入框聚焦时滚动面板
-  useEffect(() => {
-    const handleWheel = (e: WheelEvent) => {
-      // 阻止滚轮事件传播到父容器
-      e.stopPropagation();
-    };
-
-    const elements = [inputRef.current, colorTextRef.current].filter(Boolean);
-    
-    elements.forEach(element => {
-      if (element) {
-        element.addEventListener('wheel', handleWheel, { passive: false });
-      }
-    });
-    
-    return () => {
-      elements.forEach(element => {
-        if (element) {
-          element.removeEventListener('wheel', handleWheel);
-        }
-      });
-    };
-  }, [type]);
 
   // 辅助函数：标准化颜色值为 6 位 RGB 格式
   const normalizeColor = (color: string): string => {
@@ -94,6 +71,7 @@ export const PropertyEditor: React.FC<PropertyEditorProps> = ({
           value={value ?? ''}
           min={min}
           max={max}
+          step={step}
           placeholder={placeholder}
           onChange={(e) => {
             const val = e.target.value;

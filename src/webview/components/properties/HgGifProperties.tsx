@@ -194,6 +194,7 @@ export const HgGifProperties: React.FC<PropertyPanelProps> = ({ component, onUpd
                   <PropertyEditor
                     type="number"
                     min={0}
+                    step={0.1}
                     value={transform.scaleX ?? 1.0}
                     onChange={(val) => {
                       const value = val === '' ? 1.0 : parseFloat(val);
@@ -208,6 +209,7 @@ export const HgGifProperties: React.FC<PropertyPanelProps> = ({ component, onUpd
                   <PropertyEditor
                     type="number"
                     min={0}
+                    step={0.1}
                     value={transform.scaleY ?? 1.0}
                     onChange={(val) => {
                       const value = val === '' ? 1.0 : parseFloat(val);

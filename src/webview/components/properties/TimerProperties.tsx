@@ -1716,8 +1716,12 @@ const TimerActionEditor: React.FC<{
             <input
               type="number"
               step="0.1"
-              value={action.zoomXOrigin || 1.0}
-              onChange={(e) => onUpdate({ zoomXOrigin: Number(e.target.value) })}
+              min="0"
+              value={action.zoomXOrigin ?? 1.0}
+              onChange={(e) => {
+                const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                onUpdate({ zoomXOrigin: isNaN(val) ? 0 : Math.max(0, val) });
+              }}
               style={{
                 width: '100%',
                 padding: '3px',
@@ -1734,8 +1738,12 @@ const TimerActionEditor: React.FC<{
             <input
               type="number"
               step="0.1"
-              value={action.zoomXTarget || 2.0}
-              onChange={(e) => onUpdate({ zoomXTarget: Number(e.target.value) })}
+              min="0"
+              value={action.zoomXTarget ?? 2.0}
+              onChange={(e) => {
+                const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                onUpdate({ zoomXTarget: isNaN(val) ? 0 : Math.max(0, val) });
+              }}
               style={{
                 width: '100%',
                 padding: '3px',
@@ -1752,8 +1760,12 @@ const TimerActionEditor: React.FC<{
             <input
               type="number"
               step="0.1"
-              value={action.zoomYOrigin || 1.0}
-              onChange={(e) => onUpdate({ zoomYOrigin: Number(e.target.value) })}
+              min="0"
+              value={action.zoomYOrigin ?? 1.0}
+              onChange={(e) => {
+                const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                onUpdate({ zoomYOrigin: isNaN(val) ? 0 : Math.max(0, val) });
+              }}
               style={{
                 width: '100%',
                 padding: '3px',
@@ -1770,8 +1782,12 @@ const TimerActionEditor: React.FC<{
             <input
               type="number"
               step="0.1"
-              value={action.zoomYTarget || 2.0}
-              onChange={(e) => onUpdate({ zoomYTarget: Number(e.target.value) })}
+              min="0"
+              value={action.zoomYTarget ?? 2.0}
+              onChange={(e) => {
+                const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                onUpdate({ zoomYTarget: isNaN(val) ? 0 : Math.max(0, val) });
+              }}
               style={{
                 width: '100%',
                 padding: '3px',

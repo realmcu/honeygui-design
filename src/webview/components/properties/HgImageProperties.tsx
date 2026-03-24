@@ -291,6 +291,7 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
                   <PropertyEditor
                     type="number"
                     min={0}
+                    step={0.1}
                     value={transform.scaleX ?? 1.0}
                     onChange={(val) => {
                       const value = val === '' ? 1.0 : parseFloat(val);
@@ -305,6 +306,7 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
                   <PropertyEditor
                     type="number"
                     min={0}
+                    step={0.1}
                     value={transform.scaleY ?? 1.0}
                     onChange={(val) => {
                       const value = val === '' ? 1.0 : parseFloat(val);
