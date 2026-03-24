@@ -93,6 +93,7 @@ const zhCN = {
   'Image Path': '图片路径',
   'GIF Path': 'GIF路径',
   'Select Image File': '选择图片文件',
+  'Select Video File': '选择视频文件',
   'Visible': '可见',
   'High Quality': '高质量渲染',
   'Checked': '选中',

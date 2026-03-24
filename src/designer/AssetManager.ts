@@ -1017,6 +1017,92 @@ export class AssetManager extends EventEmitter {
     }
 
     /**
+     * 处理选择视频文件路径
+     */
+    public async handleSelectVideoPath(componentId: string | undefined, currentFilePath: string | undefined): Promise<void> {
+        try {
+            const options: vscode.OpenDialogOptions = {
+                canSelectFiles: true,
+                canSelectFolders: false,
+                canSelectMany: false,
+                defaultUri: this.getDefaultDialogUri(currentFilePath),
+                filters: {
+                    'Video': ['mp4', 'avi', 'mov', 'mkv', 'webm']
+                },
+                openLabel: vscode.l10n.t('Select Video')
+            };
+
+            const fileUri = await vscode.window.showOpenDialog(options);
+            if (fileUri && fileUri.length > 0) {
+                const filePath = fileUri[0].fsPath;
+                const fileName = path.basename(filePath);
+
+                AssetManager.rememberPath(filePath, false);
+
+                if (!currentFilePath) {
+                    vscode.window.showErrorMessage(vscode.l10n.t('Cannot determine project path'));
+                    return;
+                }
+
+                const projectRoot = ProjectUtils.findProjectRoot(currentFilePath);
+                if (!projectRoot) {
+                    vscode.window.showErrorMessage(vscode.l10n.t('Cannot find project root (project.json)'));
+                    return;
+                }
+
+                const assetsDir = path.join(projectRoot, 'assets');
+                const normalizedFilePath = path.normalize(filePath);
+                const normalizedAssetsDir = path.normalize(assetsDir);
+
+                let relativePath: string;
+
+                if (normalizedFilePath.startsWith(normalizedAssetsDir)) {
+                    const relativeToAssets = path.relative(assetsDir, filePath).replace(/\\/g, '/');
+                    relativePath = `assets/${relativeToAssets}`;
+                } else {
+                    const targetPath = path.join(assetsDir, fileName);
+
+                    if (fs.existsSync(targetPath)) {
+                        const result = await vscode.window.showWarningMessage(
+                            vscode.l10n.t('File {0} already exists. Overwrite?', fileName),
+                            vscode.l10n.t('Overwrite'),
+                            vscode.l10n.t('Cancel')
+                        );
+                        if (result !== vscode.l10n.t('Overwrite')) {
+                            return;
+                        }
+                    }
+
+                    await fs.promises.copyFile(filePath, targetPath);
+                    relativePath = `assets/${fileName}`;
+                    logger.info(`[AssetManager] 视频已复制到: ${relativePath}`);
+
+                    try {
+                        const content = await fs.promises.readFile(targetPath);
+                        this.emit('assetAdded', fileName, content);
+                    } catch (e) {
+                        logger.error(`[AssetManager] 读取复制文件失败: ${e}`);
+                    }
+                }
+
+                if (componentId) {
+                    this._panel.webview.postMessage({
+                        command: 'updateImagePath',
+                        componentId: componentId,
+                        propertyName: 'src',
+                        path: relativePath
+                    });
+                }
+
+                this.handleLoadAssets(currentFilePath);
+            }
+        } catch (error) {
+            logger.error(`[AssetManager] 选择视频失败: ${error}`);
+            vscode.window.showErrorMessage(vscode.l10n.t('Failed to select video'));
+        }
+    }
+
+    /**
      * 处理选择文件夹中的图片序列
      */
     public async handleSelectFolderImages(callbackId: string | undefined, currentFilePath: string | undefined): Promise<void> {

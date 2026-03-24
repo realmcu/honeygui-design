@@ -93,6 +93,7 @@ const en = {
   'Image Path': 'Image Path',
   'GIF Path': 'GIF Path',
   'Select Image File': 'Select Image File',
+  'Select Video File': 'Select Video File',
   'Visible': 'Visible',
   'High Quality': 'High Quality',
   'Checked': 'Checked',

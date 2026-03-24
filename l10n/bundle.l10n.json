@@ -388,6 +388,8 @@
   "Start Download": "Start Download",
   "Enter serial port": "Enter serial port",
   "Select Image": "Select Image",
+  "Select Video": "Select Video",
+  "Failed to select video": "Failed to select video",
   "Renamed successfully": "Renamed successfully",
   "Renamed successfully, updated {0} references": "Renamed successfully, updated {0} references",
   "Folder deleted": "Folder deleted",

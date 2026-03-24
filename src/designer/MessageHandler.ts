@@ -215,6 +215,10 @@ export class MessageHandler {
                 this._assetManager.handleSelectImagePath(message.componentId, message.propertyName, message.callbackId, this._fileManager.currentFilePath);
                 break;
 
+            case 'selectVideoPath':
+                this._assetManager.handleSelectVideoPath(message.componentId, this._fileManager.currentFilePath);
+                break;
+
             case 'selectFolderPath':
                 this._assetManager.handleSelectFolderPath(message.componentId, this._fileManager.currentFilePath);
                 break;

@@ -96,14 +96,42 @@ export const HgVideoProperties: React.FC<PropertyPanelProps> = ({ component, onU
               <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', fontWeight: 600 }}>{t('Video Settings')}</h4>
               
               <label style={labelStyle}>{t('Video Path')}</label>
-              <input
-                type="text"
-                value={src}
-                onChange={(e) => handlePropertyChange('src', e.target.value)}
-                placeholder="assets/video.mp4"
-                style={inputStyle}
-              />
-              <small style={helpTextStyle}>{t('Drag video file from assets panel to canvas')}</small>
+              <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
+                <input
+                  type="text"
+                  value={src}
+                  onChange={(e) => handlePropertyChange('src', e.target.value)}
+                  placeholder="assets/video.mp4"
+                  style={{
+                    flex: 1,
+                    padding: '4px 6px',
+                    backgroundColor: 'var(--vscode-input-background)',
+                    color: 'var(--vscode-input-foreground)',
+                    border: '1px solid var(--vscode-input-border)',
+                    borderRadius: '2px',
+                  }}
+                />
+                <button
+                  onClick={() => {
+                    window.vscodeAPI?.postMessage({
+                      command: 'selectVideoPath',
+                      componentId: component.id,
+                    });
+                  }}
+                  style={{
+                    padding: '4px 8px',
+                    backgroundColor: 'var(--vscode-button-background)',
+                    color: 'var(--vscode-button-foreground)',
+                    border: 'none',
+                    borderRadius: '2px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                  }}
+                  title={t('Select Video File')}
+                >
+                  📁
+                </button>
+              </div>
 
               <label style={labelStyle}>{t('Frame Rate (FPS)')}</label>
               <input
