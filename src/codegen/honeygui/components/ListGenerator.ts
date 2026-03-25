@@ -436,7 +436,19 @@ export class ListGenerator implements ComponentCodeGenerator {
         }
         // Replace placeholders (including children and event bindings)
         creationCode = creationCode.replace(/__CHILDREN_PLACEHOLDER__/g, childrenCode);
-        creationCode = creationCode.replace(/__EVENT_BINDINGS_PLACEHOLDER__/g, ''); // Window in list does not need event bindings
+        
+        // Generate event binding code for window in list_item
+        let eventBindingsCode = '';
+        if (component.type === 'hg_window' && component.eventConfigs && component.eventConfigs.length > 0) {
+          const eventGenerator = EventGeneratorFactory.getGenerator('hg_window');
+          if (eventGenerator) {
+            const eventCode = eventGenerator.generateEventBindings(component, indent, context.componentMap);
+            if (eventCode) {
+              eventBindingsCode = '\n' + eventCode;
+            }
+          }
+        }
+        creationCode = creationCode.replace(/__EVENT_BINDINGS_PLACEHOLDER__/g, eventBindingsCode);
         code += creationCode;
       } else {
         // Regular component: add creation code directly
