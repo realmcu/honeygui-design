@@ -45,6 +45,24 @@ export class FileManager {
     public set currentFilePath(path: string | undefined) {
         this._filePath = path;
     }
+
+    /**
+     * 刷新其他 HML 文件的组件 ID 列表并发送给前端
+     * 当面板重新获得焦点时调用，确保跨文件命名去重数据是最新的
+     */
+    public async refreshOtherFileComponentIds(): Promise<void> {
+        if (!this._filePath) return;
+        try {
+            const otherFileComponentIds = await this.scanAllComponentIds(this._filePath);
+            logger.debug(`[FileManager] 刷新跨文件组件 ID: ${otherFileComponentIds.length} 个`);
+            this._panel.webview.postMessage({
+                command: 'updateOtherFileComponentIds',
+                otherFileComponentIds
+            });
+        } catch (error) {
+            logger.warn(`[FileManager] 刷新跨文件组件 ID 失败: ${error}`);
+        }
+    }
     
     /**
      * 记录当前状态到撤销栈（在保存前调用）
@@ -322,6 +340,48 @@ export class FileManager {
 
         return allViews;
     }
+
+    /**
+     * 扫描项目中所有 HML 文件的组件 ID（排除当前文件），用于跨文件命名去重
+     */
+    private async scanAllComponentIds(currentFilePath: string): Promise<string[]> {
+        const projectRoot = ProjectUtils.findProjectRoot(currentFilePath);
+        if (!projectRoot) {
+            logger.warn('[FileManager] scanAllComponentIds: 未找到项目根目录');
+            return [];
+        }
+
+        const uiDir = ProjectUtils.getUiDir(projectRoot);
+        const hmlFiles = this.scanHmlFilesRecursive(uiDir, projectRoot);
+        const allIds: string[] = [];
+        const currentNorm = path.normalize(currentFilePath);
+        
+        logger.info(`[FileManager] scanAllComponentIds: 扫描 ${hmlFiles.length} 个 HML 文件，当前文件: ${path.basename(currentFilePath)}`);
+
+        for (const hmlFile of hmlFiles) {
+            // 排除当前正在编辑的文件（当前文件的组件已在前端 components 中）
+            if (path.normalize(hmlFile.path) === currentNorm) {
+                logger.debug(`[FileManager] scanAllComponentIds: 跳过当前文件 ${hmlFile.name}`);
+                continue;
+            }
+            try {
+                const tempController = new HmlController();
+                const doc = await tempController.loadFile(hmlFile.path);
+                if (doc.view && doc.view.components) {
+                    for (const comp of doc.view.components) {
+                        if (comp.id) {
+                            allIds.push(comp.id);
+                        }
+                    }
+                    logger.debug(`[FileManager] scanAllComponentIds: ${hmlFile.name} 包含 ${doc.view.components.length} 个组件`);
+                }
+            } catch (err) {
+                logger.warn(`扫描组件ID ${hmlFile.path} 失败: ${err}`);
+            }
+        }
+
+        return allIds;
+    }
     
     /**
      * 创建新的空白文档
@@ -548,6 +608,10 @@ export class FileManager {
         // 扫描所有 HML 文件
         const allHmlFiles = this.scanAllHmlFiles(this._filePath!);
         
+        // 扫描其他 HML 文件中的组件 ID（用于跨文件命名去重）
+        const otherFileComponentIds = await this.scanAllComponentIds(this._filePath!);
+        logger.info(`[FileManager] 跨文件组件 ID 数量: ${otherFileComponentIds.length}, IDs: ${otherFileComponentIds.join(', ')}`);
+        
         // 获取当前 VSCode 语言设置
         const locale = vscode.env.language;
         
@@ -571,6 +635,7 @@ export class FileManager {
             projectRoot: projectRoot,
             allViews: allViews,
             allHmlFiles: allHmlFiles,
+            otherFileComponentIds: otherFileComponentIds,
             currentFilePath: this._filePath,
             locale: locale,
             isSimulationRunning: isSimulationRunning

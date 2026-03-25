@@ -105,16 +105,17 @@ function collectTree(components: Component[], root: Component): Component[] {
  * @param components 所有组件数组
  * @param rootComponent 要克隆的根组件
  * @param allComponents 当前所有组件（用于生成唯一ID）
+ * @param extraIds 其他文件中的组件ID（跨文件去重）
  * @returns 克隆后的组件数组（包括根组件和所有子组件）
  */
-function cloneComponentTree(components: Component[], rootComponent: Component, allComponents: Component[]): Component[] {
+function cloneComponentTree(components: Component[], rootComponent: Component, allComponents: Component[], extraIds?: string[]): Component[] {
   const toClone = collectTree(components, rootComponent);
   
   // 第一步：为所有组件生成新 ID，并建立映射
   const idMap = new Map<string, string>();
   let trackingComponents = [...allComponents];
   for (const comp of toClone) {
-    const newId = generateComponentId(comp.type, trackingComponents);
+    const newId = generateComponentId(comp.type, trackingComponents, extraIds);
     idMap.set(comp.id, newId);
     trackingComponents.push({ ...comp, id: newId } as Component);
   }
@@ -322,6 +323,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   projectConfig: null as any, // 项目配置（分辨率等）
   allViews: [] as Array<{id: string, name: string, file: string, edges: Array<{target: string, event: string, switchOutStyle?: string, switchInStyle?: string}>}>, // 项目中所有 view（含跳转关系）
   allHmlFiles: [] as Array<{path: string, name: string, relativePath: string}>, // 项目中所有 HML 文件
+  otherFileComponentIds: [] as string[], // 其他 HML 文件中的组件 ID（跨文件命名去重）
   currentFilePath: '' as string, // 当前打开的文件路径
   selectedComponent: null,
   selectedComponents: [],
@@ -1141,7 +1143,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     const component = state.components.find((c) => c.id === id);
     if (!component) return;
 
-    const newId = generateComponentId(component.type, state.components);
+    const newId = generateComponentId(component.type, state.components, state.otherFileComponentIds);
     const newComponent: Component = {
       ...component,
       id: newId,
@@ -1225,7 +1227,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       const idMap = new Map<string, string>();
       let trackingComponents = [...components];
       clipboardMultiple.forEach((comp) => {
-        const newId = generateComponentId(comp.type, trackingComponents);
+        const newId = generateComponentId(comp.type, trackingComponents, get().otherFileComponentIds);
         idMap.set(comp.id, newId);
         trackingComponents.push({ ...comp, id: newId } as Component);
       });
@@ -1315,7 +1317,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       ? components.some((c) => c.id === clipboard.parent)
       : true;
     
-    const newId = generateComponentId(clipboard.type, components);
+    const newId = generateComponentId(clipboard.type, components, get().otherFileComponentIds);
     const newComponent: Component = {
       ...clipboard,
       id: newId,

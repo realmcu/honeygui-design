@@ -294,6 +294,11 @@ const App: React.FC = () => {
                 batchUpdate.allHmlFiles = message.allHmlFiles;
               }
               
+              // 添加其他文件的组件 ID（跨文件命名去重）
+              if (message.otherFileComponentIds) {
+                batchUpdate.otherFileComponentIds = message.otherFileComponentIds;
+              }
+              
               // 如果有组件数据，添加到批量更新中
               if (message.components) {
                 batchUpdate.components = message.components;
@@ -343,6 +348,10 @@ const App: React.FC = () => {
                 useDesignerStore.setState({ allHmlFiles: message.allHmlFiles });
               }
               
+              if (message.otherFileComponentIds) {
+                useDesignerStore.setState({ otherFileComponentIds: message.otherFileComponentIds });
+              }
+              
               if (message.components) {
                 store.setComponents(message.components);
                 // 自适应居中
@@ -358,6 +367,13 @@ const App: React.FC = () => {
         case 'showMessage':
           // Show success message
           console.log(message.text);
+          break;
+
+        case 'updateOtherFileComponentIds':
+          // 刷新跨文件组件 ID（面板获得焦点时触发）
+          if (message.otherFileComponentIds) {
+            useDesignerStore.setState({ otherFileComponentIds: message.otherFileComponentIds });
+          }
           break;
 
         case 'error':
@@ -947,8 +963,9 @@ const App: React.FC = () => {
       return;
     }
 
-    // 生成唯一组件ID
-    const componentId = generateComponentId(componentType, components);
+    // 生成唯一组件ID（含跨文件去重）
+    const otherIds1 = useDesignerStore.getState().otherFileComponentIds;
+    const componentId = generateComponentId(componentType, components, otherIds1);
     
     // 默认位置和尺寸
     let defWidth = componentDef.defaultSize.width;
@@ -1254,8 +1271,9 @@ const App: React.FC = () => {
       console.log(`[拖放] 最终画布坐标: x=${x}, y=${y}`);
     }
 
-    // 生成唯一组件ID
-    const componentId = generateComponentId(componentType, components);
+    // 生成唯一组件ID（含跨文件去重）
+    const otherIds2 = useDesignerStore.getState().otherFileComponentIds;
+    const componentId = generateComponentId(componentType, components, otherIds2);
 
     let positionX = x;
     let positionY = y;

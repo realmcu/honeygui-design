@@ -88,6 +88,7 @@ export interface DesignerState {
   components: Component[];
   allViews?: ViewInfo[]; // 项目中所有 view（含跳转关系）
   allHmlFiles?: Array<{path: string, name: string, relativePath: string}>; // 项目中所有 HML 文件
+  otherFileComponentIds?: string[]; // 其他 HML 文件中的组件 ID（跨文件命名去重）
   currentFilePath?: string; // 当前打开的文件路径
   selectedComponent: string | null;
   selectedComponents: string[];

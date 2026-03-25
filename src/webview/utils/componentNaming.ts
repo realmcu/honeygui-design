@@ -61,17 +61,27 @@ function nextNumber(abbr: string, values: string[]): number {
 /**
  * 根据控件类型和已有控件列表，生成递增编号的控件名称
  * 例如：btn_1, btn_2, img_1, view_1
+ * @param extraNames 其他 HML 文件中已使用的名称列表（跨文件去重）
  */
-export function generateComponentName(type: string, components: Component[]): string {
+export function generateComponentName(type: string, components: Component[], extraNames?: string[]): string {
   const abbr = getTypeAbbreviation(type);
-  return `${abbr}_${nextNumber(abbr, components.map(c => c.name))}`;
+  const allNames = components.map(c => c.name);
+  if (extraNames) {
+    allNames.push(...extraNames);
+  }
+  return `${abbr}_${nextNumber(abbr, allNames)}`;
 }
 
 /**
  * 根据控件类型和已有控件列表，生成递增编号的控件 ID
  * 例如：btn_1, btn_2, img_1, view_1
+ * @param extraIds 其他 HML 文件中已使用的 ID 列表（跨文件去重）
  */
-export function generateComponentId(type: string, components: Component[]): string {
+export function generateComponentId(type: string, components: Component[], extraIds?: string[]): string {
   const abbr = getTypeAbbreviation(type);
-  return `${abbr}_${nextNumber(abbr, components.map(c => c.id))}`;
+  const allIds = components.map(c => c.id);
+  if (extraIds) {
+    allIds.push(...extraIds);
+  }
+  return `${abbr}_${nextNumber(abbr, allIds)}`;
 }

@@ -196,6 +196,8 @@ export class DesignerPanel {
             () => {
                 if (this._panel.visible) {
                     DesignerPanel.currentPanel = this;
+                    // 面板重新获得焦点时，刷新其他文件的组件 ID 列表（跨文件命名去重）
+                    this._fileManager.refreshOtherFileComponentIds();
                 }
             },
             null,

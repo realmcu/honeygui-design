@@ -1,6 +1,14 @@
 import { Component } from '../types';
 import { getAbsolutePosition } from '../utils/componentUtils';
 import { generateComponentId } from '../utils/componentNaming';
+import { useDesignerStore } from '../store';
+
+/**
+ * 获取其他文件中已使用的组件 ID（用于跨文件命名去重）
+ */
+const getOtherFileIds = (): string[] => {
+  return useDesignerStore.getState().otherFileComponentIds || [];
+};
 
 const getNextZIndex = (components: Component[], parentId: string): number => {
   const siblings = components.filter(c => c.parent === parentId);
@@ -33,7 +41,7 @@ export const createImageComponentAtPosition = (
   const height = imageSize?.height || 100;
   const zIndex = getNextZIndex(components, targetContainerId);
 
-  const imageId = generateComponentId('hg_image', components);
+  const imageId = generateComponentId('hg_image', components, getOtherFileIds());
   const imageComponent: Component = {
     id: imageId,
     type: 'hg_image',
@@ -75,7 +83,7 @@ export const createGifComponentAtPosition = (
   const height = imageSize?.height || 150;
   const zIndex = getNextZIndex(components, targetContainerId);
 
-  const gifId = generateComponentId('hg_gif', components);
+  const gifId = generateComponentId('hg_gif', components, getOtherFileIds());
   const gifComponent: Component = {
     id: gifId,
     type: 'hg_gif',
@@ -113,7 +121,7 @@ export const create3DComponentAtPosition = (
   const relativeY = Math.max(0, dropPosition.y - targetAbsPos.y);
   const zIndex = getNextZIndex(components, targetContainerId);
 
-  const id3D = generateComponentId('hg_3d', components);
+  const id3D = generateComponentId('hg_3d', components, getOtherFileIds());
   const component3D: Component = {
     id: id3D,
     type: 'hg_3d',
@@ -170,7 +178,7 @@ export const createVideoComponentAtPosition = (
   const { width, height } = videoSize || { width: 320, height: 240 };
   const zIndex = getNextZIndex(components, targetContainerId);
 
-  const videoId = generateComponentId('hg_video', components);
+  const videoId = generateComponentId('hg_video', components, getOtherFileIds());
   const videoComponent: Component = {
     id: videoId,
     type: 'hg_video',
@@ -209,7 +217,7 @@ export const createSvgComponentAtPosition = (
   const relativeY = Math.max(0, dropPosition.y - targetAbsPos.y);
   const zIndex = getNextZIndex(components, targetContainerId);
 
-  const svgId = generateComponentId('hg_svg', components);
+  const svgId = generateComponentId('hg_svg', components, getOtherFileIds());
   const svgComponent: Component = {
     id: svgId,
     type: 'hg_svg',
@@ -253,7 +261,7 @@ export const createGlassComponentAtPosition = (
   const relativeY = Math.max(0, dropPosition.y - targetAbsPos.y);
   const zIndex = getNextZIndex(components, targetContainerId);
 
-  const glassId = generateComponentId('hg_glass', components);
+  const glassId = generateComponentId('hg_glass', components, getOtherFileIds());
   const glassComponent: Component = {
     id: glassId,
     type: 'hg_glass',
@@ -301,7 +309,7 @@ export const createLottieComponentAtPosition = (
   const relativeY = Math.max(0, dropPosition.y - targetAbsPos.y);
   const zIndex = getNextZIndex(components, targetContainerId);
 
-  const lottieId = generateComponentId('hg_lottie', components);
+  const lottieId = generateComponentId('hg_lottie', components, getOtherFileIds());
   const lottieComponent: Component = {
     id: lottieId,
     type: 'hg_lottie',
