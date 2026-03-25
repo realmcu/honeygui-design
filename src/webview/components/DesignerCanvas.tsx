@@ -12,6 +12,7 @@ import { executeMenuAction, MenuActionHelpers } from '../services/contextMenuAct
 import { ViewConnectionLayer } from './ViewConnectionLayer';
 import { AlignmentGuides, AlignmentLine } from './AlignmentGuides';
 import { ResizeHandles, ResizeDirection } from './ResizeHandles';
+import { MoveHandle } from './MoveHandle';
 import { calculateAlignment } from '../utils/dragAlignmentGuides';
 import { getAbsolutePosition, findComponentAtPosition, isContainerType } from '../utils/componentUtils';
 import { t } from '../i18n';
@@ -179,6 +180,45 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
     window.addEventListener('component-context-menu', handleCustomContextMenu);
     return () => window.removeEventListener('component-context-menu', handleCustomContextMenu);
   }, [components, showMenu]);
+
+  // 移动手柄拖拽开始：直接启动拖拽，不触发复杂的选中逻辑
+  const handleMoveStart = (e: React.MouseEvent, componentId: string) => {
+    const component = components.find(c => c.id === componentId);
+    if (!component || component.locked) return;
+
+    if (canvasRef.current) {
+      const rect = canvasRef.current.getBoundingClientRect();
+      const effectiveZoom = zoom / (window.devicePixelRatio || 1);
+      const mouseX = (e.clientX - rect.left - canvasOffset.x) / effectiveZoom;
+      const mouseY = (e.clientY - rect.top - canvasOffset.y) / effectiveZoom;
+
+      setDragOffset({
+        x: mouseX - component.position.x,
+        y: mouseY - component.position.y,
+      });
+
+      // 多选拖拽偏移量
+      if (selectedComponents.length > 1 && selectedComponents.includes(componentId)) {
+        const offsets = new Map<string, { x: number; y: number }>();
+        selectedComponents.forEach(id => {
+          const comp = components.find(c => c.id === id);
+          if (comp && !comp.locked) {
+            const absPos = getAbsolutePosition(comp, components);
+            offsets.set(id, {
+              x: mouseX - absPos.x,
+              y: mouseY - absPos.y,
+            });
+          }
+        });
+        setMultiDragOffsets(offsets);
+      } else {
+        setMultiDragOffsets(new Map());
+      }
+    }
+
+    setPendingDragComponent(componentId);
+    setDragStart({ x: e.clientX, y: e.clientY });
+  };
 
   const handleComponentMouseDown = (e: React.MouseEvent, componentId: string) => {
     e.stopPropagation();
@@ -939,6 +979,29 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
           {components
             .filter((c) => c.parent === null)
             .map((component) => renderComponent(component))}
+
+          {/* 移动手柄覆盖层 - 独立于组件层，不受 overflow:hidden 影响 */}
+          {(() => {
+            // 收集所有需要显示移动手柄的选中组件
+            const selectedIds = selectedComponent ? [selectedComponent, ...selectedComponents.filter(id => id !== selectedComponent)] : [...selectedComponents];
+            const uniqueIds = [...new Set(selectedIds)];
+            
+            return uniqueIds.map(id => {
+              const comp = components.find(c => c.id === id);
+              if (!comp || comp.locked || comp.type === 'hg_list_item' || draggedComponent) return null;
+              const absPos = getAbsolutePosition(comp, components);
+              return (
+                <MoveHandle
+                  key={`move-${comp.id}`}
+                  componentId={comp.id}
+                  absX={absPos.x}
+                  absY={absPos.y}
+                  width={comp.position.width}
+                  onMoveStart={handleMoveStart}
+                />
+              );
+            });
+          })()}
         </div>
 
         {/* 视图连接层 - 独立于组件层 */}

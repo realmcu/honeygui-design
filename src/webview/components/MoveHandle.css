@@ -1,0 +1,28 @@
+/* 组件移动手柄 - 作为画布覆盖层渲染 */
+.move-handle {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #007ACC;
+  border: 1px solid #005A9E;
+  border-radius: 0 3px 3px 0;
+  cursor: move;
+  z-index: 10001;
+  user-select: none;
+  color: #ffffff;
+  opacity: 0.85;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+  pointer-events: auto;
+}
+
+.move-handle:hover {
+  opacity: 1;
+  background-color: #0098FF;
+}
+
+.move-handle:active {
+  background-color: #005A9E;
+}
