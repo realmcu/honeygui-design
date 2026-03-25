@@ -23,4 +23,5 @@ export interface GeneratorContext {
   getParentRef(component: Component): string;
   projectRoot?: string;  // Project root directory for reading asset files
   generateTimerBindings?: (component: Component, indent: number) => string;  // Timer binding code generation method
+  isInsideListItem?: boolean;  // Whether this component is inside a list_item (note_design callback context)
 }

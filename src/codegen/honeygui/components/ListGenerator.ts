@@ -388,10 +388,12 @@ export class ListGenerator implements ComponentCodeGenerator {
         effectiveContext = {
           componentMap: context.componentMap,
           getParentRef: (_comp: Component) => '(gui_obj_t *)note',
-          projectRoot: context.projectRoot
+          projectRoot: context.projectRoot,
+          generateTimerBindings: context.generateTimerBindings,
+          isInsideListItem: true
         };
       } else {
-        // Deeper level: use provided context
+        // Deeper level: use provided context (preserve isInsideListItem flag)
         effectiveContext = context;
       }
 
@@ -413,7 +415,9 @@ export class ListGenerator implements ComponentCodeGenerator {
           const nestedContext: GeneratorContext = {
             componentMap: context.componentMap,
             getParentRef: (_comp: Component) => `(gui_obj_t *)${parentId}`,
-            projectRoot: context.projectRoot
+            projectRoot: context.projectRoot,
+            generateTimerBindings: context.generateTimerBindings,
+            isInsideListItem: context.isInsideListItem
           };
           component.children.forEach(childId => {
             const child = context.componentMap.get(childId);
@@ -478,7 +482,9 @@ export class ListGenerator implements ComponentCodeGenerator {
           const nestedContext: GeneratorContext = {
             componentMap: context.componentMap,
             getParentRef: (_comp: Component) => `(gui_obj_t *)${parentId}`,
-            projectRoot: context.projectRoot
+            projectRoot: context.projectRoot,
+            generateTimerBindings: context.generateTimerBindings,
+            isInsideListItem: context.isInsideListItem
           };
           component.children.forEach(childId => {
             const child = context.componentMap.get(childId);
