@@ -639,10 +639,10 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
             break;
         }
         
-        // 移动所有选中的组件（不触发保存）
+        // 移动所有选中的组件（不触发保存），跳过 hg_list_item（位置由 list 自动管理）
         ids.forEach(id => {
           const comp = components.find(c => c.id === id);
-          if (comp && !comp.locked) {
+          if (comp && !comp.locked && comp.type !== 'hg_list_item') {
             updateComponent(id, {
               position: {
                 ...comp.position,

@@ -55,14 +55,13 @@ export class ViewEventGenerator implements EventCodeGenerator {
         // Use handler property directly if available
         if (eventConfig.handler) {
           code += `${indentStr}gui_msg_subscribe(${targetRef}, "${eventConfig.message}", ${eventConfig.handler});\n`;
-        }
-        // Otherwise check callFunction in actions
-        else {
-          eventConfig.actions.forEach(action => {
-            if (action.type === 'callFunction' && action.functionName) {
-              code += `${indentStr}gui_msg_subscribe(${targetRef}, "${eventConfig.message}", ${action.functionName});\n`;
-            }
-          });
+        } else {
+          // All other cases: use auto-generated callback name (which wraps the actual actions)
+          const msgIndex = Array.from(component.eventConfigs || [])
+            .filter(e => e.type === 'onMessage')
+            .indexOf(eventConfig);
+          const callbackName = getMessageCallbackName(component, eventConfig, msgIndex);
+          code += `${indentStr}gui_msg_subscribe(${targetRef}, "${eventConfig.message}", ${callbackName});\n`;
         }
         return;
       }
@@ -122,7 +121,7 @@ export class ViewEventGenerator implements EventCodeGenerator {
           if (eventConfig.handler) {
             functions.push(eventConfig.handler);
           } else {
-            // Otherwise use auto-generated name
+            // All other cases: use auto-generated callback name
             functions.push(getMessageCallbackName(component, eventConfig, msgIndex));
           }
           msgIndex++;

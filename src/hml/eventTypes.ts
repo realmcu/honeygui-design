@@ -82,6 +82,7 @@ export const COMPONENT_SUPPORTED_EVENTS: Record<string, EventType[]> = {
   hg_progressbar: ['onClick', 'onValueChange', 'onKeyShortPress', 'onKeyLongPress', 'onMessage'],
   hg_input: ['onClick', 'onValueChange', 'onKeyShortPress', 'onKeyLongPress', 'onMessage'],
   hg_canvas: ['onClick', 'onLongPress', 'onKeyShortPress', 'onKeyLongPress', 'onMessage'],
+  hg_list: ['onClick', 'onLongPress', 'onSwipeLeft', 'onSwipeRight', 'onSwipeUp', 'onSwipeDown', 'onKeyShortPress', 'onKeyLongPress', 'onMessage'],
   hg_arc: ['onClick', 'onLongPress', 'onKeyShortPress', 'onKeyLongPress', 'onMessage'],
   hg_rect: ['onClick', 'onLongPress', 'onKeyShortPress', 'onKeyLongPress', 'onMessage'],
   hg_svg: ['onClick', 'onLongPress', 'onKeyShortPress', 'onKeyLongPress', 'onMessage'],
