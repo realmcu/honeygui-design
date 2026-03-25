@@ -48,22 +48,38 @@ export class WindowGenerator implements ComponentCodeGenerator {
 
     
     // Time label initialization code in window
-    // Note: Do not declare time_t now and struct tm *t here, as they are already declared in view's switch_in function
-    // Only generate sprintf calls to initialize time strings
     const timeLabels = this.collectTimeLabels(component, context);
     if (timeLabels.length > 0) {
-      code += `\n${indentStr}// Initialize time strings (using now and t variables declared in view)\n`;
-      code += `${indentStr}if (t != NULL)\n`;
-      code += `${indentStr}{\n`;
-      timeLabels.forEach(labelId => {
-        const labelComp = context.componentMap.get(labelId);
-        const timeFormat = labelComp?.data?.timeFormat;
-        const formatCode = this.getTimeFormatCode(timeFormat);
-        code += `${indentStr}    sprintf(${labelId}_time_str, "${formatCode.format}", ${formatCode.args});\n`;
-      });
-      code += `${indentStr}}\n`;
+      if (context.isInsideListItem) {
+        // Inside list_item (note_design callback): t is not declared, need to declare it locally
+        code += `\n${indentStr}// Initialize time strings\n`;
+        code += `${indentStr}{\n`;
+        code += `${indentStr}    time_t now = time(NULL);\n`;
+        code += `${indentStr}    struct tm *t = localtime(&now);\n`;
+        code += `${indentStr}    if (t != NULL)\n`;
+        code += `${indentStr}    {\n`;
+        timeLabels.forEach(labelId => {
+          const labelComp = context.componentMap.get(labelId);
+          const timeFormat = labelComp?.data?.timeFormat;
+          const formatCode = this.getTimeFormatCode(timeFormat);
+          code += `${indentStr}        sprintf(${labelId}_time_str, "${formatCode.format}", ${formatCode.args});\n`;
+        });
+        code += `${indentStr}    }\n`;
+        code += `${indentStr}}\n`;
+      } else {
+        // Inside view's switch_in: t is already declared
+        code += `\n${indentStr}// Initialize time strings (using now and t variables declared in view)\n`;
+        code += `${indentStr}if (t != NULL)\n`;
+        code += `${indentStr}{\n`;
+        timeLabels.forEach(labelId => {
+          const labelComp = context.componentMap.get(labelId);
+          const timeFormat = labelComp?.data?.timeFormat;
+          const formatCode = this.getTimeFormatCode(timeFormat);
+          code += `${indentStr}    sprintf(${labelId}_time_str, "${formatCode.format}", ${formatCode.args});\n`;
+        });
+        code += `${indentStr}}\n`;
+      }
     }
-    
     // Child component creation handled by main generator (via childrenCode callback)
     code += `__CHILDREN_PLACEHOLDER__`;
     
