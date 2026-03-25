@@ -423,7 +423,7 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
   );
 };
 
-const ComponentTree: React.FC<{ onContextMenu?: (e: React.MouseEvent, componentId: string) => void }> = ({ onContextMenu }) => {
+const ComponentTree: React.FC<{ onContextMenu?: (e: React.MouseEvent, componentId: string) => void; isTabActive?: boolean }> = ({ onContextMenu, isTabActive }) => {
   const { components, allHmlFiles, currentFilePath, vscodeAPI, selectedComponent } = useDesignerStore();
   const treeContentRef = React.useRef<HTMLDivElement>(null);
   const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(new Set());
@@ -459,43 +459,57 @@ const ComponentTree: React.FC<{ onContextMenu?: (e: React.MouseEvent, componentI
     }
   };
 
-  // 当选中组件变化时，展开祖先节点并滚动到对应的节点
-  React.useEffect(() => {
-    if (selectedComponent && treeContentRef.current) {
-      // 展开所有祖先节点
-      const ancestorIds: string[] = [];
-      const comp = components.find(c => c.id === selectedComponent);
-      if (comp) {
-        let parentId = comp.parent;
-        while (parentId) {
-          ancestorIds.push(parentId);
-          const parent = components.find(c => c.id === parentId);
-          parentId = parent?.parent || null;
-        }
+  // 滚动到选中组件的通用逻辑
+  const scrollToSelected = useCallback(() => {
+    if (!selectedComponent || !treeContentRef.current) return;
+    
+    // 展开所有祖先节点
+    const ancestorIds: string[] = [];
+    const comp = components.find(c => c.id === selectedComponent);
+    if (comp) {
+      let parentId = comp.parent;
+      while (parentId) {
+        ancestorIds.push(parentId);
+        const parent = components.find(c => c.id === parentId);
+        parentId = parent?.parent || null;
       }
-      if (ancestorIds.length > 0) {
-        setCollapsedNodes(prev => {
-          const hasCollapsed = ancestorIds.some(id => prev.has(id));
-          if (!hasCollapsed) return prev;
-          const next = new Set(prev);
-          ancestorIds.forEach(id => next.delete(id));
-          return next;
+    }
+    if (ancestorIds.length > 0) {
+      setCollapsedNodes(prev => {
+        const hasCollapsed = ancestorIds.some(id => prev.has(id));
+        if (!hasCollapsed) return prev;
+        const next = new Set(prev);
+        ancestorIds.forEach(id => next.delete(id));
+        return next;
+      });
+    }
+
+    // 延迟执行，确保 DOM 已更新（祖先展开后子节点才会渲染）
+    setTimeout(() => {
+      const selectedNode = treeContentRef.current?.querySelector(`[data-component-id="${selectedComponent}"]`);
+      if (selectedNode) {
+        selectedNode.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+          inline: 'nearest'
         });
       }
+    }, 100);
+  }, [selectedComponent, components]);
 
-      // 延迟执行，确保 DOM 已更新（祖先展开后子节点才会渲染）
-      setTimeout(() => {
-        const selectedNode = treeContentRef.current?.querySelector(`[data-component-id="${selectedComponent}"]`);
-        if (selectedNode) {
-          selectedNode.scrollIntoView({
-            behavior: 'smooth',
-            block: 'nearest',
-            inline: 'nearest'
-          });
-        }
-      }, 100);
+  // 当选中组件变化时，展开祖先节点并滚动到对应的节点
+  React.useEffect(() => {
+    if (isTabActive) {
+      scrollToSelected();
     }
   }, [selectedComponent]);
+
+  // 当切换到控件树面板时，自动滚动到选中的控件
+  React.useEffect(() => {
+    if (isTabActive && selectedComponent) {
+      scrollToSelected();
+    }
+  }, [isTabActive]);
 
   const expandContextValue = React.useMemo(() => ({ collapsedNodes, toggleCollapse }), [collapsedNodes, toggleCollapse]);
 

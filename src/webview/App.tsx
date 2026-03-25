@@ -1593,7 +1593,7 @@ const App: React.FC = () => {
               <AssetsPanel />
             </div>
             <div style={{ display: activeTab === 'tree' ? 'contents' : 'none' }}>
-              <ComponentTree onContextMenu={handleComponentContextMenu} />
+              <ComponentTree onContextMenu={handleComponentContextMenu} isTabActive={activeTab === 'tree'} />
             </div>
           </div>
         </div>
