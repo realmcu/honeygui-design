@@ -788,8 +788,9 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
         message += `，已清理 ${cleanedCount} 个视图切换引用`;
       }
 
-      // 检测断裂的动画引用
-      const brokenRefs = findComponentsWithBrokenRefs(get().components);
+      // 检测断裂的动画引用（含跨文件 view 验证）
+      const allViewIds = new Set((get().allViews || []).map(v => v.id));
+      const brokenRefs = findComponentsWithBrokenRefs(get().components, allViewIds);
       if (brokenRefs.size > 0) {
         const brokenIds = Array.from(brokenRefs);
         message += `\n⚠ 以下控件存在断裂的事件引用: ${brokenIds.join(', ')}`;
@@ -870,8 +871,9 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
         message += `，已清理 ${cleanedCount} 个视图切换引用`;
       }
 
-      // 检测断裂的动画引用
-      const brokenRefs = findComponentsWithBrokenRefs(get().components);
+      // 检测断裂的动画引用（含跨文件 view 验证）
+      const allViewIds2 = new Set((get().allViews || []).map(v => v.id));
+      const brokenRefs = findComponentsWithBrokenRefs(get().components, allViewIds2);
       if (brokenRefs.size > 0) {
         const brokenIds = Array.from(brokenRefs);
         message += `\n⚠ 以下控件存在断裂的事件引用: ${brokenIds.join(', ')}`;

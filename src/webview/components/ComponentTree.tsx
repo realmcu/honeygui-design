@@ -499,8 +499,10 @@ const ComponentTree: React.FC<{ onContextMenu?: (e: React.MouseEvent, componentI
 
   const expandContextValue = React.useMemo(() => ({ collapsedNodes, toggleCollapse }), [collapsedNodes, toggleCollapse]);
 
-  // 计算有断裂引用的组件集合
-  const brokenRefComponents = useMemo(() => findComponentsWithBrokenRefs(components), [components]);
+  // 计算有断裂引用的组件集合（包含跨文件 view 验证）
+  const allViews = useDesignerStore((state) => state.allViews);
+  const allViewIds = useMemo(() => new Set((allViews || []).map(v => v.id)), [allViews]);
+  const brokenRefComponents = useMemo(() => findComponentsWithBrokenRefs(components, allViewIds), [components, allViewIds]);
 
   // 拖拽时的自动滚动
   const scrollTimerRef = React.useRef<number | null>(null);

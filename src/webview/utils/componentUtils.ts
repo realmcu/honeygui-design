@@ -93,7 +93,12 @@ export const findComponentAtPosition = (
  * 检测有断裂事件引用的组件
  * 返回有问题的组件 ID 集合
  */
-export function findComponentsWithBrokenRefs(components: Component[]): Set<string> {
+/**
+ * 检测有断裂事件引用的组件
+ * 返回有问题的组件 ID 集合
+ * @param allViewIds 项目中所有 HML 文件的 view ID 集合（用于跨文件 switchView 验证）
+ */
+export function findComponentsWithBrokenRefs(components: Component[], allViewIds?: Set<string>): Set<string> {
   const componentIds = new Set(components.map(c => c.id));
   const broken = new Set<string>();
 
@@ -102,7 +107,7 @@ export function findComponentsWithBrokenRefs(components: Component[]): Set<strin
 
     for (const eventConfig of comp.eventConfigs) {
       for (const action of eventConfig.actions) {
-        // 检查 controlTimer 引用
+        // 检查 controlTimer 引用（只检查当前文件，定时器不跨文件）
         if (action.type === 'controlTimer' && action.timerTargets) {
           for (const target of action.timerTargets) {
             if (!componentIds.has(target.componentId)) {
@@ -121,9 +126,11 @@ export function findComponentsWithBrokenRefs(components: Component[]): Set<strin
             }
           }
         }
-        // 检查 switchView 引用
+        // 检查 switchView 引用（支持跨文件 view）
         if (action.type === 'switchView' && action.target) {
-          if (!componentIds.has(action.target)) {
+          const existsInCurrentFile = componentIds.has(action.target);
+          const existsInAllViews = allViewIds ? allViewIds.has(action.target) : false;
+          if (!existsInCurrentFile && !existsInAllViews) {
             broken.add(comp.id);
           }
         }
