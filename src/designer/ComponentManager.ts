@@ -17,38 +17,14 @@ export class ComponentManager {
 
     /**
      * 处理添加组件的请求
+     * 注意：前端已经在 store 中添加了组件并随后发送 save 命令持久化，
+     * 此处不再重复添加到 HML 模型（避免产生不同 ID 的重复组件）。
+     * 协作广播已在 MessageHandler.handleMessage 入口处处理。
      */
-    public handleAddComponent(parentId: string, componentData: Omit<Component, 'id' | 'children'>): void {
-        try {
-            const newComponent = this._hmlController.addComponent({
-                ...componentData,
-                id: `${componentData.type}_${Date.now()}`,
-                parent: parentId || null,
-                children: []
-            } as Component);
-            
-            if (newComponent) {
-                // 通知Webview组件已添加成功
-                this._panel.webview.postMessage({
-                    command: 'componentAdded',
-                    component: newComponent,
-                    success: true
-                });
-            } else {
-                this._panel.webview.postMessage({
-                    command: 'componentAdded',
-                    success: false,
-                    error: '未找到父组件'
-                });
-            }
-        } catch (error) {
-            logger.error(`添加组件失败: ${error}`);
-            this._panel.webview.postMessage({
-                command: 'componentAdded',
-                success: false,
-                error: error instanceof Error ? error.message : '未知错误'
-            });
-        }
+    public handleAddComponent(_parentId: string, _componentData: Omit<Component, 'id' | 'children'>): void {
+        // 前端的 addComponent → saveToFile 流程已经处理了持久化，
+        // 这里不再操作 HML 模型，避免竞态条件导致的重复组件问题。
+        logger.debug('[ComponentManager] handleAddComponent: 跳过（由 save 命令统一处理）');
     }
     
     /**

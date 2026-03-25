@@ -1054,8 +1054,20 @@ const App: React.FC = () => {
     };
   }, []);
 
+  // 防止短时间内重复处理 drop 事件的时间戳守卫
+  const lastDropTimeRef = React.useRef(0);
+
   const handleCanvasDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+
+    // 防重复：200ms 内不允许第二次 drop
+    const now = Date.now();
+    if (now - lastDropTimeRef.current < 200) {
+      console.warn('[拖放] 忽略重复的 drop 事件');
+      return;
+    }
+    lastDropTimeRef.current = now;
 
     console.log('========== [拖放] handleCanvasDrop 开始 ==========');
     console.log('[拖放] dataTransfer.types:', e.dataTransfer.types);
@@ -1442,6 +1454,7 @@ const App: React.FC = () => {
 
   const handleCanvasDragOver = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
   };
 
   const handleCanvasClick = (e: React.MouseEvent) => {
