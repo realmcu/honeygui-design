@@ -209,6 +209,7 @@ void ${component.id}_toggle_cb(void *obj, gui_event_t *e)
 ${onCallLine}    } else {
         gui_img_set_src((gui_img_t *)${component.id}, "${binOff}", IMG_SRC_FILESYS);
 ${offCallLine}    }
+    gui_fb_change();
 ${extraCode}}
 
 // Get current state
