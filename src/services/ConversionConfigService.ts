@@ -108,6 +108,8 @@ export interface ConversionConfig {
  */
 export interface ResolvedConfig {
   format: Exclude<TargetFormat, 'inherit' | 'adaptive16' | 'adaptive24'>;
+  /** 继承解析后的原始格式（未经 adaptive 转换），用于判断是否需要自适应处理 */
+  rawFormat: TargetFormat;
   compression: Exclude<CompressionMethod, 'inherit'>;
   yuvParams?: YuvParams;
   jpegParams?: JpegParams;
@@ -329,6 +331,7 @@ export class ConversionConfigService {
     
     const result: ResolvedConfig = {
       format: resolvedFormat,
+      rawFormat: format,
       compression: resolvedCompression,
       dither,
       isInherited

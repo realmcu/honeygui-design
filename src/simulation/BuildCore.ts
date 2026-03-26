@@ -1018,16 +1018,14 @@ Return('objs')
         const configService = ConversionConfigService.getInstance();
         const resolvedConfig = configService.resolveEffectiveConfig(relativePath, config);
         
-        // 获取原始配置的格式（未解析前）
-        const normalizedPath = relativePath.replace(/\\/g, '/');
-        const itemSettings = config.items[normalizedPath];
-        const effectiveFormat = itemSettings?.format || config.defaultSettings.format || 'adaptive16';
+        // 使用继承解析后的原始格式（rawFormat 包含了父文件夹继承的结果）
+        const effectiveFormat = resolvedConfig.rawFormat || resolvedConfig.format || 'adaptive16';
         
         // 调试日志
         console.log(`[DEBUG] resolveImageOptions for: ${relativePath}`);
-        console.log(`[DEBUG] normalizedPath: ${normalizedPath}`);
-        console.log(`[DEBUG] effectiveFormat: ${effectiveFormat}`);
+        console.log(`[DEBUG] effectiveFormat (from inheritance): ${effectiveFormat}`);
         console.log(`[DEBUG] isAdaptiveFormat: ${BuildCore.isAdaptiveFormat(effectiveFormat)}`);
+        console.log(`[DEBUG] isInherited: ${resolvedConfig.isInherited}, inheritedFrom: ${resolvedConfig.inheritedFrom}`);
         
         // 解析格式（只对自适应格式进行透明通道检测和格式调整）
         let format: string;

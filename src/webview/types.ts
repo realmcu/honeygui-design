@@ -266,6 +266,8 @@ export interface ConversionConfig {
 export interface ResolvedConfig {
   /** 解析后的格式（不包含 inherit、adaptive16、adaptive24） */
   format: Exclude<TargetFormat, 'inherit' | 'adaptive16' | 'adaptive24'>;
+  /** 继承解析后的原始格式（未经 adaptive 转换），用于判断是否需要自适应处理 */
+  rawFormat?: TargetFormat;
   /** 压缩方式 */
   compression: CompressionMethod;
   /** YUV 压缩参数 */
