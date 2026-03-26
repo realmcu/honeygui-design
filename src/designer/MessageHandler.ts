@@ -189,6 +189,9 @@ export class MessageHandler {
                 // 保存后通知前端更新撤销/重做状态
                 this._fileManager.sendUndoRedoState();
                 
+                // 保存后重新扫描所有视图并更新前端
+                await this._fileManager.updateAllViewsToFrontend();
+                
                 // 触发自动代码生成（带防抖）
                 this._scheduleAutoCodeGeneration();
                 break;

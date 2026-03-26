@@ -65,6 +65,26 @@ export class FileManager {
     }
     
     /**
+     * 重新扫描所有视图并更新前端
+     * 在保存文件后调用，确保跳转界面的视图列表是最新的
+     */
+    public async updateAllViewsToFrontend(): Promise<void> {
+        if (!this._filePath) return;
+        try {
+            const allViews = await this.scanAllViews(this._filePath);
+            const allHmlFiles = this.scanAllHmlFiles(this._filePath);
+            logger.debug(`[FileManager] 更新视图列表: ${allViews.length} 个视图, ${allHmlFiles.length} 个文件`);
+            this._panel.webview.postMessage({
+                command: 'updateAllViews',
+                allViews,
+                allHmlFiles
+            });
+        } catch (error) {
+            logger.warn(`[FileManager] 更新视图列表失败: ${error}`);
+        }
+    }
+    
+    /**
      * 记录当前状态到撤销栈（在保存前调用）
      * 使用滑动窗口防抖：连续快速操作期间只记录首次状态，
      * 只有在操作间隔超过 500ms 后才创建新的撤销点

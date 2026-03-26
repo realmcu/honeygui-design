@@ -376,6 +376,20 @@ const App: React.FC = () => {
           }
           break;
 
+        case 'updateAllViews':
+          // 刷新所有视图列表（保存文件后触发）
+          if (message.allViews || message.allHmlFiles) {
+            const updates: any = {};
+            if (message.allViews) {
+              updates.allViews = message.allViews;
+            }
+            if (message.allHmlFiles) {
+              updates.allHmlFiles = message.allHmlFiles;
+            }
+            useDesignerStore.setState(updates);
+          }
+          break;
+
         case 'error':
           // Show error message
           console.error(message.text);
