@@ -342,10 +342,3 @@ const char *gps_provider_type_str(gps_provider_type_t type)
             return "Unknown";
     }
 }
-#ifdef USE_HONEY_GUI
-#include "gui_api_os.h"
-void *gui_lower_calloc(size_t num, size_t size)
-{
-    return gui_lower_malloc(num * size);
-}
-#endif
