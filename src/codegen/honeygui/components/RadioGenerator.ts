@@ -23,6 +23,11 @@ export class RadioGenerator implements ComponentCodeGenerator {
       code += `${indentStr}// TODO: gui_radio_set_selected(${component.id}, ${component.data.value});\n`;
     }
 
+    // Visibility
+    if (component.visible !== undefined) {
+      code += `${indentStr}gui_obj_show((gui_obj_t *)${component.id}, ${component.visible ? 'true' : 'false'});\n`;
+    }
+
     return code;
   }
 }

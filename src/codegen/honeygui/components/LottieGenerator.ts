@@ -34,6 +34,11 @@ export class LottieGenerator implements ComponentCodeGenerator {
       code += `${indentStr}${component.id}->opacity_value = ${component.style.opacity};\n`;
     }
 
+    // Visibility
+    if (component.visible !== undefined) {
+      code += `${indentStr}gui_obj_show((gui_obj_t *)${component.id}, ${component.visible ? 'true' : 'false'});\n`;
+    }
+
     return code;
   }
 }

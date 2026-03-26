@@ -27,7 +27,7 @@ export class ButtonGenerator implements ComponentCodeGenerator {
       const binOff = this.convertToBinPath(imageOff);
 
       // Create widget (using off image as placeholder)
-      let code = `${indentStr}${component.id} = gui_img_create_from_fs(${parentRef}, "${component.name}", "${binOff}", ${x}, ${y}, ${width}, ${height});\n`;
+      let code = `${indentStr}${component.id} = (gui_obj_t *)gui_img_create_from_fs(${parentRef}, "${component.name}", "${binOff}", ${x}, ${y}, ${width}, ${height});\n`;
       // Set initial image based on runtime state variable (restore state on page re-entry)
       code += `${indentStr}if (${component.id}_state) {\n`;
       code += `${indentStr}    gui_img_set_src((gui_img_t *)${component.id}, "${binOn}", IMG_SRC_FILESYS);\n`;
@@ -43,6 +43,11 @@ export class ButtonGenerator implements ComponentCodeGenerator {
   generatePropertySetters(component: Component, indent: number, context: GeneratorContext): string {
     const indentStr = '    '.repeat(indent);
     let code = '';
+
+    // Visibility
+    if (component.visible !== undefined) {
+      code += `${indentStr}gui_obj_show((gui_obj_t *)${component.id}, ${component.visible ? 'true' : 'false'});\n`;
+    }
 
     // Check for toggle mode
     const toggleMode = component.data?.toggleMode === true || component.data?.toggleMode === 'true';

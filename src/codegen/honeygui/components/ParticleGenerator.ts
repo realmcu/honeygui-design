@@ -14,8 +14,15 @@ export class ParticleGenerator implements ComponentCodeGenerator {
     return `${indentStr}${component.id} = effect_${effectType}_create(${parentRef}, "${component.name}", ${x}, ${y}, ${width}, ${height});\n`;
   }
 
-  generatePropertySetters(_component: Component, _indent: number, _context: GeneratorContext): string {
-    // No additional property setters for particle component
-    return '';
+  generatePropertySetters(component: Component, indent: number, _context: GeneratorContext): string {
+    let code = '';
+    const indentStr = '    '.repeat(indent);
+
+    // Visibility
+    if (component.visible !== undefined) {
+      code += `${indentStr}gui_obj_show((gui_obj_t *)${component.id}, ${component.visible ? 'true' : 'false'});\n`;
+    }
+
+    return code;
   }
 }

@@ -43,6 +43,11 @@ export class InputGenerator implements ComponentCodeGenerator {
       code += `${indentStr}gui_text_set_color(${component.id}, ${color});\n`;
     }
 
+    // Visibility
+    if (component.visible !== undefined) {
+      code += `${indentStr}gui_obj_show((gui_obj_t *)${component.id}, ${component.visible ? 'true' : 'false'});\n`;
+    }
+
     return code;
   }
   
