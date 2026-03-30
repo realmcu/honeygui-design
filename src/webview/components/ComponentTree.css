@@ -35,6 +35,34 @@
   outline-offset: -1px;
 }
 
+/* Sticky scroll header */
+.tree-sticky-header {
+  border-bottom: 1px solid var(--vscode-panel-border);
+  background-color: var(--vscode-sideBar-background);
+  z-index: 1;
+  flex-shrink: 0;
+}
+
+.tree-sticky-item {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--vscode-foreground);
+  opacity: 0.85;
+  transition: background-color 0.1s ease;
+}
+
+.tree-sticky-item:hover {
+  background-color: var(--vscode-list-hoverBackground);
+  opacity: 1;
+}
+
+.tree-sticky-item.selected {
+  background-color: var(--vscode-list-inactiveSelectionBackground);
+}
+
 .tree-content {
   flex: 1;
   overflow-y: auto;
@@ -180,7 +208,6 @@
 
 /* Tree children */
 .tree-children {
-  margin-left: 16px;
 }
 
 /* Empty state */
