@@ -38,8 +38,9 @@ export const ListItemProperties: React.FC<PropertyPanelProps> = ({ component, on
                 <label>{t('Name')}</label>
                 <PropertyEditor
                   type="string"
-                  value={component.name}
-                  onChange={(value) => onUpdate({ name: value })}
+                  value={component.id}
+                  onChange={() => {}}
+                  disabled
                 />
               </div>
 

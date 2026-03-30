@@ -1225,13 +1225,31 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     if (clipboardMultiple.length > 0) {
       const newIds: string[] = [];
       
-      // 创建旧ID到新ID的映射表
+      // 创建旧ID到新ID的映射表（两阶段：先非 list_item，再 list_item）
       const idMap = new Map<string, string>();
       let trackingComponents = [...components];
+      
+      // 阶段1：为非 list_item 组件生成新 ID
       clipboardMultiple.forEach((comp) => {
+        if (comp.type === 'hg_list_item') return;
         const newId = generateComponentId(comp.type, trackingComponents, get().otherFileComponentIds);
         idMap.set(comp.id, newId);
         trackingComponents.push({ ...comp, id: newId } as Component);
+      });
+      
+      // 阶段2：为 list_item 组件生成 {newListId}_item_{index} 格式的 ID
+      clipboardMultiple.forEach((comp) => {
+        if (comp.type !== 'hg_list_item') return;
+        const newParentId = comp.parent ? (idMap.get(comp.parent) || comp.parent) : '';
+        const itemIndex = comp.data?.index ?? 0;
+        let newItemId = `${newParentId}_item_${itemIndex}`;
+        let suffix = itemIndex as number;
+        while (trackingComponents.some(c => c.id === newItemId)) {
+          suffix++;
+          newItemId = `${newParentId}_item_${suffix}`;
+        }
+        idMap.set(comp.id, newItemId);
+        trackingComponents.push({ ...comp, id: newItemId } as Component);
       });
       
       // 找出所有顶层组件（没有父组件或父组件不在复制列表中）
