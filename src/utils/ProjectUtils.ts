@@ -166,4 +166,22 @@ export class ProjectUtils {
         }
         return { width, height };
     }
+
+    /**
+     * 将 pixelMode 转换为像素位数
+     * @param pixelMode 像素格式，如 "RGB565", "RGB888", "ARGB8888"
+     * @returns 像素位数，默认 16 (RGB565)
+     */
+    static getPixelBits(pixelMode?: string): number {
+        switch (pixelMode) {
+            case 'RGB565':
+                return 16;
+            case 'RGB888':
+                return 24;
+            case 'ARGB8888':
+                return 32;
+            default:
+                return 16;  // 默认 RGB565
+        }
+    }
 }

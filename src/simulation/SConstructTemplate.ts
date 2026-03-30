@@ -6,7 +6,7 @@
 export interface SConstructOptions {
     libSim: string;                    // 插件内置 lib/sim 绝对路径（正斜杠）
     projectSrc: string;                // 项目 src 目录绝对路径（正斜杠）
-    lcd: { width: number; height: number; cornerRadius: number };
+    lcd: { width: number; height: number; cornerRadius: number; pixelBits: number };
     platform: 'win32' | 'linux';       // 当前平台，用于选择静态库目录
 }
 
@@ -32,8 +32,8 @@ sdl2_libdir = '${libSim}/SDL2-2.26.0-STATIC/lib'`;
 
     // CFLAGS 拼接
     const cflags = platform === 'linux'
-        ? `menu_config.CFLAGS + ' -DDRV_LCD_WIDTH=${lcd.width} -DDRV_LCD_HEIGHT=${lcd.height} -DDRV_LCD_CORNER_RADIUS=${lcd.cornerRadius} -I${includeDir}' + ' ' + sdl2_cflags`
-        : `menu_config.CFLAGS + ' -DDRV_LCD_WIDTH=${lcd.width} -DDRV_LCD_HEIGHT=${lcd.height} -DDRV_LCD_CORNER_RADIUS=${lcd.cornerRadius} -I${includeDir} -I' + sdl2_inc1 + ' -I' + sdl2_inc2`;
+        ? `menu_config.CFLAGS + ' -DDRV_LCD_WIDTH=${lcd.width} -DDRV_LCD_HEIGHT=${lcd.height} -DDRV_LCD_CORNER_RADIUS=${lcd.cornerRadius} -DDRV_PIXEL_BITS=${lcd.pixelBits} -I${includeDir}' + ' ' + sdl2_cflags`
+        : `menu_config.CFLAGS + ' -DDRV_LCD_WIDTH=${lcd.width} -DDRV_LCD_HEIGHT=${lcd.height} -DDRV_LCD_CORNER_RADIUS=${lcd.cornerRadius} -DDRV_PIXEL_BITS=${lcd.pixelBits} -I${includeDir} -I' + sdl2_inc1 + ' -I' + sdl2_inc2`;
 
     const cpppath = platform === 'linux'
         ? `env.AppendUnique(CPPPATH=['${includeDir}'])`

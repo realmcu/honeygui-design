@@ -30,6 +30,7 @@ export interface ProjectConfig {
         email?: string;
     };
     resolution?: string;
+    pixelMode?: 'RGB565' | 'RGB888' | 'ARGB8888';  // 像素格式，默认 RGB565
     targetEngine?: 'honeygui' | 'lvgl';  // 目标GUI引擎，默认honeygui
     assetsDir?: string;      // 资源目录，默认 "assets"
     uiDir?: string;          // UI目录，默认 "ui"

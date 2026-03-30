@@ -13,6 +13,7 @@ import { SamplingFactor } from '../../tools/image-to-jpeg-converter/src/index';
 import { ProjectConfig, DEFAULT_ROMFS_BASE_ADDR } from '../common/ProjectConfig';
 import { RomfsConfig } from '../common/RomfsConfig';
 import { buildSConstruct } from './SConstructTemplate';
+import { ProjectUtils } from '../utils/ProjectUtils';
 
 /**
  * 日志接口
@@ -496,12 +497,13 @@ Return('objs')
         const projectSrc = this.projectRoot.replace(/\\/g, '/') + '/src';
         const { width, height } = this.parseResolution(this.projectConfig.resolution);
         const cornerRadius = this.projectConfig.cornerRadius || 0;
+        const pixelBits = ProjectUtils.getPixelBits(this.projectConfig.pixelMode);
         const platform = process.platform === 'win32' ? 'win32' : 'linux';
 
         const content = buildSConstruct({
             libSim,
             projectSrc,
-            lcd: { width, height, cornerRadius },
+            lcd: { width, height, cornerRadius, pixelBits },
             platform
         });
 
@@ -528,6 +530,20 @@ Return('objs')
         }
 
         return defaultResolution;
+    }
+    /**
+     * 将 pixelMode 转换为像素位数
+     */
+    private getPixelBits(pixelMode?: string): number {
+        switch (pixelMode) {
+            case 'RGB565':
+                return 16;
+            case 'RGB888':
+                return 24;
+            case 'ARGB8888':
+            default:
+                return 32;  // 默认 ARGB8888
+        }
     }
 
     /**
