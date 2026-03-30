@@ -748,6 +748,39 @@ Return('objs')
             }
         }
 
+        // 特殊处理：timers 属性中的 imageSequence 和 changeImage 资源引用
+        const timersRegex = /timers\s*=\s*"([^"]*)"/g;
+        let timersMatch;
+        while ((timersMatch = timersRegex.exec(hmlContent)) !== null) {
+            try {
+                // timers 属性值经过 HTML 实体编码，需要先解码
+                const decoded = timersMatch[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+                const timers = JSON.parse(decoded);
+                if (Array.isArray(timers)) {
+                    for (const timer of timers) {
+                        const segments = timer.segments || [];
+                        for (const segment of segments) {
+                            const actions = segment.actions || [];
+                            for (const action of actions) {
+                                // imageSequence: 图片序列动作
+                                if (action.type === 'imageSequence' && Array.isArray(action.imageSequence)) {
+                                    for (const imgPath of action.imageSequence) {
+                                        processAssetPath(imgPath);
+                                    }
+                                }
+                                // changeImage: 更换图片动作
+                                if (action.type === 'changeImage' && action.imagePath) {
+                                    processAssetPath(action.imagePath);
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                // timers JSON 解析失败，跳过
+            }
+        }
+
         // 特殊处理：hg_glass 的 src（玻璃效果文件已经在 convertGlassWithComponentConfig 中处理）
     }
 
