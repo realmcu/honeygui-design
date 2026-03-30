@@ -113,8 +113,17 @@ export class ImageConverter {
         const pixelData = convertPixels(pixels, width, pixelFormat, options);
 
         // Build header
+        // 子字节格式需要将 width 补齐到整字节边界
+        let headerWidth = width;
+        if (pixelFormat === PixelFormat.A4) {
+            headerWidth = Math.ceil(width / 2) * 2;  // 补齐到偶数
+        } else if (pixelFormat === PixelFormat.A2) {
+            headerWidth = Math.ceil(width / 4) * 4;  // 补齐到4的倍数
+        } else if (pixelFormat === PixelFormat.A1) {
+            headerWidth = Math.ceil(width / 8) * 8;  // 补齐到8的倍数
+        }
         const useCompress = this.compressor !== undefined;
-        const header = new RGBDataHeader(width, height, pixelFormat, useCompress);
+        const header = new RGBDataHeader(headerWidth, height, pixelFormat, useCompress);
 
         // Write output
         const dir = path.dirname(outputPath);
