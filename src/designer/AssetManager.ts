@@ -420,6 +420,10 @@ export class AssetManager extends EventEmitter {
                     // 删除文件夹
                     logger.info(`[删除资源] 删除文件夹: ${filePath}`);
                     fs.rmSync(filePath, { recursive: true, force: true });
+                    
+                    // 清理 conversion.json 中该文件夹及其子项的配置
+                    this.removeConversionConfig(projectRoot, assetPath, true);
+                    
                     vscode.window.showInformationMessage(vscode.l10n.t('Folder deleted'));
                 } else {
                     const relativePath = `assets/${assetPath}`;
@@ -442,6 +446,10 @@ export class AssetManager extends EventEmitter {
                             imagePath: relativePath
                         });
                     }
+                    
+                    // 清理 conversion.json 中该文件的配置
+                    this.removeConversionConfig(projectRoot, assetPath, false);
+                    
                     vscode.window.showInformationMessage(vscode.l10n.t('Asset file deleted'));
                 }
                 
@@ -729,6 +737,50 @@ export class AssetManager extends EventEmitter {
             }
         } catch (error) {
             logger.error(`[AssetManager] Failed to update conversion config after rename: ${error}`);
+        }
+    }
+
+    /**
+     * 删除 conversion.json 中已删除资源的配置
+     * @param projectRoot 项目根目录
+     * @param assetPath 资源相对路径（相对于 assets 目录）
+     * @param isFolder 是否为文件夹
+     */
+    private removeConversionConfig(projectRoot: string, assetPath: string, isFolder: boolean): void {
+        try {
+            const configService = ConversionConfigService.getInstance();
+            const config = configService.loadConfig(projectRoot);
+            const normalizedPath = assetPath.replace(/\\/g, '/');
+            let changed = false;
+
+            if (isFolder) {
+                // 文件夹：删除该路径及所有子路径的配置
+                for (const key of Object.keys(config.items)) {
+                    if (key === normalizedPath || key.startsWith(normalizedPath + '/')) {
+                        delete config.items[key];
+                        changed = true;
+                    }
+                }
+            } else {
+                // 单个文件
+                if (config.items[normalizedPath] !== undefined) {
+                    delete config.items[normalizedPath];
+                    changed = true;
+                }
+            }
+
+            if (changed) {
+                configService.saveConfig(projectRoot, config);
+                logger.info(`[删除资源] 已清理 conversion.json 中的配置: ${normalizedPath}`);
+
+                // 通知前端重新加载配置
+                this._panel.webview.postMessage({
+                    command: 'conversionConfigLoaded',
+                    config
+                });
+            }
+        } catch (error) {
+            logger.error(`[AssetManager] Failed to remove conversion config: ${error}`);
         }
     }
 
