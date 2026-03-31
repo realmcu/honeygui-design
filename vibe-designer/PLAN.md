@@ -1,4 +1,4 @@
-# HoneyGUI AI 集成开发计划
+# HoneyGUI Vibe Designer 开发计划
 
 ## 项目概述
 
@@ -8,17 +8,81 @@
 
 ---
 
+## 两大核心场景
+
+### 场景 1：从零开始生成（AI Generation）
+**描述**：用户通过自然语言描述需求，AI 生成完整的 HoneyGUI 项目。
+
+**工作流**：
+```
+用户需求（自然语言）
+  ↓
+AI 读取 skills/honeygui-designer/ (Skill 1)
+  ↓
+生成 HML + 资源列表
+  ↓
+MCP: validate-hml → preview-ui → create-project
+  ↓
+输出：完整项目（HML + assets/ + project.json）
+```
+
+**关键技术**：
+- Skill 1: `skills/honeygui-designer/` - HML 生成指导
+- Schema: `skills/schema/hml-schema.json` - 组件定义
+- MCP Tools: validate, preview, export
+
+---
+
+### 场景 2：设计稿转换（Design Import）
+**描述**：用户提供 Figma/MasterGo 设计稿，AI 转换为 HoneyGUI 项目。
+
+**工作流**：
+```
+设计稿（Figma/MasterGo URL 或 JSON）
+  ↓
+AI 读取 skills/honeygui-import/ (Skill 2)
+  ↓
+MCP: import-figma/import-mastergo
+  ↓
+解析设计稿 → 组件映射 → 生成 HML
+  ↓
+MCP: download-assets → validate-hml → preview-ui
+  ↓
+输出：完整项目（HML + assets/ + project.json）
+```
+
+**关键技术**：
+- Skill 2: `skills/honeygui-import/` - 设计稿转换指导
+- 组件映射规则：Figma/MasterGo → HoneyGUI 组件
+- MCP Tools: import-figma, import-mastergo, download-assets
+
+---
+
+## 两个独立 Skill
+
+| Skill | 用途 | 输入 | 输出 |
+|-------|------|------|------|
+| **skills/honeygui-designer/** | 从零生成 | 自然语言描述 | HML |
+| **skills/honeygui-import/** | 设计稿转换 | Figma/MasterGo 数据 | HML |
+
+**共享资源**：
+- `skills/schema/` - HML JSON Schema（两个 Skill 输出相同格式）
+- MCP Server - 统一的校验、预览、导出工具
+
+---
+
 ## 当前进度
 
-### ✅ 已完成（2025-03-19）
+### ✅ 已完成（2025-03-31）
 
-- [x] 创建 `ai/` 目录结构
-- [x] 移动 Skill 到 `ai/skills/honeygui-designer/`
-- [x] 创建 MCP 待办事项文档 (`ai/mcp/TODO.md`)
-- [x] 创建整体规划文档 (`ai/README.md`)
-- [x] 生成简化版 HML JSON Schema (`ai/skills/schema/hml-schema.json`)
+- [x] 创建 `vibe-designer/` 目录结构（从 `ai/` 重命名）
+- [x] 创建 Skill 1: `vibe-designer/skills/honeygui-designer/` - 从零生成
+- [x] 创建 MCP 待办事项文档 (`vibe-designer/mcp/TODO.md`)
+- [x] 创建整体规划文档 (`vibe-designer/README.md`)
+- [x] 生成简化版 HML JSON Schema (`vibe-designer/skills/schema/hml-schema.json`)
   - 包含 4 个核心组件：hg_button, hg_label, hg_image, hg_view
   - 实现 P0 级别约束（必需属性、尺寸、格式）
+- [x] 明确两大核心场景（从零生成 + 设计稿转换）
 
 ---
 
@@ -35,7 +99,7 @@
 
 **任务**：
 - [ ] 创建 Schema 测试脚本
-  - 位置：`ai/skills/schema/test-schema.js` (Node.js) 或 `test-schema.py` (Python)
+  - 位置：`vibe-designer/skills/schema/test-schema.js` (Node.js) 或 `test-schema.py` (Python)
   - 功能：加载 Schema，验证合法/非法 HML JSON
 - [ ] 准备测试用例
   - 合法用例 3 个：按钮、标签、完整页面
@@ -46,8 +110,8 @@
 - [ ] 文档：记录测试结果和问题
 
 **交付物**：
-- `ai/skills/schema/test-schema.js`
-- `ai/skills/schema/test-cases/` 目录（包含测试 JSON 文件）
+- `vibe-designer/skills/schema/test-schema.js`
+- `vibe-designer/skills/schema/test-cases/` 目录（包含测试 JSON 文件）
 - 测试报告（Markdown）
 
 ---
@@ -75,7 +139,7 @@
   - hg_tab - 标签页
 
 **交付物**：
-- `ai/skills/schema/hml-schema.json` v0.2.0+
+- `vibe-designer/skills/schema/hml-schema.json` v0.2.0+
 - 每个新组件的测试用例
 
 ---
@@ -160,31 +224,46 @@
     - 输入：当前 HML
     - 输出：优化建议
 - [ ] 定义 Tools（操作能力）
-  - `validate-hml` - 校验 HML 结构
-    - 输入：`{ hml: string }` (XML 字符串)
-    - 输出：`ValidationResult`
-  - `preview-ui` - 生成预览
-    - 输入：`{ hml: string }`
-    - 输出：`{ imageBase64: string, width: number, height: number }`
-  - `get-screenshot` - 获取截图
-    - 输入：`{ hml: string, componentId?: string }`
-    - 输出：`{ imageBase64: string }`
-  - `apply-patch` - 应用修改
-    - 输入：`{ hml: string, patches: Patch[] }`
-    - 输出：`{ hml: string }`
-  - `export-code` - 导出 C 代码
-    - 输入：`{ hml: string, projectRoot: string }`
-    - 输出：`{ files: { path: string, content: string }[] }`
+  - **场景 1 专用（从零生成）**：
+    - `validate-hml` - 校验 HML 结构
+      - 输入：`{ hml: string }` (XML 字符串)
+      - 输出：`ValidationResult`
+    - `preview-ui` - 生成预览
+      - 输入：`{ hml: string }`
+      - 输出：`{ imageBase64: string, width: number, height: number }`
+    - `create-project` - 创建完整项目结构
+      - 输入：`{ name: string, resolution: string, hmlFiles: {...}[] }`
+      - 输出：`{ projectPath: string, files: string[] }`
+    - `export-code` - 导出 C 代码
+      - 输入：`{ hml: string, projectRoot: string }`
+      - 输出：`{ files: { path: string, content: string }[] }`
+  - **场景 2 专用（设计稿转换）**：
+    - `import-figma` - 导入 Figma 设计
+      - 输入：`{ figmaUrl: string }` 或 `{ figmaJson: object }`
+      - 输出：`{ hmlFiles: {...}[], assets: {...}[], warnings: string[] }`
+    - `import-mastergo` - 导入 MasterGo 设计
+      - 输入：`{ mastergoUrl: string }` 或 `{ mastergoJson: object }`
+      - 输出：`{ hmlFiles: {...}[], assets: {...}[], warnings: string[] }`
+    - `download-assets` - 批量下载设计稿资源
+      - 输入：`{ assets: { url: string, path: string }[] }`
+      - 输出：`{ downloaded: number, failed: string[] }`
+  - **共享工具（两个场景通用）**：
+    - `optimize-layout` - 优化已有 HML 布局
+      - 输入：`{ hml: string, optimizeFor: 'alignment'|'spacing'|'accessibility' }`
+      - 输出：`{ hml: string, changes: string[] }`
+    - `batch-edit` - 批量修改组件属性
+      - 输入：`{ hml: string, selector: {...}, changes: {...} }`
+      - 输出：`{ hml: string, affectedCount: number }`
 - [ ] 创建接口文档
   - 每个 Resource/Prompt/Tool 的详细说明
   - 输入输出格式
   - 使用示例
 
 **交付物**：
-- `ai/mcp/docs/api-reference.md` - MCP API 参考文档
-- `ai/mcp/docs/resources.md` - Resources 详细说明
-- `ai/mcp/docs/prompts.md` - Prompts 详细说明
-- `ai/mcp/docs/tools.md` - Tools 详细说明
+- `vibe-designer/mcp/docs/api-reference.md` - MCP API 参考文档
+- `vibe-designer/mcp/docs/resources.md` - Resources 详细说明
+- `vibe-designer/mcp/docs/prompts.md` - Prompts 详细说明
+- `vibe-designer/mcp/docs/tools.md` - Tools 详细说明
 
 ---
 
@@ -201,7 +280,7 @@
 
 **任务**：
 - [ ] 创建项目目录
-  - 位置：`ai/mcp/honeygui-mcp/`
+  - 位置：`vibe-designer/mcp/honeygui-mcp/`
 - [ ] 初始化 npm 项目
   ```bash
   cd ai/mcp/honeygui-mcp
@@ -228,9 +307,9 @@
   ```
 
 **交付物**：
-- `ai/mcp/honeygui-mcp/package.json`
-- `ai/mcp/honeygui-mcp/tsconfig.json`
-- `ai/mcp/honeygui-mcp/src/` 目录结构
+- `vibe-designer/mcp/honeygui-mcp/package.json`
+- `vibe-designer/mcp/honeygui-mcp/tsconfig.json`
+- `vibe-designer/mcp/honeygui-mcp/src/` 目录结构
 
 ---
 
@@ -358,6 +437,182 @@
 
 ---
 
+## 阶段 1.5：设计稿转换能力（2-3 周）
+
+### 目标
+实现 Figma/MasterGo 设计稿到 HoneyGUI 的转换能力（场景 2）。
+
+### 任务清单
+
+#### 1. 创建 Skill 2（1-2 天）
+
+**优先级**：P0
+
+**任务**：
+- [ ] 创建 `skills/honeygui-import/` 目录结构
+  ```
+  skills/honeygui-import/
+  ├── SKILL.md               # 核心 Skill：设计稿转换指导
+  ├── README.md              # 使用说明
+  ├── mappings/              # 组件映射规则
+  │   ├── figma-mapping.md   # Figma → HoneyGUI 映射
+  │   ├── mastergo-mapping.md # MasterGo → HoneyGUI 映射
+  │   └── component-recognition.md # 组件识别规则
+  ├── examples/              # 转换示例
+  │   ├── figma-to-hml.md    # Figma 转换示例
+  │   └── mastergo-to-hml.md # MasterGo 转换示例
+  └── troubleshooting.md     # 常见问题
+  ```
+- [ ] 编写 `SKILL.md` - 设计稿转换核心指导
+  - Figma/MasterGo API 数据结构
+  - 组件识别策略（Frame/Group → hg_view, Rectangle+Text → hg_button）
+  - 布局转换规则（绝对坐标 → HoneyGUI 坐标系）
+  - 资源处理流程（图片导出 → 下载 → 转换为 .bin）
+  - 警告和人工介入场景（不支持的组件、复杂效果）
+- [ ] 编写映射规则文档
+  - `figma-mapping.md` - Figma 节点类型到 HoneyGUI 组件的映射表
+  - `mastergo-mapping.md` - MasterGo 节点类型到 HoneyGUI 组件的映射表
+  - `component-recognition.md` - 如何识别按钮、输入框、图标等
+- [ ] 创建转换示例
+  - 至少 3 个真实 Figma 设计稿的转换案例
+  - 展示从 JSON 到 HML 的完整过程
+
+**交付物**：
+- `skills/honeygui-import/SKILL.md` - Skill 2 核心文档
+- `skills/honeygui-import/mappings/*.md` - 映射规则
+- `skills/honeygui-import/examples/*.md` - 转换示例
+
+---
+
+#### 2. Figma/MasterGo API 调研（2-3 天）
+
+**优先级**：P0
+
+**任务**：
+- [ ] Figma API 调研
+  - 注册 Figma Developer Account
+  - 获取 Access Token
+  - 测试 Figma REST API（获取文件数据）
+  - 测试图片导出 API（导出 PNG/SVG）
+  - 记录 API 限制（rate limit, 数据格式）
+- [ ] MasterGo API 调研
+  - 注册 MasterGo Developer Account
+  - 获取 API 文档
+  - 测试 API 可用性
+  - 对比 Figma 和 MasterGo 数据格式差异
+- [ ] 评估技术可行性
+  - Figma/MasterGo 是否支持我们需要的所有功能？
+  - 是否有无法映射的设计元素？
+  - 性能预估（大型设计稿的转换时间）
+
+**交付物**：
+- `vibe-designer/mcp/docs/figma-api-research.md` - Figma API 调研报告
+- `vibe-designer/mcp/docs/mastergo-api-research.md` - MasterGo API 调研报告
+- 技术可行性评估报告
+
+---
+
+#### 3. 实现 Figma 转换器（5-7 天）
+
+**优先级**：P0
+
+**任务**：
+- [ ] 创建 `src/converters/` 模块
+  ```
+  src/converters/
+  ├── figma-converter.ts       # Figma JSON → HML 主逻辑
+  ├── mastergo-converter.ts    # MasterGo → HML 主逻辑
+  ├── component-mapper.ts      # 组件类型映射
+  ├── layout-converter.ts      # 坐标和尺寸转换
+  ├── style-converter.ts       # 样式转换（颜色、字体）
+  ├── asset-extractor.ts       # 提取图片/图标资源
+  └── hml-builder.ts           # 构建 HML XML
+  ```
+- [ ] 实现 Figma JSON 解析
+  - 解析 Figma 文件结构（document → canvas → frame → children）
+  - 递归遍历节点树
+  - 识别节点类型（FRAME, GROUP, RECTANGLE, TEXT, INSTANCE 等）
+- [ ] 实现组件映射逻辑
+  - FRAME → hg_view（容器）
+  - RECTANGLE + TEXT → hg_button（按钮）
+  - TEXT → hg_label（标签）
+  - IMAGE / fills.imageRef → hg_image（图片）
+  - INSTANCE → 查找组件库定义
+- [ ] 实现布局转换
+  - Figma 绝对坐标 → HoneyGUI 坐标
+  - 处理 Auto Layout（约束 → 手动布局）
+  - 处理嵌套容器的相对坐标
+- [ ] 实现样式转换
+  - 颜色格式：rgba → #RRGGBB
+  - 字体：Figma 字体名 → HoneyGUI 字体路径（需手动映射）
+  - 边框、圆角、阴影（部分支持，记录警告）
+- [ ] 实现资源提取
+  - 提取 fills.imageRef（图片填充）
+  - 提取 IMAGE 节点
+  - 生成资源下载列表（URL + 本地路径）
+
+**交付物**：
+- `src/converters/figma-converter.ts` - Figma 转换器
+- 单元测试（至少 10 个测试用例）
+- 转换示例（输入 Figma JSON，输出 HML）
+
+---
+
+#### 4. 实现 MCP Tools（场景 2 专用）（3-5 天）
+
+**优先级**：P0
+
+**任务**：
+- [ ] 实现 `import-figma` tool
+  - 输入：`{ figmaUrl: string }` 或 `{ figmaJson: object }`
+  - 调用 Figma API 获取文件数据（如提供 URL）
+  - 调用 `figma-converter` 转换为 HML
+  - 返回：HML 文件列表 + 资源列表 + 警告
+- [ ] 实现 `import-mastergo` tool
+  - 输入：`{ mastergoUrl: string }` 或 `{ mastergoJson: object }`
+  - 调用 MasterGo API 获取文件数据
+  - 调用 `mastergo-converter` 转换为 HML
+  - 返回：HML 文件列表 + 资源列表 + 警告
+- [ ] 实现 `download-assets` tool
+  - 输入：`{ assets: { url: string, path: string, type: string }[] }`
+  - 批量下载图片/图标
+  - 保存到指定路径（assets/images/, assets/icons/）
+  - 返回：下载成功数量 + 失败列表
+- [ ] 实现 `create-project` tool
+  - 输入：`{ name: string, resolution: string, hmlFiles: {...}[], assets: string[] }`
+  - 创建项目目录结构（ui/, assets/, src/, project.json）
+  - 写入 HML 文件
+  - 复制资源文件
+  - 生成 project.json
+  - 返回：项目路径
+
+**交付物**：
+- `src/tools/import-figma.ts`
+- `src/tools/import-mastergo.ts`
+- `src/tools/download-assets.ts`
+- `src/tools/create-project.ts`
+- 集成测试
+
+---
+
+#### 5. MasterGo 转换器（可选，3-5 天）
+
+**优先级**：P1
+
+**任务**：
+- [ ] 实现 `mastergo-converter.ts`
+  - 参考 Figma 转换器实现
+  - 适配 MasterGo 数据格式差异
+  - 复用 `component-mapper`, `layout-converter` 等通用模块
+- [ ] 单元测试
+- [ ] 转换示例
+
+**交付物**：
+- `src/converters/mastergo-converter.ts`
+- 测试用例
+
+---
+
 ## 阶段 2：集成测试（1-2 周）
 
 ### 目标
@@ -411,26 +666,44 @@
 **优先级**：P0
 
 **任务**：
-- [ ] 测试用例 1：简单按钮页面
+
+**场景 1 测试（从零生成）：**
+- [ ] 测试用例 1.1：简单按钮页面
   - 需求：创建一个只有一个按钮的页面
   - 流程：需求 → 生成 → 校验 → 预览 → 导出
   - 验证：HML 合法、预览正确、C 代码可编译
-- [ ] 测试用例 2：设置页面
+- [ ] 测试用例 1.2：设置页面
   - 需求：亮度和音量滑块
   - 流程：需求 → 生成（错误）→ 校验（捕获错误）→ 修复 → 预览 → 导出
   - 验证：AI 能根据错误报告自动修复
-- [ ] 测试用例 3：复杂仪表盘
+- [ ] 测试用例 1.3：复杂仪表盘
   - 需求：4 个状态卡片（步数、心率、卡路里、睡眠）
   - 流程：需求 → 生成 → 校验 → 预览 → 导出
   - 验证：布局合理、组件不重叠
-- [ ] 测试用例 4：从模板修改
-  - 需求：基于 music_player 模板修改标题
-  - 流程：加载模板 → AI 修改 → 校验 → 预览
-  - 验证：模板正确加载、修改准确
-- [ ] 测试用例 5：错误修复循环
-  - 需求：故意让 AI 生成错误 HML
-  - 流程：生成（错误）→ 校验（多个错误）→ AI 修复 → 校验 → 通过
-  - 验证：AI 能在 2-3 轮内修复所有错误
+
+**场景 2 测试（设计稿转换）：**
+- [ ] 测试用例 2.1：简单 Figma 设计稿
+  - 输入：Figma 设计稿（3 个 Frame，包含按钮、标签、图片）
+  - 流程：import-figma → 校验 → 预览 → create-project
+  - 验证：HML 正确映射、资源下载成功、项目可打开
+- [ ] 测试用例 2.2：复杂 Figma 设计稿
+  - 输入：Figma 设计稿（包含 Auto Layout、组件实例、图标）
+  - 流程：import-figma → 警告提示 → 手动调整 → 校验 → 预览
+  - 验证：警告清晰、AI 能根据警告指导用户
+- [ ] 测试用例 2.3：MasterGo 设计稿（可选）
+  - 输入：MasterGo 设计稿
+  - 流程：import-mastergo → 校验 → 预览
+  - 验证：转换结果与 Figma 质量一致
+
+**共享工具测试：**
+- [ ] 测试用例 3.1：布局优化
+  - 输入：HML（对齐不佳）
+  - 流程：optimize-layout → 校验 → 预览
+  - 验证：布局优化后更整齐
+- [ ] 测试用例 3.2：批量编辑
+  - 输入：HML（10 个按钮）
+  - 流程：batch-edit（修改所有按钮颜色）→ 校验
+  - 验证：所有按钮颜色已修改
 
 **交付物**：
 - 测试用例文档
@@ -498,7 +771,7 @@
   }
   ```
 - [ ] 创建默认 Token 文件
-  - `ai/skills/schema/design-tokens.json`
+  - `vibe-designer/skills/schema/design-tokens.json`
 - [ ] 更新 Schema 支持 Token 引用
   - `"color": "@token/primary"`
 - [ ] 实现 Token 解析器
@@ -637,10 +910,10 @@
   - 校验失败处理
 
 **交付物**：
-- `ai/mcp/docs/quick-start.md`
-- `ai/mcp/docs/user-guide.md`
-- `ai/mcp/docs/best-practices.md`
-- `ai/mcp/docs/troubleshooting.md`
+- `vibe-designer/mcp/docs/quick-start.md`
+- `vibe-designer/mcp/docs/user-guide.md`
+- `vibe-designer/mcp/docs/best-practices.md`
+- `vibe-designer/mcp/docs/troubleshooting.md`
 
 ---
 
@@ -667,10 +940,10 @@
   - PR 流程
 
 **交付物**：
-- `ai/mcp/docs/architecture.md`
-- `ai/mcp/docs/api-reference.md`
-- `ai/mcp/docs/extension-guide.md`
-- `ai/mcp/docs/contributing.md`
+- `vibe-designer/mcp/docs/architecture.md`
+- `vibe-designer/mcp/docs/api-reference.md`
+- `vibe-designer/mcp/docs/extension-guide.md`
+- `vibe-designer/mcp/docs/contributing.md`
 
 ---
 
@@ -752,9 +1025,9 @@
 
 ## 相关文档
 
-- **整体规划**：`ai/README.md`
-- **MCP 待办**：`ai/mcp/TODO.md`
-- **Schema 说明**：`ai/skills/schema/README.md`
+- **整体规划**：`vibe-designer/README.md`
+- **MCP 待办**：`vibe-designer/mcp/TODO.md`
+- **Schema 说明**：`vibe-designer/skills/schema/README.md`
 - **方向调整文档**：（需创建）
 
 ---

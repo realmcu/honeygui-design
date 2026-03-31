@@ -12,7 +12,7 @@
 - [ ] 定义组件类型、必需属性、可选属性、值约束
 - [ ] 包含所有组件的完整定义（基础、交互、容器、高级）
 - [ ] 定义验证规则（触摸目标最小 44x44px、字体最小 16px 等）
-- [ ] 输出位置：`ai/skills/schema/hml-schema.json`
+- [ ] 输出位置：`vibe-designer/skills/schema/hml-schema.json`
 
 ### 2. HML 校验器
 - [ ] 实现 `HmlValidator.ts`（可复用 Designer 现有代码）
@@ -45,7 +45,7 @@
 ### 4. 技术栈选择
 - [ ] 评估 FastMCP (Python) vs MCP SDK (TypeScript)
 - [ ] 建议：TypeScript（与 Designer 代码库一致）
-- [ ] 初始化项目：`ai/mcp/honeygui-mcp/`
+- [ ] 初始化项目：`vibe-designer/mcp/honeygui-mcp/`
 
 ### 5. 实现核心功能
 - [ ] Resources 实现（读取 schema、templates）
@@ -133,5 +133,5 @@
 ## 相关文档
 
 - 方向调整文档：`/docs/方向调整共识文档（草案）.md`（待创建）
-- Skill 定义：`ai/skills/honeygui-designer/SKILL.md`
-- 组件参考：`ai/skills/honeygui-designer/references/components.md`
+- Skill 定义：`vibe-designer/skills/honeygui-designer/SKILL.md`
+- 组件参考：`vibe-designer/skills/honeygui-designer/references/components.md`

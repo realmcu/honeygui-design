@@ -1,4 +1,4 @@
-# HoneyGUI AI 集成目录
+# HoneyGUI Vibe Designer
 
 本目录包含 HoneyGUI Designer 的 AI 驱动能力，包括 Skill 定义和 MCP Server 实现。
 
@@ -7,7 +7,7 @@
 ## 目录结构
 
 ```
-ai/
+vibe-designer/
 ├── README.md                    # 本文件：整体规划和说明
 ├── skills/                      # Skill 定义（软约束）
 │   ├── honeygui-designer/       # 主 Skill：HML 生成指导
@@ -72,7 +72,7 @@ ai/
 
 **定义**：告诉 AI "应该如何生成 HML"
 
-**位置**：`ai/skills/honeygui-designer/`
+**位置**：`vibe-designer/skills/honeygui-designer/`
 
 **内容**：
 - 组件用法说明
@@ -97,7 +97,7 @@ ai/
 
 **定义**：程序化定义 HML 的合法边界
 
-**位置**：`ai/skills/schema/`
+**位置**：`vibe-designer/skills/schema/`
 
 **内容**：
 - JSON Schema 格式的组件定义
@@ -121,7 +121,7 @@ ai/
 
 **定义**：暴露 Designer 能力给 AI 工具的接口层
 
-**位置**：`ai/mcp/honeygui-mcp/`
+**位置**：`vibe-designer/mcp/honeygui-mcp/`
 
 **内容**：
 - **Resources**：规则数据（schema、templates、tokens）
@@ -204,8 +204,8 @@ MCP Server **不重复实现** Designer 已有功能，而是**调用**：
 
 ### 阶段 0：基础设施（1-2 周）
 
-- [x] 创建 `ai/` 目录结构
-- [x] 移动现有 Skill 到 `ai/skills/`
+- [x] 创建 `vibe-designer/` 目录结构
+- [x] 移动现有 Skill 到 `vibe-designer/skills/`
 - [ ] 生成 HML JSON Schema
 - [ ] 实现 HML 校验器
 - [ ] 设计 MCP 接口（resources/prompts/tools）
@@ -257,16 +257,16 @@ MCP Server **不重复实现** Designer 已有功能，而是**调用**：
 
 ### 开发者（扩展 Skill）
 
-1. 编辑 `ai/skills/honeygui-designer/references/*.md`
+1. 编辑 `vibe-designer/skills/honeygui-designer/references/*.md`
 2. 添加新组件文档到 `components.md`
-3. 更新 `ai/skills/schema/hml-schema.json`
+3. 更新 `vibe-designer/skills/schema/hml-schema.json`
 4. 重新构建 MCP Server
 
 ### AI 工具用户（Codex/Cursor）
 
 1. 安装 MCP Server：
    ```bash
-   cd ai/mcp/honeygui-mcp
+   cd vibe-designer/mcp/honeygui-mcp
    npm install
    npm run build
    ```
@@ -277,7 +277,7 @@ MCP Server **不重复实现** Designer 已有功能，而是**调用**：
      "mcpServers": {
        "honeygui": {
          "command": "node",
-         "args": ["path/to/ai/mcp/honeygui-mcp/dist/index.js"]
+         "args": ["path/to/vibe-designer/mcp/honeygui-mcp/dist/index.js"]
        }
      }
    }
@@ -295,14 +295,14 @@ MCP Server **不重复实现** Designer 已有功能，而是**调用**：
 
 ### 添加新组件
 
-1. 在 `ai/skills/honeygui-designer/references/components.md` 添加文档
-2. 在 `ai/skills/schema/components/*.json` 添加 schema 定义
+1. 在 `vibe-designer/skills/honeygui-designer/references/components.md` 添加文档
+2. 在 `vibe-designer/skills/schema/components/*.json` 添加 schema 定义
 3. 更新 MCP Server 的 resources 映射
 4. 添加测试用例
 
 ### 添加新模板
 
-1. 创建 HML 文件到 `ai/skills/honeygui-designer/assets/examples/`
+1. 创建 HML 文件到 `vibe-designer/skills/honeygui-designer/assets/examples/`
 2. 截图并添加到 `assets/screenshots/`
 3. 在 `references/layout-patterns.md` 添加说明
 4. 更新 MCP Server 的 templates resource
@@ -312,7 +312,7 @@ MCP Server **不重复实现** Designer 已有功能，而是**调用**：
 ## 相关文档
 
 - **方向调整文档**：`/docs/方向调整共识文档.md`（待创建）
-- **MCP 待办事项**：`ai/mcp/TODO.md`
+- **MCP 待办事项**：`vibe-designer/mcp/TODO.md`
 - **Designer 主文档**：`/AGENTS.md`, `/README.md`
 - **MCP 官方文档**：https://modelcontextprotocol.io/
 
