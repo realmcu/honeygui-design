@@ -14,7 +14,7 @@ import {
   ResizeType
 } from './utils/alignmentUtils';
 import { generateComponentId } from './utils/componentNaming';
-import { findComponentsWithBrokenRefs } from './utils/componentUtils';
+import { findComponentsWithBrokenRefs, isDropTargetType } from './utils/componentUtils';
 
 // ============ 层级调整辅助函数 ============
 
@@ -1219,7 +1219,19 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   },
 
   pasteComponent: (position) => {
-    const { clipboard, clipboardMultiple, components } = get();
+    const { clipboard, clipboardMultiple, components, selectedComponent } = get();
+    
+    // 根据当前选中组件确定粘贴目标父容器
+    const resolveTargetParent = (): string | null => {
+      if (!selectedComponent) return null;
+      const selected = components.find(c => c.id === selectedComponent);
+      if (!selected) return null;
+      // 选中的是容器 → 粘贴为其子组件
+      if (isDropTargetType(selected.type)) return selected.id;
+      // 选中的不是容器 → 粘贴到其父组件下
+      return selected.parent || null;
+    };
+    const targetParent = resolveTargetParent();
     
     // 多选粘贴
     if (clipboardMultiple.length > 0) {
@@ -1263,32 +1275,28 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       
       clipboardMultiple.forEach((comp, index) => {
         const newId = idMap.get(comp.id)!;
+        const isTopLevel = !comp.parent || !idMap.has(comp.parent);
         
-        // 检查父组件是否在复制的组件中
+        // 确定父组件
         let newParent: string | null = null;
         if (comp.parent) {
           if (idMap.has(comp.parent)) {
-            // 父组件也在复制列表中，使用新的父组件ID
+            // 父组件在复制列表中，使用新 ID
             newParent = idMap.get(comp.parent)!;
-          } else if (components.some((c) => c.id === comp.parent)) {
-            // 父组件不在复制列表中，但存在于画布中，保持原父组件
-            newParent = comp.parent;
+          } else if (isTopLevel) {
+            // 顶层组件：使用目标父容器
+            newParent = targetParent;
           }
-          // 否则 newParent 为 null（父组件不存在）
+        } else if (isTopLevel) {
+          newParent = targetParent;
         }
         
-        // 更新 children 数组中的 ID
-        let newChildren: string[] | undefined = undefined;
-        if (comp.children && comp.children.length > 0) {
-          newChildren = comp.children
-            .map(childId => idMap.get(childId))
-            .filter((id): id is string => id !== undefined);
-        }
+        // 不预设 children，由 addComponent 在添加子组件时自动构建
         
         // 计算新位置
         let newPosition;
-        if (newParent && idMap.has(comp.parent!)) {
-          // 子组件：保持相对于父组件的原始位置（不改变）
+        if (!isTopLevel) {
+          // 子组件：保持相对于父组件的原始位置
           newPosition = {
             x: comp.position.x,
             y: comp.position.y,
@@ -1306,8 +1314,8 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
             width: comp.position.width,
             height: comp.position.height,
           } : {
-            x: comp.position.x + 20,
-            y: comp.position.y + 20,
+            x: 20 + offsetX,
+            y: 20 + offsetY,
             width: comp.position.width,
             height: comp.position.height,
           };
@@ -1318,7 +1326,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
           id: newId,
           name: newId,
           parent: newParent,
-          children: newChildren,
+          children: [],
           position: newPosition,
         };
         
@@ -1333,24 +1341,21 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     // 单选粘贴
     if (!clipboard) return;
     
-    const parentExists = clipboard.parent 
-      ? components.some((c) => c.id === clipboard.parent)
-      : true;
-    
     const newId = generateComponentId(clipboard.type, components, get().otherFileComponentIds);
     const newComponent: Component = {
       ...clipboard,
       id: newId,
       name: newId,
-      parent: parentExists ? clipboard.parent : null,
+      parent: targetParent,
+      children: [],
       position: position ? {
         x: position.x,
         y: position.y,
         width: clipboard.position.width,
         height: clipboard.position.height,
       } : {
-        x: clipboard.position.x + 20,
-        y: clipboard.position.y + 20,
+        x: 20,
+        y: 20,
         width: clipboard.position.width,
         height: clipboard.position.height,
       },
