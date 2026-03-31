@@ -182,6 +182,7 @@ export class ButtonGenerator implements ComponentCodeGenerator {
     const offCallback = component.data?.offCallback || '';
 
     // Generate callback invocation code (skip if empty)
+    const onCallLinedefine = onCallback ? `        extern void ${onCallback}(void *obj, gui_event_t *e);\n` : '';
     const onCallLine = onCallback ? `        ${onCallback}(obj, e);\n` : '';
     const offCallLine = offCallback ? `        ${offCallback}(obj, e);\n` : '';
     const onCallLineNull = onCallback ? `        ${onCallback}(NULL, NULL);\n` : '';
@@ -211,9 +212,9 @@ void ${component.id}_toggle_cb(void *obj, gui_event_t *e)
     // Switch image based on state and call corresponding callback
     if (${component.id}_state) {
         gui_img_set_src((gui_img_t *)${component.id}, "${binOn}", IMG_SRC_FILESYS);
-${onCallLine}    } else {
+${onCallLinedefine}${onCallLine}    } else {
         gui_img_set_src((gui_img_t *)${component.id}, "${binOff}", IMG_SRC_FILESYS);
-${offCallLine}    }
+${onCallLinedefine}${offCallLine}    }
     gui_fb_change();
 ${extraCode}}
 
@@ -231,9 +232,9 @@ void ${component.id}_set_state(bool state)
         
         if (state) {
             gui_img_set_src((gui_img_t *)${component.id}, "${binOn}", IMG_SRC_FILESYS);
-${onCallLineNull}        } else {
+${onCallLinedefine}${onCallLineNull}        } else {
             gui_img_set_src((gui_img_t *)${component.id}, "${binOff}", IMG_SRC_FILESYS);
-${offCallLineNull}        }
+${onCallLinedefine}${offCallLineNull}        }
     }
 }
 `;
