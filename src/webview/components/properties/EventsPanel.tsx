@@ -30,6 +30,7 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
   const [expandedEvents, setExpandedEvents] = useState<Set<number>>(new Set([0]));
   const [timerExpanded, setTimerExpanded] = useState<boolean>(false);
   const [userFunctions, setUserFunctions] = useState<Array<{ name: string; type: 'event' | 'message' }>>([]);
+  const userFunctionsLoaded = React.useRef(false);
   const components = useDesignerStore((state) => state.components);
   const allViews = useDesignerStore((state) => state.allViews || []);
 
@@ -45,6 +46,7 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
     const handleMessage = (event: MessageEvent) => {
       const message = event.data;
       if (message.command === 'userFunctionsLoaded') {
+        userFunctionsLoaded.current = true;
         setUserFunctions(message.functions || []);
       }
     };
@@ -55,7 +57,7 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
 
   // 当用户函数列表更新时，清除引用已删除函数的 action
   useEffect(() => {
-    if (!eventConfigs.length || !userFunctions) return;
+    if (!userFunctionsLoaded.current || !eventConfigs.length) return;
     const validNames = new Set(userFunctions.map(f => f.name));
     let changed = false;
     const newConfigs = eventConfigs.map(config => {
