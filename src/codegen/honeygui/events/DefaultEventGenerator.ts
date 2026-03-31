@@ -172,7 +172,7 @@ ${callbackBody}}`);
   private generateSingleActionCode(action: any, componentMap: Map<string, Component>, indent: string): string {
     let code = '';
 
-    if (action.type === 'callFunction' && action.functionName) {
+    if (action.type === 'callFunction' && action.functionName?.trim()) {
       // Call function
       code += `${indent}${action.functionName}(obj, e);\n`;
     } else if (action.type === 'switchView' && action.target) {

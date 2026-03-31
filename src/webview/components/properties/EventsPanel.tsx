@@ -53,6 +53,26 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
+  // 当用户函数列表更新时，清除引用已删除函数的 action
+  useEffect(() => {
+    if (!eventConfigs.length || !userFunctions) return;
+    const validNames = new Set(userFunctions.map(f => f.name));
+    let changed = false;
+    const newConfigs = eventConfigs.map(config => {
+      const newActions = config.actions.map(action => {
+        if (action.type === 'callFunction' && action.functionName && !validNames.has(action.functionName)) {
+          changed = true;
+          return { ...action, functionName: '' };
+        }
+        return action;
+      });
+      return { ...config, actions: newActions };
+    });
+    if (changed) {
+      onUpdate({ eventConfigs: newConfigs });
+    }
+  }, [userFunctions]);
+
   // 获取可用的视图列表（当前文件 + 其他文件）
   const getAvailableViews = () => {
     // 当前文件的 view
