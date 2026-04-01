@@ -94,12 +94,24 @@ export interface ItemSettings {
   fontCopyOnly?: boolean;}
 
 /**
+ * 强制转换配置（支持精确路径和 glob 模式）
+ */
+export interface AlwaysConvertConfig {
+  images?: string[];   // 图片资源路径或 glob 模式
+  videos?: string[];   // 视频资源路径或 glob 模式
+  models?: string[];   // 3D 模型资源路径或 glob 模式
+  fonts?: string[];    // 字体资源路径或 glob 模式
+}
+
+/**
  * 完整配置文件结构
  */
 export interface ConversionConfig {
   version: string;
   defaultSettings: ItemSettings;
   items: Record<string, ItemSettings>;
+  /** 强制转换列表（即使 HML 未引用也会被转换打包） */
+  alwaysConvert?: AlwaysConvertConfig;
 }
 
 
@@ -187,18 +199,69 @@ export class ConversionConfigService {
    */
   loadConfig(projectRoot: string): ConversionConfig {
     const configPath = this.getConfigPath(projectRoot);
+    let config: ConversionConfig;
     
     try {
       if (fs.existsSync(configPath)) {
         const content = fs.readFileSync(configPath, 'utf-8');
-        const config = JSON.parse(content) as ConversionConfig;
-        return this.validateAndMergeConfig(config);
+        const parsed = JSON.parse(content) as ConversionConfig;
+        config = this.validateAndMergeConfig(parsed);
+      } else {
+        config = { ...DEFAULT_CONFIG, items: {} };
       }
     } catch (error) {
       console.error('Failed to load conversion config:', error);
+      config = { ...DEFAULT_CONFIG, items: {} };
     }
-    
-    return { ...DEFAULT_CONFIG, items: {} };
+
+    // 向后兼容：如果 conversion.json 中没有 alwaysConvert，尝试从 project.json 迁移
+    if (!config.alwaysConvert) {
+      const migrated = this.migrateAlwaysConvertFromProject(projectRoot);
+      if (migrated) {
+        config.alwaysConvert = migrated;
+        // 自动保存迁移后的配置
+        try {
+          this.saveConfig(projectRoot, config);
+          console.log('[ConversionConfigService] alwaysConvert 已从 project.json 迁移到 conversion.json');
+        } catch (e) {
+          console.error('[ConversionConfigService] 保存迁移配置失败:', e);
+        }
+      }
+    }
+
+    return config;
+  }
+
+  /**
+   * 从 project.json 迁移 alwaysConvert 配置（向后兼容）
+   */
+  private migrateAlwaysConvertFromProject(projectRoot: string): AlwaysConvertConfig | null {
+    try {
+      const projectJsonPath = path.join(projectRoot, 'project.json');
+      if (!fs.existsSync(projectJsonPath)) {
+        return null;
+      }
+      const projectConfig = JSON.parse(fs.readFileSync(projectJsonPath, 'utf-8'));
+      if (!projectConfig.alwaysConvert) {
+        return null;
+      }
+      const ac = projectConfig.alwaysConvert;
+      // 检查是否有实际内容
+      const hasContent = ['images', 'videos', 'models', 'fonts'].some(
+        (k) => Array.isArray(ac[k]) && ac[k].length > 0
+      );
+      if (!hasContent) {
+        return null;
+      }
+      return {
+        images: ac.images || [],
+        videos: ac.videos || [],
+        models: ac.models || [],
+        fonts: ac.fonts || []
+      };
+    } catch {
+      return null;
+    }
   }
 
 
@@ -226,7 +289,8 @@ export class ConversionConfigService {
     return {
       version: config.version || DEFAULT_CONFIG.version,
       defaultSettings: { ...DEFAULT_CONFIG.defaultSettings, ...config.defaultSettings },
-      items: config.items || {}
+      items: config.items || {},
+      alwaysConvert: config.alwaysConvert
     };
   }
 

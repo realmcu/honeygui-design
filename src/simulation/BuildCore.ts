@@ -602,7 +602,10 @@ Return('objs')
         models: Set<string>,
         fonts: Set<string>
     ): void {
-        const alwaysConvert = this.projectConfig.alwaysConvert;
+        // 从 conversion.json 读取 alwaysConvert 配置
+        const configService = ConversionConfigService.getInstance();
+        const conversionConfig = configService.loadConfig(this.projectRoot);
+        const alwaysConvert = conversionConfig.alwaysConvert;
         if (!alwaysConvert) {
             return;
         }

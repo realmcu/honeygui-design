@@ -902,19 +902,13 @@ export class MessageHandler {
                 return;
             }
 
-            // 读取 project.json
-            const projectConfigPath = path.join(projectRoot, 'project.json');
-            if (!fs.existsSync(projectConfigPath)) {
-                logger.warn('[MessageHandler] project.json 不存在');
-                vscode.window.showErrorMessage(vscode.l10n.t('project.json not found'));
-                return;
-            }
-
-            const projectConfig = JSON.parse(fs.readFileSync(projectConfigPath, 'utf-8'));
+            // 读取 conversion.json
+            const configService = ConversionConfigService.getInstance();
+            const conversionConfig = configService.loadConfig(projectRoot);
 
             // 确保 alwaysConvert 配置存在
-            if (!projectConfig.alwaysConvert) {
-                projectConfig.alwaysConvert = {
+            if (!conversionConfig.alwaysConvert) {
+                conversionConfig.alwaysConvert = {
                     images: [],
                     videos: [],
                     models: [],
@@ -934,17 +928,17 @@ export class MessageHandler {
 
                 // 检查是否已存在（任意分类中存在即视为已标记）
                 for (const cat of categories) {
-                    if (!projectConfig.alwaysConvert[cat]) {
-                        projectConfig.alwaysConvert[cat] = [];
+                    if (!conversionConfig.alwaysConvert[cat]) {
+                        conversionConfig.alwaysConvert[cat] = [];
                     }
-                    if (projectConfig.alwaysConvert[cat].includes(globPattern)) {
+                    if (conversionConfig.alwaysConvert[cat]!.includes(globPattern)) {
                         isRemoving = true;
                         break;
                     }
                 }
 
                 for (const cat of categories) {
-                    const list: string[] = projectConfig.alwaysConvert[cat];
+                    const list: string[] = conversionConfig.alwaysConvert[cat]!;
                     const idx = list.indexOf(globPattern);
                     if (isRemoving) {
                         if (idx >= 0) { list.splice(idx, 1); }
@@ -978,30 +972,30 @@ export class MessageHandler {
                 }
 
                 // 确保分类数组存在
-                if (!projectConfig.alwaysConvert[category]) {
-                    projectConfig.alwaysConvert[category] = [];
+                if (!conversionConfig.alwaysConvert[category]) {
+                    conversionConfig.alwaysConvert[category] = [];
                 }
 
                 // 切换状态
-                const index = projectConfig.alwaysConvert[category].indexOf(assetPath);
+                const index = conversionConfig.alwaysConvert[category]!.indexOf(assetPath);
                 if (index >= 0) {
                     // 已存在，移除
-                    projectConfig.alwaysConvert[category].splice(index, 1);
+                    conversionConfig.alwaysConvert[category]!.splice(index, 1);
                     logger.info(`[MessageHandler] 已从强制转换列表移除: ${assetPath}`);
                 } else {
                     // 不存在，添加
-                    projectConfig.alwaysConvert[category].push(assetPath);
+                    conversionConfig.alwaysConvert[category]!.push(assetPath);
                     logger.info(`[MessageHandler] 已添加到强制转换列表: ${assetPath}`);
                 }
             }
 
-            // 保存 project.json
-            fs.writeFileSync(projectConfigPath, JSON.stringify(projectConfig, null, 2), 'utf-8');
+            // 保存 conversion.json
+            configService.saveConfig(projectRoot, conversionConfig);
 
             // 通知前端更新状态
             this._panel.webview.postMessage({
                 command: 'alwaysConvertUpdated',
-                alwaysConvert: projectConfig.alwaysConvert
+                alwaysConvert: conversionConfig.alwaysConvert
             });
 
             logger.debug('[MessageHandler] 强制转换配置已更新');

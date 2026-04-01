@@ -129,20 +129,6 @@ export class AssetManager extends EventEmitter {
             const configService = ConversionConfigService.getInstance();
             const conversionConfig = configService.loadConfig(projectRoot);
 
-            // 读取 project.json 获取 alwaysConvert 配置
-            const projectConfigPath = path.join(projectRoot, 'project.json');
-            let alwaysConvert = { images: [], videos: [], models: [] };
-            if (fs.existsSync(projectConfigPath)) {
-                try {
-                    const projectConfig = JSON.parse(fs.readFileSync(projectConfigPath, 'utf-8'));
-                    if (projectConfig.alwaysConvert) {
-                        alwaysConvert = projectConfig.alwaysConvert;
-                    }
-                } catch (error) {
-                    logger.warn(`[Assets] 读取 project.json 失败: ${error}`);
-                }
-            }
-
             // 发送资源列表到webview
             this._panel.webview.postMessage({
                 command: 'assetsLoaded',
@@ -155,10 +141,10 @@ export class AssetManager extends EventEmitter {
                 config: conversionConfig
             });
 
-            // 发送 alwaysConvert 配置到webview
+            // 从 conversion.json 读取 alwaysConvert 配置并发送到webview
             this._panel.webview.postMessage({
                 command: 'alwaysConvertUpdated',
-                alwaysConvert
+                alwaysConvert: conversionConfig.alwaysConvert || { images: [], videos: [], models: [], fonts: [] }
             });
         } catch (error) {
             logger.error(`加载资源列表失败: ${error}`);
@@ -668,22 +654,18 @@ export class AssetManager extends EventEmitter {
     }
 
     /**
-     * Update alwaysConvert paths in project.json after rename
+     * Update alwaysConvert paths in conversion.json after rename
      */
     private updateAlwaysConvertPath(projectRoot: string, oldPath: string, newPath: string): void {
         try {
-            const projectConfigPath = path.join(projectRoot, 'project.json');
-            if (!fs.existsSync(projectConfigPath)) {
-                return;
-            }
-
-            const config = JSON.parse(fs.readFileSync(projectConfigPath, 'utf-8'));
+            const configService = ConversionConfigService.getInstance();
+            const config = configService.loadConfig(projectRoot);
             if (!config.alwaysConvert) {
                 return;
             }
 
             let updated = false;
-            for (const category of ['images', 'videos', 'models', 'fonts']) {
+            for (const category of ['images', 'videos', 'models', 'fonts'] as const) {
                 const list: string[] | undefined = config.alwaysConvert[category];
                 if (!list) continue;
                 const idx = list.indexOf(oldPath);
@@ -694,7 +676,7 @@ export class AssetManager extends EventEmitter {
             }
 
             if (updated) {
-                fs.writeFileSync(projectConfigPath, JSON.stringify(config, null, 2), 'utf-8');
+                configService.saveConfig(projectRoot, config);
                 this._panel.webview.postMessage({
                     command: 'alwaysConvertUpdated',
                     alwaysConvert: config.alwaysConvert
