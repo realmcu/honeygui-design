@@ -695,16 +695,74 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
           const updatedConfigs = comp.eventConfigs.map(ec => ({
             ...ec,
             actions: ec.actions.map(action => {
-              if (action.target === oldId) {
-                return { ...action, target: newId };
+              let updatedAction = action;
+              // 同步 switchView target
+              if (updatedAction.target === oldId) {
+                updatedAction = { ...updatedAction, target: newId };
+              } else if (listItemRenames.has(updatedAction.target || '')) {
+                updatedAction = { ...updatedAction, target: listItemRenames.get(updatedAction.target!)! };
               }
-              if (listItemRenames.has(action.target || '')) {
-                return { ...action, target: listItemRenames.get(action.target!)! };
+              // 同步 controlTimer timerTargets 中的 componentId
+              if (updatedAction.timerTargets) {
+                let targetsChanged = false;
+                const newTargets = updatedAction.timerTargets.map(tt => {
+                  if (tt.componentId === oldId) {
+                    targetsChanged = true;
+                    return { ...tt, componentId: newId };
+                  }
+                  if (listItemRenames.has(tt.componentId)) {
+                    targetsChanged = true;
+                    return { ...tt, componentId: listItemRenames.get(tt.componentId)! };
+                  }
+                  return tt;
+                });
+                if (targetsChanged) {
+                  updatedAction = { ...updatedAction, timerTargets: newTargets };
+                }
               }
-              return action;
+              return updatedAction;
             })
           }));
           updated = { ...updated, eventConfigs: updatedConfigs };
+        }
+        
+        // 更新定时动画中的 target 引用（switchView 动作）
+        if (comp.data?.timers && Array.isArray(comp.data.timers)) {
+          let timersChanged = false;
+          const newTimers = comp.data.timers.map((timer: any) => {
+            if (!timer.segments || !Array.isArray(timer.segments)) return timer;
+            let segmentsChanged = false;
+            const newSegments = timer.segments.map((seg: any) => {
+              if (!seg.actions || !Array.isArray(seg.actions)) return seg;
+              let actionsChanged = false;
+              const newActions = seg.actions.map((act: any) => {
+                if (act.type === 'switchView' && act.target) {
+                  if (act.target === oldId) {
+                    actionsChanged = true;
+                    return { ...act, target: newId };
+                  }
+                  if (listItemRenames.has(act.target)) {
+                    actionsChanged = true;
+                    return { ...act, target: listItemRenames.get(act.target)! };
+                  }
+                }
+                return act;
+              });
+              if (actionsChanged) {
+                segmentsChanged = true;
+                return { ...seg, actions: newActions };
+              }
+              return seg;
+            });
+            if (segmentsChanged) {
+              timersChanged = true;
+              return { ...timer, segments: newSegments };
+            }
+            return timer;
+          });
+          if (timersChanged) {
+            updated = { ...updated, data: { ...updated.data, timers: newTimers } };
+          }
         }
         
         return updated;
