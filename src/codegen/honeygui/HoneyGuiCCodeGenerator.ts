@@ -550,9 +550,16 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       code += `${indentStr}gui_obj_focus_set((gui_obj_t *)${component.id});\n`;
     }
 
-    // Recursively generate child components
+    // Recursively generate child components (sorted by zIndex, matching component tree order)
     if (component.children && component.children.length > 0) {
-      component.children.forEach(childId => {
+      const sortedChildren = [...component.children].sort((a, b) => {
+        const compA = this.componentMap.get(a);
+        const compB = this.componentMap.get(b);
+        const zA = typeof compA?.zIndex === 'number' ? compA.zIndex : 0;
+        const zB = typeof compB?.zIndex === 'number' ? compB.zIndex : 0;
+        return zA - zB;
+      });
+      sortedChildren.forEach(childId => {
         const child = this.componentMap.get(childId);
         if (child) {
           code += this.generateComponentTree(child, indent);
@@ -594,9 +601,16 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       const arcGroups = ArcGenerator.collectArcGroups(childComponents);
       const processedGroups = new Set<string>();
       
-      // Use children array order directly without additional sorting
+      // Use children array order sorted by zIndex (matching component tree display order)
       // Earlier components in the tree are created first (bottom layer), later ones on top
-      component.children.forEach(childId => {
+      const sortedChildren = [...component.children].sort((a, b) => {
+        const compA = this.componentMap.get(a);
+        const compB = this.componentMap.get(b);
+        const zA = typeof compA?.zIndex === 'number' ? compA.zIndex : 0;
+        const zB = typeof compB?.zIndex === 'number' ? compB.zIndex : 0;
+        return zA - zB;
+      });
+      sortedChildren.forEach(childId => {
         const child = this.componentMap.get(childId);
         if (child) {
           // Check if this is an arc group member
