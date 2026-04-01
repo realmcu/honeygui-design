@@ -247,3 +247,33 @@ textarea:disabled {
   font-size: 11px;
   margin-top: 4px;
 }
+
+/* Transform Center Presets */
+.transform-center-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.transform-center-preset-btn {
+  padding: 2px 8px;
+  font-size: 11px;
+  background-color: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+  border: 1px solid transparent;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.transform-center-preset-btn:hover {
+  background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+.transform-center-preset-btn.active {
+  background-color: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border-color: var(--vscode-focusBorder);
+}

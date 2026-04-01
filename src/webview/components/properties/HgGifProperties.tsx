@@ -47,6 +47,20 @@ export const HgGifProperties: React.FC<PropertyPanelProps> = ({ component, onUpd
     });
   };
 
+  const handleTransformCenterPreset = (x: number | undefined, y: number | undefined) => {
+    const transform = component.style?.transform || {};
+    onUpdate({
+      style: {
+        ...component.style,
+        transform: {
+          ...transform,
+          focusX: x,
+          focusY: y,
+        },
+      },
+    });
+  };
+
   const handleSelectGifPath = () => {
     window.vscodeAPI?.postMessage({
       command: 'selectImagePath',
@@ -279,6 +293,35 @@ export const HgGifProperties: React.FC<PropertyPanelProps> = ({ component, onUpd
             {/* 变换中心点 */}
             <div className="property-item">
               <label>{t('Transform Center')}</label>
+              <div className="transform-center-presets">
+                {[
+                  { label: t('Top-Left'), x: 0, y: 0 },
+                  { label: t('Top-Right'), x: component.position.width, y: 0 },
+                  { label: t('Center'), x: Math.round(component.position.width / 2), y: Math.round(component.position.height / 2) },
+                  { label: t('Bottom-Left'), x: 0, y: component.position.height },
+                  { label: t('Bottom-Right'), x: component.position.width, y: component.position.height },
+                ].map((preset) => (
+                  <button
+                    key={preset.label}
+                    className={`transform-center-preset-btn${
+                      transform.focusX === preset.x && transform.focusY === preset.y ? ' active' : ''
+                    }`}
+                    title={`${preset.label} (${preset.x}, ${preset.y})`}
+                    onClick={() => handleTransformCenterPreset(preset.x, preset.y)}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+                <button
+                  className={`transform-center-preset-btn${
+                    transform.focusX === undefined && transform.focusY === undefined ? ' active' : ''
+                  }`}
+                  title={t('Clear to use default')}
+                  onClick={() => handleTransformCenterPreset(undefined, undefined)}
+                >
+                  {t('Auto')}
+                </button>
+              </div>
               <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)' }}>X</label>
