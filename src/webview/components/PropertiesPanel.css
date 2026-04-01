@@ -250,15 +250,15 @@ textarea:disabled {
 
 /* Transform Center Presets */
 .transform-center-presets {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
   margin-top: 4px;
 }
 
 .transform-center-preset-btn {
-  padding: 2px 8px;
-  font-size: 11px;
+  padding: 2px 4px;
+  font-size: 10px;
   background-color: var(--vscode-button-secondaryBackground);
   color: var(--vscode-button-secondaryForeground);
   border: 1px solid transparent;
@@ -266,6 +266,7 @@ textarea:disabled {
   cursor: pointer;
   transition: all 0.15s ease;
   white-space: nowrap;
+  text-align: center;
 }
 
 .transform-center-preset-btn:hover {
@@ -276,6 +277,10 @@ textarea:disabled {
   background-color: var(--vscode-button-background);
   color: var(--vscode-button-foreground);
   border-color: var(--vscode-focusBorder);
+}
+
+.transform-center-preset-btn.default-btn {
+  grid-column: 1 / -1;
 }
 
 /* Scale link button */

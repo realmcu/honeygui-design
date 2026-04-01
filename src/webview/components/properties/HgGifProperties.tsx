@@ -323,9 +323,13 @@ export const HgGifProperties: React.FC<PropertyPanelProps> = ({ component, onUpd
               <div className="transform-center-presets">
                 {[
                   { label: t('Top-Left'), x: 0, y: 0 },
+                  { label: t('Top-Center'), x: Math.round(component.position.width / 2), y: 0 },
                   { label: t('Top-Right'), x: component.position.width, y: 0 },
+                  { label: t('Left-Center'), x: 0, y: Math.round(component.position.height / 2) },
                   { label: t('Center'), x: Math.round(component.position.width / 2), y: Math.round(component.position.height / 2) },
+                  { label: t('Right-Center'), x: component.position.width, y: Math.round(component.position.height / 2) },
                   { label: t('Bottom-Left'), x: 0, y: component.position.height },
+                  { label: t('Bottom-Center'), x: Math.round(component.position.width / 2), y: component.position.height },
                   { label: t('Bottom-Right'), x: component.position.width, y: component.position.height },
                 ].map((preset) => (
                   <button
@@ -340,13 +344,13 @@ export const HgGifProperties: React.FC<PropertyPanelProps> = ({ component, onUpd
                   </button>
                 ))}
                 <button
-                  className={`transform-center-preset-btn${
+                  className={`transform-center-preset-btn default-btn${
                     transform.focusX === undefined && transform.focusY === undefined ? ' active' : ''
                   }`}
                   title={t('Clear to use default')}
                   onClick={() => handleTransformCenterPreset(undefined, undefined)}
                 >
-                  {t('Auto')}
+                  {t('Default')}
                 </button>
               </div>
               <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
@@ -355,7 +359,7 @@ export const HgGifProperties: React.FC<PropertyPanelProps> = ({ component, onUpd
                   <PropertyEditor
                     type="number"
                     value={transform.focusX ?? ''}
-                    placeholder="auto"
+                    placeholder="default"
                     onChange={(value) => handleTransformChange('focusX', value ? parseFloat(value) : undefined)}
                   />
                 </div>
@@ -364,7 +368,7 @@ export const HgGifProperties: React.FC<PropertyPanelProps> = ({ component, onUpd
                   <PropertyEditor
                     type="number"
                     value={transform.focusY ?? ''}
-                    placeholder="auto"
+                    placeholder="default"
                     onChange={(value) => handleTransformChange('focusY', value ? parseFloat(value) : undefined)}
                   />
                 </div>
