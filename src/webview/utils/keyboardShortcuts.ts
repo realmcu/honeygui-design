@@ -80,6 +80,7 @@ export const useKeyboardShortcuts = () => {
 
         // Delete (Delete key only, Backspace is reserved for text input)
         case 'Delete':
+          if (e.repeat) break;
           e.preventDefault();
           
           // 多选删除
@@ -139,7 +140,7 @@ export const useKeyboardShortcuts = () => {
         // Paste (Ctrl+V)
         case 'v':
         case 'V':
-          if (isModKey) {
+          if (isModKey && !e.repeat) {
             e.preventDefault();
             pasteComponent();
           }
@@ -148,7 +149,7 @@ export const useKeyboardShortcuts = () => {
         // Duplicate (Ctrl+D)
         case 'd':
         case 'D':
-          if (isModKey) {
+          if (isModKey && !e.repeat) {
             e.preventDefault();
             if (selectedComponent) {
               duplicateComponent(selectedComponent);

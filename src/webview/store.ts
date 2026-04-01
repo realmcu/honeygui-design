@@ -399,14 +399,13 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
         const parentIndex = newComponents.findIndex(comp => comp.id === component.parent);
 
         if (parentIndex !== -1) {
-          // 确保父组件有children数组
-          if (!newComponents[parentIndex].children) {
-            newComponents[parentIndex] = { ...newComponents[parentIndex], children: [] };
-          }
-
-          // 将当前组件的ID添加到父组件的children数组中
-          if (newComponents[parentIndex]?.children && !newComponents[parentIndex].children.includes(component.id)) {
-            newComponents[parentIndex].children.push(component.id);
+          const parentChildren = newComponents[parentIndex].children || [];
+          // 使用不可变方式更新父组件的 children 数组
+          if (!parentChildren.includes(component.id)) {
+            newComponents[parentIndex] = {
+              ...newComponents[parentIndex],
+              children: [...parentChildren, component.id],
+            };
           }
         }
       }
@@ -756,10 +755,21 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       });
     }
 
+    // 收集被删除组件及其子组件的 ID 集合
+    const removedIds = new Set<string>();
+    removedIds.add(id);
+    state.components.forEach(c => {
+      if (c.parent === id) removedIds.add(c.id);
+    });
+
     set((state) => ({
       components: state.components
-        .filter((c) => c.id !== id && c.parent !== id)
+        .filter((c) => !removedIds.has(c.id))
         .map(c => {
+          // 清理父组件的 children 数组中被删除的引用
+          if (c.children && c.children.some(childId => removedIds.has(childId))) {
+            c = { ...c, children: c.children.filter(childId => !removedIds.has(childId)) };
+          }
           // 清理 eventConfigs 中的 switchView 引用
           if (c.eventConfigs && component.type === 'hg_view') {
             const newEventConfigs = c.eventConfigs.map(eventConfig => ({
@@ -839,10 +849,23 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       });
     }
     
+    // 收集所有被删除的 ID（包含直接子组件）
+    const removedIds = new Set<string>();
+    filteredIds.forEach(fid => {
+      removedIds.add(fid);
+      state.components.forEach(c => {
+        if (c.parent && filteredIds.includes(c.parent)) removedIds.add(c.id);
+      });
+    });
+    
     set((state) => ({
       components: state.components
-        .filter((c) => !filteredIds.includes(c.id) && !filteredIds.includes(c.parent as any))
+        .filter((c) => !removedIds.has(c.id))
         .map(c => {
+          // 清理父组件的 children 数组中被删除的引用
+          if (c.children && c.children.some(childId => removedIds.has(childId))) {
+            c = { ...c, children: c.children.filter(childId => !removedIds.has(childId)) };
+          }
           // 清理 eventConfigs 中的 switchView 引用
           if (c.eventConfigs && deletedViews.length > 0) {
             const newEventConfigs = c.eventConfigs.map(eventConfig => ({
@@ -1150,6 +1173,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       ...component,
       id: newId,
       name: newId,
+      children: [],
       position: {
         x: component.position.x + 20,
         y: component.position.y + 20,

@@ -541,6 +541,18 @@ export class HmlController {
         const componentMap = new Map<string, Component>();
         components.forEach(c => componentMap.set(c.id, c));
         
+        // 清理不存在的 children 引用
+        components.forEach(component => {
+            if (component.children && component.children.length > 0) {
+                const validChildren = component.children.filter(childId => componentMap.has(childId));
+                if (validChildren.length !== component.children.length) {
+                    logger.debug(`[HmlController] 清理: ${component.id} 的children从 ${component.children.length} 个减少到 ${validChildren.length} 个`);
+                    component.children = validChildren;
+                }
+            }
+        });
+        
+        // 添加缺失的 children 引用
         components.forEach(component => {
             if (component.parent) {
                 const parent = componentMap.get(component.parent);
