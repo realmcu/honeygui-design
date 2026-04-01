@@ -1223,6 +1223,12 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     
     // 根据当前选中组件确定粘贴目标父容器
     const resolveTargetParent = (): string | null => {
+      // 如果粘贴的是 view，强制放到画布根级别
+      const topLevelClipboard = clipboardMultiple.length > 0
+        ? clipboardMultiple.find(c => !c.parent || !clipboardMultiple.some(p => p.id === c.parent))
+        : clipboard;
+      if (topLevelClipboard && topLevelClipboard.type === 'hg_view') return null;
+
       if (!selectedComponent) return null;
       const selected = components.find(c => c.id === selectedComponent);
       if (!selected) return null;
