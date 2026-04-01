@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PropertyPanelProps } from './types';
 import { PropertyEditor } from './PropertyEditor';
 import { BaseProperties } from './BaseProperties';
@@ -10,6 +10,7 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
   const [activeTab, setActiveTab] = useState<'properties' | 'events'>('properties');
   const syncListItems = useDesignerStore((state) => state.syncListItems);
   const canvasSize = useDesignerStore((state) => state.canvasSize);
+  const [noteDesignFunctions, setNoteDesignFunctions] = useState<string[]>([]);
 
   // 获取当前属性值
   const itemWidth = (component.style as any)?.itemWidth ?? 100;
@@ -27,9 +28,29 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
   const offset = (component.data as any)?.offset ?? 0;
   const outScope = (component.data as any)?.outScope ?? 0;
   const cardStackLocation = (component.style as any)?.cardStackLocation ?? 0;
+  const useUserNoteDesign = (component.data as any)?.useUserNoteDesign ?? false;
+  const userNoteDesignFunc = (component.data as any)?.userNoteDesignFunc ?? '';
   // 圆环半径：默认值根据方向决定（纵向=宽度，横向=高度）
   const defaultCircleRadius = direction === 'VERTICAL' ? component.position.width : component.position.height;
   const circleRadius = (component.style as any)?.circleRadius ?? defaultCircleRadius;
+
+  // 加载用户自定义 note_design 函数列表
+  useEffect(() => {
+    window.vscodeAPI?.postMessage({ command: 'getUserFunctions' });
+
+    const handleMessage = (event: MessageEvent) => {
+      const message = event.data;
+      if (message.command === 'userFunctionsLoaded') {
+        const funcs = (message.functions || [])
+          .filter((f: any) => f.type === 'noteDesign')
+          .map((f: any) => f.name);
+        setNoteDesignFunctions(funcs);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
 
   // 屏幕尺寸限制
   const maxWidth = canvasSize.width;
@@ -505,6 +526,59 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* 用户自定义 note_design */}
+            <div className="property-group">
+              <div className="property-group-title">{t('Note Design')}</div>
+
+              <div className="property-item">
+                <label>{t('Use Custom Note Design')}</label>
+                <PropertyEditor
+                  type="boolean"
+                  value={useUserNoteDesign}
+                  onChange={(value) => {
+                    onUpdate({
+                      data: {
+                        ...component.data,
+                        useUserNoteDesign: value,
+                        userNoteDesignFunc: value ? userNoteDesignFunc : '',
+                      },
+                    });
+                  }}
+                />
+                <div style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '4px' }}>
+                  {t('Use user-defined note_design function from *_user.c')}
+                </div>
+              </div>
+
+              {useUserNoteDesign && (
+                <div className="property-item">
+                  <label>{t('Note Design Function')}</label>
+                  <select
+                    value={userNoteDesignFunc}
+                    onChange={(e) => onUpdate({ data: { ...component.data, userNoteDesignFunc: e.target.value } })}
+                    style={{
+                      width: '100%',
+                      background: 'var(--vscode-input-background)',
+                      color: 'var(--vscode-input-foreground)',
+                      border: '1px solid var(--vscode-input-border)',
+                      padding: '4px',
+                      borderRadius: '2px',
+                    }}
+                  >
+                    <option value="">-- {t('Select')} --</option>
+                    {noteDesignFunctions.map(fn => (
+                      <option key={fn} value={fn}>{fn}</option>
+                    ))}
+                  </select>
+                  {noteDesignFunctions.length === 0 && (
+                    <div style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '4px' }}>
+                      {t('No note_design functions found in *_user.h')}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </>
         )}

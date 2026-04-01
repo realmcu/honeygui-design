@@ -2,15 +2,16 @@
  * User code file generator
  * Generates user.h and user.c files (generated once only)
  */
+import { Component } from '../../../hml/types';
 
 export class UserFileGenerator {
 
   /**
    * Generate user header file
    */
-  generateHeader(baseName: string): string {
+  generateHeader(baseName: string, listComponents: Component[] = []): string {
     const guardName = `${baseName.toUpperCase()}_USER_H`;
-    return `#ifndef ${guardName}
+    let code = `#ifndef ${guardName}
 #define ${guardName}
 
 #include "../callbacks/${baseName}_callbacks.h"
@@ -22,16 +23,25 @@ export class UserFileGenerator {
  */
 
 // Add custom declarations here
-
-#endif // ${guardName}
 `;
+
+    // Add note_design function declarations for list components
+    if (listComponents.length > 0) {
+      code += `\n// List note_design function declarations\n`;
+      listComponents.forEach(comp => {
+        code += `void ${comp.id}_note_design(gui_obj_t *obj, void *param);\n`;
+      });
+    }
+
+    code += `\n#endif // ${guardName}\n`;
+    return code;
   }
 
   /**
    * Generate user implementation file
    */
-  generateImplementation(baseName: string): string {
-    return `#include "${baseName}_user.h"
+  generateImplementation(baseName: string, listComponents: Component[] = []): string {
+    let code = `#include "${baseName}_user.h"
 
 /**
  * User-defined implementation
@@ -67,6 +77,17 @@ export class UserFileGenerator {
 //     // TODO
 // #endif
 // }
+
+// void list_note_design(gui_obj_t *obj, void *param)
+// {
+//     GUI_UNUSED(param);
+//     // Cast obj to gui_list_note_t * type
+//     gui_list_note_t *note = (gui_list_note_t *)obj;
+//     uint16_t index = note->index;
+//     GUI_UNUSED(index);
+// }
 `;
+
+    return code;
   }
 }

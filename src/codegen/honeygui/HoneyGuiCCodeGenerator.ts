@@ -99,13 +99,18 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       const userHeaderFile = path.join(userDir, `${designName}_user.h`);
       const userImplFile = path.join(userDir, `${designName}_user.c`);
 
+      // Collect list components that use user-defined note_design
+      const listComponentsWithUserNoteDesign = this.components.filter(
+        c => c.type === 'hg_list' && c.data?.useUserNoteDesign === true
+      );
+
       if (!fs.existsSync(userHeaderFile)) {
-        fs.writeFileSync(userHeaderFile, userGenerator.generateHeader(designName));
+        fs.writeFileSync(userHeaderFile, userGenerator.generateHeader(designName, listComponentsWithUserNoteDesign));
         files.push(userHeaderFile);
       }
 
       if (!fs.existsSync(userImplFile)) {
-        fs.writeFileSync(userImplFile, userGenerator.generateImplementation(designName));
+        fs.writeFileSync(userImplFile, userGenerator.generateImplementation(designName, listComponentsWithUserNoteDesign));
         files.push(userImplFile);
       }
 
@@ -340,6 +345,7 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
  */
 #include "${baseName}_ui.h"
 #include "../callbacks/${baseName}_callbacks.h"
+#include "../user/${baseName}_user.h"
 #include <stddef.h>
 `;
 

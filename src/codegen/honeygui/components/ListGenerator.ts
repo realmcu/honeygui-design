@@ -59,7 +59,12 @@ export class ListGenerator implements ComponentCodeGenerator {
       const dirEnum = direction === 'VERTICAL' ? 'VERTICAL' : 'HORIZONTAL';
 
       // Generate note_design callback function name
-      const noteDesignCallback = `${component.id}_note_design`;
+      // If user-defined note_design is enabled and a function is selected, use it directly
+      const useUserNoteDesign = component.data?.useUserNoteDesign === true;
+      const userNoteDesignFunc = component.data?.userNoteDesignFunc as string | undefined;
+      const noteDesignCallback = (useUserNoteDesign && userNoteDesignFunc && userNoteDesignFunc.trim() !== '')
+        ? userNoteDesignFunc
+        : `${component.id}_note_design`;
 
       // Get style and count (must be set immediately after creation)
       const style = component.style?.style ?? 'LIST_CLASSIC';
@@ -173,9 +178,17 @@ export class ListGenerator implements ComponentCodeGenerator {
   /**
    * Generate note_design callback function
    * Designs the content of each list_item
+   * If useUserNoteDesign is true AND userNoteDesignFunc is set, skip generation (user provides the function)
    */
   generateNoteDesignCallback(component: Component, context: GeneratorContext, getGenerator: (type: string) => ComponentCodeGenerator): string {
     try {
+      // Only skip generation if BOTH useUserNoteDesign is true AND a valid function is selected
+      const useUserNoteDesign = component.data?.useUserNoteDesign === true;
+      const userNoteDesignFunc = component.data?.userNoteDesignFunc as string | undefined;
+      if (useUserNoteDesign && userNoteDesignFunc && userNoteDesignFunc.trim() !== '') {
+        return '';
+      }
+
       const callbackName = `${component.id}_note_design`;
       let code = '';
 

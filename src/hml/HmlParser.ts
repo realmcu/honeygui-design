@@ -679,7 +679,9 @@ export class HmlParser {
       'timerEnabled', 'timerInterval', 'timerReload', 'timerMode', 'timerCallback', 
       'timerActions', 'timerDuration', 'timerStopOnComplete',
       // 蜂窝菜单属性
-      'iconFolder', 'iconImages', 'iconSize', 'offsetX', 'offsetY', 'iconActions'
+      'iconFolder', 'iconImages', 'iconSize', 'offsetX', 'offsetY', 'iconActions',
+      // list 用户自定义 note_design 属性
+      'useUserNoteDesign', 'userNoteDesignFunc'
     ]);
 
     const metaProps = new Set([
@@ -701,7 +703,7 @@ export class HmlParser {
         // dataProps 白名单优先（防止 onCallback 等被误判为事件）
         let value = attributes[key];
         // 布尔值转换（loop, createBar, autoAlign, inertia, enableAreaDisplay, keepNoteAlive, toggleMode, movable, click, timerEnabled, timerReload, timerStopOnComplete, enableScroll, scrollReverse, highQuality, needClip, isTimerLabel, timerAutoStart 等）
-        if (['loop', 'createBar', 'autoAlign', 'inertia', 'enableAreaDisplay', 'keepNoteAlive', 'toggleMode', 'movable', 'click', 'timerEnabled', 'timerReload', 'timerStopOnComplete', 'enableScroll', 'scrollReverse', 'highQuality', 'needClip', 'isTimerLabel', 'timerAutoStart'].includes(key)) {
+        if (['loop', 'createBar', 'autoAlign', 'inertia', 'enableAreaDisplay', 'keepNoteAlive', 'toggleMode', 'movable', 'click', 'timerEnabled', 'timerReload', 'timerStopOnComplete', 'enableScroll', 'scrollReverse', 'highQuality', 'needClip', 'isTimerLabel', 'timerAutoStart', 'useUserNoteDesign'].includes(key)) {
           value = value === 'true' || value === true;
         }
         // 数字类型属性转换（包括 opacity, timerInterval, timerDuration, timerInitialValue）

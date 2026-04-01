@@ -1235,11 +1235,14 @@ export class MessageHandler {
                 .replace(/\/\*[\s\S]*?\*\//g, ''); // remove multi-line comments
 
             // 解析函数声明
-            // 匹配模式：void function_name(void *obj, gui_event_t *e) 或 void function_name(gui_obj_t *obj, const char *topic, void *data, uint16_t len)
+            // 匹配模式：void function_name(void *obj, gui_event_t *e)
+            //           void function_name(gui_obj_t *obj, const char *topic, void *data, uint16_t len)
+            //           void function_name(gui_obj_t *obj, void *param)  <- note_design
             const eventFuncPattern = /void\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(\s*void\s*\*\s*obj\s*,\s*gui_event_t\s*\*\s*e\s*\)/g;
             const msgFuncPattern = /void\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(\s*gui_obj_t\s*\*\s*obj\s*,\s*const\s+char\s*\*\s*topic\s*,\s*void\s*\*\s*data\s*,\s*uint16_t\s+len\s*\)/g;
+            const noteDesignFuncPattern = /void\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(\s*gui_obj_t\s*\*\s*obj\s*,\s*void\s*\*\s*param\s*\)/g;
 
-            const functions: Array<{ name: string; type: 'event' | 'message' }> = [];
+            const functions: Array<{ name: string; type: 'event' | 'message' | 'noteDesign' }> = [];
 
             // 提取事件函数
             let match;
@@ -1250,6 +1253,14 @@ export class MessageHandler {
             // 提取消息函数
             while ((match = msgFuncPattern.exec(content)) !== null) {
                 functions.push({ name: match[1], type: 'message' });
+            }
+
+            // 提取 note_design 函数
+            while ((match = noteDesignFuncPattern.exec(content)) !== null) {
+                // 避免与 event/message 函数重复
+                if (!functions.some(f => f.name === match![1])) {
+                    functions.push({ name: match[1], type: 'noteDesign' });
+                }
             }
 
             logger.info(`[MessageHandler] 找到 ${functions.length} 个用户自定义函数`);
