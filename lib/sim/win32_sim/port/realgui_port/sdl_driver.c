@@ -12,10 +12,8 @@
 #include <string.h>
 #include "unistd.h"
 #include "tp_algo.h"
-#include "kb_algo.h"
 #include "sdl_driver.h"
 #include "sdl_driver_panel.h"
-#include "gui_api.h"
 
 static uint32_t simulator_width = 480;
 static uint32_t simulator_height = 480;
@@ -164,6 +162,11 @@ void *sdl_driver_thread(void *arg)
                                                    simulator_pixel_bits == 32 ? SDL_PIXELFORMAT_ARGB8888 :
                                                    simulator_pixel_bits == 16 ? SDL_PIXELFORMAT_RGB565 :
                                                    SDL_PIXELFORMAT_INDEX8);
+
+    if (simulator_pixel_bits == 32)
+    {
+        SDL_SetSurfaceBlendMode(customSurface, SDL_BLENDMODE_NONE);
+    }
 
     if (screen_corner_radius != 0)
     {
