@@ -15,6 +15,7 @@ export const HgGifProperties: React.FC<PropertyPanelProps> = ({ component, onUpd
   
   // 保存当前正在编辑的组件 ID
   const componentIdRef = React.useRef(component.id);
+  const [proportionalScale, setProportionalScale] = useState(true);
   
   // 组件切换时更新 ref 和输入状态
   React.useEffect(() => {
@@ -59,6 +60,22 @@ export const HgGifProperties: React.FC<PropertyPanelProps> = ({ component, onUpd
         },
       },
     });
+  };
+
+  const handleScaleChange = (axis: 'scaleX' | 'scaleY', val: any) => {
+    const value = val === '' ? 1.0 : parseFloat(val);
+    const finalVal = isNaN(value) ? 1.0 : Math.max(0, value);
+    const transform = component.style?.transform || {};
+    if (proportionalScale) {
+      onUpdate({
+        style: {
+          ...component.style,
+          transform: { ...transform, scaleX: finalVal, scaleY: finalVal },
+        },
+      });
+    } else {
+      handleTransformChange(axis, finalVal);
+    }
   };
 
   const handleSelectGifPath = () => {
@@ -202,7 +219,7 @@ export const HgGifProperties: React.FC<PropertyPanelProps> = ({ component, onUpd
             {/* 缩放 */}
             <div className="property-item">
               <label>{t('Scale')}</label>
-              <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+              <div style={{ display: 'flex', gap: '4px', marginTop: '4px', alignItems: 'flex-end' }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)' }}>X</label>
                   <PropertyEditor
@@ -210,14 +227,29 @@ export const HgGifProperties: React.FC<PropertyPanelProps> = ({ component, onUpd
                     min={0}
                     step={0.1}
                     value={transform.scaleX ?? 1.0}
-                    onChange={(val) => {
-                      const value = val === '' ? 1.0 : parseFloat(val);
-                      // 确保值大于等于 0
-                      const finalVal = isNaN(value) ? 1.0 : Math.max(0, value);
-                      handleTransformChange('scaleX', finalVal);
-                    }}
+                    onChange={(val) => handleScaleChange('scaleX', val)}
                   />
                 </div>
+                <button
+                  className={`scale-link-btn${proportionalScale ? ' active' : ''}`}
+                  title={proportionalScale ? t('Unlink scale axes') : t('Link scale axes')}
+                  onClick={() => setProportionalScale(!proportionalScale)}
+                >
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                    {proportionalScale ? (
+                      <>
+                        <path d="M4.5 3A1.5 1.5 0 0 0 3 4.5v1a1.5 1.5 0 0 0 1.06 1.44l1.5-1.5A.5.5 0 0 1 5 5.5v-1a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .06.004l1.5-1.5A1.5 1.5 0 0 0 6.5 3h-2z" />
+                        <path d="M11.5 13A1.5 1.5 0 0 0 13 11.5v-1a1.5 1.5 0 0 0-1.06-1.44l-1.5 1.5A.5.5 0 0 1 11 10.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.06-.004l-1.5 1.5A1.5 1.5 0 0 0 9.5 13h2z" />
+                        <path d="M5.354 10.354l5-5-.708-.708-5 5 .708.708z" />
+                      </>
+                    ) : (
+                      <>
+                        <path d="M4.5 3A1.5 1.5 0 0 0 3 4.5v1a1.5 1.5 0 0 0 1.5 1.5h1A1.5 1.5 0 0 0 7 5.5v-1A1.5 1.5 0 0 0 5.5 3h-1zM4 4.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1z" />
+                        <path d="M10.5 9A1.5 1.5 0 0 0 9 10.5v1a1.5 1.5 0 0 0 1.5 1.5h1a1.5 1.5 0 0 0 1.5-1.5v-1A1.5 1.5 0 0 0 11.5 9h-1zm-.5 1.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1z" />
+                      </>
+                    )}
+                  </svg>
+                </button>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)' }}>Y</label>
                   <PropertyEditor
@@ -225,12 +257,7 @@ export const HgGifProperties: React.FC<PropertyPanelProps> = ({ component, onUpd
                     min={0}
                     step={0.1}
                     value={transform.scaleY ?? 1.0}
-                    onChange={(val) => {
-                      const value = val === '' ? 1.0 : parseFloat(val);
-                      // 确保值大于等于 0
-                      const finalVal = isNaN(value) ? 1.0 : Math.max(0, value);
-                      handleTransformChange('scaleY', finalVal);
-                    }}
+                    onChange={(val) => handleScaleChange('scaleY', val)}
                   />
                 </div>
               </div>

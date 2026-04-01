@@ -971,6 +971,7 @@ const TimerActionEditor: React.FC<{
   currentTimerId: string;
 }> = ({ action, componentType, onUpdate, onDelete, availableViews, availableTimers, currentTimerId }) => {
   const components = useDesignerStore((state) => state.components);
+  const [proportionalScale, setProportionalScale] = useState(true);
   
   // 获取除当前定时器外的其他定时器
   const otherTimers = availableTimers.filter(t => t.id !== currentTimerId);
@@ -1710,94 +1711,139 @@ const TimerActionEditor: React.FC<{
       )}
 
       {action.type === 'scale' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-          <div>
-            <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('From Scale')} X</label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              value={action.zoomXOrigin ?? 1.0}
-              onChange={(e) => {
-                const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
-                onUpdate({ zoomXOrigin: isNaN(val) ? 0 : Math.max(0, val) });
-              }}
-              style={{
-                width: '100%',
-                padding: '3px',
-                backgroundColor: 'var(--vscode-input-background)',
-                color: 'var(--vscode-input-foreground)',
-                border: '1px solid var(--vscode-input-border)',
-                borderRadius: '2px',
-                fontSize: '11px',
-              }}
-            />
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+            <span style={{ fontSize: '10px', color: 'var(--vscode-descriptionForeground)' }}>{t('Proportional Scale')}</span>
+            <button
+              className={`scale-link-btn${proportionalScale ? ' active' : ''}`}
+              title={proportionalScale ? t('Unlink scale axes') : t('Link scale axes')}
+              onClick={() => setProportionalScale(!proportionalScale)}
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                {proportionalScale ? (
+                  <>
+                    <path d="M4.5 3A1.5 1.5 0 0 0 3 4.5v1a1.5 1.5 0 0 0 1.06 1.44l1.5-1.5A.5.5 0 0 1 5 5.5v-1a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .06.004l1.5-1.5A1.5 1.5 0 0 0 6.5 3h-2z" />
+                    <path d="M11.5 13A1.5 1.5 0 0 0 13 11.5v-1a1.5 1.5 0 0 0-1.06-1.44l-1.5 1.5A.5.5 0 0 1 11 10.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.06-.004l-1.5 1.5A1.5 1.5 0 0 0 9.5 13h2z" />
+                    <path d="M5.354 10.354l5-5-.708-.708-5 5 .708.708z" />
+                  </>
+                ) : (
+                  <>
+                    <path d="M4.5 3A1.5 1.5 0 0 0 3 4.5v1a1.5 1.5 0 0 0 1.5 1.5h1A1.5 1.5 0 0 0 7 5.5v-1A1.5 1.5 0 0 0 5.5 3h-1zM4 4.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1z" />
+                    <path d="M10.5 9A1.5 1.5 0 0 0 9 10.5v1a1.5 1.5 0 0 0 1.5 1.5h1a1.5 1.5 0 0 0 1.5-1.5v-1A1.5 1.5 0 0 0 11.5 9h-1zm-.5 1.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1z" />
+                  </>
+                )}
+              </svg>
+            </button>
           </div>
-          <div>
-            <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('To Scale')} X</label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              value={action.zoomXTarget ?? 2.0}
-              onChange={(e) => {
-                const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
-                onUpdate({ zoomXTarget: isNaN(val) ? 0 : Math.max(0, val) });
-              }}
-              style={{
-                width: '100%',
-                padding: '3px',
-                backgroundColor: 'var(--vscode-input-background)',
-                color: 'var(--vscode-input-foreground)',
-                border: '1px solid var(--vscode-input-border)',
-                borderRadius: '2px',
-                fontSize: '11px',
-              }}
-            />
-          </div>
-          <div>
-            <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('From Scale')} Y</label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              value={action.zoomYOrigin ?? 1.0}
-              onChange={(e) => {
-                const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
-                onUpdate({ zoomYOrigin: isNaN(val) ? 0 : Math.max(0, val) });
-              }}
-              style={{
-                width: '100%',
-                padding: '3px',
-                backgroundColor: 'var(--vscode-input-background)',
-                color: 'var(--vscode-input-foreground)',
-                border: '1px solid var(--vscode-input-border)',
-                borderRadius: '2px',
-                fontSize: '11px',
-              }}
-            />
-          </div>
-          <div>
-            <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('To Scale')} Y</label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              value={action.zoomYTarget ?? 2.0}
-              onChange={(e) => {
-                const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
-                onUpdate({ zoomYTarget: isNaN(val) ? 0 : Math.max(0, val) });
-              }}
-              style={{
-                width: '100%',
-                padding: '3px',
-                backgroundColor: 'var(--vscode-input-background)',
-                color: 'var(--vscode-input-foreground)',
-                border: '1px solid var(--vscode-input-border)',
-                borderRadius: '2px',
-                fontSize: '11px',
-              }}
-            />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+            <div>
+              <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('From Scale')} X</label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                value={action.zoomXOrigin ?? 1.0}
+                onChange={(e) => {
+                  const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                  const finalVal = isNaN(val) ? 0 : Math.max(0, val);
+                  if (proportionalScale) {
+                    onUpdate({ zoomXOrigin: finalVal, zoomYOrigin: finalVal });
+                  } else {
+                    onUpdate({ zoomXOrigin: finalVal });
+                  }
+                }}
+                style={{
+                  width: '100%',
+                  padding: '3px',
+                  backgroundColor: 'var(--vscode-input-background)',
+                  color: 'var(--vscode-input-foreground)',
+                  border: '1px solid var(--vscode-input-border)',
+                  borderRadius: '2px',
+                  fontSize: '11px',
+                }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('To Scale')} X</label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                value={action.zoomXTarget ?? 2.0}
+                onChange={(e) => {
+                  const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                  const finalVal = isNaN(val) ? 0 : Math.max(0, val);
+                  if (proportionalScale) {
+                    onUpdate({ zoomXTarget: finalVal, zoomYTarget: finalVal });
+                  } else {
+                    onUpdate({ zoomXTarget: finalVal });
+                  }
+                }}
+                style={{
+                  width: '100%',
+                  padding: '3px',
+                  backgroundColor: 'var(--vscode-input-background)',
+                  color: 'var(--vscode-input-foreground)',
+                  border: '1px solid var(--vscode-input-border)',
+                  borderRadius: '2px',
+                  fontSize: '11px',
+                }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('From Scale')} Y</label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                value={action.zoomYOrigin ?? 1.0}
+                onChange={(e) => {
+                  const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                  const finalVal = isNaN(val) ? 0 : Math.max(0, val);
+                  if (proportionalScale) {
+                    onUpdate({ zoomYOrigin: finalVal, zoomXOrigin: finalVal });
+                  } else {
+                    onUpdate({ zoomYOrigin: finalVal });
+                  }
+                }}
+                style={{
+                  width: '100%',
+                  padding: '3px',
+                  backgroundColor: 'var(--vscode-input-background)',
+                  color: 'var(--vscode-input-foreground)',
+                  border: '1px solid var(--vscode-input-border)',
+                  borderRadius: '2px',
+                  fontSize: '11px',
+                }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: '10px', display: 'block', marginBottom: '2px' }}>{t('To Scale')} Y</label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                value={action.zoomYTarget ?? 2.0}
+                onChange={(e) => {
+                  const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                  const finalVal = isNaN(val) ? 0 : Math.max(0, val);
+                  if (proportionalScale) {
+                    onUpdate({ zoomYTarget: finalVal, zoomXTarget: finalVal });
+                  } else {
+                    onUpdate({ zoomYTarget: finalVal });
+                  }
+                }}
+                style={{
+                  width: '100%',
+                  padding: '3px',
+                  backgroundColor: 'var(--vscode-input-background)',
+                  color: 'var(--vscode-input-foreground)',
+                  border: '1px solid var(--vscode-input-border)',
+                  borderRadius: '2px',
+                  fontSize: '11px',
+                }}
+              />
+            </div>
           </div>
         </div>
       )}

@@ -277,3 +277,32 @@ textarea:disabled {
   color: var(--vscode-button-foreground);
   border-color: var(--vscode-focusBorder);
 }
+
+/* Scale link button */
+.scale-link-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  margin-bottom: 2px;
+  padding: 0;
+  border: 1px solid var(--vscode-input-border);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--vscode-descriptionForeground);
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.15s, background-color 0.15s;
+}
+.scale-link-btn:hover {
+  opacity: 1;
+  background-color: var(--vscode-toolbar-hoverBackground);
+}
+.scale-link-btn.active {
+  opacity: 1;
+  color: var(--vscode-button-foreground);
+  background-color: var(--vscode-button-background);
+  border-color: var(--vscode-focusBorder);
+}
