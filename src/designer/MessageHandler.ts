@@ -922,44 +922,77 @@ export class MessageHandler {
                 };
             }
 
-            // 判断资源类型
+            // 判断是否是文件夹（无扩展名且路径不含点，或者由前端明确标记）
             const ext = path.extname(assetPath).toLowerCase();
-            const imageExts = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.svg'];
-            const videoExts = ['.mp4', '.avi', '.mov', '.mkv', '.webm'];
-            const modelExts = ['.gltf', '.glb', '.obj'];
-            const fontExts = ['.ttf', '.otf', '.woff', '.woff2'];
+            const isFolder = ext === '';
 
-            let category: 'images' | 'videos' | 'models' | 'fonts' | null = null;
-            if (imageExts.includes(ext)) {
-                category = 'images';
-            } else if (videoExts.includes(ext)) {
-                category = 'videos';
-            } else if (modelExts.includes(ext)) {
-                category = 'models';
-            } else if (fontExts.includes(ext)) {
-                category = 'fonts';
-            }
+            if (isFolder) {
+                // 文件夹：对所有分类添加/移除 glob 模式 "folder/**"
+                const globPattern = `${assetPath}/**`;
+                const categories = ['images', 'videos', 'models', 'fonts'] as const;
+                let isRemoving = false;
 
-            if (!category) {
-                logger.warn(`[MessageHandler] 不支持的资源类型: ${ext}`);
-                return;
-            }
+                // 检查是否已存在（任意分类中存在即视为已标记）
+                for (const cat of categories) {
+                    if (!projectConfig.alwaysConvert[cat]) {
+                        projectConfig.alwaysConvert[cat] = [];
+                    }
+                    if (projectConfig.alwaysConvert[cat].includes(globPattern)) {
+                        isRemoving = true;
+                        break;
+                    }
+                }
 
-            // 确保分类数组存在
-            if (!projectConfig.alwaysConvert[category]) {
-                projectConfig.alwaysConvert[category] = [];
-            }
+                for (const cat of categories) {
+                    const list: string[] = projectConfig.alwaysConvert[cat];
+                    const idx = list.indexOf(globPattern);
+                    if (isRemoving) {
+                        if (idx >= 0) { list.splice(idx, 1); }
+                    } else {
+                        if (idx < 0) { list.push(globPattern); }
+                    }
+                }
 
-            // 切换状态
-            const index = projectConfig.alwaysConvert[category].indexOf(assetPath);
-            if (index >= 0) {
-                // 已存在，移除
-                projectConfig.alwaysConvert[category].splice(index, 1);
-                logger.info(`[MessageHandler] 已从强制转换列表移除: ${assetPath}`);
+                logger.info(`[MessageHandler] 文件夹强制转换 ${isRemoving ? '已移除' : '已添加'}: ${globPattern}`);
             } else {
-                // 不存在，添加
-                projectConfig.alwaysConvert[category].push(assetPath);
-                logger.info(`[MessageHandler] 已添加到强制转换列表: ${assetPath}`);
+                // 单文件：按扩展名判断分类
+                const imageExts = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.svg'];
+                const videoExts = ['.mp4', '.avi', '.mov', '.mkv', '.webm'];
+                const modelExts = ['.gltf', '.glb', '.obj'];
+                const fontExts = ['.ttf', '.otf', '.woff', '.woff2'];
+
+                let category: 'images' | 'videos' | 'models' | 'fonts' | null = null;
+                if (imageExts.includes(ext)) {
+                    category = 'images';
+                } else if (videoExts.includes(ext)) {
+                    category = 'videos';
+                } else if (modelExts.includes(ext)) {
+                    category = 'models';
+                } else if (fontExts.includes(ext)) {
+                    category = 'fonts';
+                }
+
+                if (!category) {
+                    logger.warn(`[MessageHandler] 不支持的资源类型: ${ext}`);
+                    return;
+                }
+
+                // 确保分类数组存在
+                if (!projectConfig.alwaysConvert[category]) {
+                    projectConfig.alwaysConvert[category] = [];
+                }
+
+                // 切换状态
+                const index = projectConfig.alwaysConvert[category].indexOf(assetPath);
+                if (index >= 0) {
+                    // 已存在，移除
+                    projectConfig.alwaysConvert[category].splice(index, 1);
+                    logger.info(`[MessageHandler] 已从强制转换列表移除: ${assetPath}`);
+                } else {
+                    // 不存在，添加
+                    projectConfig.alwaysConvert[category].push(assetPath);
+                    logger.info(`[MessageHandler] 已添加到强制转换列表: ${assetPath}`);
+                }
             }
 
             // 保存 project.json

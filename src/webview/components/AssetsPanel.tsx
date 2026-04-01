@@ -591,9 +591,13 @@ const AssetsPanel: React.FC = () => {
 
   /**
    * 检查资源是否在强制转换列表中
+   * 文件夹：检查是否存在 "folder/**" glob 模式
    */
   const isAlwaysConvert = (assetPath: string): boolean => {
-    return alwaysConvertAssets.has(assetPath);
+    if (alwaysConvertAssets.has(assetPath)) { return true; }
+    // 检查文件夹 glob 模式
+    const globPattern = `${assetPath}/**`;
+    return alwaysConvertAssets.has(globPattern);
   };
 
   /**
@@ -740,11 +744,13 @@ const AssetsPanel: React.FC = () => {
 
   const renderFolderItem = (folder: AssetFile) => {
     const isSelected = selectedAsset?.path === folder.path;
+    const folderRelativePath = folder.relativePath || folder.name;
+    const isMarkedAlwaysConvert = isAlwaysConvert(folderRelativePath);
     
     return (
       <div 
         key={folder.path} 
-        className={`asset-grid-item folder-item${isSelected ? ' selected' : ''}`}
+        className={`asset-grid-item folder-item${isSelected ? ' selected' : ''}${isMarkedAlwaysConvert ? ' always-convert' : ''}`}
         onClick={(e) => handleFolderClick(folder, e)}
         onDoubleClick={(e) => handleFolderDoubleClick(folder, e)}
       >
@@ -770,6 +776,16 @@ const AssetsPanel: React.FC = () => {
             <span className="asset-name" title={folder.name}>{folder.name}</span>
           )}
           <div className="asset-actions">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleToggleAlwaysConvert(folderRelativePath);
+              }}
+              title={isMarkedAlwaysConvert ? t('Remove from always convert') : t('Add to always convert')}
+              className={`action-btn force-convert-btn${isMarkedAlwaysConvert ? ' active' : ''}`}
+            >
+              <Zap size={12} />
+            </button>
             <button 
               onClick={(e) => { 
                 e.stopPropagation(); 

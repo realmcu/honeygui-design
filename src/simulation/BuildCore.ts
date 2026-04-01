@@ -628,65 +628,51 @@ Return('objs')
         };
         scanDir(assetsDir);
 
+        const imageExts = new Set(['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.svg']);
+        const videoExts = new Set(['.mp4', '.avi', '.mov', '.mkv', '.webm']);
+        const modelExts = new Set(['.gltf', '.glb', '.obj']);
+        const fontExts  = new Set(['.ttf', '.otf', '.woff', '.woff2']);
+
+        const matchFiles = (pattern: string, extFilter: Set<string>, target: Set<string>) => {
+            if (allFiles.includes(pattern)) {
+                // 精确路径：仍按扩展名过滤，避免误分类
+                if (extFilter.has(path.extname(pattern).toLowerCase())) {
+                    target.add(pattern);
+                }
+            } else {
+                for (const file of allFiles) {
+                    if (minimatch(file, pattern) && extFilter.has(path.extname(file).toLowerCase())) {
+                        target.add(file);
+                    }
+                }
+            }
+        };
+
         // 匹配图片（支持精确路径和 glob 模式）
         if (alwaysConvert.images && Array.isArray(alwaysConvert.images)) {
             for (const pattern of alwaysConvert.images) {
-                // 检查是否是精确路径
-                if (allFiles.includes(pattern)) {
-                    images.add(pattern);
-                } else {
-                    // 使用 glob 模式匹配
-                    for (const file of allFiles) {
-                        if (minimatch(file, pattern)) {
-                            images.add(file);
-                        }
-                    }
-                }
+                matchFiles(pattern, imageExts, images);
             }
         }
 
         // 匹配视频
         if (alwaysConvert.videos && Array.isArray(alwaysConvert.videos)) {
             for (const pattern of alwaysConvert.videos) {
-                if (allFiles.includes(pattern)) {
-                    videos.add(pattern);
-                } else {
-                    for (const file of allFiles) {
-                        if (minimatch(file, pattern)) {
-                            videos.add(file);
-                        }
-                    }
-                }
+                matchFiles(pattern, videoExts, videos);
             }
         }
 
         // 匹配 3D 模型
         if (alwaysConvert.models && Array.isArray(alwaysConvert.models)) {
             for (const pattern of alwaysConvert.models) {
-                if (allFiles.includes(pattern)) {
-                    models.add(pattern);
-                } else {
-                    for (const file of allFiles) {
-                        if (minimatch(file, pattern)) {
-                            models.add(file);
-                        }
-                    }
-                }
+                matchFiles(pattern, modelExts, models);
             }
         }
 
         // 匹配字体
         if (alwaysConvert.fonts && Array.isArray(alwaysConvert.fonts)) {
             for (const pattern of alwaysConvert.fonts) {
-                if (allFiles.includes(pattern)) {
-                    fonts.add(pattern);
-                } else {
-                    for (const file of allFiles) {
-                        if (minimatch(file, pattern)) {
-                            fonts.add(file);
-                        }
-                    }
-                }
+                matchFiles(pattern, fontExts, fonts);
             }
         }
     }
