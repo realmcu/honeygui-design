@@ -1768,10 +1768,13 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       const component = state.components.find((c) => c.id === id);
       if (!component) return state;
 
+      // 计算新父容器下现有子组件数量，用于设置正确的 zIndex
+      const newSiblingCount = state.components.filter(c => c.parent === newParent).length;
+
       return {
         components: state.components.map((comp) => {
           if (comp.id === id) {
-            return { ...comp, parent: newParent };
+            return { ...comp, parent: newParent, zIndex: newSiblingCount };
           }
           // Update old parent's children
           if (comp.id === component.parent) {
@@ -2140,8 +2143,9 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       const comp = state.components.find(c => c.id === componentId);
       if (!comp) return state;
 
-      // 找到同级组件
-      const siblings = state.components.filter(c => c.parent === comp.parent);
+      // 找到同级组件（按 zIndex 排序以确保与视觉顺序一致）
+      const siblings = state.components.filter(c => c.parent === comp.parent)
+        .sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0));
       if (siblings.length <= 1) return state;
 
       const currentIndex = siblings.findIndex(c => c.id === componentId);
