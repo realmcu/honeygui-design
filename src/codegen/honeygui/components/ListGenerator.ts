@@ -252,16 +252,9 @@ export class ListGenerator implements ComponentCodeGenerator {
         code += `    case ${idx}:\n`;
         code += `    {\n`;
         
-        // Generate child components for this list_item (sorted by zIndex, matching component tree order)
+        // Generate child components for this list_item
         if (listItem.children && listItem.children.length > 0) {
-          const sortedChildren = [...listItem.children].sort((a, b) => {
-            const compA = context.componentMap.get(a);
-            const compB = context.componentMap.get(b);
-            const zA = typeof compA?.zIndex === 'number' ? compA.zIndex : 0;
-            const zB = typeof compB?.zIndex === 'number' ? compB.zIndex : 0;
-            return zA - zB;
-          });
-          sortedChildren.forEach(childId => {
+          listItem.children.forEach(childId => {
             const child = context.componentMap.get(childId);
             if (child) {
               try {
