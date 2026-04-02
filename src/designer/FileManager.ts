@@ -457,7 +457,27 @@ export class FileManager {
         logger.info(`[FileManager] loadFromDocument: 开始加载文件 ${this._filePath}`);
 
         try {
-            const content = document.getText();
+            let content = document.getText();
+
+            // 防御性检查：如果内容为空或缺少 <hml> 根元素，尝试从磁盘重新读取
+            if (!content || !content.includes('<hml')) {
+                logger.warn(`[FileManager] TextDocument 内容异常（长度=${content.length}），尝试从磁盘重新读取`);
+                const fs = require('fs');
+                for (let retry = 0; retry < 3; retry++) {
+                    await new Promise(resolve => setTimeout(resolve, 300 * (retry + 1)));
+                    try {
+                        const diskContent = fs.readFileSync(this._filePath, 'utf-8');
+                        if (diskContent && diskContent.includes('<hml')) {
+                            logger.info(`[FileManager] 磁盘读取成功（重试 ${retry + 1} 次），内容长度=${diskContent.length}`);
+                            content = diskContent;
+                            break;
+                        }
+                        logger.warn(`[FileManager] 磁盘内容仍然异常（重试 ${retry + 1}），长度=${diskContent?.length || 0}`);
+                    } catch (readErr) {
+                        logger.warn(`[FileManager] 磁盘读取失败（重试 ${retry + 1}）: ${readErr}`);
+                    }
+                }
+            }
 
             // 解析文档内容
             const hmlDocument = this._hmlController.parseContent(content);
@@ -503,6 +523,12 @@ export class FileManager {
                 logger.debug(`[FileManager] updateFromDocument: 重新加载文件 ${this._filePath}`);
                 const document = await vscode.workspace.openTextDocument(this._filePath);
                 const diskContent = document.getText();
+
+                // 防御性检查：如果内容为空或无效，跳过更新
+                if (!diskContent || !diskContent.includes('<hml')) {
+                    logger.warn(`[FileManager] updateFromDocument: 内容异常（长度=${diskContent?.length || 0}），跳过更新`);
+                    return;
+                }
                 
                 // 使用智能内容对比机制
                 if (this._lastSerializedSnapshot) {

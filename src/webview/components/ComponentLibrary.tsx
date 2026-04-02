@@ -245,7 +245,7 @@ const componentDefinitions: ComponentDefinition[] = [
   {
     type: 'hg_view',
     name: 'View',
-    icon: '👁️',
+    icon: '📱',
     defaultSize: { width: 350, height: 250 },
     properties: [
       { name: 'entry', label: 'Entry View', type: 'boolean', defaultValue: false, group: 'general' },
@@ -282,7 +282,7 @@ const componentDefinitions: ComponentDefinition[] = [
   {
     type: 'hg_list',
     name: 'List',
-    icon: '📋',
+    icon: '📜',
     defaultSize: { width: 300, height: 400 },
     properties: [
       { name: 'itemWidth', label: 'Item Width', type: 'number', defaultValue: 100, group: 'style' },
@@ -525,7 +525,7 @@ const componentIconMap: Record<string, string> = componentDefinitions.reduce((ac
 }, {} as Record<string, string>);
 
 // 添加不在组件库中显示但需要图标的组件
-componentIconMap['hg_list_item'] = '📄';
+componentIconMap['hg_list_item'] = '▫️';
 
 const ComponentLibrary: React.FC<ComponentLibraryProps> = ({ onComponentDragStart, onCreateComponent }) => {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
