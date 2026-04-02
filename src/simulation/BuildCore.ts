@@ -725,15 +725,21 @@ Return('objs')
         }
 
         // 特殊处理：hg_map/hg_openclaw 组件的 fontFile 和 emojiFontFile 属性（字体文件需要直接拷贝，不进行格式转换）
-        const fontFileRegex = /(fontFile|emojiFontFile)\s*=\s*["']([^"']+)["']/g;
-        let fontMatch;
-        while ((fontMatch = fontFileRegex.exec(hmlContent)) !== null) {
-            let fontPath = fontMatch[2];
-            if (fontPath.startsWith('assets/')) {
-                fontPath = fontPath.substring(7);
-            }
-            if (fontPath) {
-                mapFonts.add(fontPath);
+        // 只匹配 hg_map 和 hg_openclaw 标签内的 fontFile，避免误匹配 hg_label 等组件的字体属性
+        const mapComponentRegex = /<(hg_map|hg_openclaw)\s[^>]*>/g;
+        let compMatch;
+        while ((compMatch = mapComponentRegex.exec(hmlContent)) !== null) {
+            const tagContent = compMatch[0];
+            const fontFileInTag = /(fontFile|emojiFontFile)\s*=\s*["']([^"']+)["']/g;
+            let fontMatch;
+            while ((fontMatch = fontFileInTag.exec(tagContent)) !== null) {
+                let fontPath = fontMatch[2];
+                if (fontPath.startsWith('assets/')) {
+                    fontPath = fontPath.substring(7);
+                }
+                if (fontPath) {
+                    mapFonts.add(fontPath);
+                }
             }
         }
 
