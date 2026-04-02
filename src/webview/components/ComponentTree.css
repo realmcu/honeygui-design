@@ -35,12 +35,23 @@
   outline-offset: -1px;
 }
 
-/* Sticky scroll header */
+/* Scroll wrapper - relative container for absolute sticky header */
+.tree-scroll-wrapper {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Sticky scroll header - absolute positioned, overlays tree-content */
 .tree-sticky-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
   border-bottom: 1px solid var(--vscode-panel-border);
   background-color: var(--vscode-sideBar-background);
-  z-index: 1;
-  flex-shrink: 0;
+  z-index: 10;
 }
 
 .tree-sticky-item {
@@ -64,7 +75,7 @@
 }
 
 .tree-content {
-  flex: 1;
+  height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
   padding: 8px 0;

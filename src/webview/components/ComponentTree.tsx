@@ -533,14 +533,18 @@ const ComponentTree: React.FC<{ onContextMenu?: (e: React.MouseEvent, componentI
 
   // Sticky scroll：滚动时 pin 父节点到顶部
   const [stickyParents, setStickyParents] = useState<string[]>([]);
+  const stickyRafRef = useRef<number | null>(null);
+  const prevStickyRef = useRef<string>('');
 
   const computeStickyParents = useCallback(() => {
     const container = treeContentRef.current;
     if (!container) return;
 
     const containerRect = container.getBoundingClientRect();
-    // sticky header 在 tree-content 外部，不影响视口计算
-    const viewportTop = containerRect.top;
+    // 计算 sticky header 实际高度，用于偏移视口顶部（因为 sticky header 覆盖在滚动内容上方）
+    const stickyHeader = container.parentElement?.querySelector('.tree-sticky-header');
+    const stickyHeight = stickyHeader ? stickyHeader.getBoundingClientRect().height : 0;
+    const viewportTop = containerRect.top + stickyHeight;
 
     // 查找 .tree-node-content（28px header）而不是 .tree-node（包含子树）
     const allNodeContents = container.querySelectorAll('.tree-node-content');
@@ -556,13 +560,19 @@ const ComponentTree: React.FC<{ onContextMenu?: (e: React.MouseEvent, componentI
     }
 
     if (!firstVisibleId) {
-      setStickyParents([]);
+      if (prevStickyRef.current !== '') {
+        prevStickyRef.current = '';
+        setStickyParents([]);
+      }
       return;
     }
 
     const comp = components.find(c => c.id === firstVisibleId);
     if (!comp) {
-      setStickyParents([]);
+      if (prevStickyRef.current !== '') {
+        prevStickyRef.current = '';
+        setStickyParents([]);
+      }
       return;
     }
 
@@ -590,7 +600,12 @@ const ComponentTree: React.FC<{ onContextMenu?: (e: React.MouseEvent, componentI
       }
     }
 
-    setStickyParents(pinnedParents);
+    // 只在内容变化时更新，避免不必要的重渲染
+    const key = pinnedParents.join(',');
+    if (key !== prevStickyRef.current) {
+      prevStickyRef.current = key;
+      setStickyParents(pinnedParents);
+    }
   }, [components]);
 
   useEffect(() => {
@@ -598,11 +613,21 @@ const ComponentTree: React.FC<{ onContextMenu?: (e: React.MouseEvent, componentI
     if (!container) return;
 
     const handleScroll = () => {
-      requestAnimationFrame(computeStickyParents);
+      // 去重：同一帧内只执行一次
+      if (stickyRafRef.current !== null) return;
+      stickyRafRef.current = requestAnimationFrame(() => {
+        stickyRafRef.current = null;
+        computeStickyParents();
+      });
     };
 
     container.addEventListener('scroll', handleScroll, { passive: true });
-    return () => container.removeEventListener('scroll', handleScroll);
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      if (stickyRafRef.current !== null) {
+        cancelAnimationFrame(stickyRafRef.current);
+      }
+    };
   }, [computeStickyParents]);
 
   // 拖拽时的自动滚动
@@ -700,58 +725,59 @@ const ComponentTree: React.FC<{ onContextMenu?: (e: React.MouseEvent, componentI
           </select>
         </div>
       )}
-      {/* Sticky scroll 父节点 */}
-      {stickyParents.length > 0 && (
-        <div className="tree-sticky-header">
-          {stickyParents.map((parentId) => {
-            const comp = components.find(c => c.id === parentId);
-            if (!comp) return null;
-            // 计算实际层级
-            let level = 0;
-            let pid = comp.parent;
-            while (pid) {
-              level++;
-              const p = components.find(c => c.id === pid);
-              pid = p?.parent || null;
-            }
-            const icon = componentIconMap[comp.type] || '📦';
-            return (
-              <div
-                key={parentId}
-                className={`tree-sticky-item ${selectedComponent === parentId ? 'selected' : ''}`}
-                style={{ paddingLeft: `${level * 12 + 8}px` }}
-                onClick={() => {
-                  selectComponent(parentId);
-                }}
-              >
+      <div className="tree-scroll-wrapper">
+        {/* Sticky scroll 父节点 - 绝对定位覆盖在滚动区域上方，不影响布局 */}
+        {stickyParents.length > 0 && (
+          <div className="tree-sticky-header">
+            {stickyParents.map((parentId) => {
+              const comp = components.find(c => c.id === parentId);
+              if (!comp) return null;
+              // 计算实际层级
+              let level = 0;
+              let pid = comp.parent;
+              while (pid) {
+                level++;
+                const p = components.find(c => c.id === pid);
+                pid = p?.parent || null;
+              }
+              const icon = componentIconMap[comp.type] || '📦';
+              return (
                 <div
-                  className="tree-expand-icon"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleCollapse(parentId);
-                    requestAnimationFrame(() => {
-                      const container = treeContentRef.current;
-                      const node = container?.querySelector(`[data-component-id="${parentId}"]`);
-                      if (node && container) {
-                        const nodeContent = node.querySelector(':scope > .tree-node-content');
-                        if (nodeContent) {
-                          nodeContent.scrollIntoView({ block: 'start' });
-                          requestAnimationFrame(computeStickyParents);
-                        }
-                      }
-                    });
+                  key={parentId}
+                  className={`tree-sticky-item ${selectedComponent === parentId ? 'selected' : ''}`}
+                  style={{ paddingLeft: `${level * 12 + 8}px` }}
+                  onClick={() => {
+                    selectComponent(parentId);
                   }}
                 >
-                  <ChevronDown size={14} />
+                  <div
+                    className="tree-expand-icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleCollapse(parentId);
+                      requestAnimationFrame(() => {
+                        const container = treeContentRef.current;
+                        const node = container?.querySelector(`[data-component-id="${parentId}"]`);
+                        if (node && container) {
+                          const nodeContent = node.querySelector(':scope > .tree-node-content');
+                          if (nodeContent) {
+                            nodeContent.scrollIntoView({ block: 'start' });
+                            requestAnimationFrame(computeStickyParents);
+                          }
+                        }
+                      });
+                    }}
+                  >
+                    <ChevronDown size={14} />
+                  </div>
+                  <div className="tree-node-icon">{icon}</div>
+                  <div className="tree-node-label">{comp.id}</div>
                 </div>
-                <div className="tree-node-icon">{icon}</div>
-                <div className="tree-node-label">{comp.id}</div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-      <div className="tree-content" ref={treeContentRef}>
+              );
+            })}
+          </div>
+        )}
+        <div className="tree-content" ref={treeContentRef}>
         {rootComponents.length === 0 ? (
           <div className="tree-empty">
             {t('No components')}
@@ -769,6 +795,7 @@ const ComponentTree: React.FC<{ onContextMenu?: (e: React.MouseEvent, componentI
             />
           ))
         )}
+      </div>
       </div>
     </div>
     </BrokenRefsContext.Provider>
