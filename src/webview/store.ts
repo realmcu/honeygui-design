@@ -1802,8 +1802,9 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   // 重新排序同级组件
   reorderSiblings: (componentId: string, parentId: string | null | undefined, newIndex: number) => {
     set((state) => {
-      // 获取同级组件
-      const siblings = state.components.filter(c => c.parent === parentId);
+      // 获取同级组件（按 zIndex 排序以确保与视觉顺序一致）
+      const siblings = state.components.filter(c => c.parent === parentId)
+        .sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0));
       const currentIndex = siblings.findIndex(c => c.id === componentId);
       
       if (currentIndex === -1 || currentIndex === newIndex) {
@@ -1931,9 +1932,9 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       
       return {
         components: state.components.map((comp) => {
-          // 更新组件的父引用
+          // 更新组件的父引用（设置高 zIndex 确保在排序后位于末尾）
           if (comp.id === componentId) {
-            return { ...comp, parent: newParentId };
+            return { ...comp, parent: newParentId, zIndex: 99999 };
           }
           // 从旧父组件的 children 中移除
           if (comp.id === oldParentId) {
@@ -1956,7 +1957,8 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     
     // 然后调整顺序（使用更新后的状态）
     const updatedState = get();
-    const siblings = updatedState.components.filter(c => c.parent === newParentId);
+    const siblings = updatedState.components.filter(c => c.parent === newParentId)
+      .sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0));
     const targetIndex = siblings.findIndex(c => c.id === targetId);
     const newIndex = position === 'before' ? targetIndex : targetIndex + 1;
     

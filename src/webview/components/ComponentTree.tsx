@@ -315,8 +315,9 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
     
     const targetParent = targetComp.parent;
     
-    // 获取同级组件列表
-    const siblings = state.components.filter(c => c.parent === targetParent);
+    // 获取同级组件列表（按 zIndex 排序以匹配视觉顺序）
+    const siblings = state.components.filter(c => c.parent === targetParent)
+      .sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0));
     const targetIndex = siblings.findIndex(c => c.id === targetId);
     const draggedIndex = siblings.findIndex(c => c.id === draggedId);
     
@@ -328,9 +329,9 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
         newIndex = targetIndex + 1;
       }
       
-      // 如果拖拽组件在目标组件之前，需要调整索引
-      if (draggedIndex < targetIndex && position === 'before') {
-        newIndex = targetIndex - 1;
+      // 如果拖拽组件在目标组件之前，移除后目标索引会前移一位，需要补偿
+      if (draggedIndex < targetIndex) {
+        newIndex = newIndex - 1;
       }
       
       if (draggedIndex !== newIndex) {
