@@ -243,7 +243,7 @@ export const LabelWidget: React.FC<WidgetProps> = ({ component, style, handlers,
     // 关键：lineHeight 必须等于 fontSize（或 fontSize + lineSpacing），确保文本占用空间 = EM 矩形
     lineHeight: `${lineHeight}px`,
     textAlign: hAlign.toLowerCase() as any,
-    display: 'block',
+    display: style?.display === 'none' ? 'none' : 'block',
     // 垂直对齐：基于 lineHeight（即 EM 矩形大小）
     paddingTop: `${verticalPadding}px`,
     // 按词换行
@@ -292,7 +292,7 @@ export const LabelWidget: React.FC<WidgetProps> = ({ component, style, handlers,
       const numWidth = containerWidth - colonWidth;  // 数字部分宽度
       
       return (
-        <div key={component.id} style={{...labelStyle, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: 0}} {...handlers}>
+        <div key={component.id} style={{...labelStyle, display: labelStyle.display === 'none' ? 'none' : 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: 0}} {...handlers}>
           {/* 第一行：小时（居中对齐） */}
           <div style={{ 
             fontFamily: fontFamily || 'inherit', 

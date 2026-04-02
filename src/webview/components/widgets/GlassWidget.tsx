@@ -910,14 +910,14 @@ export const GlassWidget: React.FC<WidgetProps> = ({ component, style, handlers 
 
   if (error) {
     return (
-      <div style={{ ...style, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...handlers}>
+      <div style={{ ...style, display: style?.display === 'none' ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center' }} {...handlers}>
         <span style={{ fontSize: 32 }}>🔮</span>
       </div>
     );
   }
 
   return (
-    <div style={{ ...style, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...handlers}>
+    <div style={{ ...style, display: style?.display === 'none' ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center' }} {...handlers}>
       {belowImageComponents.map(c => (
         <ImageLoader
           key={c.id}

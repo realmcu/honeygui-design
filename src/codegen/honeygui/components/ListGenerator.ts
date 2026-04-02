@@ -162,6 +162,11 @@ export class ListGenerator implements ComponentCodeGenerator {
         code += `${indentStr}gui_list_keep_note_alive(${component.id}, true);\n`;
       }
 
+      // Visibility
+      if (component.visible !== undefined) {
+        code += `${indentStr}gui_obj_show((gui_obj_t *)${component.id}, ${component.visible ? 'true' : 'false'});\n`;
+      }
+
       return code;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);

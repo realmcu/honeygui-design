@@ -140,7 +140,7 @@ export const TimerLabelWidget: React.FC<WidgetProps> = ({ component, style, hand
     letterSpacing: Number(component.style?.letterSpacing) || 0,
     lineHeight: `${lineHeight}px`,
     textAlign: hAlign.toLowerCase() as any,
-    display: 'block',
+    display: style?.display === 'none' ? 'none' : 'block',
     paddingTop: `${verticalPadding}px`,
     whiteSpace: wordWrap ? 'pre-wrap' : 'nowrap',
     overflow: 'hidden',

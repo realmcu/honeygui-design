@@ -101,7 +101,7 @@ export const TimeLabelWidget: React.FC<WidgetProps> = ({ component, style, handl
     letterSpacing: Number(component.style?.letterSpacing) || 0,
     lineHeight: `${lineHeight}px`,
     textAlign: hAlign.toLowerCase() as any,
-    display: 'block',
+    display: style?.display === 'none' ? 'none' : 'block',
     paddingTop: `${verticalPadding}px`,
     whiteSpace: wordWrap ? 'pre-wrap' : 'nowrap',
     overflow: 'hidden',
@@ -120,7 +120,7 @@ export const TimeLabelWidget: React.FC<WidgetProps> = ({ component, style, handl
       const numWidth = containerWidth - colonWidth;
       
       return (
-        <div key={component.id} style={{...labelStyle, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: 0}} {...handlers}>
+        <div key={component.id} style={{...labelStyle, display: labelStyle.display === 'none' ? 'none' : 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: 0}} {...handlers}>
           {/* 第一行：小时 */}
           <div style={{ 
             fontFamily: fontFamily || 'inherit', 
