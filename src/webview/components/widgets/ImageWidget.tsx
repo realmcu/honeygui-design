@@ -37,7 +37,6 @@ export const ImageWidget: React.FC<WidgetProps> = ({ component, style, handlers 
     // 使用双层结构：背景色层 + 前景色层（使用图片作为 mask）
     imageStyle = {
       ...style,
-      position: 'relative',
       background: isA8BGFG && bgColor ? argbToRgba(bgColor) : 'transparent',
     };
   } else if (webviewUri) {
