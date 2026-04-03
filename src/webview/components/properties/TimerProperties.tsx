@@ -196,54 +196,19 @@ export const TimerProperties: React.FC<TimerPropertiesProps> = ({
                 gap: '8px',
               }}
             >
-              {/* 第一行：启用复选框和删除按钮 */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <input
-                    type="checkbox"
-                    checked={timer.enabled}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      handleUpdateTimer(timer.id, { enabled: e.target.checked });
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                    style={{ cursor: 'pointer' }}
-                  />
-                  <span style={{ fontSize: '11px', opacity: 0.7, whiteSpace: 'nowrap' }}>
-                    {t('Bind on component creation')}
-                  </span>
-                </div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteTimer(timer.id);
-                  }}
-                  style={{
-                    padding: '2px 8px',
-                    background: 'var(--vscode-button-secondaryBackground)',
-                    color: 'var(--vscode-button-secondaryForeground)',
-                    border: 'none',
-                    borderRadius: '2px',
-                    cursor: 'pointer',
-                    fontSize: '11px',
-                    flexShrink: 0,
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {t('Delete')}
-                </button>
-              </div>
-
-              {/* 第二行：名称输入框和展开按钮 */}
+              {/* 第一行：折叠三角 + 名称 + 删除按钮 */}
               <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
+                  gap: '6px',
                   cursor: 'pointer',
                 }}
                 onClick={() => toggleExpand(timer.id)}
               >
+                <span style={{ fontSize: '10px', opacity: 0.7, flexShrink: 0, width: '12px', textAlign: 'center' }}>
+                  {expandedTimerId === timer.id ? '▼' : '▶'}
+                </span>
                 <input
                   type="text"
                   value={timer.name || ''}
@@ -268,10 +233,45 @@ export const TimerProperties: React.FC<TimerPropertiesProps> = ({
                       : '1px solid var(--vscode-input-border)',
                     borderRadius: '2px',
                     fontSize: '12px',
+                    minWidth: 0,
                   }}
                 />
-                <span style={{ fontSize: '12px', opacity: 0.7 }}>
-                  {expandedTimerId === timer.id ? '▼' : '▶'}
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteTimer(timer.id);
+                  }}
+                  title={t('Delete')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '20px',
+                    height: '20px',
+                    cursor: 'pointer',
+                    opacity: 0.6,
+                    borderRadius: '2px',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Trash2 size={13} />
+                </span>
+              </div>
+
+              {/* 第二行：启用复选框 */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '18px' }}>
+                <input
+                  type="checkbox"
+                  checked={timer.enabled}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    handleUpdateTimer(timer.id, { enabled: e.target.checked });
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ cursor: 'pointer' }}
+                />
+                <span style={{ fontSize: '11px', opacity: 0.7, whiteSpace: 'nowrap' }}>
+                  {t('Bind on component creation')}
                 </span>
               </div>
             </div>
@@ -282,7 +282,7 @@ export const TimerProperties: React.FC<TimerPropertiesProps> = ({
                 {/* 基本配置 */}
                 <div style={{ marginBottom: '8px' }}>
                   <label style={{ fontSize: '11px', display: 'block', marginBottom: '4px' }}>
-                    {t('Animation Interval (ms)')}
+                    {t('Timer Interval (ms)')}
                   </label>
                   <PropertyEditor
                     type="number"
@@ -298,7 +298,7 @@ export const TimerProperties: React.FC<TimerPropertiesProps> = ({
                       value={timer.reload}
                       onChange={(value) => handleUpdateTimer(timer.id, { reload: value })}
                     />
-                    <span style={{ fontSize: '12px' }}>{t('Repeat animation')}</span>
+                    <span style={{ fontSize: '12px' }}>{t('Repeat timer')}</span>
                   </div>
                 </div>
 

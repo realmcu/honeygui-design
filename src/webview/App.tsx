@@ -1482,9 +1482,10 @@ const App: React.FC = () => {
     };
 
     addComponent(newComponent);
+    selectComponent(newComponent.id);
   };
 
-  const handleCanvasDragOver = (e: React.DragEvent) => {
+  const handleCanvasDragOver= (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
   };
