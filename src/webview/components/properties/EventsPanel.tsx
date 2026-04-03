@@ -26,9 +26,16 @@ interface EventsPanelProps {
   onUpdate: (updates: Partial<Component>) => void;
 }
 
+// 模块级缓存：保留面板展开状态，避免 tab 切换时丢失
+const eventsPanelStateCache = new Map<string, {
+  expandedEvents: Set<number>;
+  timerExpanded: boolean;
+}>();
+
 export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate }) => {
-  const [expandedEvents, setExpandedEvents] = useState<Set<number>>(new Set([0]));
-  const [timerExpanded, setTimerExpanded] = useState<boolean>(false);
+  const cached = eventsPanelStateCache.get(component.id);
+  const [expandedEvents, setExpandedEvents] = useState<Set<number>>(cached?.expandedEvents ?? new Set([0]));
+  const [timerExpanded, setTimerExpanded] = useState<boolean>(cached?.timerExpanded ?? false);
   const [userFunctions, setUserFunctions] = useState<Array<{ name: string; type: 'event' | 'message' }>>([]);
   const userFunctionsLoaded = React.useRef(false);
   const components = useDesignerStore((state) => state.components);
@@ -36,6 +43,11 @@ export const EventsPanel: React.FC<EventsPanelProps> = ({ component, onUpdate })
 
   const eventConfigs = component.eventConfigs || [];
   const supportedEvents = getSupportedEvents(component.type);
+
+  // 同步展开状态到缓存
+  useEffect(() => {
+    eventsPanelStateCache.set(component.id, { expandedEvents, timerExpanded });
+  }, [component.id, expandedEvents, timerExpanded]);
 
   // 加载用户自定义函数列表
   useEffect(() => {
