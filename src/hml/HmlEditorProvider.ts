@@ -104,11 +104,63 @@ export class HmlEditorProvider implements vscode.CustomTextEditorProvider {
                 designerPanel.updateFromDocument();
             }
         });
+
+        // 监听文档内容变更事件（处理 AI agent 通过 WorkspaceEdit 编辑的情况）
+        // 使用防抖机制避免频繁刷新
+        let changeDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+        const textChangeSubscription = vscode.workspace.onDidChangeTextDocument(e => {
+            if (e.document.uri.fsPath !== document.uri.fsPath) {
+                return;
+            }
+            // 跳过设计器自身触发的修改
+            if (designerPanel.getSaveTransactionId() > 0) {
+                return;
+            }
+            // 忽略无实际内容变更的事件
+            if (e.contentChanges.length === 0) {
+                return;
+            }
+            // 防抖：1000ms 内只触发一次（AI agent 可能连续多次编辑）
+            if (changeDebounceTimer) {
+                clearTimeout(changeDebounceTimer);
+            }
+            changeDebounceTimer = setTimeout(() => {
+                logger.debug('[HmlEditorProvider] 检测到文档内容变更（外部编辑），更新设计器...');
+                designerPanel.updateFromDocument();
+            }, 1000);
+        });
+
+        // 监听磁盘文件变更（处理 AI agent 直接写磁盘 或 git checkout 等外部程序修改的情况）
+        const fileWatcher = vscode.workspace.createFileSystemWatcher(
+            new vscode.RelativePattern(path.dirname(document.uri.fsPath), path.basename(document.uri.fsPath))
+        );
+        let fsDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+        const onDiskChange = () => {
+            if (designerPanel.getSaveTransactionId() > 0) {
+                return;
+            }
+            if (fsDebounceTimer) {
+                clearTimeout(fsDebounceTimer);
+            }
+            fsDebounceTimer = setTimeout(() => {
+                logger.debug('[HmlEditorProvider] 检测到磁盘文件变更，更新设计器...');
+                designerPanel.updateFromDocument();
+            }, 1000);
+        };
+        fileWatcher.onDidChange(onDiskChange);
         
         // 面板关闭时清理监听器
         webviewPanel.onDidDispose(() => {
             logger.debug('[HmlEditorProvider] 面板关闭，清理监听器');
             changeDocumentSubscription.dispose();
+            textChangeSubscription.dispose();
+            fileWatcher.dispose();
+            if (changeDebounceTimer) {
+                clearTimeout(changeDebounceTimer);
+            }
+            if (fsDebounceTimer) {
+                clearTimeout(fsDebounceTimer);
+            }
         });
         
         logger.info('[HmlEditorProvider] resolveCustomTextEditor完成');

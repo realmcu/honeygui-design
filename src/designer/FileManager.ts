@@ -553,6 +553,9 @@ export class FileManager {
                 
                 logger.debug('[FileManager] 重新加载到设计器');
                 await this.loadFromDocument(document);
+                // loadFromDocument 只解析数据但不发送到前端（设计为等待 ready 消息）
+                // 此时前端已经 ready，需要主动调用 reloadCurrentDocument 推送数据
+                await this.reloadCurrentDocument();
             } catch (error) {
                 logger.error(`更新文档失败: ${error}`);
             }
