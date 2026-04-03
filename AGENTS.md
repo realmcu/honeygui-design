@@ -110,6 +110,7 @@ HmlEditorProvider.resolveCustomTextEditor()
 1. 在 `ComponentLibrary.tsx` 的 `componentDefinitions` 添加定义
 2. 在 `HoneyGuiCCodeGenerator.ts` 添加代码生成逻辑
 3. 更新 `ComponentType` 类型定义
+4. **同步更新 `docs/HML-Spec.md`**：添加新组件的属性表和说明
 
 ### 添加新项目模板
 项目模板通过 Git 仓库管理，添加新模板：
@@ -156,6 +157,9 @@ HmlEditorProvider.resolveCustomTextEditor()
 5. **代码质量**：
    - 考虑整理软件框架
    - Review 是否存在冗余代码
+6. **HML 规范文档同步**：
+   - 当 HML spec 发生变动（新增组件、新增/修改属性、新增事件类型、修改嵌套规则等）时，必须同步更新 `docs/HML-Spec.md`
+   - 该文档是 AI agent 生成 HML 的唯一参考，保持其准确性至关重要
 6. **执行环境**：只在 CMD 环境下执行命令，不要在 PowerShell 环境下执行
 7. **代码提交**：
    - 默认情况下，只修改代码，不执行 git 操作

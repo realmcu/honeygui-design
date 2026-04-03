@@ -1,0 +1,1084 @@
+# HML (HoneyGUI Markup Language) Specification
+
+> Version: 1.0 | Last Updated: 2026-04-03
+
+HML is an XML-based markup language used by HoneyGUI Design to describe embedded GUI layouts. This document serves as the authoritative reference for AI agents generating HML files.
+
+---
+
+## Table of Contents
+
+1. [Document Structure](#1-document-structure)
+2. [Meta Section](#2-meta-section)
+3. [View Section](#3-view-section)
+4. [Common Attributes](#4-common-attributes)
+5. [Component Taxonomy & Nesting Rules](#5-component-taxonomy--nesting-rules)
+6. [Container Components](#6-container-components)
+7. [Basic Controls](#7-basic-controls)
+8. [Input Controls](#8-input-controls)
+9. [Graphics Controls](#9-graphics-controls)
+10. [Multimedia Controls](#10-multimedia-controls)
+11. [Mini-App Controls](#11-mini-app-controls)
+12. [Event System](#12-event-system)
+13. [Timer & Animation System](#13-timer--animation-system)
+14. [View Switch Animations](#14-view-switch-animations)
+15. [Code Generation Mapping](#15-code-generation-mapping)
+16. [Examples](#16-examples)
+
+---
+
+## 1. Document Structure
+
+Every HML file is a UTF-8 encoded XML document with the following skeleton:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<hml>
+    <meta>
+        <!-- project metadata -->
+    </meta>
+    <view>
+        <!-- component tree -->
+    </view>
+</hml>
+```
+
+### Rules
+
+| Item | Requirement |
+|------|-------------|
+| Root element | `<hml>` — mandatory |
+| Children | Exactly two children: `<meta>` then `<view>`, in order |
+| Encoding | UTF-8 |
+| Tag prefix | All component tags must start with `hg_` or `custom_` |
+
+### Tag Conventions
+
+- **Leaf nodes** (no children, no events): use self-closing tags — `<hg_image id="img1" ... />`
+- **Containers** or **nodes with events**: use open/close tags — `<hg_view ...>...</hg_view>`
+
+---
+
+## 2. Meta Section
+
+The `<meta>` node holds project-level configuration:
+
+```xml
+<meta>
+    <project name="MyApp" appId="com.example.myapp"
+             resolution="454x454" minSdk="1.0" pixelMode="RGB565" />
+    <author name="Developer" email="dev@example.com" />
+</meta>
+```
+
+### `<project>` Attributes
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `name` | string | Project name |
+| `appId` | string | Application identifier |
+| `resolution` | string | Screen resolution in `WxH` format (e.g. `454x454`, `480x272`) |
+| `minSdk` | string | Minimum SDK version |
+| `pixelMode` | string | Pixel format: `RGB565`, `ARGB8888`, etc. |
+
+### `<author>` Attributes
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `name` | string | Author name |
+| `email` | string | Author email |
+
+---
+
+## 3. View Section
+
+The `<view>` node contains the UI component tree. Top-level children are typically `hg_view` containers representing different screens/pages.
+
+```xml
+<view>
+    <hg_view id="view_home" x="0" y="0" width="454" height="454" entry="true">
+        <hg_label id="lbl1" x="10" y="10" width="100" height="24" text="Hello" />
+    </hg_view>
+    <hg_view id="view_settings" x="0" y="0" width="454" height="454">
+        <!-- another screen -->
+    </hg_view>
+</view>
+```
+
+Components within `<view>` are ordered by `zIndex` during serialization.
+
+---
+
+## 4. Common Attributes
+
+All components support these base attributes:
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `id` | string | auto-generated | Globally unique component identifier |
+| `name` | string | same as `id` | Display name (used in the designer UI) |
+| `x` | int | 0 | X position relative to parent |
+| `y` | int | 0 | Y position relative to parent |
+| `width` | int | 100 | Width in pixels |
+| `height` | int | 40 | Height in pixels |
+| `visible` | boolean | true | Visibility flag |
+| `enabled` | boolean | true | Interaction enabled flag |
+| `locked` | boolean | false | Lock in designer (prevent dragging) |
+| `zIndex` | int | 0 | Stacking order — higher values render on top |
+| `showOverflow` | boolean | false | Show overflow content in designer |
+
+> **ID naming convention**: Use lowercase with underscores, e.g. `btn_menu`, `lbl_time`, `img_bg`.
+
+---
+
+## 5. Component Taxonomy & Nesting Rules
+
+### All Component Types
+
+| Category | Tags |
+|----------|------|
+| **Containers** | `hg_view`, `hg_window`, `hg_canvas`, `hg_list`, `hg_list_item`, `hg_menu_cellular` |
+| **Basic** | `hg_button`, `hg_label`, `hg_time_label`, `hg_timer_label`, `hg_image` |
+| **Input** | `hg_input`, `hg_checkbox`, `hg_radio`, `hg_switch`, `hg_slider` |
+| **Graphics** | `hg_arc`, `hg_circle`, `hg_rect`, `hg_svg`, `hg_glass`, `hg_particle` |
+| **Multimedia** | `hg_video`, `hg_gif`, `hg_3d`, `hg_lottie` |
+| **Mini-App** | `hg_map`, `hg_openclaw`, `hg_claw_face` |
+
+### Nesting Rules (CRITICAL)
+
+1. **Only containers** (`hg_view`, `hg_window`, `hg_canvas`, `hg_list`, `hg_list_item`) **can hold child components**.
+2. **Non-container controls MUST be children of a container** — they cannot appear as direct children of `<view>`.
+3. **Non-container controls CANNOT have child components**.
+4. `hg_list` children should be `hg_list_item` elements.
+5. `hg_list_item` can contain any non-container control.
+
+### Valid Tree Example
+
+```
+<view>
+  └─ hg_view (container)
+       ├─ hg_label (leaf)
+       ├─ hg_button (leaf)
+       ├─ hg_image (leaf)
+       └─ hg_window (nested container)
+            └─ hg_label (leaf)
+```
+
+### INVALID Examples
+
+```
+WRONG: hg_label containing hg_button  (non-container cannot have children)
+WRONG: hg_button directly under <view>  (must be inside a container)
+```
+
+---
+
+## 6. Container Components
+
+### 6.1 `hg_view` — View Container
+
+The primary top-level container representing a full screen/page.
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `entry` | boolean | false | Entry view — the first screen shown on app launch. Exactly ONE view should have `entry="true"` |
+| `backgroundColor` | color | #000000 | Background color |
+| `borderRadius` | number | 20 | Border radius |
+| `padding` | number | 12 | Padding |
+| `overflow` | enum | auto | `auto` / `hidden` / `scroll` |
+| `residentMemory` | boolean | — | Keep in memory when switching away |
+| `animateStep` | number | height/10 | Animation step value |
+| `opacity` | number | 255 | Opacity (0–255) |
+
+- **Default size**: 350×250
+- **C API**: `GUI_VIEW_INSTANCE` macro
+
+### 6.2 `hg_window` — Window Container
+
+A windowed container with optional background and blur.
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `showBackground` | boolean | false | Show background fill |
+| `backgroundColor` | color | #808080 | Background color |
+| `enableBlur` | boolean | false | Enable blur effect |
+| `blurDegree` | number | 225 | Blur intensity |
+
+- **Default size**: 450×350
+- **C API**: `gui_win_create`
+
+### 6.3 `hg_canvas` — Canvas Container
+
+A drawing surface that can hold SVG graphics and child components.
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `backgroundColor` | color | #ffffff | Background color |
+| `border` | string | "1px solid #cccccc" | Border style |
+| `borderRadius` | number | 4 | Border radius |
+| `overflow` | enum | hidden | Overflow handling |
+| `svgFile` | string | — | Auto-generated SVG filename |
+
+- **Default size**: 300×200
+
+### 6.4 `hg_list` — List Container
+
+Scrollable list with multiple layout styles.
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `itemWidth` | number | 100 | Item width |
+| `itemHeight` | number | 100 | Item height |
+| `space` | number | 5 | Spacing between items |
+| `direction` | enum | VERTICAL | `VERTICAL` / `HORIZONTAL` |
+| `style` | enum | LIST_CLASSIC | List style (see table below) |
+| `cardStackLocation` | number | 0 | Card stack position |
+| `circleRadius` | number | — | Circle layout radius (auto-computed) |
+| `noteNum` | number | 5 | Number of visible items |
+| `autoAlign` | boolean | true | Auto-align to nearest item |
+| `inertia` | boolean | true | Inertial scrolling |
+| `loop` | boolean | false | Loop scrolling |
+| `createBar` | boolean | false | Show scrollbar |
+| `enableAreaDisplay` | boolean | false | Enable area display |
+| `keepNoteAlive` | boolean | false | Keep items alive |
+| `offset` | number | 0 | Offset |
+| `outScope` | number | 0 | Out-of-scope range |
+| `useUserNoteDesign` | boolean | — | Use custom item design |
+| `userNoteDesignFunc` | string | — | Custom design function name |
+
+**List `style` values**:
+
+| Value | Description |
+|-------|-------------|
+| `LIST_CLASSIC` | Classic vertical/horizontal list |
+| `LIST_CIRCLE` | Circular layout |
+| `LIST_ZOOM` | Zoom-scaled list |
+| `LIST_ZOOM_CYLINDER` | Cylinder zoom |
+| `LIST_CARD` | Card stack |
+| `LIST_FADE` | Fade in/out |
+| `LIST_FAN` | Fan layout |
+| `LIST_HELIX` | Helix layout |
+| `LIST_CURL` | Curl effect |
+
+- **Default size**: 300×400
+- **C API**: `gui_list_create`
+
+### 6.5 `hg_list_item` — List Item
+
+Child of `hg_list`. Not available in the component library — managed automatically by the list.
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `index` | number | auto-assigned | Item index (sorted by position) |
+
+### 6.6 `hg_menu_cellular` — Honeycomb Menu
+
+A hexagonal scrolling menu.
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `iconFolder` | string | "" | Icon asset folder |
+| `iconSize` | number | 64 | Icon size |
+| `offsetX` | number | 0 | X offset |
+| `offsetY` | number | 0 | Y offset |
+
+- **Default size**: dynamic (matches project resolution)
+
+---
+
+## 7. Basic Controls
+
+### 7.1 `hg_button` — Button
+
+Image-based button with optional dual-state toggle.
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `text` | string | "Button" | Button label text |
+| `toggleMode` | boolean | false | Enable toggle (on/off) mode |
+| `imageOn` | string | — | Image path for ON state |
+| `imageOff` | string | — | Image path for OFF state |
+| `initialState` | enum | off | Initial state: `on` / `off` |
+| `onCallback` | string | — | C callback function for ON state |
+| `offCallback` | string | — | C callback function for OFF state |
+| `controlTarget` | string | — | Target component ID to control |
+
+- **Default size**: 100×32
+- **C API**: `gui_img_create_from_fs`
+
+### 7.2 `hg_label` — Text Label
+
+Text display with optional scrolling and timer features.
+
+#### Text & Layout
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `text` | string | "Label" | Display text |
+| `hAlign` | enum | LEFT | Horizontal alignment: `LEFT` / `CENTER` / `RIGHT` |
+| `vAlign` | enum | TOP | Vertical alignment: `TOP` / `MID` |
+| `color` | color | #ffffff | Text color |
+| `letterSpacing` | number | 0 | Letter spacing |
+| `lineSpacing` | number | 0 | Line spacing |
+| `wordWrap` | boolean | false | Word wrap |
+| `wordBreak` | boolean | false | Break within words |
+
+#### Font
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `fontFile` | string | — | Font file path (relative to assets) |
+| `fontSize` | number | 16 | Font size in pixels |
+| `fontType` | enum | bitmap | `bitmap` / `vector` |
+| `renderMode` | enum | 4 | Anti-alias bits: `1` / `2` / `4` / `8` |
+
+#### Scrolling Text
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `scrollDirection` | enum | horizontal | `horizontal` / `vertical` |
+| `scrollReverse` | boolean | false | Reverse scroll direction |
+| `scrollStartOffset` | number | 0 | Start offset |
+| `scrollEndOffset` | number | 0 | End offset |
+| `scrollInterval` | number | 3000 | Scroll interval in ms |
+| `scrollDuration` | number | 0 | Scroll duration in ms |
+
+#### Timer Label Mode
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `isTimerLabel` | boolean | false | Enable timer label mode |
+| `timerType` | enum | stopwatch | `stopwatch` (count up) / `countdown` (count down) |
+| `timerInitialValue` | number | 0 | Initial value in seconds |
+| `timerFormat` | enum | HH:MM:SS | `HH:MM:SS` / `MM:SS` / `MM:SS:MS` / `SS` |
+| `timerAutoStart` | boolean | true | Auto-start the timer |
+
+- **Default size**: 100×24
+- **C API**: `gui_text_create` / `gui_scroll_text_create`
+
+### 7.3 `hg_time_label` — Real-Time Clock Label
+
+Displays the current system time. Inherits all `hg_label` font and alignment attributes.
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `text` | string | "" | Static text (overridden by time display) |
+| `timeFormat` | enum | HH:mm:ss | Time format (see table below) |
+
+**`timeFormat` values**:
+
+| Format | Example Output |
+|--------|----------------|
+| `HH:mm:ss` | 14:30:05 |
+| `HH:mm` | 14:30 |
+| `HH` | 14 |
+| `mm` | 30 |
+| `HH:mm-split` | Separate hour and minute display |
+| `YYYY-MM-DD` | 2026-04-03 |
+| `YYYY-MM-DD HH:mm:ss` | 2026-04-03 14:30:05 |
+| `MM-DD HH:mm` | 04-03 14:30 |
+
+- **Default size**: 120×24
+
+### 7.4 `hg_timer_label` — Timer Label
+
+Like `hg_label` with timer mode, but defaults to NOT auto-starting.
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| *(inherits all hg_label timer attributes)* | | | |
+| `timerAutoStart` | boolean | **false** | Does NOT auto-start (unlike hg_label) |
+
+- **Default size**: 120×24
+
+### 7.5 `hg_image` — Image
+
+Image display with transform and blend mode support.
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `src` | string | — | Image file path (relative to assets) |
+| `blendMode` | string | — | Blend mode (see below) |
+| `fgColor` | string | — | Foreground recolor for A8 mode (format: `0xFFRRGGBB`) |
+| `bgColor` | string | — | Background color for A8 BGFG mode |
+| `highQuality` | boolean | false | High quality rendering |
+| `needClip` | boolean | false | Enable clipping |
+| `transform` | JSON | — | Transform object (see below) |
+
+**`blendMode` values**:
+
+| Value | Description |
+|-------|-------------|
+| `IMG_FILTER_BLACK` | Black color filter |
+| `IMG_2D_SW_FIX_A8_FG` | A8 format with foreground color |
+| `IMG_2D_SW_FIX_A8_BGFG` | A8 format with foreground + background color |
+
+**`transform` object** (JSON):
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `scaleX` | number | 1.0 | X-axis scale |
+| `scaleY` | number | 1.0 | Y-axis scale |
+| `rotation` | number | 0 | Rotation in degrees |
+| `translateX` | number | 0 | X translation |
+| `translateY` | number | 0 | Y translation |
+| `skewX` | number | 0 | X skew in degrees |
+| `skewY` | number | 0 | Y skew in degrees |
+| `focusX` | number | — | Transform origin X |
+| `focusY` | number | — | Transform origin Y |
+| `opacity` | number | 255 | Opacity (0–255) |
+
+- **Default size**: 150×150
+- **C API**: `gui_img_create_from_fs`
+
+---
+
+## 8. Input Controls
+
+### 8.1 `hg_input` — Text Input
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `placeholder` | string | — | Placeholder hint text |
+
+- **Default size**: 200×32
+- **C API**: `gui_text_create`
+
+### 8.2 `hg_checkbox` — Checkbox
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `value` | boolean | false | Checked state |
+
+- **Default size**: 20×20
+
+### 8.3 `hg_radio` — Radio Button
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `value` | boolean | false | Selected state |
+
+- **Default size**: 20×20
+
+### 8.4 `hg_switch` — Toggle Switch
+
+Uses image assets to control appearance.
+
+- **C API**: `gui_switch_create`
+
+### 8.5 `hg_slider` — Slider
+
+- **C API**: `gui_seekbar_create`
+
+---
+
+## 9. Graphics Controls
+
+### 9.1 `hg_arc` — Arc
+
+| Attribute | Type | Default | Range | Description |
+|-----------|------|---------|-------|-------------|
+| `radius` | number | 40 | ≥ 0 | Arc radius |
+| `startAngle` | number | 0 | — | Start angle in degrees |
+| `endAngle` | number | 270 | — | End angle in degrees |
+| `strokeWidth` | number | 8 | ≥ 0 | Stroke width |
+| `color` | color | #007acc | — | Arc color |
+| `opacity` | number | 255 | 0–255 | Opacity |
+| `useGradient` | boolean | false | — | Enable gradient |
+| `arcGroup` | string | "" | — | Arc group identifier (for grouping multiple arcs) |
+
+- **Default size**: 96×96
+- **C API**: `gui_arc_create`
+
+### 9.2 `hg_circle` — Circle
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `radius` | number | 40 | Circle radius |
+| `fillColor` | color | #007acc | Fill color |
+| `opacity` | number | 255 | Opacity (0–255) |
+| `useGradient` | boolean | false | Enable gradient |
+| `gradientType` | enum | radial | `radial` / `angular` |
+
+**Button Mode Attributes** (interactive circle):
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `buttonMode` | enum | none | `none` / `dual-state` / `opacity` |
+| `buttonStateOnColor` | color | #00FF00 | ON state color |
+| `buttonStateOffColor` | color | #FF0000 | OFF state color |
+| `buttonInitialState` | enum | off | `on` / `off` |
+| `buttonPressedOpacity` | number | 128 | Pressed opacity |
+| `buttonReleasedOpacity` | number | 255 | Released opacity |
+
+- **Default size**: 80×80
+- **C API**: `gui_circle_create`
+
+### 9.3 `hg_rect` — Rectangle
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `borderRadius` | number | 0 | Corner radius |
+| `fillColor` | color | #007acc | Fill color |
+| `opacity` | number | 255 | Opacity (0–255) |
+| `useGradient` | boolean | false | Enable gradient |
+| `gradientDirection` | enum | horizontal | `horizontal` / `vertical` / `diagonal_tl_br` / `diagonal_tr_bl` |
+
+> `hg_rect` also supports the same **button mode** attributes as `hg_circle`.
+
+- **Default size**: 120×80
+- **C API**: `gui_rect_create`
+
+### 9.4 `hg_svg` — SVG Image
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `src` | string | — | SVG file path |
+
+- **Default size**: 100×100
+
+### 9.5 `hg_glass` — Glass Effect
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `src` | string | — | Image file path |
+| `distortion` | number | 10 | Distortion percentage |
+| `region` | number | 50 | Effect range percentage |
+| `movable` | boolean | false | Draggable |
+| `click` | boolean | false | Clickable |
+
+- **Default size**: 150×150
+- **C API**: `gui_glass_create_from_fs`
+
+### 9.6 `hg_particle` — Particle Effect
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `particleEffect` | enum | snow | Particle effect type |
+
+**`particleEffect` values**: `snow`, `rain`, `fire`, `sparkle`, `confetti`, `bubble`, `smoke`, `star`, `ripple`, `firefly`, `trail`, `aurora`, `vortex`, `matrix`, and more.
+
+- **Default size**: 200×200
+
+---
+
+## 10. Multimedia Controls
+
+### 10.1 `hg_video` — Video Player
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `src` | string | — | Video file path |
+| `autoplay` | boolean | false | Auto-play on load |
+| `loop` | boolean | false | Loop playback |
+| `controls` | boolean | true | Show playback controls |
+
+- **Default size**: 320×240
+- **C API**: `gui_video_create_from_fs`
+
+### 10.2 `hg_gif` — GIF Animation
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `src` | string | — | GIF file path |
+| `highQuality` | boolean | false | High quality rendering |
+
+- **Default size**: 150×150
+- **C API**: `gui_gif_create_from_fs`
+
+### 10.3 `hg_3d` — 3D Model
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `modelPath` | string | — | 3D model file path |
+| `drawType` | enum | L3_DRAW_FRONT_AND_SORT | Draw mode |
+| `worldX` | number | 0 | World position X |
+| `worldY` | number | 0 | World position Y |
+| `worldZ` | number | 30 | World position Z |
+| `rotationX` | number | 0 | X rotation |
+| `rotationY` | number | 0 | Y rotation |
+| `rotationZ` | number | 0 | Z rotation |
+| `scale` | number | 5 | Scale factor |
+| `cameraPosX` | number | 0 | Camera position X |
+| `cameraPosY` | number | 0 | Camera position Y |
+| `cameraPosZ` | number | 0 | Camera position Z |
+| `cameraLookX` | number | 0 | Camera look-at X |
+| `cameraLookY` | number | 0 | Camera look-at Y |
+| `cameraLookZ` | number | 1 | Camera look-at Z |
+
+**`drawType` values**:
+
+| Value | Description |
+|-------|-------------|
+| `L3_DRAW_FRONT_ONLY` | Front face only |
+| `L3_DRAW_FRONT_AND_BACK` | Front and back faces |
+| `L3_DRAW_FRONT_AND_SORT` | Front face with depth sorting |
+
+- **Default size**: 400×400
+- **C API**: `gui_3d_create`
+
+### 10.4 `hg_lottie` — Lottie Animation
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `src` | string | — | Lottie JSON file path |
+| `autoplay` | boolean | true | Auto-play |
+| `loop` | boolean | true | Loop animation |
+
+- **Default size**: 150×150
+
+---
+
+## 11. Mini-App Controls
+
+### 11.1 `hg_map` — Vector Map
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `mapFile` | string | "" | Map data file |
+| `fontFile` | string | "" | Map font file |
+| `pcSerialName` | string | "" | PC serial port name |
+
+- **Default size**: 200×300
+- **C API**: `gui_vector_map_create_from_mem`
+
+### 11.2 `hg_openclaw` — OpenClaw AI Chat
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `fontFile` | string | "" | Font file |
+| `emojiFontFile` | string | "" | Emoji font file |
+| `senderId` | string | "user1" | Sender identifier |
+
+- **Default size**: 410×502
+- **C API**: `gui_openclaw_create_from_mem`
+
+### 11.3 `hg_claw_face` — Claw Face Expression
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `openclawTarget` | string | "" | Linked OpenClaw component ID |
+| `initialExpression` | enum | neutral | Initial expression |
+
+**`initialExpression` values**: `neutral`, `happy`, `sad`, `angry`, `surprised`, `thinking`, `sleeping`, `love`, `wink`
+
+- **Default size**: 160×160
+- **C API**: `gui_openclaw_emoji_create`
+
+---
+
+## 12. Event System
+
+HML uses an **event → action** model. Events are declared inside an `<events>` child node of any component.
+
+### 12.1 XML Syntax
+
+```xml
+<hg_button id="btn1" x="0" y="0" width="100" height="40" text="Go">
+    <events>
+        <event type="onClick">
+            <action type="switchView" target="view2"
+                    switchOutStyle="SWITCH_OUT_TO_LEFT_USE_TRANSLATION"
+                    switchInStyle="SWITCH_IN_FROM_RIGHT_USE_TRANSLATION" />
+        </event>
+    </events>
+</hg_button>
+```
+
+Multiple actions per event and multiple events per component are supported:
+
+```xml
+<events>
+    <event type="onClick">
+        <action type="sendMessage" message="refresh" />
+        <action type="callFunction" functionName="on_click_handler" />
+    </event>
+    <event type="onLongPress">
+        <action type="switchView" target="view_settings" />
+    </event>
+</events>
+```
+
+### 12.2 Event Types
+
+| Event | Description | Extra Attributes |
+|-------|-------------|------------------|
+| `onClick` | Touch click | — |
+| `onLongPress` | Touch long press | — |
+| `onTouchDown` | Touch down | — |
+| `onTouchUp` | Touch release | `checkReleaseArea` (optional) |
+| `onKeyShortPress` | Key short press | `keyName`: `Home`/`Back`/`Menu`/`Power` |
+| `onKeyLongPress` | Key long press | `keyName`: `Home`/`Back`/`Menu`/`Power` |
+| `onSwipeLeft` | Left swipe | — |
+| `onSwipeRight` | Right swipe | — |
+| `onSwipeUp` | Up swipe | — |
+| `onSwipeDown` | Down swipe | — |
+| `onValueChange` | Value changed | For slider, progressbar, input |
+| `onCheckedChange` | Check state changed | For switch, checkbox, radio |
+| `onShow` | View shown | `hg_view` only |
+| `onHide` | View hidden | `hg_view` only |
+| `onMessage` | Message received | `message` (message name) |
+
+### 12.3 Action Types
+
+| Action | Attributes | Description |
+|--------|------------|-------------|
+| `switchView` | `target`, `switchOutStyle`, `switchInStyle` | Navigate to target view with transition |
+| `sendMessage` | `message` | Broadcast a message to other components |
+| `callFunction` | `functionName` | Invoke a C callback function |
+| `controlTimer` | `timerTargets` | Control timers (JSON array) |
+
+**`controlTimer` — `timerTargets` format**:
+
+```json
+[
+    { "componentId": "img1", "timerIndex": 0, "action": "start" },
+    { "componentId": "img2", "action": "stop" }
+]
+```
+
+### 12.4 Component Event Support Matrix
+
+| Component | Supported Events |
+|-----------|-----------------|
+| `hg_view` | All (click, longPress, touch, key, swipe, lifecycle, message) |
+| `hg_button` | click, longPress, touchDown, touchUp, key, message |
+| `hg_label` | click, longPress, message |
+| `hg_image` | click, longPress, touchDown, touchUp, key, message |
+| `hg_slider` | click, valueChange, key, message |
+| `hg_switch` | click, checkedChange, key, message |
+| `hg_checkbox` | click, checkedChange, message |
+| `hg_radio` | click, checkedChange, message |
+
+---
+
+## 13. Timer & Animation System
+
+Components can have timer-driven animations via the `timers` attribute (stored as a JSON array string).
+
+### 13.1 XML Representation
+
+```xml
+<hg_image id="img1" x="0" y="0" width="100" height="100" src="icon.png"
+          timers='[{"id":"t1","name":"Rotate","enabled":true,"interval":16,"reload":true,"mode":"preset","segments":[{"duration":3000,"actions":[{"type":"rotation","from":0,"to":360}]}]}]' />
+```
+
+### 13.2 TimerConfig Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique timer identifier |
+| `name` | string | Display name |
+| `enabled` | boolean | Bind to component at creation time |
+| `runImmediately` | boolean | Execute first frame immediately |
+| `interval` | number | Timer interval in milliseconds |
+| `reload` | boolean | Loop execution |
+| `mode` | enum | `preset` (built-in actions) / `custom` (C callback) |
+| `actions` | TimerAction[] | Single-segment animation actions |
+| `segments` | AnimationSegment[] | Multi-segment animation |
+| `callback` | string | Custom callback function name (`custom` mode) |
+| `duration` | number | Total duration in milliseconds |
+| `stopOnComplete` | boolean | Stop after total duration |
+| `enableLog` | boolean | Enable debug logging |
+
+### 13.3 TimerAction Types
+
+| Type | Description |
+|------|-------------|
+| `size` | Animate size |
+| `position` | Animate position |
+| `opacity` | Animate opacity |
+| `rotation` | Animate rotation |
+| `scale` | Animate scale |
+| `switchView` | Switch to another view |
+| `changeImage` | Change image source |
+| `imageSequence` | Play image sequence |
+| `visibility` | Toggle visibility |
+| `switchTimer` | Start/stop another timer |
+| `setFocus` | Set focus |
+| `fgColor` | Animate foreground color |
+| `bgColor` | Animate background color |
+
+---
+
+## 14. View Switch Animations
+
+Transition animations used with `switchView` actions.
+
+### 14.1 Switch Out Styles
+
+| Style | Description |
+|-------|-------------|
+| `SWITCH_INIT_STATE` | Initial state |
+| `SWITCH_OUT_NONE_ANIMATION` | No animation |
+| `SWITCH_OUT_TO_LEFT_USE_TRANSLATION` | Slide left |
+| `SWITCH_OUT_TO_RIGHT_USE_TRANSLATION` | Slide right |
+| `SWITCH_OUT_TO_TOP_USE_TRANSLATION` | Slide up |
+| `SWITCH_OUT_TO_BOTTOM_USE_TRANSLATION` | Slide down |
+| `SWITCH_OUT_TO_LEFT_USE_CUBE` | Cube rotate left |
+| `SWITCH_OUT_TO_RIGHT_USE_CUBE` | Cube rotate right |
+| `SWITCH_OUT_TO_TOP_USE_CUBE` | Cube rotate up |
+| `SWITCH_OUT_TO_BOTTOM_USE_CUBE` | Cube rotate down |
+| `SWITCH_OUT_TO_LEFT_USE_ROTATE` | Rotate left |
+| `SWITCH_OUT_TO_RIGHT_USE_ROTATE` | Rotate right |
+| `SWITCH_OUT_TO_LEFT_USE_REDUCTION` | Shrink left |
+| `SWITCH_OUT_TO_RIGHT_USE_REDUCTION` | Shrink right |
+| `SWITCH_OUT_STILL_USE_BLUR` | Static blur |
+| `SWITCH_OUT_ANIMATION_FADE` | Fade out |
+
+### 14.2 Switch In Styles
+
+| Style | Description |
+|-------|-------------|
+| `SWITCH_INIT_STATE` | Initial state |
+| `SWITCH_IN_NONE_ANIMATION` | No animation |
+| `SWITCH_IN_FROM_LEFT_USE_TRANSLATION` | Slide in from left |
+| `SWITCH_IN_FROM_RIGHT_USE_TRANSLATION` | Slide in from right |
+| `SWITCH_IN_FROM_TOP_USE_TRANSLATION` | Slide in from top |
+| `SWITCH_IN_FROM_BOTTOM_USE_TRANSLATION` | Slide in from bottom |
+| `SWITCH_IN_FROM_LEFT_USE_CUBE` | Cube from left |
+| `SWITCH_IN_FROM_RIGHT_USE_CUBE` | Cube from right |
+| `SWITCH_IN_FROM_LEFT_USE_ROTATE` | Rotate from left |
+| `SWITCH_IN_FROM_RIGHT_USE_ROTATE` | Rotate from right |
+| `SWITCH_IN_FROM_LEFT_USE_REDUCTION` | Expand from left |
+| `SWITCH_IN_FROM_RIGHT_USE_REDUCTION` | Expand from right |
+| `SWITCH_IN_STILL_USE_BLUR` | Static blur |
+| `SWITCH_IN_ANIMATION_ZOOM` | Zoom in |
+| `SWITCH_IN_ANIMATION_FADE` | Fade in |
+| `SWITCH_IN_ANIMATION_MOVE_FADE` | Move + fade |
+| `SWITCH_IN_ANIMATION_MOVE_FROM_RIGHT` | Move from right |
+| `SWITCH_IN_ANIMATION_MOVE_FROM_LEFT` | Move from left |
+| `SWITCH_IN_ANIMATION_BOUNCE_FROM_RIGHT` | Bounce from right |
+| `SWITCH_IN_ANIMATION_ZOOM_FROM_TOP_LEFT` | Zoom from top-left |
+| `SWITCH_IN_ANIMATION_ZOOM_FROM_TOP_RIGHT` | Zoom from top-right |
+| `SWITCH_IN_ANIMATION_CENTER_ZOOM_FADE` | Center zoom + fade |
+
+---
+
+## 15. Code Generation Mapping
+
+The designer generates C source code from HML. Here is the component-to-API mapping:
+
+| HML Tag | C Create Function | Header |
+|---------|-------------------|--------|
+| `hg_view` | `GUI_VIEW_INSTANCE` macro | `gui_view.h` |
+| `hg_window` | `gui_win_create` | `gui_win.h` |
+| `hg_button` | `gui_img_create_from_fs` | `gui_img.h` |
+| `hg_label` | `gui_text_create` / `gui_scroll_text_create` | `gui_text.h` |
+| `hg_time_label` | `gui_text_create` | `gui_text.h` |
+| `hg_timer_label` | `gui_text_create` | `gui_text.h` |
+| `hg_image` | `gui_img_create_from_fs` | `gui_img.h` |
+| `hg_gif` | `gui_gif_create_from_fs` | `gui_gif.h` |
+| `hg_input` | `gui_text_create` | `gui_text.h` |
+| `hg_switch` | `gui_switch_create` | `gui_switch.h` |
+| `hg_slider` | `gui_seekbar_create` | `gui_seekbar.h` |
+| `hg_video` | `gui_video_create_from_fs` | `gui_video.h` |
+| `hg_3d` | `gui_3d_create` | `gui_lite3d.h` |
+| `hg_arc` | `gui_arc_create` | `gui_arc.h` |
+| `hg_circle` | `gui_circle_create` | `gui_circle.h` |
+| `hg_rect` | `gui_rect_create` | `gui_rect.h` |
+| `hg_list` | `gui_list_create` | `gui_list.h` |
+| `hg_glass` | `gui_glass_create_from_fs` | `gui_glass.h` |
+| `hg_map` | `gui_vector_map_create_from_mem` | `gui_vector_map.h` |
+| `hg_openclaw` | `gui_openclaw_create_from_mem` | `gui_openclaw.h` |
+| `hg_claw_face` | `gui_openclaw_emoji_create` | `gui_openclaw_emoji.h` |
+| `hg_menu_cellular` | custom generator | `gui_menu_cellular.h` |
+
+### Generated File Structure
+
+```
+src/
+├── ui/
+│   ├── {name}_ui.h          # Overwritten on each code generation
+│   └── {name}_ui.c          # Overwritten on each code generation
+├── callbacks/
+│   ├── {name}_callbacks.h    # Auto-extracted declarations
+│   └── {name}_callbacks.c    # Protected regions — user code preserved
+├── user/
+│   ├── {name}_user.h         # Generated once only — never overwritten
+│   └── {name}_user.c         # Generated once only — never overwritten
+└── SConscript                # Build script (auto-generated)
+```
+
+**Protected region syntax** (in `*_callbacks.c`):
+
+```c
+/* USER CODE BEGIN callback_name */
+// User code here is preserved across regeneration
+/* USER CODE END callback_name */
+```
+
+---
+
+## 16. Examples
+
+### 16.1 Smartwatch Home Screen
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<hml>
+    <meta>
+        <project name="SmartWatch" appId="com.example.smartwatch"
+                 resolution="454x454" pixelMode="RGB565" />
+        <author name="Developer" email="dev@example.com" />
+    </meta>
+    <view>
+        <!-- Home screen -->
+        <hg_view id="view_home" x="0" y="0" width="454" height="454"
+                 entry="true" backgroundColor="#000000" zIndex="0">
+
+            <!-- Background image -->
+            <hg_image id="img_bg" x="0" y="0" width="454" height="454"
+                      src="assets/watchface_bg.png" zIndex="0" />
+
+            <!-- Time display -->
+            <hg_time_label id="lbl_time" x="127" y="160" width="200" height="70"
+                           timeFormat="HH:mm" fontSize="56" color="#FFFFFF"
+                           hAlign="CENTER" fontFile="roboto_56.bin" zIndex="1" />
+
+            <!-- Date display -->
+            <hg_time_label id="lbl_date" x="152" y="230" width="150" height="30"
+                           timeFormat="MM-DD HH:mm" fontSize="18" color="#AAAAAA"
+                           hAlign="CENTER" fontFile="roboto_18.bin" zIndex="2" />
+
+            <!-- Steps arc -->
+            <hg_arc id="arc_steps" x="179" y="300" width="96" height="96"
+                    radius="40" startAngle="0" endAngle="270"
+                    strokeWidth="8" color="#4CAF50" zIndex="3" />
+
+            <!-- Menu button -->
+            <hg_button id="btn_menu" x="187" y="400" width="80" height="40"
+                       text="Menu" zIndex="5">
+                <events>
+                    <event type="onClick">
+                        <action type="switchView" target="view_menu"
+                                switchOutStyle="SWITCH_OUT_TO_LEFT_USE_TRANSLATION"
+                                switchInStyle="SWITCH_IN_FROM_RIGHT_USE_TRANSLATION" />
+                    </event>
+                </events>
+            </hg_button>
+        </hg_view>
+
+        <!-- Menu screen -->
+        <hg_view id="view_menu" x="0" y="0" width="454" height="454"
+                 backgroundColor="#1a1a1a" zIndex="1">
+
+            <hg_button id="btn_back" x="10" y="10" width="60" height="40"
+                       text="Back" zIndex="0">
+                <events>
+                    <event type="onClick">
+                        <action type="switchView" target="view_home"
+                                switchOutStyle="SWITCH_OUT_TO_RIGHT_USE_TRANSLATION"
+                                switchInStyle="SWITCH_IN_FROM_LEFT_USE_TRANSLATION" />
+                    </event>
+                </events>
+            </hg_button>
+
+            <hg_list id="list_menu" x="20" y="60" width="414" height="380"
+                     direction="VERTICAL" style="LIST_CLASSIC"
+                     itemWidth="414" itemHeight="80" space="10"
+                     noteNum="4" autoAlign="true" inertia="true" zIndex="1">
+                <hg_list_item id="item_0" x="0" y="0" width="414" height="80">
+                    <hg_image id="icon_settings" x="20" y="15" width="50" height="50"
+                              src="assets/icon_settings.png" zIndex="0" />
+                    <hg_label id="lbl_settings" x="90" y="25" width="200" height="30"
+                              text="Settings" fontSize="20" color="#FFFFFF" zIndex="1" />
+                </hg_list_item>
+                <hg_list_item id="item_1" x="0" y="0" width="414" height="80">
+                    <hg_image id="icon_health" x="20" y="15" width="50" height="50"
+                              src="assets/icon_health.png" zIndex="0" />
+                    <hg_label id="lbl_health" x="90" y="25" width="200" height="30"
+                              text="Health" fontSize="20" color="#FFFFFF" zIndex="1" />
+                </hg_list_item>
+            </hg_list>
+        </hg_view>
+    </view>
+</hml>
+```
+
+### 16.2 Image with Animation
+
+```xml
+<hg_image id="img_logo" x="177" y="177" width="100" height="100"
+          src="assets/logo.png" zIndex="10"
+          timers='[{
+              "id": "timer_rotate",
+              "name": "Spin",
+              "enabled": true,
+              "interval": 16,
+              "reload": true,
+              "mode": "preset",
+              "segments": [{
+                  "duration": 3000,
+                  "actions": [{ "type": "rotation", "from": 0, "to": 360 }]
+              }]
+          }]' />
+```
+
+### 16.3 Message Communication
+
+```xml
+<!-- Button sends a message -->
+<hg_button id="btn_refresh" x="10" y="10" width="80" height="32" text="Refresh">
+    <events>
+        <event type="onClick">
+            <action type="sendMessage" message="data_refresh" />
+        </event>
+    </events>
+</hg_button>
+
+<!-- Label receives message and calls a function -->
+<hg_label id="lbl_data" x="10" y="50" width="200" height="24" text="--">
+    <events>
+        <event type="onMessage" message="data_refresh">
+            <action type="callFunction" functionName="update_data_display" />
+        </event>
+    </events>
+</hg_label>
+```
+
+### 16.4 Swipe Navigation Between Views
+
+```xml
+<hg_view id="view_page1" x="0" y="0" width="454" height="454" entry="true">
+    <events>
+        <event type="onSwipeLeft">
+            <action type="switchView" target="view_page2"
+                    switchOutStyle="SWITCH_OUT_TO_LEFT_USE_TRANSLATION"
+                    switchInStyle="SWITCH_IN_FROM_RIGHT_USE_TRANSLATION" />
+        </event>
+    </events>
+    <hg_label id="lbl_p1" x="150" y="210" width="154" height="34"
+              text="Page 1 - Swipe Left" fontSize="20" color="#FFFFFF" hAlign="CENTER" />
+</hg_view>
+
+<hg_view id="view_page2" x="0" y="0" width="454" height="454">
+    <events>
+        <event type="onSwipeRight">
+            <action type="switchView" target="view_page1"
+                    switchOutStyle="SWITCH_OUT_TO_RIGHT_USE_TRANSLATION"
+                    switchInStyle="SWITCH_IN_FROM_LEFT_USE_TRANSLATION" />
+        </event>
+    </events>
+    <hg_label id="lbl_p2" x="150" y="210" width="154" height="34"
+              text="Page 2 - Swipe Right" fontSize="20" color="#FFFFFF" hAlign="CENTER" />
+</hg_view>
+```
+
+---
+
+## Attribute Classification Reference
+
+The HML parser categorizes XML attributes into the following buckets:
+
+### Style Attributes
+`color`, `backgroundColor`, `fontWeight`, `border`, `borderRadius`, `padding`, `margin`, `overflow`, `title`, `titleBarHeight`, `titleBarColor`, `radius`, `startAngle`, `endAngle`, `strokeWidth`, `fillColor`, `showBackground`, `itemWidth`, `itemHeight`, `direction`, `style`, `space`, `cardStackLocation`, `circleRadius`, `transform`, `align`, `hAlign`, `vAlign`, `letterSpacing`, `lineSpacing`, `wordWrap`, `wordBreak`, `useGradient`, `gradientType`, `gradientDirection`, `opacity`
+
+### Data Attributes
+`text`, `src`, `value`, `placeholder`, `options`, `min`, `max`, `step`, `checked`, `selected`, `noteNum`, `autoAlign`, `inertia`, `loop`, `createBar`, `enableAreaDisplay`, `keepNoteAlive`, `offset`, `outScope`, `fontFile`, `timeFormat`, `enableScroll`, `scrollDirection`, `scrollReverse`, `scrollStartOffset`, `scrollEndOffset`, `scrollInterval`, `scrollDuration`, `fontType`, `renderMode`, `fontSize`, `characterSets`, `residentMemory`, `animateStep`, `toggleMode`, `imageOn`, `imageOff`, `initialState`, `onCallback`, `offCallback`, `movable`, `click`, `svgFile`, `particleEffect`, `blendMode`, `fgColor`, `bgColor`, `highQuality`, `needClip`, `isTimerLabel`, `timerType`, `timerFormat`, `timerInitialValue`, `timerAutoStart`, `timers`
+
+### Meta Attributes
+`id`, `name`, `x`, `y`, `width`, `height`, `visible`, `enabled`, `locked`, `zIndex`, `parent`
+
+### Event Attributes
+Any attribute prefixed with `on` (except data-whitelisted ones like `onCallback`, `offCallback`).

@@ -30,6 +30,7 @@ test-services.js
 # 脚本和文档
 scripts/**
 docs/**
+!docs/HML-Spec.md
 
 # Tools - 只保留运行时需要的工具
 tools/**

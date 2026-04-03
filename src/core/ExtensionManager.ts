@@ -131,12 +131,43 @@ export class ExtensionManager {
             if (fs.existsSync(projectConfigPath)) {
                 const config = JSON.parse(fs.readFileSync(projectConfigPath, 'utf8'));
                 logger.info(`检测到项目配置: ${config.name || '未命名项目'}`);
+
+                // 将 HML-Spec.md 拷贝到项目根目录（供 AI agent 参考）
+                this.copyHmlSpecToProject(workspaceRoot);
             } else {
                 logger.info('未检测到项目配置文件');
             }
 
         } catch (error) {
             logger.warn(`环境检查失败: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    }
+
+    /**
+     * 将插件内置的 HML-Spec.md 拷贝到项目根目录
+     * 供 AI agent (vibe coding) 生成 HML 时参考
+     */
+    private copyHmlSpecToProject(projectRoot: string): void {
+        try {
+            const extensionPath = this.context.extensionPath;
+            const srcSpec = path.join(extensionPath, 'docs', 'HML-Spec.md');
+            const destSpec = path.join(projectRoot, 'HML-Spec.md');
+
+            if (!fs.existsSync(srcSpec)) {
+                logger.warn(`HML-Spec.md 不存在: ${srcSpec}`);
+                return;
+            }
+
+            // 检查是否需要更新（源文件更新时间比目标新，或目标不存在）
+            const needCopy = !fs.existsSync(destSpec) ||
+                fs.statSync(srcSpec).mtimeMs > fs.statSync(destSpec).mtimeMs;
+
+            if (needCopy) {
+                fs.copyFileSync(srcSpec, destSpec);
+                logger.info(`HML-Spec.md 已拷贝到项目: ${destSpec}`);
+            }
+        } catch (error) {
+            logger.warn(`拷贝 HML-Spec.md 失败: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 
