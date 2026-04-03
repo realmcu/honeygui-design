@@ -13,27 +13,18 @@ interface TimerPropertiesProps {
   onUpdate: (timers: TimerConfig[]) => void;
 }
 
-// 模块级缓存：保留动画展开状态
-const timerStateCache = new Map<string, string | null>();
-
 export const TimerProperties: React.FC<TimerPropertiesProps> = ({
   componentId,
   componentType,
   timers,
   onUpdate,
 }) => {
-  const cachedExpandedId = timerStateCache.get(componentId);
   const [expandedTimerId, setExpandedTimerId] = useState<string | null>(
-    cachedExpandedId !== undefined ? cachedExpandedId : (timers.length > 0 ? timers[0].id : null)
+    timers.length > 0 ? timers[0].id : null
   );
   
   const components = useDesignerStore((state) => state.components);
   const allViews = useDesignerStore((state) => state.allViews || []);
-
-  // 同步展开状态到缓存
-  useEffect(() => {
-    timerStateCache.set(componentId, expandedTimerId);
-  }, [componentId, expandedTimerId]);
 
   // 获取可用的视图列表
   const getAvailableViews = () => {

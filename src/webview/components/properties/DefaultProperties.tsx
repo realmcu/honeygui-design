@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState } from 'react';
 import { PropertyPanelProps } from './types';
 import { PropertyEditor } from './PropertyEditor';
 import { BaseProperties } from './BaseProperties';
@@ -10,64 +10,11 @@ import { t } from '../../i18n';
 // 字体文件扩展名
 const FONT_EXTS = ['ttf', 'otf', 'woff', 'woff2', 'bin'];
 
-// 模块级缓存：保留 tab 状态和滚动位置
-const tabStateCache = new Map<string, {
-  activeTab: 'properties' | 'events';
-  scrollProperties: number;
-  scrollEvents: number;
-}>();
-
 export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onUpdate, components }) => {
-  const cached = tabStateCache.get(component.id);
-  const [activeTab, setActiveTab] = useState<'properties' | 'events'>(cached?.activeTab ?? 'properties');
+  const [activeTab, setActiveTab] = useState<'properties' | 'events'>('properties');
   const [showFontPicker, setShowFontPicker] = useState<string | null>(null);
   const [fontFiles, setFontFiles] = useState<string[]>([]);
   const [userFunctions, setUserFunctions] = useState<Array<{ name: string; type: 'event' | 'message' }>>([]);
-
-  // 滚动位置保存
-  const propertiesScrollRef = useRef<HTMLDivElement>(null);
-  const eventsScrollRef = useRef<HTMLDivElement>(null);
-  const scrollPositions = useRef<{ properties: number; events: number }>({
-    properties: cached?.scrollProperties ?? 0,
-    events: cached?.scrollEvents ?? 0,
-  });
-
-  // 组件挂载时恢复滚动位置
-  React.useEffect(() => {
-    const pos = scrollPositions.current;
-    requestAnimationFrame(() => {
-      if (propertiesScrollRef.current) {
-        propertiesScrollRef.current.scrollTop = pos.properties;
-      }
-      if (eventsScrollRef.current) {
-        eventsScrollRef.current.scrollTop = pos.events;
-      }
-    });
-  }, []);
-
-  const handleTabSwitch = useCallback((tab: 'properties' | 'events') => {
-    // 保存当前 tab 的滚动位置
-    if (activeTab === 'properties' && propertiesScrollRef.current) {
-      scrollPositions.current.properties = propertiesScrollRef.current.scrollTop;
-    } else if (activeTab === 'events' && eventsScrollRef.current) {
-      scrollPositions.current.events = eventsScrollRef.current.scrollTop;
-    }
-    setActiveTab(tab);
-    // 更新缓存
-    tabStateCache.set(component.id, {
-      activeTab: tab,
-      scrollProperties: scrollPositions.current.properties,
-      scrollEvents: scrollPositions.current.events,
-    });
-    // 恢复目标 tab 的滚动位置
-    requestAnimationFrame(() => {
-      if (tab === 'properties' && propertiesScrollRef.current) {
-        propertiesScrollRef.current.scrollTop = scrollPositions.current.properties;
-      } else if (tab === 'events' && eventsScrollRef.current) {
-        eventsScrollRef.current.scrollTop = scrollPositions.current.events;
-      }
-    });
-  }, [activeTab, component.id]);
   
   // 保存当前正在编辑的组件 ID（用于异步操作时确保操作应用到正确的组件）
   const componentIdRef = React.useRef(component.id);
@@ -774,22 +721,22 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
       <div className="properties-tabs">
         <button
           className={activeTab === 'properties' ? 'active' : ''}
-          onClick={() => handleTabSwitch('properties')}
+          onClick={() => setActiveTab('properties')}
         >
           {t('Properties')}
         </button>
         <button
           className={activeTab === 'events' ? 'active' : ''}
-          onClick={() => handleTabSwitch('events')}
+          onClick={() => setActiveTab('events')}
         >
           {t('Events')}
         </button>
       </div>
 
-      <div ref={propertiesScrollRef} className="properties-content" style={activeTab !== 'properties' ? { display: 'none' } : undefined}>
-        {(
+      <div className="properties-content">
+        {activeTab === 'properties' && (
           <>
-            <BaseProperties
+            <BaseProperties 
               component={component} 
               onUpdate={onUpdate} 
               components={components}
@@ -1617,10 +1564,10 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
             )}
           </>
         )}
-      </div>
 
-      <div ref={eventsScrollRef} className="properties-content" style={activeTab !== 'events' ? { display: 'none' } : undefined}>
-        <EventsPanel component={component} onUpdate={onUpdate} />
+        {activeTab === 'events' && (
+          <EventsPanel component={component} onUpdate={onUpdate} />
+        )}
       </div>
     </>
   );
