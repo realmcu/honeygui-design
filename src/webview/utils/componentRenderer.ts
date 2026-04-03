@@ -24,6 +24,12 @@ export const calculateComponentStyle = (
     } else {
       border = 'none';
     }
+  } else if (component.type === 'hg_window') {
+    if (isSelected || isMultiSelected) {
+      border = '2px solid #007ACC';
+    } else {
+      border = '1px dashed rgba(150, 150, 150, 0.5)';
+    }
   } else if (isListItem && !isSelected && !isMultiSelected) {
     border = '1px dashed rgba(150, 150, 150, 0.5)';
   } else if (isSelected || isMultiSelected) {
