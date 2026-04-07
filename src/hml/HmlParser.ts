@@ -46,13 +46,25 @@ export class HmlParser {
   private idCounter = 0;
 
   constructor() {
+    // 文本类属性，保留原始值（不 trim）
+    const TEXT_PROPS = new Set(['text', 'placeholder']);
+    
+    // 属性值处理器：text/placeholder 保留原始值，其他属性 trim
+    const attributeValueProcessor = (attrName: string, attrValue: string): string => {
+      if (TEXT_PROPS.has(attrName)) {
+        return attrValue; // 保留原始值，包括首尾空格
+      }
+      return attrValue.trim();
+    };
+
     // 普通解析器（用于 meta 等不需要保持顺序的部分）
     this.xmlParser = new XMLParser({
       ignoreAttributes: false,
       attributeNamePrefix: '',
       textNodeName: '_text',
       parseAttributeValue: false,
-      trimValues: true
+      trimValues: false,  // 关闭全局 trim，由 attributeValueProcessor 精确控制
+      attributeValueProcessor,
     });
     
     // 保持顺序的解析器（用于 view 中的组件）
@@ -61,7 +73,8 @@ export class HmlParser {
       attributeNamePrefix: '',
       textNodeName: '_text',
       parseAttributeValue: false,
-      trimValues: true,
+      trimValues: false,  // 关闭全局 trim，由 attributeValueProcessor 精确控制
+      attributeValueProcessor,
       preserveOrder: true  // 保持 XML 元素的原始顺序
     });
   }

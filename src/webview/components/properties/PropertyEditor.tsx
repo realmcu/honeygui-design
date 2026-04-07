@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { PropertyEditorProps } from './types';
 
 const inputStyle: React.CSSProperties = {
@@ -27,6 +27,18 @@ export const PropertyEditor: React.FC<PropertyEditorProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const colorTextRef = useRef<HTMLInputElement>(null);
   const disabledStyle = disabled ? { opacity: 0.6, cursor: 'not-allowed' } : {};
+
+  // text 类型使用本地 state 缓冲，避免受控输入在 store 更新时丢失空格
+  const [localText, setLocalText] = useState<string>(value ?? '');
+  const isComposingRef = useRef(false); // 处理中文输入法
+
+  // 外部 value 变化时同步本地 state（仅在非编辑状态下同步）
+  const isFocusedRef = useRef(false);
+  useEffect(() => {
+    if (!isFocusedRef.current) {
+      setLocalText(value ?? '');
+    }
+  }, [value]);
 
   // 辅助函数：标准化颜色值为 6 位 RGB 格式
   const normalizeColor = (color: string): string => {
@@ -199,9 +211,25 @@ export const PropertyEditor: React.FC<PropertyEditorProps> = ({
         <input
           ref={inputRef}
           type="text"
-          value={value || ''}
+          value={localText}
           placeholder={placeholder}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => {
+            setLocalText(e.target.value);
+            // 非输入法组合状态下实时提交（保证画布预览同步）
+            if (!isComposingRef.current) {
+              onChange(e.target.value);
+            }
+          }}
+          onCompositionStart={() => { isComposingRef.current = true; }}
+          onCompositionEnd={(e) => {
+            isComposingRef.current = false;
+            onChange((e.target as HTMLInputElement).value);
+          }}
+          onFocus={() => { isFocusedRef.current = true; }}
+          onBlur={(e) => {
+            isFocusedRef.current = false;
+            onChange(e.target.value);
+          }}
           disabled={disabled}
           title={title}
           style={{ ...inputStyle, ...disabledStyle }}
