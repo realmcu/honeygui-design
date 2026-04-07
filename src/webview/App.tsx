@@ -307,10 +307,13 @@ const App: React.FC = () => {
                 batchUpdate.components = message.components;
               }
               
-              // 不恢复缩放和偏移（每次打开都自适应居中）
-              if (restored && savedState) {
+              // 恢复选中状态：首次加载从 savedState 恢复，保存后刷新保持当前选中
+              if (hadComponentsBefore) {
+                // 保存后刷新：保持当前选中状态不变（不设置 selectedComponent）
+                console.log('[ViewState] 保存后刷新，保持当前选中状态');
+              } else if (restored && savedState) {
                 batchUpdate.selectedComponent = savedState.selectedComponent;
-                console.log('[ViewState] 恢复选中状态，缩放将自适应居中');
+                console.log('[ViewState] 首次加载，恢复选中状态');
               }
               
               // 添加仿真状态

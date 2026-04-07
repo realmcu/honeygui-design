@@ -121,6 +121,9 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
     setEditingId(component.id);
     setIdError(null);
     editingComponentIdRef.current = component.id;
+    // 同步更新 editingIdRef，防止 useEffect 和 re-render 之间的时间窗口
+    // 导致 stale blur handler 读到不一致的 ref 值
+    editingIdRef.current = component.id;
 
     return () => {
       // cleanup: 组件切换（同类型 re-render）或卸载（不同类型）时都会执行
@@ -142,6 +145,7 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
 
   const handleIdChange = (value: string) => {
     setEditingId(value);
+    editingIdRef.current = value;
     
     // 实时校验
     const allIds = components.map(c => c.id);
@@ -151,24 +155,29 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
 
   const handleIdCommit = () => {
     const originalId = editingComponentIdRef.current;
-    if (editingId === originalId) return; // 没有变化
+    // 使用 ref 而非闭包中的 state，避免组件切换时 stale closure 导致误操作
+    const pendingId = editingIdRef.current;
+    if (pendingId === originalId) return; // 没有变化
     if (idError) {
       // 校验失败，恢复原值
       setEditingId(originalId);
+      editingIdRef.current = originalId;
       setIdError(null);
       return;
     }
     
     // 执行重命名（使用保存的原始 ID）
-    const success = renameComponent(originalId, editingId);
+    const success = renameComponent(originalId, pendingId);
     if (!success) {
       setEditingId(originalId);
+      editingIdRef.current = originalId;
       setIdError(t('Rename failed'));
     } else {
       // 更新引用为新的 ID
-      editingComponentIdRef.current = editingId;
+      editingComponentIdRef.current = pendingId;
+      editingIdRef.current = pendingId;
       // 同步 name 为新的 ID 值
-      onUpdate({ name: editingId });
+      onUpdate({ name: pendingId });
     }
   };
 
