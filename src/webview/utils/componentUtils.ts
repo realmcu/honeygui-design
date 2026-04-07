@@ -1,6 +1,11 @@
 import { Component, ComponentType } from '../types';
 
 /**
+ * hg_view 网格布局间距（像素）
+ */
+const VIEW_GRID_GAP = 30;
+
+/**
  * 可包含子组件的容器类型
  */
 const CONTAINER_TYPES: ComponentType[] = ['hg_view', 'hg_window', 'hg_canvas', 'hg_list', 'hg_list_item'];
@@ -25,14 +30,68 @@ export function isDropTargetType(type: ComponentType | string): boolean {
 }
 
 /**
+ * 计算顶层 hg_view 的网格布局位置
+ * hg_view 的 x/y 坐标对实际 GUI 显示无意义，在画布上按 a×b 网格排列
+ */
+export const getViewGridPosition = (
+  viewComponent: Component,
+  allComponents: Component[]
+): { x: number; y: number } => {
+  const topLevelViews = allComponents.filter(c => c.parent === null && c.type === 'hg_view');
+  const index = topLevelViews.findIndex(c => c.id === viewComponent.id);
+  if (index <= 0) {
+    return { x: 0, y: 0 };
+  }
+
+  // 列数 = ceil(sqrt(N))，形成接近正方形的网格
+  const cols = Math.ceil(Math.sqrt(topLevelViews.length));
+  const row = Math.floor(index / cols);
+  const col = index % cols;
+
+  // 计算该列/行之前所有 view 的最大宽度/高度，保证对齐
+  // 每列宽度取该列中最宽的 view
+  let x = 0;
+  for (let c = 0; c < col; c++) {
+    let maxW = 0;
+    for (let r = 0; r < topLevelViews.length / cols; r++) {
+      const i = r * cols + c;
+      if (i < topLevelViews.length) {
+        maxW = Math.max(maxW, topLevelViews[i].position.width);
+      }
+    }
+    x += maxW + VIEW_GRID_GAP;
+  }
+
+  // 每行高度取该行中最高的 view
+  let y = 0;
+  for (let r = 0; r < row; r++) {
+    let maxH = 0;
+    for (let c = 0; c < cols; c++) {
+      const i = r * cols + c;
+      if (i < topLevelViews.length) {
+        maxH = Math.max(maxH, topLevelViews[i].position.height);
+      }
+    }
+    y += maxH + VIEW_GRID_GAP;
+  }
+
+  return { x, y };
+};
+
+/**
  * 获取组件的绝对位置（相对于画布）
  * 递归计算父组件的位置累加
+ * 顶层 hg_view 使用网格布局位置
  */
 export const getAbsolutePosition = (
   comp: Component,
   components: Component[]
 ): { x: number; y: number } => {
   if (!comp.parent) {
+    // 顶层 hg_view 使用网格布局位置
+    if (comp.type === 'hg_view') {
+      return getViewGridPosition(comp, components);
+    }
     return { x: comp.position.x, y: comp.position.y };
   }
   

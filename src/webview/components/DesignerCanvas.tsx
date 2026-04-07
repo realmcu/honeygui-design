@@ -270,20 +270,10 @@ const DesignerCanvas: React.FC<DesignerCanvasProps> = ({ onComponentSelect, onDr
         // 检查每个同级组件是否在点击位置
         siblings.forEach(sibling => {
           // 计算组件的绝对位置
-          let absX = sibling.position.x;
-          let absY = sibling.position.y;
+          const absPos = getAbsolutePosition(sibling, components);
           
-          // 如果有父容器，需要加上父容器的位置
-          if (currentParent) {
-            const parent = components.find(c => c.id === currentParent);
-            if (parent) {
-              absX += parent.position.x;
-              absY += parent.position.y;
-            }
-          }
-          
-          const compLeft = absX;
-          const compTop = absY;
+          const compLeft = absPos.x;
+          const compTop = absPos.y;
           const compRight = compLeft + sibling.position.width;
           const compBottom = compTop + sibling.position.height;
           

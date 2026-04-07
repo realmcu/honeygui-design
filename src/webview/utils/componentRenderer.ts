@@ -1,5 +1,5 @@
 import { Component } from '../types';
-import { isContainerType } from './componentUtils';
+import { isContainerType, getViewGridPosition } from './componentUtils';
 
 /**
  * 计算组件样式
@@ -199,8 +199,12 @@ export const calculateComponentStyle = (
 
   return {
     position: 'absolute',
-    left: component.position.x,
-    top: component.position.y,
+    left: (component.type === 'hg_view' && !component.parent && allComponents)
+      ? getViewGridPosition(component, allComponents).x
+      : component.position.x,
+    top: (component.type === 'hg_view' && !component.parent && allComponents)
+      ? getViewGridPosition(component, allComponents).y
+      : component.position.y,
     width: component.position.width,
     height: component.position.height,
     display: component.visible ? 'flex' : 'none',
