@@ -126,7 +126,7 @@ export const TimerProperties: React.FC<TimerPropertiesProps> = ({
       id: `timer_${timerIndex}`,
       name: importedName,
       callback: `${componentId}_timer_${timerIndex}_cb`,
-      enabled: false,
+      enabled: timers.length === 0,
     };
     onUpdate([...timers, imported]);
     setExpandedTimerId(imported.id);
