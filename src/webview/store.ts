@@ -584,6 +584,13 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
           return comp;
         }),
       }));
+      // 通知后端清除其他 HML 文件中的 entry 标记（跨文件互斥）
+      if (vscodeAPI) {
+        vscodeAPI.postMessage({
+          command: 'setEntryView',
+          viewId: id
+        });
+      }
       get().saveToFile();
       return;
     }

@@ -459,6 +459,10 @@ export class MessageHandler {
                 this._componentManager.handleUpdateComponent(message.componentId, message.updates);
                 break;
 
+            case 'setEntryView':
+                this._handleSetEntryView(message.viewId);
+                break;
+
             case 'deleteComponent':
                 this._componentManager.handleDeleteComponent(message.componentId);
                 break;
@@ -690,6 +694,69 @@ export class MessageHandler {
      */
     private async handleGenerateCode(): Promise<void> {
         await CodeGenerationService.generateFromFile(this._fileManager.currentFilePath, this._codeGenerator);
+    }
+
+    /**
+     * 处理设置入口视图（跨文件互斥）
+     * 清除其他 HML 文件中所有 hg_view 的 entry="true"
+     */
+    private _handleSetEntryView(viewId: string): void {
+        const currentFilePath = this._fileManager.currentFilePath;
+        if (!currentFilePath) {
+            return;
+        }
+
+        const projectRoot = ProjectUtils.findProjectRoot(currentFilePath);
+        if (!projectRoot) {
+            return;
+        }
+
+        const uiDir = ProjectUtils.getUiDir(projectRoot);
+        if (!fs.existsSync(uiDir)) {
+            return;
+        }
+
+        // 递归扫描所有 HML 文件
+        const scanDir = (dir: string): string[] => {
+            const results: string[] = [];
+            const entries = fs.readdirSync(dir, { withFileTypes: true });
+            for (const entry of entries) {
+                const fullPath = path.join(dir, entry.name);
+                if (entry.isDirectory()) {
+                    results.push(...scanDir(fullPath));
+                } else if (entry.isFile() && entry.name.endsWith('.hml')) {
+                    results.push(fullPath);
+                }
+            }
+            return results;
+        };
+
+        const hmlFiles = scanDir(uiDir);
+        let modifiedCount = 0;
+
+        for (const hmlFile of hmlFiles) {
+            // 跳过当前正在编辑的文件（已由前端处理）
+            if (path.normalize(hmlFile) === path.normalize(currentFilePath)) {
+                continue;
+            }
+
+            try {
+                const content = fs.readFileSync(hmlFile, 'utf-8');
+                // 将所有 entry="true" 替换为 entry="false"
+                const updated = content.replace(/\bentry\s*=\s*"true"/g, 'entry="false"');
+                if (updated !== content) {
+                    fs.writeFileSync(hmlFile, updated, 'utf-8');
+                    modifiedCount++;
+                    logger.info(`[MessageHandler] Cleared entry in: ${path.basename(hmlFile)}`);
+                }
+            } catch (err) {
+                logger.error(`[MessageHandler] Failed to update entry in ${hmlFile}: ${err}`);
+            }
+        }
+
+        if (modifiedCount > 0) {
+            logger.info(`[MessageHandler] Cleared entry in ${modifiedCount} other HML file(s)`);
+        }
     }
 
     /**
