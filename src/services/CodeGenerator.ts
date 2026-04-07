@@ -70,11 +70,13 @@ export class CodeGenerator {
         const config = ProjectUtils.loadProjectConfig(projectRoot);
         const srcDir = ProjectUtils.getSrcDir(projectRoot);
 
-        // 生成项目入口文件（只生成一次，仅 HoneyGUI 引擎需要）
+        // 生成项目入口文件（仅 HoneyGUI 引擎需要）
         const targetEngine: TargetEngine = config.targetEngine || 'honeygui';
         if (targetEngine === 'honeygui') {
             try {
-                const entryFile = EntryFileGenerator.generate(srcDir, config.name || 'HoneyGUI');
+                // 从 HML 文件中查找 entry view 的 ID
+                const entryViewId = await this.findEntryViewId(hmlFiles);
+                const entryFile = EntryFileGenerator.generate(srcDir, config.name || 'HoneyGUI', entryViewId);
                 logger.info(`入口文件: ${path.basename(entryFile)}`);
             } catch (error) {
                 logger.error(`生成入口文件失败: ${error}`);
@@ -116,6 +118,28 @@ export class CodeGenerator {
             totalFiles,
             errors
         };
+    }
+
+    /**
+     * 从 HML 文件列表中查找 entry view 的 ID
+     */
+    private async findEntryViewId(hmlFiles: string[]): Promise<string | undefined> {
+        for (const hmlFile of hmlFiles) {
+            try {
+                const hmlController = new HmlController();
+                const doc = await hmlController.loadFile(hmlFile);
+                const components = doc.view.components || [];
+                const entryView = components.find(
+                    c => c.type === 'hg_view' && (c.data?.entry === true || c.data?.entry === 'true')
+                );
+                if (entryView) {
+                    return entryView.id;
+                }
+            } catch {
+                // 跳过解析失败的文件
+            }
+        }
+        return undefined;
     }
 
     /**

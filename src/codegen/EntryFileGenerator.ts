@@ -11,22 +11,18 @@ export class EntryFileGenerator {
      * Generate the entry file
      * @param srcDir Path to the src directory
      * @param projectName Project name
+     * @param entryViewId The ID of the entry view (from HML with entry="true")
      */
-    static generate(srcDir: string, projectName: string): string {
+    static generate(srcDir: string, projectName: string, entryViewId?: string): string {
         // Ensure the directory exists
         if (!fs.existsSync(srcDir)) {
             fs.mkdirSync(srcDir, { recursive: true });
         }
 
         const entryFile = path.join(srcDir, `${projectName}Entry.c`);
-        
-        // Only create on first generation
-        if (fs.existsSync(entryFile)) {
-            return entryFile;
-        }
 
         const romfsRootName = RomfsConfig.getRootName();
-        const mainViewId = `${projectName}MainView`;
+        const mainViewId = entryViewId || `${projectName}MainView`;
         const content = `#include "gui_api.h"
 #include "gui_view.h"
 #include "gui_components_init.h"
