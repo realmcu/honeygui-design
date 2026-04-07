@@ -571,14 +571,14 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     }
     
     // 对于 hg_view，如果设置 entry=true，需要将其他 hg_view 的 entry 设为 false
-    if (before.type === 'hg_view' && finalUpdates.data?.entry === true) {
+    if (before.type === 'hg_view' && (finalUpdates.data?.entry === true || finalUpdates.data?.entry === 'true')) {
       set((state) => ({
         components: state.components.map((comp) => {
           if (comp.id === id) {
             return { ...comp, ...finalUpdates };
           }
           // 其他 hg_view 的 entry 设为 false
-          if (comp.type === 'hg_view' && comp.data?.entry === true) {
+          if (comp.type === 'hg_view' && (comp.data?.entry === true || comp.data?.entry === 'true')) {
             return { ...comp, data: { ...comp.data, entry: false } };
           }
           return comp;

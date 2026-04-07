@@ -442,6 +442,15 @@ export class CreateProjectPanel {
         fs.mkdirSync(path.join(projectPath, 'src'), { recursive: true });
         fs.mkdirSync(path.join(projectPath, 'assets'), { recursive: true });
 
+        
+        // 创建 fallback 目录并复制默认字体
+        const fallbackDir = path.join(projectPath, 'fallback');
+        fs.mkdirSync(fallbackDir, { recursive: true });
+        const fontSrc = path.join(this._extensionUri.fsPath, 'lib', 'font', 'NotoSansSC-Bold.ttf');
+        if (fs.existsSync(fontSrc)) {
+            fs.copyFileSync(fontSrc, path.join(fallbackDir, 'NotoSansSC-Bold.ttf'));
+        }
+
         // 创建 conversion.json 资源转换配置文件
         const isZhCn = vscode.env.language.startsWith('zh');
         const conversionConfigContent = isZhCn ? `{

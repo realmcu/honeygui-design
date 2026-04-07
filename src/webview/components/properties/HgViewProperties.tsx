@@ -75,6 +75,14 @@ export const HgViewProperties: React.FC<PropertyPanelProps> = ({ component, onUp
             <div className="property-group">
               <div className="property-group-title">{t('View Properties')}</div>
               <div className="property-item">
+                <label>{t('Entry (Main Screen)')}</label>
+                <PropertyEditor
+                  type="boolean"
+                  value={component.data?.entry === true || component.data?.entry === 'true'}
+                  onChange={(value) => handleDataChange('entry', value)}
+                />
+              </div>
+              <div className="property-item">
                 <label>{t('Resident Memory')}</label>
                 <PropertyEditor
                   type="boolean"

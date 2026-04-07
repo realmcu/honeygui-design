@@ -544,6 +544,7 @@ const en = {
 
   // HgViewProperties
   'View Properties': 'View Properties',
+  'Entry (Main Screen)': 'Entry (Main Screen)',
   'Resident Memory': 'Resident Memory',
   'Animation Step': 'Animation Step',
   'hg_view size is determined by project resolution and cannot be modified': 'hg_view size is determined by project resolution and cannot be modified',

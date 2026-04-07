@@ -544,6 +544,7 @@ const zhCN = {
 
   // HgViewProperties
   'View Properties': '视图属性',
+  'Entry (Main Screen)': '主界面入口',
   'Resident Memory': '常驻内存',
   'Animation Step': '动画步长',
   'hg_view size is determined by project resolution and cannot be modified': 'hg_view 的宽高由项目分辨率决定，不可修改',
