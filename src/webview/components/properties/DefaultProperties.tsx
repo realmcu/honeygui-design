@@ -10,8 +10,17 @@ import { t } from '../../i18n';
 // 字体文件扩展名
 const FONT_EXTS = ['ttf', 'otf', 'woff', 'woff2', 'bin'];
 
+// 模块级缓存：保留 activeTab 状态，防止组件重挂载时重置
+const activeTabCache = new Map<string, 'properties' | 'events'>();
+
 export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onUpdate, components }) => {
-  const [activeTab, setActiveTab] = useState<'properties' | 'events'>('properties');
+  const [activeTab, setActiveTabState] = useState<'properties' | 'events'>(
+    activeTabCache.get(component.id) ?? 'properties'
+  );
+  const setActiveTab = React.useCallback((tab: 'properties' | 'events') => {
+    activeTabCache.set(component.id, tab);
+    setActiveTabState(tab);
+  }, [component.id]);
   const [showFontPicker, setShowFontPicker] = useState<string | null>(null);
   const [fontFiles, setFontFiles] = useState<string[]>([]);
   const [userFunctions, setUserFunctions] = useState<Array<{ name: string; type: 'event' | 'message' }>>([]);

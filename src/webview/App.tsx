@@ -204,14 +204,17 @@ const App: React.FC = () => {
           break;
 
         case 'loadHml':
-          // 【关键】立即显示加载状态并清空组件，避免显示旧内容
-          setIsLoadingFile(true);
-          
           // 直接使用store方法，避免闭包问题
           const store = useDesignerStore.getState();
           
-          // 【关键】立即清空组件，避免显示旧组件
-          useDesignerStore.setState({ components: [] });
+          // 记录是否已有组件（区分首次加载和保存后刷新）
+          const hadComponentsBefore = store.components.length > 0;
+          
+          // 首次加载时清空旧组件并显示加载状态，保存后刷新时保持当前状态
+          if (!hadComponentsBefore) {
+            setIsLoadingFile(true);
+            useDesignerStore.setState({ components: [] });
+          }
           
           // Set locale if provided（同时保存到状态）
           if (message.locale) {
@@ -325,12 +328,16 @@ const App: React.FC = () => {
                 });
               });
               
-              // 每次打开文件都自适应居中显示
+              // 首次打开文件时自适应居中显示，保存后刷新不重置视图
               if (message.components) {
-                console.log('[ViewState] 自适应居中显示内容');
-                setTimeout(() => {
-                  store.fitContentToView();
-                }, 0);
+                if (!hadComponentsBefore) {
+                  console.log('[ViewState] 首次加载，自适应居中显示内容');
+                  setTimeout(() => {
+                    store.fitContentToView();
+                  }, 0);
+                } else {
+                  console.log('[ViewState] 保存后刷新，保持当前视图');
+                }
               }
             } else {
               // 没有 currentFilePath 的情况（旧逻辑兼容）
@@ -354,8 +361,10 @@ const App: React.FC = () => {
               
               if (message.components) {
                 store.setComponents(message.components);
-                // 自适应居中
-                setTimeout(() => { store.fitContentToView(); }, 0);
+                // 仅首次加载时自适应居中
+                if (!hadComponentsBefore) {
+                  setTimeout(() => { store.fitContentToView(); }, 0);
+                }
               }
               
               // 隐藏加载状态
