@@ -226,6 +226,7 @@ const componentDefinitions: ComponentDefinition[] = [
     type: 'hg_checkbox',
     name: 'Checkbox',
     icon: '☑️',
+    comingSoon: true,
     defaultSize: { width: 20, height: 20 },
     properties: [
       { name: 'value', label: 'Checked', type: 'boolean', defaultValue: false, group: 'data' },
@@ -236,6 +237,7 @@ const componentDefinitions: ComponentDefinition[] = [
     type: 'hg_radio',
     name: 'Radio',
     icon: '⭕',
+    comingSoon: true,
     defaultSize: { width: 20, height: 20 },
     properties: [
       { name: 'value', label: 'Checked', type: 'boolean', defaultValue: false, group: 'data' },
@@ -627,14 +629,20 @@ const ComponentLibrary: React.FC<ComponentLibraryProps> = ({ onComponentDragStar
                   {components.map((component) => (
                     <div
                       key={component.type}
-                      className="component-item"
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, component.type)}
+                      className={`component-item${component.comingSoon ? ' component-item--coming-soon' : ''}`}
+                      draggable={!component.comingSoon}
+                      onDragStart={(e) => {
+                        if (component.comingSoon) { e.preventDefault(); return; }
+                        handleDragStart(e, component.type);
+                      }}
                       onContextMenu={(e) => handleContextMenu(e, component.type)}
-                      title={t(component.name as any)}
+                      title={component.comingSoon ? t('Coming Soon' as any) : t(component.name as any)}
                     >
                       <div className="component-icon">{component.icon}</div>
                       <div className="component-name">{t(component.name as any)}</div>
+                      {component.comingSoon && (
+                        <div className="component-coming-soon-badge">TODO</div>
+                      )}
                     </div>
                   ))}
                 </div>

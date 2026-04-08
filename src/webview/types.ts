@@ -54,6 +54,7 @@ export interface ComponentDefinition {
   icon: string;
   defaultSize: { width: number; height: number };
   properties: PropertyDefinition[];
+  comingSoon?: boolean; // SDK 尚未实现，禁止拖放
 }
 
 export interface PropertyDefinition {
