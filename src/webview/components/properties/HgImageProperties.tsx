@@ -159,16 +159,14 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
   // 颜色转换函数：将 #RRGGBB 转换为 0xFFRRGGBB 格式
   const hexToArgb = (hex: string): string => {
     if (!hex || !hex.startsWith('#')) return '0xFFFFFFFF';
-    const r = hex.substring(1, 3);
-    const g = hex.substring(3, 5);
-    const b = hex.substring(5, 7);
-    return `0xFF${r}${g}${b}`.toUpperCase();
+    const rgb = hex.substring(1).toUpperCase();
+    return `0xFF${rgb}`;
   };
 
   // 颜色转换函数：将 0xFFRRGGBB 转换为 #RRGGBB 格式
   const argbToHex = (argb: string): string => {
-    if (!argb || !argb.startsWith('0x')) return '#FFFFFF';
-    const hex = argb.substring(4); // 去掉 0xFF
+    if (!argb || !argb.toLowerCase().startsWith('0x') || argb.length < 8) return '#FFFFFF';
+    const hex = argb.substring(4);
     return `#${hex}`;
   };
 
