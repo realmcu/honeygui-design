@@ -1034,7 +1034,7 @@ static void update_nav_state(app_state_t *app)
 
     if (nav->off_route)
     {
-        MAP_PRINTF("⚠️  Off route, distance > %.0fm\n", OFF_ROUTE_THRESHOLD);
+        MAP_PRINTF("⚠️  Off route, distance > %.0fm\n", (double)OFF_ROUTE_THRESHOLD);
         app->needs_reroute = 1;
         return;
     }
@@ -1845,7 +1845,7 @@ static int nav_handle_keyboard_honey(app_state_t *app)
     if (trmap_honey_gui_consume_key_press("Home"))
     {
         (void)trmap_map_control_zoom_out();
-        MAP_PRINTF("Home: Zoom out %.1fx", app->zoom_factor);
+        MAP_PRINTF("Home: Zoom out %.1fx", (double)app->zoom_factor);
     }
 
     if (trmap_honey_gui_consume_key_press("Back"))
@@ -1864,7 +1864,7 @@ static int nav_handle_keyboard_honey(app_state_t *app)
     if (trmap_honey_gui_consume_key_press("Power"))
     {
         (void)trmap_map_control_zoom_in();
-        MAP_PRINTF("Power: Zoom in %.1fx", app->zoom_factor);
+        MAP_PRINTF("Power: Zoom in %.1fx", (double)app->zoom_factor);
     }
 
     if (trmap_honey_gui_touch_active(tp))
@@ -1923,7 +1923,7 @@ static int nav_handle_keyboard_honey(app_state_t *app)
         else
         {
             (void)trmap_map_control_pan_finish();
-            MAP_PRINTF("Touch pan end: offset %.6f, %.6f", app->pan_offset_lat, app->pan_offset_lon);
+            MAP_PRINTF("Touch pan end: offset %.6f, %.6f", (double)app->pan_offset_lat, (double)app->pan_offset_lon);
         }
     }
 
@@ -2038,7 +2038,7 @@ static int nav_handle_keyboard_mcu(app_state_t *app)
     {
         g_key1_pressed = 0;
         (void)trmap_map_control_zoom_out();
-        MAP_PRINTF("KEY1: Zoom out %.1fx", app->zoom_factor);
+        MAP_PRINTF("KEY1: Zoom out %.1fx", (double)app->zoom_factor);
     }
 
     /* KEY2 (ADC_0): Reset zoom and pan to default */
@@ -2063,7 +2063,7 @@ static int nav_handle_keyboard_mcu(app_state_t *app)
     {
         g_mfb_pressed = 0;
         (void)trmap_map_control_zoom_in();
-        MAP_PRINTF("MFB: Zoom in %.1fx", app->zoom_factor);
+        MAP_PRINTF("MFB: Zoom in %.1fx", (double)app->zoom_factor);
     }
 
     /* Touch screen pan handling */
@@ -2138,7 +2138,7 @@ static int nav_handle_keyboard_mcu(app_state_t *app)
                 {
                     (void)trmap_map_control_pan_finish();
                     /* Touch was a pan gesture */
-                    MAP_PRINTF("Touch pan end: offset %.6f, %.6f", app->pan_offset_lat, app->pan_offset_lon);
+                    MAP_PRINTF("Touch pan end: offset %.6f, %.6f", (double)app->pan_offset_lat, (double)app->pan_offset_lon);
                 }
             }
         }
@@ -2772,13 +2772,13 @@ static int gps_map_handle_keyboard_honey(gps_map_state_t *state)
     if (trmap_honey_gui_consume_key_press("Home"))
     {
         (void)trmap_map_control_zoom_out();
-        MAP_PRINTF("Home: Zoom out %.1fx", state->zoom_factor);
+        MAP_PRINTF("Home: Zoom out %.1fx", (double)state->zoom_factor);
     }
 
     if (trmap_honey_gui_consume_key_press("Back"))
     {
         (void)trmap_map_control_reset();
-        MAP_PRINTF("Back: Reset to %.6f, %.6f, Zoom 1x", state->dest_lat, state->dest_lon);
+        MAP_PRINTF("Back: Reset to %.6f, %.6f, Zoom 1x", (double)state->dest_lat, (double)state->dest_lon);
     }
 
     if (trmap_honey_gui_consume_key_press("Menu"))
@@ -2790,7 +2790,7 @@ static int gps_map_handle_keyboard_honey(gps_map_state_t *state)
             state->nav_start_lat = gps->lat;
             state->nav_start_lon = gps->lon;
             state->nav_requested = 1;
-            MAP_PRINTF("Menu: Start navigation to %.6f, %.6f", state->dest_lat, state->dest_lon);
+            MAP_PRINTF("Menu: Start navigation to %.6f, %.6f", (double)state->dest_lat, (double)state->dest_lon);
             (void)trmap_request_mode_switch(TRMAP_APP_MODE_NAVIGATION);
             return 2;
         }
@@ -2801,7 +2801,7 @@ static int gps_map_handle_keyboard_honey(gps_map_state_t *state)
     if (trmap_honey_gui_consume_key_press("Power"))
     {
         (void)trmap_map_control_zoom_in();
-        MAP_PRINTF("Power: Zoom in %.1fx", state->zoom_factor);
+        MAP_PRINTF("Power: Zoom in %.1fx", (double)state->zoom_factor);
     }
 
     if (trmap_honey_gui_touch_active(tp))
@@ -2851,12 +2851,12 @@ static int gps_map_handle_keyboard_honey(gps_map_state_t *state)
         if (distance_sq < (TOUCH_DOUBLE_TAP_DISTANCE * TOUCH_DOUBLE_TAP_DISTANCE))
         {
             (void)trmap_map_control_reset();
-            MAP_PRINTF("Tap: Reset to %.6f, %.6f, Zoom 1x", state->dest_lat, state->dest_lon);
+            MAP_PRINTF("Tap: Reset to %.6f, %.6f, Zoom 1x", (double)state->dest_lat, (double)state->dest_lon);
         }
         else
         {
             (void)trmap_map_control_pan_finish();
-            MAP_PRINTF("Touch pan end: offset %.6f, %.6f", state->pan_offset_lat, state->pan_offset_lon);
+            MAP_PRINTF("Touch pan end: offset %.6f, %.6f", (double)state->pan_offset_lat, (double)state->pan_offset_lon);
         }
     }
 
@@ -3003,7 +3003,7 @@ static int gps_map_handle_keyboard_mcu(gps_map_state_t *state)
     {
         g_key1_pressed = 0;
         (void)trmap_map_control_zoom_out();
-        MAP_PRINTF("KEY1: Zoom out %.1fx", state->zoom_factor);
+        MAP_PRINTF("KEY1: Zoom out %.1fx", (double)state->zoom_factor);
     }
 
     /* KEY2 (ADC_0): Reset zoom and destination to default */
@@ -3011,7 +3011,7 @@ static int gps_map_handle_keyboard_mcu(gps_map_state_t *state)
     {
         g_key2_pressed = 0;
         (void)trmap_map_control_reset();
-        MAP_PRINTF("KEY2: Reset to %.6f, %.6f, Zoom 1x", state->dest_lat, state->dest_lon);
+        MAP_PRINTF("KEY2: Reset to %.6f, %.6f, Zoom 1x", (double)state->dest_lat, (double)state->dest_lon);
     }
 
     /* KEY3 (P3_1): Confirm destination and start navigation */
@@ -3025,7 +3025,7 @@ static int gps_map_handle_keyboard_mcu(gps_map_state_t *state)
             state->nav_start_lat = gps->lat;
             state->nav_start_lon = gps->lon;
             state->nav_requested = 1;
-            MAP_PRINTF("KEY3: Start navigation to %.6f, %.6f", state->dest_lat, state->dest_lon);
+            MAP_PRINTF("KEY3: Start navigation to %.6f, %.6f", (double)state->dest_lat, (double)state->dest_lon);
             (void)trmap_request_mode_switch(TRMAP_APP_MODE_NAVIGATION);
             return 2;
         }
@@ -3038,7 +3038,7 @@ static int gps_map_handle_keyboard_mcu(gps_map_state_t *state)
     {
         g_mfb_pressed = 0;
         (void)trmap_map_control_zoom_in();
-        MAP_PRINTF("MFB: Zoom in %.1fx", state->zoom_factor);
+        MAP_PRINTF("MFB: Zoom in %.1fx", (double)state->zoom_factor);
     }
 
     /* Touch screen pan handling */
@@ -3111,13 +3111,13 @@ static int gps_map_handle_keyboard_mcu(gps_map_state_t *state)
                 {
                     /* Single tap detected - reset zoom, pan and destination to default */
                     (void)trmap_map_control_reset();
-                    MAP_PRINTF("Tap: Reset to GPS %.6f, %.6f, Zoom 1x", state->dest_lat, state->dest_lon);
+                    MAP_PRINTF("Tap: Reset to GPS %.6f, %.6f, Zoom 1x", (double)state->dest_lat, (double)state->dest_lon);
                 }
                 else
                 {
                     /* Touch was a pan gesture - apply pan offset */
                     (void)trmap_map_control_pan_finish();
-                    MAP_PRINTF("Touch pan end: Dest %.6f, %.6f", state->dest_lat, state->dest_lon);
+                    MAP_PRINTF("Touch pan end: Dest %.6f, %.6f", (double)state->dest_lat, (double)state->dest_lon);
                 }
             }
         }
@@ -3705,7 +3705,7 @@ static int gps_track_handle_keyboard_honey(gps_track_state_t *state)
     if (trmap_honey_gui_consume_key_press("Home"))
     {
         (void)trmap_map_control_zoom_out();
-        MAP_PRINTF("Home: Zoom out %.1fx", 1.0f / state->manual_zoom);
+        MAP_PRINTF("Home: Zoom out %.1fx", (double)(1.0f / state->manual_zoom));
     }
 
     if (trmap_honey_gui_consume_key_press("Back"))
@@ -3724,7 +3724,7 @@ static int gps_track_handle_keyboard_honey(gps_track_state_t *state)
     if (trmap_honey_gui_consume_key_press("Power"))
     {
         (void)trmap_map_control_zoom_in();
-        MAP_PRINTF("Power: Zoom in %.1fx", 1.0f / state->manual_zoom);
+        MAP_PRINTF("Power: Zoom in %.1fx", (double)(1.0f / state->manual_zoom));
     }
 
     if (trmap_honey_gui_touch_active(tp))
@@ -3785,7 +3785,7 @@ static int gps_track_handle_keyboard_honey(gps_track_state_t *state)
         else
         {
             (void)trmap_map_control_pan_finish();
-            MAP_PRINTF("Touch pan end: offset %.6f, %.6f", state->pan_offset_lat, state->pan_offset_lon);
+            MAP_PRINTF("Touch pan end: offset %.6f, %.6f", (double)state->pan_offset_lat, (double)state->pan_offset_lon);
         }
     }
 
@@ -4036,7 +4036,7 @@ static int gps_track_handle_keyboard_mcu(gps_track_state_t *state)
     {
         g_key1_pressed = 0;
         (void)trmap_map_control_zoom_out();
-        MAP_PRINTF("KEY1: Zoom out %.1fx", 1.0f / state->manual_zoom);
+        MAP_PRINTF("KEY1: Zoom out %.1fx", (double)(1.0f / state->manual_zoom));
     }    /* KEY2 (ADC_0): Reset zoom and pan to default (auto mode) */
     if (g_key2_pressed)
     {
@@ -4059,7 +4059,7 @@ static int gps_track_handle_keyboard_mcu(gps_track_state_t *state)
     {
         g_mfb_pressed = 0;
         (void)trmap_map_control_zoom_in();
-        MAP_PRINTF("MFB: Zoom in %.1fx", 1.0f / state->manual_zoom);
+        MAP_PRINTF("MFB: Zoom in %.1fx", (double)(1.0f / state->manual_zoom));
     }
 
     /* Touch screen pan handling */
@@ -4136,7 +4136,7 @@ static int gps_track_handle_keyboard_mcu(gps_track_state_t *state)
                 {
                     (void)trmap_map_control_pan_finish();
                     /* Touch was a pan gesture */
-                    MAP_PRINTF("Touch pan end: offset %.6f, %.6f", state->pan_offset_lat, state->pan_offset_lon);
+                    MAP_PRINTF("Touch pan end: offset %.6f, %.6f", (double)state->pan_offset_lat, (double)state->pan_offset_lon);
                 }
             }
         }

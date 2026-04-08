@@ -32,7 +32,7 @@ export class MenuCellularGenerator implements ComponentCodeGenerator {
 
     if (iconImages.length !== 0) {
       // Generate icon path array
-      code += `${indentStr}const void *${component.id}_icons[] = {\n`;
+      code += `${indentStr}void *${component.id}_icons[] = {\n`;
       iconImages.forEach((iconPath, index) => {
         const binPath = this.convertToBinPath(iconPath);
         const comma = index < iconImages.length - 1 ? ',' : '';
