@@ -7,10 +7,13 @@ HML is an XML-based markup language used by HoneyGUI Design to describe embedded
 
 ## hg_view can not nest hg_view!!!!
 
-## Assets fallback
+- no father-son hg_view
+- hg_view's xy only make sense on webview canvas, not on gui, so change xy to make views set being a grid effext (0,0;a,0;2a,0;0,b;a,b;.....)
+
+## Assets fallback MUST COPY TO USE IT!!!：Only if font files is in assets folder, the hg_label can access them!!!
 
 - fallback: if there is no font file in assets folder, coping font files in fallback folder to assets folder, and using these fallback font files. 
-- Only if font files is in assets folder, the gui can access them!!! MUST COPY TO USE IT!!!
+
 
 ## no relative file path 
 - all assets files's path is a '/' + 'relative path from assets folder'
