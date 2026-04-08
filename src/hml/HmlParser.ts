@@ -683,7 +683,7 @@ export class HmlParser {
       // hg_particle 粒子效果属性
       'particleEffect',
       // hg_image 图片属性
-      'blendMode', 'fgColor', 'bgColor', 'highQuality', 'needClip',
+      'blendMode', 'fgColor', 'bgColor', 'highQuality', 'needClip', 'assetFormat',
       // 计时标签属性
       'isTimerLabel', 'timerType', 'timerFormat', 'timerInitialValue', 'timerAutoStart',
       // 定时器属性（新版）

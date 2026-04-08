@@ -422,6 +422,7 @@ Image display with transform and blend mode support.
 | `bgColor` | string | — | Background color for A8 BGFG mode |
 | `highQuality` | boolean | false | High quality rendering |
 | `needClip` | boolean | false | Enable clipping |
+| `assetFormat` | string | `A8` | Alpha format for A8 blend modes: `A8` (8-bit, 256 levels), `A4` (4-bit, 16 levels), `A2` (2-bit, 4 levels), `A1` (1-bit, 2 levels). Only effective when `blendMode` is `IMG_2D_SW_FIX_A8_FG` or `IMG_2D_SW_FIX_A8_BGFG` |
 | `transform` | JSON | — | Transform object (see below) |
 
 **`blendMode` values**:

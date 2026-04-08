@@ -228,6 +228,30 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
 
             {/* 前景色设置（仅在 IMG_2D_SW_FIX_A8_FG 或 IMG_2D_SW_FIX_A8_BGFG 模式下显示） */}
             {showFgColor && (
+              <>
+              {/* 资源格式设置 */}
+              <div className="property-item">
+                <label>{t('Asset Format')}</label>
+                <select
+                  value={component.data?.assetFormat || 'A8'}
+                  onChange={(e) => handleDataChange('assetFormat', e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '4px 6px',
+                    marginTop: '4px',
+                    backgroundColor: 'var(--vscode-input-background)',
+                    color: 'var(--vscode-input-foreground)',
+                    border: '1px solid var(--vscode-input-border)',
+                    borderRadius: '2px',
+                  }}
+                >
+                  <option value="A8">A8 (8-bit alpha)</option>
+                  <option value="A4">A4 (4-bit alpha, MSB)</option>
+                  <option value="A2">A2 (2-bit alpha, MSB)</option>
+                  <option value="A1">A1 (1-bit alpha, MSB)</option>
+                </select>
+              </div>
+
               <div className="property-item">
                 <label>{t('Foreground Color')}</label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
@@ -253,6 +277,7 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
                   />
                 </div>
               </div>
+              </>
             )}
 
             {/* 背景色设置（仅在 IMG_2D_SW_FIX_A8_BGFG 模式下显示） */}

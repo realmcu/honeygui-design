@@ -522,6 +522,7 @@ const en = {
   'Opacity (0-255)': 'Opacity (0-255)',
   'Leave empty to use default (rotation: image center, scale: top-left)': 'Leave empty to use default (rotation: image center, scale: top-left)',
   'Blend Mode': 'Blend Mode',
+  'Asset Format': 'Asset Format',
   'Foreground Color': 'Foreground Color',
   'High Quality Rendering': 'Anti-aliasing',
   'Enable Clipping': 'Enable Clipping',

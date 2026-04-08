@@ -522,6 +522,7 @@ const zhCN = {
   'Opacity (0-255)': '透明度 (0-255)',
   'Leave empty to use default (rotation: image center, scale: top-left)': '留空则使用默认（旋转：图片中心，缩放：左上角）',
   'Blend Mode': '渲染模式',
+  'Asset Format': '资源格式',
   'Foreground Color': '前景色',
   'High Quality Rendering': '抗锯齿',
   'Enable Clipping': '启用裁剪',

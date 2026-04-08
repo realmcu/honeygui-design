@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { WidgetProps } from './types';
 import { useWebviewUri } from '../../hooks/useWebviewUri';
 
@@ -14,6 +14,81 @@ const argbToRgba = (argb: string | undefined, alpha: number = 1): string => {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
+/**
+ * 将图片 alpha 通道量化为指定位数（MSB），返回处理后的 data URL
+ * A4: 4-bit (16 levels), A2: 2-bit (4 levels), A1: 1-bit (2 levels)
+ */
+function useQuantizedAlphaMask(srcUri: string | undefined, assetFormat: string | undefined): string | undefined {
+  const [maskUrl, setMaskUrl] = useState<string | undefined>();
+
+  const shiftBits = assetFormat === 'A4' ? 4 : assetFormat === 'A2' ? 6 : assetFormat === 'A1' ? 7 : 0;
+
+  useEffect(() => {
+    if (!srcUri || shiftBits === 0) {
+      setMaskUrl(undefined);
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const response = await fetch(srcUri);
+        const blob = await response.blob();
+        const imageBitmap = await createImageBitmap(blob);
+
+        if (cancelled) return;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = imageBitmap.width;
+        canvas.height = imageBitmap.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        ctx.drawImage(imageBitmap, 0, 0);
+        imageBitmap.close();
+
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+
+        // Quantize alpha with bit replication:
+        // A4: MSB 4-bit replicated once → 0xC0 → 0xCC
+        // A2: MSB 2-bit replicated 3 times → 0xC0 → 0xFF
+        // A1: MSB 1-bit replicated 7 times → 0x80 → 0xFF
+        for (let i = 3; i < data.length; i += 4) {
+          const a = data[i];
+          if (shiftBits === 4) {
+            const msb = a >> 4;
+            data[i] = (msb << 4) | msb;
+          } else if (shiftBits === 6) {
+            const msb = a >> 6;
+            data[i] = (msb << 6) | (msb << 4) | (msb << 2) | msb;
+          } else {
+            // A1: shiftBits === 7
+            data[i] = (a >> 7) * 255;
+          }
+        }
+
+        ctx.putImageData(imageData, 0, 0);
+
+        if (cancelled) return;
+
+        // Use data URL instead of blob URL to comply with CSP
+        const dataUrl = canvas.toDataURL('image/png');
+        setMaskUrl(dataUrl);
+      } catch (err) {
+        console.error('Failed to quantize alpha mask:', err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [srcUri, shiftBits]);
+
+  return maskUrl;
+}
+
 export const ImageWidget: React.FC<WidgetProps> = ({ component, style, handlers }) => {
   const webviewUri = useWebviewUri(component.data?.src);
   
@@ -23,6 +98,14 @@ export const ImageWidget: React.FC<WidgetProps> = ({ component, style, handlers 
   const isA8BGFG = blendMode === 'IMG_2D_SW_FIX_A8_BGFG';
   const isA8Mode = isA8FG || isA8BGFG;
   
+  // 资源格式量化
+  const assetFormat = isA8Mode ? component.data?.assetFormat : undefined;
+  const needsQuantization = isA8Mode && (assetFormat === 'A4' || assetFormat === 'A2' || assetFormat === 'A1');
+  const quantizedMaskUrl = useQuantizedAlphaMask(webviewUri, needsQuantization ? assetFormat : undefined);
+
+  // 用于 mask 的 URL：量化格式时使用处理后的图片，否则使用原始图片
+  const maskUri = needsQuantization ? (quantizedMaskUrl || webviewUri) : webviewUri;
+
   // 获取前景色和背景色
   const fgColor = component.data?.fgColor;
   const bgColor = component.data?.bgColor;
@@ -60,10 +143,10 @@ export const ImageWidget: React.FC<WidgetProps> = ({ component, style, handlers 
           width: '100%',
           height: '100%',
           backgroundColor: fgColor ? argbToRgba(fgColor) : '#FFFFFF',
-          WebkitMaskImage: `url(${webviewUri})`,
+          WebkitMaskImage: `url(${maskUri})`,
           WebkitMaskSize: 'contain',
           WebkitMaskRepeat: 'no-repeat',
-          maskImage: `url(${webviewUri})`,
+          maskImage: `url(${maskUri})`,
           maskSize: 'contain',
           maskRepeat: 'no-repeat',
         }} />
