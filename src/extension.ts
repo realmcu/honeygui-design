@@ -47,6 +47,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
                             );
                             await vscode.commands.executeCommand('honeygui.openInDesigner', mainHmlPath);
                         }
+
+                        // 自动执行一次代码生成，确保新项目有初始代码
+                        try {
+                            const { CodeGenerationService } = await import('./services/CodeGenerationService');
+                            const { CodeGenerator } = await import('./services/CodeGenerator');
+                            const codeGenerator = new CodeGenerator();
+                            await CodeGenerationService.generate(pendingActivation.projectPath, codeGenerator);
+                            logger.info('新项目自动代码生成完成');
+                        } catch (codegenErr) {
+                            logger.warn(`新项目自动代码生成失败（不影响使用）: ${codegenErr}`);
+                        }
                     } catch (err) {
                         logger.error(vscode.l10n.t('Failed to open main design file: {0}', String(err)));
                     }
