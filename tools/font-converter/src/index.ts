@@ -5,8 +5,10 @@
  * @packageDocumentation
  */
 
-// Export types (interfaces and enums)
-export * from './types';
+// Export types (interfaces and enums), excluding names re-exported as classes below
+export * from './types/enums';
+export * from './types/config';
+export type { GlyphEntry, BitmapGlyphData, CropInfo, VectorGlyphData } from './types/binary';
 
 // Export constants and errors
 export * from './constants';
@@ -22,7 +24,7 @@ export * from './main';
 // Export binary writer
 export * from './binary-writer';
 
-// Export header classes (these override the interface exports from types)
+// Export header classes (override interface exports from types/binary)
 export { BitmapFontHeader, BitmapFontHeaderConfig } from './bitmap-font-header';
 export { VectorFontHeader, VectorFontHeaderConfig } from './vector-font-header';
 

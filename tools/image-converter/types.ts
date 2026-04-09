@@ -55,10 +55,10 @@ export const GRAY8 = PixelFormat.GRAY;    // 8 bpp grayscale = GRAY
 // Compression algorithm types
 export enum CompressionType {
     NONE = 0,
-    RLE = 0,
     FASTLZ = 1,
     YUV_FASTLZ = 2,
     YUV = 3,
+    RLE = 4,
 }
 
 // Pixel bytes mapping (for header)

@@ -56,10 +56,10 @@ const itemSettingsArb: fc.Arbitrary<ItemSettings> = fc.record({
 });
 
 // Generate valid path segments (no special characters)
-const pathSegmentArb = fc.stringOf(
-  fc.constantFrom(...'abcdefghijklmnopqrstuvwxyz0123456789_-'.split('')),
-  { minLength: 1, maxLength: 10 }
-);
+const pathSegmentArb = fc.string({
+  unit: fc.constantFrom(...'abcdefghijklmnopqrstuvwxyz0123456789_-'.split('')),
+  minLength: 1, maxLength: 10
+});
 
 // Generate valid asset paths
 const assetPathArb = fc.array(pathSegmentArb, { minLength: 1, maxLength: 4 })
