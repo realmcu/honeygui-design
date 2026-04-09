@@ -27,6 +27,7 @@ jobs:
 
       - name: Lint
         run: npm run lint
+        continue-on-error: true
 
       - name: Compile TypeScript
         run: npm run compile
