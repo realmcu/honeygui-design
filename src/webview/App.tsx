@@ -18,6 +18,7 @@ import { getAbsolutePosition, findComponentAtPosition, isDropTargetType, isConta
 import { createImageComponentAtPosition, create3DComponentAtPosition, createVideoComponentAtPosition, createSvgComponentAtPosition, createGlassComponentAtPosition, createLottieComponentAtPosition, createGifComponentAtPosition } from './services/messageHandler';
 import { processImageFiles } from './utils/fileUtils';
 import { parseObjDependencies, parseMtlDependencies, findDependencyFiles } from './utils/objDependencyParser';
+import { clearUriCache } from './hooks/useWebviewUri';
 import { setLocale, t } from './i18n';
 import './App.css';
 
@@ -622,19 +623,6 @@ const App: React.FC = () => {
           }
           break;
 
-        case 'deleteComponentsByImagePath':
-          if (message.imagePath) {
-            const store = useDesignerStore.getState();
-            const componentsToDelete = store.components.filter(
-              c => c.type === 'hg_image' && c.data?.src === message.imagePath
-            );
-            if (componentsToDelete.length > 0) {
-              store.removeComponents(componentsToDelete.map(c => c.id));
-              console.log(`[删除组件] 删除了 ${componentsToDelete.length} 个引用 ${message.imagePath} 的图片组件`);
-            }
-          }
-          break;
-
         case 'componentPropertyUpdated':
           // 更新组件属性（来自文件浏览器）
           if (message.success && message.componentId && message.propertyName) {
@@ -649,6 +637,22 @@ const App: React.FC = () => {
               });
               console.log(`[Webview App] 更新组件属性: ${message.propertyName} = ${message.value}`);
             }
+          }
+          break;
+
+        case 'assetDeleted':
+          // 资源文件被删除，清除 URI 缓存并清空引用该资源的组件 src
+          if (message.assetPath) {
+            clearUriCache(message.assetPath);
+            const store = useDesignerStore.getState();
+            store.components.forEach(c => {
+              if (c.data?.src === message.assetPath) {
+                store.updateComponent(c.id, {
+                  data: { ...c.data, src: '' }
+                });
+              }
+            });
+            console.log(`[Webview App] 资源已删除，清除引用: ${message.assetPath}`);
           }
           break;
 

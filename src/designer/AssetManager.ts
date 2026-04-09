@@ -425,11 +425,11 @@ export class AssetManager extends EventEmitter {
                         // 普通文件直接删除
                         logger.info(`[删除资源] 删除文件: ${filePath}, 相对路径: ${relativePath}`);
                         fs.unlinkSync(filePath);
-                        
-                        // 通知前端删除引用此资源的组件
+
+                        // 通知前端清除该资源的 URI 缓存，使引用该资源的组件显示占位符
                         this._panel.webview.postMessage({
-                            command: 'deleteComponentsByImagePath',
-                            imagePath: relativePath
+                            command: 'assetDeleted',
+                            assetPath: relativePath
                         });
                     }
                     
