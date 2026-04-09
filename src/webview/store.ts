@@ -447,19 +447,26 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     // 对于 list 控件，验证属性值
     let finalUpdates = { ...updates };
     
-    // 防止取消唯一的 entry
-    if (before.type === 'hg_view' && (before.data?.entry === true || before.data?.entry === 'true')) {
-      if (finalUpdates.data) {
-        const newEntry = finalUpdates.data.entry;
-        if (newEntry === false || newEntry === 'false') {
-          const hasOtherEntry = state.components.some(c => c.id !== id && c.type === 'hg_view' && (c.data?.entry === true || c.data?.entry === 'true'));
-          if (!hasOtherEntry) {
-            if (vscodeAPI) {
-              vscodeAPI.postMessage({ command: 'showError', text: '必须至少保留一个入口视图(Entry View)' });
-            }
-            // 必须创建一个新对象，避免修改原始引用
-            finalUpdates.data = { ...finalUpdates.data, entry: true };
+    // hg_view entry 互斥逻辑
+    if (before.type === 'hg_view' && finalUpdates.data && 'entry' in finalUpdates.data) {
+      const newEntry = finalUpdates.data.entry;
+      if (newEntry === true || newEntry === 'true') {
+        // 勾选新 entry 时，自动取消其他 hg_view 的 entry
+        const updatedComponents = state.components.map(c => {
+          if (c.id !== id && c.type === 'hg_view' && (c.data?.entry === true || c.data?.entry === 'true')) {
+            return { ...c, data: { ...c.data, entry: false } };
           }
+          return c;
+        });
+        set({ components: updatedComponents });
+      } else if (newEntry === false || newEntry === 'false') {
+        // 防止取消唯一的 entry
+        const hasOtherEntry = state.components.some(c => c.id !== id && c.type === 'hg_view' && (c.data?.entry === true || c.data?.entry === 'true'));
+        if (!hasOtherEntry) {
+          if (vscodeAPI) {
+            vscodeAPI.postMessage({ command: 'showError', text: '必须至少保留一个入口视图(Entry View)' });
+          }
+          finalUpdates.data = { ...finalUpdates.data, entry: true };
         }
       }
     }

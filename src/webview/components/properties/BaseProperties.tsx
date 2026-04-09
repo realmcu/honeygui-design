@@ -260,6 +260,9 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
         )}
       </div>
 
+      {/* 插入自定义内容（位置与大小之前） */}
+      {children}
+
       {/* Position and Size */}
       <div className="property-group">
         <div className="property-item">
@@ -357,9 +360,6 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
           </div>
         )}
       </div>
-
-      {/* 插入自定义内容 */}
-      {children}
     </>
   );
 };

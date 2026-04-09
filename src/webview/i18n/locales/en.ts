@@ -98,6 +98,7 @@ const en = {
   'High Quality': 'High Quality',
   'Checked': 'Checked',
   'Entry View': 'Entry View',
+  'UI Entry View': 'UI Entry View',
   'Show Background': 'Show Background',
   'Background Color': 'Background Color',
   'Border Radius': 'Border Radius',

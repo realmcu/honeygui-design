@@ -56,7 +56,19 @@ export const HgViewProperties: React.FC<PropertyPanelProps> = ({ component, onUp
               disableSize={true}
               sizeTooltip={t('hg_view size is determined by project resolution and cannot be modified')}
               hideParent={true}
-            />
+            >
+              {/* UI Entry View - 名称后、位置与大小前 */}
+              <div className="property-item">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label>{t('UI Entry View')}</label>
+                  <PropertyEditor
+                    type="boolean"
+                    value={component.data?.entry === true || component.data?.entry === 'true'}
+                    onChange={(value) => handleDataChange('entry', value)}
+                  />
+                </div>
+              </div>
+            </BaseProperties>
 
             {/* Style Properties */}
             <div className="property-group">
@@ -74,14 +86,6 @@ export const HgViewProperties: React.FC<PropertyPanelProps> = ({ component, onUp
             {/* View Specific Properties */}
             <div className="property-group">
               <div className="property-group-title">{t('View Properties')}</div>
-              <div className="property-item">
-                <label>{t('Entry (Main Screen)')}</label>
-                <PropertyEditor
-                  type="boolean"
-                  value={component.data?.entry === true || component.data?.entry === 'true'}
-                  onChange={(value) => handleDataChange('entry', value)}
-                />
-              </div>
               <div className="property-item">
                 <label>{t('Resident Memory')}</label>
                 <PropertyEditor
