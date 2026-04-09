@@ -291,7 +291,7 @@ const componentDefinitions: ComponentDefinition[] = [
       { name: 'itemHeight', label: 'Item Height', type: 'number', defaultValue: 100, group: 'style' },
       { name: 'space', label: 'Item Spacing', type: 'number', defaultValue: 5, group: 'style' },
       { name: 'direction', label: 'Direction', type: 'select', defaultValue: 'VERTICAL', options: ['VERTICAL', 'HORIZONTAL'], group: 'style' },
-      { name: 'style', label: 'Style', type: 'select', defaultValue: 'LIST_CLASSIC', options: ['LIST_CLASSIC', 'LIST_CIRCLE', 'LIST_ZOOM', 'LIST_ZOOM_CYLINDER', 'LIST_CARD', 'LIST_FADE', 'LIST_FAN', 'LIST_HELIX', 'LIST_CURL'], group: 'style' },
+      { name: 'style', label: 'Style', type: 'select', defaultValue: 'LIST_CLASSIC', options: ['LIST_CLASSIC', 'LIST_CIRCLE', 'LIST_ZOOM', 'LIST_CARD', 'LIST_FADE', 'LIST_FAN', 'LIST_HELIX', 'LIST_CURL'], group: 'style' },
       { name: 'cardStackLocation', label: 'Stack Location Distance', type: 'number', defaultValue: 0, group: 'style' },
       // circleRadius 默认值为 undefined，运行时根据 list 的宽高和方向计算
       { name: 'circleRadius', label: 'Circle Radius', type: 'number', group: 'style' },

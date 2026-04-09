@@ -268,7 +268,6 @@ Scrollable list with multiple layout styles.
 | `LIST_CLASSIC` | Classic vertical/horizontal list |
 | `LIST_CIRCLE` | Circular layout |
 | `LIST_ZOOM` | Zoom-scaled list |
-| `LIST_ZOOM_CYLINDER` | Cylinder zoom |
 | `LIST_CARD` | Card stack |
 | `LIST_FADE` | Fade in/out |
 | `LIST_FAN` | Fan layout |
