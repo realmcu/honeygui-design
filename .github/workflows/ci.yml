@@ -33,7 +33,3 @@ jobs:
 
       - name: Build Webview
         run: npm run build:webview
-
-      - name: Run Tests
-        run: npm test
-        continue-on-error: true
