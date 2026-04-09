@@ -429,9 +429,15 @@ Image display with transform and blend mode support.
 
 | Value | Description |
 |-------|-------------|
-| `IMG_FILTER_BLACK` | Black color filter |
-| `IMG_2D_SW_FIX_A8_FG` | A8 format with foreground color |
-| `IMG_2D_SW_FIX_A8_BGFG` | A8 format with foreground + background color |
+| `IMG_BYPASS_MODE` | Direct pixel copy (bypass alpha blending, pixels are written directly to the render buffer) |
+| `IMG_FILTER_BLACK` | Black color filter (default, skip black pixels during rendering) |
+| `IMG_SRC_OVER_MODE` | Source-over alpha compositing: S × Sa + D × (1 − Sa) |
+| `IMG_COVER_MODE` | Full coverage blend mode |
+| `IMG_RECT` | Rectangle rendering mode |
+| `IMG_2D_SW_RGB565_ONLY` | Software RGB565 rendering only |
+| `IMG_2D_SW_SRC_OVER_MODE` | Software source-over alpha compositing |
+| `IMG_2D_SW_FIX_A8_FG` | A8 format with foreground color (requires `fgColor`) |
+| `IMG_2D_SW_FIX_A8_BGFG` | A8 format with foreground + background color (requires `fgColor` and `bgColor`) |
 
 **`transform` object** (JSON):
 

@@ -15,6 +15,66 @@ const argbToRgba = (argb: string | undefined, alpha: number = 1): string => {
 };
 
 /**
+ * 将图片中纯黑像素 (R=0, G=0, B=0) 设为透明，模拟 IMG_FILTER_BLACK 渲染模式
+ */
+function useFilterBlack(srcUri: string | undefined, enabled: boolean): string | undefined {
+  const [filteredUrl, setFilteredUrl] = useState<string | undefined>();
+
+  useEffect(() => {
+    if (!srcUri || !enabled) {
+      setFilteredUrl(undefined);
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const response = await fetch(srcUri);
+        const blob = await response.blob();
+        const imageBitmap = await createImageBitmap(blob);
+
+        if (cancelled) return;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = imageBitmap.width;
+        canvas.height = imageBitmap.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        ctx.drawImage(imageBitmap, 0, 0);
+        imageBitmap.close();
+
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+
+        // 纯黑像素 (R=0, G=0, B=0) → alpha 设为 0（透明）
+        for (let i = 0; i < data.length; i += 4) {
+          if (data[i] === 0 && data[i + 1] === 0 && data[i + 2] === 0) {
+            data[i + 3] = 0;
+          }
+        }
+
+        ctx.putImageData(imageData, 0, 0);
+
+        if (cancelled) return;
+
+        const dataUrl = canvas.toDataURL('image/png');
+        setFilteredUrl(dataUrl);
+      } catch (err) {
+        console.error('Failed to filter black pixels:', err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [srcUri, enabled]);
+
+  return filteredUrl;
+}
+
+/**
  * 将图片 alpha 通道量化为指定位数（MSB），返回处理后的 data URL
  * A4: 4-bit (16 levels), A2: 2-bit (4 levels), A1: 1-bit (2 levels)
  */
@@ -92,11 +152,17 @@ function useQuantizedAlphaMask(srcUri: string | undefined, assetFormat: string |
 export const ImageWidget: React.FC<WidgetProps> = ({ component, style, handlers }) => {
   const webviewUri = useWebviewUri(component.data?.src);
   
-  // 检查是否是 A8 模式
+  // 检查渲染模式
   const blendMode = component.data?.blendMode;
+  const isBypassMode = blendMode === 'IMG_BYPASS_MODE';
+  const isCoverMode = blendMode === 'IMG_COVER_MODE';
+  const isFilterBlack = !blendMode || blendMode === 'IMG_FILTER_BLACK';
   const isA8FG = blendMode === 'IMG_2D_SW_FIX_A8_FG';
   const isA8BGFG = blendMode === 'IMG_2D_SW_FIX_A8_BGFG';
   const isA8Mode = isA8FG || isA8BGFG;
+
+  // IMG_FILTER_BLACK：过滤纯黑像素
+  const filteredBlackUrl = useFilterBlack(webviewUri, isFilterBlack);
   
   // 资源格式量化
   const assetFormat = isA8Mode ? component.data?.assetFormat : undefined;
@@ -115,7 +181,25 @@ export const ImageWidget: React.FC<WidgetProps> = ({ component, style, handlers 
     ...style,
   };
   
-  if (webviewUri && isA8Mode) {
+  if (webviewUri && (isBypassMode || isCoverMode)) {
+    // BYPASS / COVER 模式：直接像素拷贝，不进行 alpha 混合，用黑色底色模拟帧缓冲
+    imageStyle = {
+      ...style,
+      backgroundColor: '#000000',
+      backgroundImage: `url(${webviewUri})`,
+      backgroundSize: 'contain',
+      backgroundRepeat: 'no-repeat',
+    };
+  } else if (webviewUri && isFilterBlack) {
+    // FILTER_BLACK 模式：纯黑像素被过滤为透明（默认模式）
+    const displayUri = filteredBlackUrl || webviewUri;
+    imageStyle = {
+      ...style,
+      backgroundImage: `url(${displayUri})`,
+      backgroundSize: 'contain',
+      backgroundRepeat: 'no-repeat',
+    };
+  } else if (webviewUri && isA8Mode) {
     // A8 模式：图片作为 alpha 通道，应用颜色
     // 使用双层结构：背景色层 + 前景色层（使用图片作为 mask）
     imageStyle = {
