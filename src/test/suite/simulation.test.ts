@@ -145,9 +145,9 @@ suite('HoneyGUI Extension E2E', function () {
             assert.fail('gcc is not available in PATH');
         }
 
-        // Run scons directly
+        // Run scons directly (without 2>&1 so we get separate stdout/stderr)
         try {
-            const output = execSync('scons -j4 2>&1', {
+            const output = execSync('scons -j4', {
                 cwd: buildDir,
                 encoding: 'utf8',
                 timeout: 90000,
@@ -156,9 +156,9 @@ suite('HoneyGUI Extension E2E', function () {
             console.log(`scons output (last 2000 chars):\n${output.slice(-2000)}`);
         } catch (err: any) {
             console.error(`scons failed with exit code: ${err.status}`);
-            console.error(`scons stdout (last 3000 chars):\n${(err.stdout || '').slice(-3000)}`);
-            console.error(`scons stderr (last 3000 chars):\n${(err.stderr || '').slice(-3000)}`);
-            assert.fail(`scons compilation failed: ${(err.stdout || err.stderr || err.message).slice(-500)}`);
+            console.error(`=== STDOUT (last 5000 chars) ===\n${(err.stdout || '').slice(-5000)}`);
+            console.error(`=== STDERR (last 5000 chars) ===\n${(err.stderr || '').slice(-5000)}`);
+            assert.fail(`scons compilation failed: ${(err.stderr || err.stdout || err.message).slice(-1000)}`);
         }
 
         // Check for executable
