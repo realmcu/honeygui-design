@@ -10,10 +10,11 @@ HML is an XML-based markup language used by HoneyGUI Design to describe embedded
 - no father-son hg_view
 - hg_view's xy only make sense on webview canvas, not on gui, so change xy to make views set being a grid effext (0,0;a,0;2a,0;0,b;a,b;.....)
 
-## Assets fallback MUST COPY TO USE IT!!!：Only if font files is in assets folder, the hg_label can access them!!!
+## Only if font files is in assets folder, the hg_label can access them!!!
 
 - fallback: if there is no font file in assets folder, coping font files in fallback folder to assets folder, and using these fallback font files. 
 
+## please setting hg_label's font file.
 
 ## no relative file path 
 - all assets files's path is a '/' + 'relative path from assets folder'
@@ -167,7 +168,7 @@ All components support these base attributes:
 | Category | Tags |
 |----------|------|
 | **Containers** | `hg_view`, `hg_window`,  `hg_list`, `hg_list_item`, `hg_menu_cellular` |
-| **Basic** | `hg_button`, `hg_label`, `hg_time_label`, `hg_image` |
+| **Basic** |  `hg_label`, `hg_time_label`, `hg_image` |
 | **Graphics** | `hg_arc`, `hg_circle`, `hg_rect`|
 | **Mini-App** | `hg_openclaw`, `hg_claw_face` |
 
@@ -185,18 +186,12 @@ All components support these base attributes:
 <view>
   └─ hg_view (container)
        ├─ hg_label (leaf)
-       ├─ hg_button (leaf)
        ├─ hg_image (leaf)
        └─ hg_window (nested container)
             └─ hg_label (leaf)
 ```
 
-### INVALID Examples
 
-```
-WRONG: hg_label containing hg_button  (non-container cannot have children)
-WRONG: hg_button directly under <view>  (must be inside a container)
-```
 
 ---
 
@@ -302,23 +297,7 @@ A hexagonal scrolling menu.
 
 ## 7. Basic Controls
 
-### 7.1 `hg_button` — Button
 
-Image-based button with optional dual-state toggle.
-
-| Attribute | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `text` | string | "Button" | Button label text |
-| `toggleMode` | boolean | false | Enable toggle (on/off) mode |
-| `imageOn` | string | — | Image path for ON state |
-| `imageOff` | string | — | Image path for OFF state |
-| `initialState` | enum | off | Initial state: `on` / `off` |
-| `onCallback` | string | — | C callback function for ON state |
-| `offCallback` | string | — | C callback function for OFF state |
-| `controlTarget` | string | — | Target component ID to control |
-
-- **Default size**: 100×32
-- **C API**: `gui_img_create_from_fs`
 
 ### 7.2 `hg_label` — Text Label
 
@@ -488,16 +467,6 @@ Image display with transform and blend mode support.
 | `useGradient` | boolean | false | Enable gradient |
 | `gradientType` | enum | radial | `radial` / `angular` |
 
-**Button Mode Attributes** (interactive circle):
-
-| Attribute | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `buttonMode` | enum | none | `none` / `dual-state` / `opacity` |
-| `buttonStateOnColor` | color | #00FF00 | ON state color |
-| `buttonStateOffColor` | color | #FF0000 | OFF state color |
-| `buttonInitialState` | enum | off | `on` / `off` |
-| `buttonPressedOpacity` | number | 128 | Pressed opacity |
-| `buttonReleasedOpacity` | number | 255 | Released opacity |
 
 - **Default size**: 80×80
 - **C API**: `gui_circle_create`
@@ -565,7 +534,7 @@ HML uses an **event → action** model. Events are declared inside an `<events>`
 ### 12.1 XML Syntax
 
 ```xml
-<hg_button id="btn1" x="0" y="0" width="100" height="40" text="Go">
+<hg_xxx id="btn1" x="0" y="0" width="100" height="40" text="Go">
     <events>
         <event type="onClick">
             <action type="switchView" target="view2"
@@ -573,7 +542,7 @@ HML uses an **event → action** model. Events are declared inside an `<events>`
                     switchInStyle="SWITCH_IN_FROM_RIGHT_USE_TRANSLATION" />
         </event>
     </events>
-</hg_button>
+</hg_xxx>
 ```
 
 Multiple actions per event and multiple events per component are supported:
@@ -631,7 +600,6 @@ Multiple actions per event and multiple events per component are supported:
 | Component | Supported Events |
 |-----------|-----------------|
 | `hg_view` | All (click, longPress, touch, key, swipe, lifecycle, message) |
-| `hg_button` | click, longPress, touchDown, touchUp, key, message |
 | `hg_label` | click, longPress, message |
 | `hg_image` | click, longPress, touchDown, touchUp, key, message |
 
@@ -749,7 +717,6 @@ The designer generates C source code from HML. Here is the component-to-API mapp
 |---------|-------------------|--------|
 | `hg_view` | `GUI_VIEW_INSTANCE` macro | `gui_view.h` |
 | `hg_window` | `gui_win_create` | `gui_win.h` |
-| `hg_button` | `gui_img_create_from_fs` | `gui_img.h` |
 | `hg_label` | `gui_text_create` / `gui_scroll_text_create` | `gui_text.h` |
 | `hg_image` | `gui_img_create_from_fs` | `gui_img.h` |
 | `hg_arc` | `gui_arc_create` | `gui_arc.h` |
@@ -823,33 +790,14 @@ src/
                     radius="40" startAngle="0" endAngle="270"
                     strokeWidth="8" color="#4CAF50" zIndex="3" />
 
-            <!-- Menu button -->
-            <hg_button id="btn_menu" x="187" y="400" width="80" height="40"
-                       text="Menu" zIndex="5">
-                <events>
-                    <event type="onClick">
-                        <action type="switchView" target="view_menu"
-                                switchOutStyle="SWITCH_OUT_TO_LEFT_USE_TRANSLATION"
-                                switchInStyle="SWITCH_IN_FROM_RIGHT_USE_TRANSLATION" />
-                    </event>
-                </events>
-            </hg_button>
+            
         </hg_view>
 
         <!-- Menu screen -->
         <hg_view id="view_menu" x="0" y="0" width="454" height="454"
                  backgroundColor="#1a1a1a" zIndex="1">
 
-            <hg_button id="btn_back" x="10" y="10" width="60" height="40"
-                       text="Back" zIndex="0">
-                <events>
-                    <event type="onClick">
-                        <action type="switchView" target="view_home"
-                                switchOutStyle="SWITCH_OUT_TO_RIGHT_USE_TRANSLATION"
-                                switchInStyle="SWITCH_IN_FROM_LEFT_USE_TRANSLATION" />
-                    </event>
-                </events>
-            </hg_button>
+            
 
             <hg_list id="list_menu" x="20" y="60" width="414" height="380"
                      direction="VERTICAL" style="LIST_CLASSIC"
@@ -892,27 +840,7 @@ src/
           }]' />
 ```
 
-### 16.3 Message Communication
 
-```xml
-<!-- Button sends a message -->
-<hg_button id="btn_refresh" x="10" y="10" width="80" height="32" text="Refresh">
-    <events>
-        <event type="onClick">
-            <action type="sendMessage" message="data_refresh" />
-        </event>
-    </events>
-</hg_button>
-
-<!-- Label receives message and calls a function -->
-<hg_label id="lbl_data" x="10" y="50" width="200" height="24" text="--">
-    <events>
-        <event type="onMessage" message="data_refresh">
-            <action type="callFunction" functionName="update_data_display" />
-        </event>
-    </events>
-</hg_label>
-```
 
 ### 16.4 Swipe Navigation Between Views
 
