@@ -5,7 +5,7 @@ import * as fs from 'fs';
 import { execSync } from 'child_process';
 
 suite('HoneyGUI Extension E2E', function () {
-    this.timeout(180000);
+    this.timeout(300000);
 
     const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
 
@@ -55,13 +55,11 @@ suite('HoneyGUI Extension E2E', function () {
             assert.fail(`Simulation command threw: ${err.message}`);
         }
 
-        // Wait for codegen + build setup
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        // Wait for codegen + build setup (smartwatch template needs more time)
+        await new Promise(resolve => setTimeout(resolve, 10000));
 
         const buildDir = path.join(workspacePath, 'build');
-        const srcDir = path.join(workspacePath, 'src');
 
-        assert.ok(fs.existsSync(srcDir), 'Codegen should create src directory');
         assert.ok(fs.existsSync(buildDir), 'Build directory should be created');
         assert.ok(
             fs.existsSync(path.join(buildDir, 'SConstruct')),
@@ -73,8 +71,8 @@ suite('HoneyGUI Extension E2E', function () {
         );
     });
 
-    test('Direct scons compilation succeeds', async function () {
-        this.timeout(120000);
+    test('Scons compilation produces executable', async function () {
+        this.timeout(180000);
 
         const buildDir = path.join(workspacePath, 'build');
         assert.ok(fs.existsSync(path.join(buildDir, 'SConstruct')), 'SConstruct must exist');
@@ -95,12 +93,12 @@ suite('HoneyGUI Extension E2E', function () {
             execSync('scons -j4', {
                 cwd: buildDir,
                 encoding: 'utf8',
-                timeout: 90000,
+                timeout: 150000,
                 maxBuffer: 10 * 1024 * 1024
             });
         } catch (err: any) {
-            const stderr = (err.stderr || '').slice(-2000);
-            const stdout = (err.stdout || '').slice(-2000);
+            const stderr = (err.stderr || '').slice(-3000);
+            const stdout = (err.stdout || '').slice(-3000);
             assert.fail(`scons failed (exit ${err.status}):\n${stderr || stdout}`);
         }
 

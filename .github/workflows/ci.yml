@@ -62,5 +62,10 @@ jobs:
       - name: Compile TypeScript
         run: npm run compile
 
+      - name: Clone smartwatch template
+        run: git clone --depth 1 https://gitee.com/realmcu/honeygui-template-smartwatch.git /tmp/smartwatch-project
+
       - name: Run E2E tests
+        env:
+          TEST_WORKSPACE: /tmp/smartwatch-project
         run: xvfb-run -a npm run test:e2e
