@@ -9,7 +9,9 @@
     </project>
   </meta>
 
-  <view id="view_main">
-    <hg_label id="lbl_hello" x="60" y="100" w="120" h="40" text="Hello" fontSize="24" color="#FFFFFF" />
+  <view id="main">
+    <hg_view id="view_main" x="0" y="0" w="240" h="240">
+      <hg_label id="lbl_hello" x="60" y="100" w="120" h="40" text="Hello" fontSize="24" color="#FFFFFF" />
+    </hg_view>
   </view>
 </hml>
