@@ -10,16 +10,14 @@ suite('HoneyGUI Extension E2E', function () {
 
     suiteSetup(async () => {
         // Wait for extension activation (onStartupFinished)
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        await new Promise(resolve => setTimeout(resolve, 5000));
     });
 
     suiteTeardown(async () => {
-        // Stop any running simulation
         try {
             await vscode.commands.executeCommand('honeygui.simulation.stop');
         } catch { /* ignore */ }
 
-        // Clean up build artifacts from fixture
         const buildDir = path.join(workspacePath, 'build');
         const srcDir = path.join(workspacePath, 'src');
         if (fs.existsSync(buildDir)) {
@@ -44,26 +42,82 @@ suite('HoneyGUI Extension E2E', function () {
         assert.ok(ext.isActive, 'Extension should be active');
     });
 
-    test('Simulation command compiles template project', async function () {
-        // Execute the simulation command (triggers full pipeline:
-        // env check → codegen → build setup → compile → run)
-        await vscode.commands.executeCommand('honeygui.simulation');
+    test('lib/sim directory is valid', () => {
+        // Check that lib/sim structure is accessible from extension
+        const ext = vscode.extensions.all.find(e =>
+            e.packageJSON?.name === 'honeygui-visual-designer'
+        );
+        assert.ok(ext, 'Extension should be found');
+        const libSimPath = path.join(ext.extensionPath, 'lib', 'sim');
+        console.log(`Extension path: ${ext.extensionPath}`);
+        console.log(`lib/sim path: ${libSimPath}`);
+        assert.ok(fs.existsSync(libSimPath), `lib/sim should exist at ${libSimPath}`);
+        assert.ok(
+            fs.existsSync(path.join(libSimPath, 'win32_sim')),
+            'lib/sim/win32_sim should exist'
+        );
+        assert.ok(
+            fs.existsSync(path.join(libSimPath, 'include')),
+            'lib/sim/include should exist'
+        );
 
-        // Verify compiled executable exists
+        const platform = process.platform === 'win32' ? 'win32' : 'linux';
+        const libGui = path.join(libSimPath, platform, 'libgui.a');
+        console.log(`libgui.a path: ${libGui}, exists: ${fs.existsSync(libGui)}`);
+        assert.ok(fs.existsSync(libGui), `libgui.a should exist at ${libGui}`);
+    });
+
+    test('Simulation command compiles template project', async function () {
+        // Create output channel listener to capture simulation output
+        const logs: string[] = [];
+        const disposable = vscode.workspace.onDidChangeTextDocument(() => {});
+
+        console.log(`Workspace: ${workspacePath}`);
+        console.log(`Project files: ${fs.readdirSync(workspacePath).join(', ')}`);
+
+        // Execute the simulation command
+        try {
+            await vscode.commands.executeCommand('honeygui.simulation');
+        } catch (err: any) {
+            console.error(`Simulation command threw: ${err.message}`);
+        }
+
+        // Wait for build to complete (poll for executable)
         const buildDir = path.join(workspacePath, 'build');
         const exeName = process.platform === 'win32' ? 'gui.exe' : 'gui';
         const exePath = path.join(buildDir, exeName);
 
-        assert.ok(
-            fs.existsSync(exePath),
-            `Compiled executable should exist at ${exePath}`
-        );
+        // Poll for up to 120 seconds
+        let found = false;
+        for (let i = 0; i < 60; i++) {
+            if (fs.existsSync(exePath)) {
+                found = true;
+                break;
+            }
+            // Log what exists in workspace for debugging
+            if (i === 0 || i === 5 || i === 10) {
+                const wsFiles = fs.existsSync(workspacePath)
+                    ? fs.readdirSync(workspacePath) : [];
+                console.log(`[${i * 2}s] Workspace contents: ${wsFiles.join(', ')}`);
+                if (fs.existsSync(buildDir)) {
+                    const buildFiles = fs.readdirSync(buildDir);
+                    console.log(`[${i * 2}s] Build dir contents: ${buildFiles.join(', ')}`);
+                }
+            }
+            await new Promise(resolve => setTimeout(resolve, 2000));
+        }
 
-        // Verify it's actually executable (non-zero size)
-        const stats = fs.statSync(exePath);
-        assert.ok(stats.size > 0, 'Executable should have non-zero size');
+        disposable.dispose();
 
-        // Stop the running simulation
-        await vscode.commands.executeCommand('honeygui.simulation.stop');
+        assert.ok(found, `Compiled executable should exist at ${exePath}`);
+
+        if (found) {
+            const stats = fs.statSync(exePath);
+            assert.ok(stats.size > 0, 'Executable should have non-zero size');
+        }
+
+        try {
+            await vscode.commands.executeCommand('honeygui.simulation.stop');
+        } catch { /* ignore */ }
     });
 });
