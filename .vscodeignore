@@ -41,6 +41,24 @@ tools/**
 tools/video-converter-ts/src/**/*.ts
 tools/video-converter-ts/tests/**
 tools/video-converter-ts/node_modules/**
+# 保留字库工具的 charset（.cst 文件）和常用 CodePage（NLS 文件）
+!tools/font-converter/charset/**
+# 只保留嵌入式常用 CodePage，完整目录约 9MB，精简后约 1MB
+!tools/font-converter/CodePage/CP936
+!tools/font-converter/CodePage/CP950
+!tools/font-converter/CodePage/CP932
+!tools/font-converter/CodePage/CP949
+!tools/font-converter/CodePage/CP1250
+!tools/font-converter/CodePage/CP1251
+!tools/font-converter/CodePage/CP1252
+!tools/font-converter/CodePage/CP1253
+!tools/font-converter/CodePage/CP1254
+!tools/font-converter/CodePage/CP1255
+!tools/font-converter/CodePage/CP1256
+!tools/font-converter/CodePage/CP1257
+!tools/font-converter/CodePage/CP1258
+!tools/font-converter/CodePage/CP874
+!tools/font-converter/CodePage/CP437
 
 # 其他
 azure.png
