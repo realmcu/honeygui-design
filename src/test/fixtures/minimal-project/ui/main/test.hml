@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hml>
+  <meta>
+    <title>Test Minimal</title>
+    <project>
+      <name>test-minimal</name>
+      <resolution>240X240</resolution>
+      <pixelMode>RGB565</pixelMode>
+    </project>
+  </meta>
+
+  <view id="view_main">
+    <hg_label id="lbl_hello" x="60" y="100" w="120" h="40" text="Hello" fontSize="24" color="#FFFFFF" />
+  </view>
+</hml>

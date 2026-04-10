@@ -126,3 +126,8 @@ __pycache__/
 # HoneyGUI 目录
 #HoneyGUI/
 /lvgl/
+
+# Test artifacts
+.vscode-test/
+src/test/fixtures/*/build/
+src/test/fixtures/*/src/
