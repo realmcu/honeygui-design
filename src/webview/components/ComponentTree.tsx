@@ -442,6 +442,20 @@ const ComponentTree: React.FC<{ onContextMenu?: (e: React.MouseEvent, componentI
     });
   }, []);
 
+  const getAncestorIds = useCallback((componentId: string) => {
+    const ancestorIds: string[] = [];
+    const comp = components.find(c => c.id === componentId);
+    let parentId = comp?.parent || null;
+
+    while (parentId) {
+      ancestorIds.unshift(parentId);
+      const parent = components.find(c => c.id === parentId);
+      parentId = parent?.parent || null;
+    }
+
+    return ancestorIds;
+  }, [components]);
+
   // 获取根组件并按 zIndex 排序（确保组件树显示顺序和层级一致）
   const rootComponents = components
     .filter(c => c.parent === null)
@@ -609,6 +623,30 @@ const ComponentTree: React.FC<{ onContextMenu?: (e: React.MouseEvent, componentI
     }
   }, [components]);
 
+  const alignCollapsedStickyParent = useCallback((componentId: string) => {
+    const container = treeContentRef.current;
+    if (!container) return;
+
+    const node = container.querySelector(`[data-component-id="${componentId}"]`);
+    const nodeContent = node?.querySelector(':scope > .tree-node-content');
+    if (!nodeContent) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const ancestorCount = getAncestorIds(componentId).length;
+    const expectedStickyHeight = ancestorCount > 0 ? ancestorCount * 28 + 1 : 0;
+    const targetTop = containerRect.top + expectedStickyHeight;
+    const nodeRect = nodeContent.getBoundingClientRect();
+    const delta = nodeRect.top - targetTop;
+
+    if (Math.abs(delta) > 1) {
+      const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
+      const nextScrollTop = Math.min(Math.max(container.scrollTop + delta, 0), maxScrollTop);
+      container.scrollTop = nextScrollTop;
+    }
+
+    requestAnimationFrame(computeStickyParents);
+  }, [computeStickyParents, getAncestorIds]);
+
   useEffect(() => {
     const container = treeContentRef.current;
     if (!container) return;
@@ -757,15 +795,9 @@ const ComponentTree: React.FC<{ onContextMenu?: (e: React.MouseEvent, componentI
                       e.stopPropagation();
                       toggleCollapse(parentId);
                       requestAnimationFrame(() => {
-                        const container = treeContentRef.current;
-                        const node = container?.querySelector(`[data-component-id="${parentId}"]`);
-                        if (node && container) {
-                          const nodeContent = node.querySelector(':scope > .tree-node-content');
-                          if (nodeContent) {
-                            nodeContent.scrollIntoView({ block: 'start' });
-                            requestAnimationFrame(computeStickyParents);
-                          }
-                        }
+                        requestAnimationFrame(() => {
+                          alignCollapsedStickyParent(parentId);
+                        });
                       });
                     }}
                   >
