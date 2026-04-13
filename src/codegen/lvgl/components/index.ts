@@ -16,6 +16,8 @@ import { LvglCircleGenerator } from './LvglCircleGenerator';
 import { LvglVideoGenerator } from './LvglVideoGenerator';
 import { LvglLottieGenerator } from './LvglLottieGenerator';
 import { Lvgl3DGenerator } from './Lvgl3DGenerator';
+import { LvglTimeLabelGenerator } from './LvglTimeLabelGenerator';
+import { LvglTimerLabelGenerator } from './LvglTimerLabelGenerator';
 import { LvglDefaultGenerator } from './LvglDefaultGenerator';
 
 export class LvglComponentGeneratorFactory {
@@ -34,6 +36,8 @@ export class LvglComponentGeneratorFactory {
     this.generators.set('hg_input', new LvglInputGenerator());
     this.generators.set('hg_checkbox', new LvglCheckboxGenerator());
     this.generators.set('hg_radio', new LvglRadioGenerator());
+    this.generators.set('hg_time_label', new LvglTimeLabelGenerator());
+    this.generators.set('hg_timer_label', new LvglTimerLabelGenerator());
 
     // Graphics controls
     this.generators.set('hg_arc', new LvglArcGenerator());
