@@ -108,7 +108,7 @@ jobs:
           cp -r /tmp/HoneyGUI/lib/gcc/install/include/* lib/sim/include/
 
       - name: Clone template project
-        run: git clone --depth 1 https://gitee.com/realmcu/${{ matrix.template.repo }}.git /tmp/test-project
+        run: git clone --depth 1 https://github.com/realmcu/${{ matrix.template.repo }}.git /tmp/test-project
 
       - name: Run E2E tests
         env:
