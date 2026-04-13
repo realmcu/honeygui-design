@@ -8,11 +8,13 @@ import { LvglArcEventGenerator } from './LvglArcEventGenerator';
 import { LvglCheckboxEventGenerator } from './LvglCheckboxEventGenerator';
 import { LvglInputEventGenerator } from './LvglInputEventGenerator';
 import { LvglRadioEventGenerator } from './LvglRadioEventGenerator';
+import { LvglViewEventGenerator } from './LvglViewEventGenerator';
 
 export class LvglEventGeneratorFactory {
   private static generators: Map<string, LvglEventCodeGenerator> = new Map();
 
   static {
+    this.generators.set('hg_view', new LvglViewEventGenerator());
     this.generators.set('hg_button', new LvglButtonEventGenerator());
     this.generators.set('hg_arc', new LvglArcEventGenerator());
     this.generators.set('hg_checkbox', new LvglCheckboxEventGenerator());

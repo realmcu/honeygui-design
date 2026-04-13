@@ -19,7 +19,7 @@ export class LvglEntryFileGenerator {
     code += `#ifdef __cplusplus\n`;
     code += `extern "C" {\n`;
     code += `#endif\n\n`;
-    code += `void lvgl_generated_ui_create(lv_obj_t * parent);\n\n`;
+    code += `void lvgl_generated_ui_create(void);\n\n`;
     code += `#ifdef __cplusplus\n`;
     code += `}\n`;
     code += `#endif\n\n`;
@@ -37,9 +37,9 @@ export class LvglEntryFileGenerator {
     code += ` */\n`;
     code += `#include "lvgl_generated_ui.h"\n`;
     code += `#include "${designName}_lvgl_ui.h"\n\n`;
-    code += `void lvgl_generated_ui_create(lv_obj_t * parent)\n`;
+    code += `void lvgl_generated_ui_create(void)\n`;
     code += `{\n`;
-    code += `    ${designName}_lvgl_ui_create(parent);\n`;
+    code += `    ${designName}_lvgl_ui_create();\n`;
     code += `}\n`;
     return code;
   }

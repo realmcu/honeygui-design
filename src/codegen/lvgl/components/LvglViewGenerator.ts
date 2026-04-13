@@ -1,5 +1,9 @@
 /**
  * hg_view component LVGL code generator
+ *
+ * hg_view maps to LVGL screen (lv_obj_create(NULL)).
+ * Each root view becomes an independent screen object.
+ * Entry view is loaded via lv_screen_load().
  */
 import { Component } from '../../../hml/types';
 import { LvglGeneratorContext } from '../LvglComponentGenerator';
@@ -8,15 +12,25 @@ import { LvglBaseGenerator } from './LvglBaseGenerator';
 
 export class LvglViewGenerator extends LvglBaseGenerator {
   generateCreation(component: Component, parentRef: string, ctx: LvglGeneratorContext): string {
-    const { x, y, width, height } = component.position;
+    const { width, height } = component.position;
     const isRootView = parentRef === 'parent';
-    const posX = isRootView ? 0 : Math.round(x);
-    const posY = isRootView ? 0 : Math.round(y);
 
-    let code = `    ${component.id} = lv_obj_create(${parentRef});\n`;
-    code += `    lv_obj_set_pos(${component.id}, ${posX}, ${posY});\n`;
-    code += `    lv_obj_set_size(${component.id}, ${Math.round(width)}, ${Math.round(height)});\n`;
+    let code = '';
+
+    if (isRootView) {
+      // Root view → independent LVGL screen
+      code += `    ${component.id} = lv_obj_create(NULL);\n`;
+      code += `    lv_obj_set_size(${component.id}, ${Math.round(width)}, ${Math.round(height)});\n`;
+    } else {
+      // Nested view (non-root) → child object
+      const { x, y } = component.position;
+      code += `    ${component.id} = lv_obj_create(${parentRef});\n`;
+      code += `    lv_obj_set_pos(${component.id}, ${Math.round(x)}, ${Math.round(y)});\n`;
+      code += `    lv_obj_set_size(${component.id}, ${Math.round(width)}, ${Math.round(height)});\n`;
+    }
+
     code += `    lv_obj_set_scrollbar_mode(${component.id}, LV_SCROLLBAR_MODE_OFF);\n`;
+    code += `    lv_obj_clear_flag(${component.id}, LV_OBJ_FLAG_SCROLLABLE);\n`;
 
     const bgColor = component.style?.backgroundColor;
     if (bgColor) {
@@ -25,6 +39,25 @@ export class LvglViewGenerator extends LvglBaseGenerator {
 
     code += LvglStyleGenerator.generateBorderWidth(component.id, 0);
     code += LvglStyleGenerator.generatePadding(component.id, 0);
+
+    // Event bindings (swipe gestures for screen switching, click, etc.)
+    const eventConfigs = (component as any).eventConfigs || [];
+    if (eventConfigs.length > 0) {
+      const { LvglEventGeneratorFactory } = require('../events');
+      const eventGen = LvglEventGeneratorFactory.getGenerator('hg_view');
+      if (eventGen) {
+        const bindings = eventGen.generateEventBindings(component);
+        if (bindings) {
+          code += bindings;
+        }
+      }
+    }
+
+    // Entry view → load as active screen
+    if (isRootView && (component.data?.entry === true || component.data?.entry === 'true')) {
+      code += `    lv_screen_load(${component.id});\n`;
+    }
+
     return code;
   }
 }

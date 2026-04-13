@@ -1,5 +1,11 @@
 /**
  * hg_window component LVGL code generator
+ *
+ * hg_window is a transparent container layer with optional background.
+ * Maps to lv_obj (NOT lv_win, which is a desktop-style window with header).
+ *
+ * Note: blur effect (enableBlur) is not available in RTK LVGL v9.4.
+ * The blur APIs (lv_obj_set_style_blur_backdrop/blur_radius) were introduced in v9.5.
  */
 import { Component } from '../../../hml/types';
 import { LvglGeneratorContext } from '../LvglComponentGenerator';
@@ -18,22 +24,20 @@ export class LvglWindowGenerator extends LvglBaseGenerator {
 
     const showBackground = component.style?.showBackground ?? false;
     const enableBlur = component.data?.enableBlur ?? false;
-    const blurDegree = component.data?.blurDegree ?? 225;
 
     if (enableBlur) {
+      // Blur not available in RTK LVGL v9.4 — fall back to semi-transparent background
+      code += `    /* NOTE(lvgl): blur effect not available in LVGL v9.4, using semi-transparent background as fallback */\n`;
       const winBgColor = component.style?.backgroundColor;
       if (showBackground && winBgColor) {
         const winBgColorHex = parseColorHex(winBgColor);
         const winBgAlpha = parseColorAlpha(winBgColor);
-        code += `    lv_obj_set_style_bg_color(${component.id}, lv_color_hex(0x${winBgColorHex}), 0);\n`;
+        code += `    lv_obj_set_style_bg_color(${component.id}, lv_color_hex(0x${winBgColorHex}), LV_PART_MAIN);\n`;
         const blurOpa = winBgAlpha < 255 ? winBgAlpha : 'LV_OPA_40';
-        code += `    lv_obj_set_style_bg_opa(${component.id}, ${blurOpa}, 0);\n`;
+        code += `    lv_obj_set_style_bg_opa(${component.id}, ${blurOpa}, LV_PART_MAIN);\n`;
       } else {
-        code += `    lv_obj_set_style_bg_opa(${component.id}, LV_OPA_0, 0);\n`;
+        code += `    lv_obj_set_style_bg_opa(${component.id}, LV_OPA_40, LV_PART_MAIN);\n`;
       }
-      code += `    lv_obj_set_style_blur_backdrop(${component.id}, true, 0);\n`;
-      const blurRadius = Math.max(1, Math.min(64, Math.round(blurDegree / 4)));
-      code += `    lv_obj_set_style_blur_radius(${component.id}, ${blurRadius}, 0);\n`;
     } else if (showBackground) {
       const winBgColor = component.style?.backgroundColor;
       if (winBgColor) {

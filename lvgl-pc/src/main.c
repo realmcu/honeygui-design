@@ -42,8 +42,7 @@ static void lvgl_log_cb(lv_log_level_t level, const char *buf)
 
 static void create_ui(void)
 {
-    lv_obj_t *scr = lv_screen_active();
-    lvgl_generated_ui_create(scr);
+    lvgl_generated_ui_create();
 }
 
 int main(void)

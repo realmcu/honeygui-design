@@ -46,7 +46,8 @@ export class LvglCallbackFileGenerator {
     code += ` * ${designName} LVGL callback implementations (auto-generated)\n`;
     code += ` * User code inside protected areas will be preserved on regeneration.\n`;
     code += ` */\n`;
-    code += `#include "${designName}_lvgl_callbacks.h"\n\n`;
+    code += `#include "${designName}_lvgl_callbacks.h"\n`;
+    code += `#include "${designName}_lvgl_ui.h"\n\n`;
 
     for (const impl of callbackImpls) {
       code += `${impl.signature}\n`;

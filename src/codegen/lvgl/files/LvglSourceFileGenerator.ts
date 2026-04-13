@@ -59,12 +59,9 @@ export class LvglSourceFileGenerator {
       code += `lv_obj_t * ${c.id} = NULL;\n`;
     });
 
-    // ui_create function
-    code += `\nvoid ${designName}_lvgl_ui_create(lv_obj_t * parent)\n`;
+    // ui_create function (screens are created internally, no parent needed)
+    code += `\nvoid ${designName}_lvgl_ui_create(void)\n`;
     code += `{\n`;
-    code += `    if(parent == NULL) {\n`;
-    code += `        parent = lv_screen_active();\n`;
-    code += `    }\n\n`;
 
     orderedComponents.forEach(component => {
       const parentRef = getParentRef(component);

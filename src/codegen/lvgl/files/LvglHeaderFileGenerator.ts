@@ -28,7 +28,7 @@ export class LvglHeaderFileGenerator {
       code += `extern lv_obj_t * ${c.id};\n`;
     });
 
-    code += `\nvoid ${designName}_lvgl_ui_create(lv_obj_t * parent);\n\n`;
+    code += `\nvoid ${designName}_lvgl_ui_create(void);\n\n`;
     code += `#ifdef __cplusplus\n`;
     code += `}\n`;
     code += `#endif\n\n`;
