@@ -67,7 +67,7 @@ jobs:
 
       - name: Build libgui.a from source
         run: |
-          cd /tmp/HoneyGUI/HoneyGUI-SDK/lib/gcc
+          cd /tmp/HoneyGUI/lib/gcc
           mkdir -p build && cd build
           cmake ..
           make -j$(nproc)
@@ -75,9 +75,9 @@ jobs:
 
       - name: Update lib/sim with freshly built library
         run: |
-          cp /tmp/HoneyGUI/HoneyGUI-SDK/lib/gcc/install/lib/libgui.a lib/sim/linux/libgui.a
+          cp /tmp/HoneyGUI/lib/gcc/install/lib/libgui.a lib/sim/linux/libgui.a
           rm -rf lib/sim/include/*
-          cp -r /tmp/HoneyGUI/HoneyGUI-SDK/lib/gcc/install/include/* lib/sim/include/
+          cp -r /tmp/HoneyGUI/lib/gcc/install/include/* lib/sim/include/
 
       - name: Clone smartwatch template
         run: git clone --depth 1 https://gitee.com/realmcu/honeygui-template-smartwatch.git /tmp/smartwatch-project
