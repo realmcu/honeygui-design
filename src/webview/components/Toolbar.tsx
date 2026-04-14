@@ -29,6 +29,8 @@ const Toolbar: React.FC<{
     canUndo,
     canRedo,
     isSimulationRunning,
+    operationInProgress,
+    setOperationInProgress,
   } = useDesignerStore();
 
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -85,7 +87,12 @@ const Toolbar: React.FC<{
     });
   };
 
+  // 是否有操作正在进行（用于禁用按钮）
+  const isBusy = operationInProgress !== null || isSimulationRunning;
+
   const handleGenerateAllCode = () => {
+    if (isBusy) return;
+    setOperationInProgress('codegen');
     window.vscodeAPI?.postMessage({
       command: 'generateCode',
       content: {},
@@ -93,6 +100,8 @@ const Toolbar: React.FC<{
   };
 
   const handleUartDownload = () => {
+    if (isBusy) return;
+    setOperationInProgress('download');
     window.vscodeAPI?.postMessage({
       command: 'executeCommand',
       commandId: 'honeygui.uartDownload',
@@ -101,13 +110,14 @@ const Toolbar: React.FC<{
 
   const handleSimulation = () => {
     if (isSimulationRunning) {
-      // 停止仿真
+      // 停止仿真始终允许
       window.vscodeAPI?.postMessage({
         command: 'executeCommand',
         commandId: 'honeygui.simulation.stop',
       });
     } else {
-      // 启动仿真
+      if (isBusy) return;
+      setOperationInProgress('simulate');
       window.vscodeAPI?.postMessage({
         command: 'executeCommand',
         commandId: 'honeygui.simulation',
@@ -116,6 +126,8 @@ const Toolbar: React.FC<{
   };
 
   const handleClean = () => {
+    if (isBusy) return;
+    setOperationInProgress('clean');
     window.vscodeAPI?.postMessage({
       command: 'executeCommand',
       commandId: 'honeygui.simulation.clean',
@@ -341,26 +353,29 @@ const Toolbar: React.FC<{
 
       <div className="toolbar-section">
         <button
-          className="toolbar-button primary"
+          className={`toolbar-button primary ${isBusy && operationInProgress === 'codegen' ? 'running' : ''}`}
           onClick={handleGenerateAllCode}
           title={t('Generate Code')}
+          disabled={isBusy && operationInProgress !== 'codegen'}
         >
           <Code size={16} strokeWidth={1.4} />
-          <span>{t('Generate Code')}</span>
+          <span>{operationInProgress === 'codegen' ? t('Generating...') : t('Generate Code')}</span>
         </button>
         <button
           className={`toolbar-button primary ${isSimulationRunning ? 'running' : ''}`}
           onClick={handleSimulation}
           title={isSimulationRunning ? t('Stop Simulation') : t('Compile & Simulate')}
+          disabled={isBusy && !isSimulationRunning}
         >
           {isSimulationRunning ? <Square size={16} strokeWidth={1.4} /> : <Rocket size={16} strokeWidth={1.4} />}
-          <span>{isSimulationRunning ? t('Stop') : t('Simulate')}</span>
+          <span>{isSimulationRunning ? t('Stop') : operationInProgress === 'simulate' ? t('Starting...') : t('Simulate')}</span>
         </button>
         <div className="toolbar-segmented">
           <button
             className="toolbar-icon-button"
             onClick={handleUartDownload}
             title={t('UART Download')}
+            disabled={isBusy}
           >
             <Download size={16} strokeWidth={1.4} />
           </button>
@@ -368,6 +383,7 @@ const Toolbar: React.FC<{
             className="toolbar-icon-button"
             onClick={handleClean}
             title={t('Clean Build')}
+            disabled={isBusy}
           >
             <BrushCleaning size={16} strokeWidth={1.4} />
           </button>

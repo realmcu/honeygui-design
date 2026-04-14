@@ -870,6 +870,10 @@ const zhCN = {
   'Sender ID': '发送者 ID',
   'Claw Face': 'Claw 表情',
   'OpenClaw Target ID': 'OpenClaw 目标 ID',
+
+  // Toolbar operation states
+  'Generating...': '生成中...',
+  'Starting...': '启动中...',
 };
 
 export default zhCN;

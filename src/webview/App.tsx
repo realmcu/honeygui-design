@@ -661,6 +661,19 @@ const App: React.FC = () => {
           if (typeof message.isRunning === 'boolean') {
             const store = useDesignerStore.getState();
             store.setSimulationRunning(message.isRunning);
+            // 仿真启动成功后清除 operationInProgress（由 isSimulationRunning 接管）
+            // 仿真停止后也清除
+            if (store.operationInProgress === 'simulate') {
+              store.setOperationInProgress(null);
+            }
+          }
+          break;
+
+        case 'operationComplete':
+          // 操作完成，清除忙碌状态
+          {
+            const store = useDesignerStore.getState();
+            store.setOperationInProgress(null);
           }
           break;
 

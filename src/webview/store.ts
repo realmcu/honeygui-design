@@ -170,6 +170,7 @@ export interface DesignerStore extends DesignerState {
 
   // Simulation status
   setSimulationRunning: (running: boolean) => void;
+  setOperationInProgress: (op: 'codegen' | 'simulate' | 'clean' | 'download' | null) => void;
 
   // Assets
   setAssetCategory: (category: 'all' | 'images' | 'svgs' | 'videos' | 'models' | 'fonts' | 'glass' | 'lottie' | 'trmap') => void;
@@ -344,6 +345,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   clipboard: null, // 剪贴板
   clipboardMultiple: [], // 多选剪贴板
   isSimulationRunning: false, // 仿真运行状态
+  operationInProgress: null, // 当前正在执行的操作
   selectedAsset: null, // 选中的资源（文件夹或图片）
   conversionConfig: null, // 转换配置
 
@@ -1016,6 +1018,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   setShowAlignmentGuides: (show) => set({ showAlignmentGuides: show }),
   setAssetCategory: (category) => set({ assetCategory: category }),
   setSimulationRunning: (running) => set({ isSimulationRunning: running }),
+  setOperationInProgress: (op) => set({ operationInProgress: op }),
   
   // 保存当前视图状态
   saveViewState: (uiState) => {

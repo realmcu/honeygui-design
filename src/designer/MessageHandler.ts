@@ -248,7 +248,24 @@ export class MessageHandler {
 
             case 'executeCommand':
                 if (message.commandId) {
-                    vscode.commands.executeCommand(message.commandId);
+                    const commandId = message.commandId;
+                    // 对于需要等待完成的命令，执行后通知前端
+                    const needsCompletion = [
+                        'honeygui.simulation.clean',
+                        'honeygui.uartDownload'
+                    ];
+                    if (needsCompletion.includes(commandId)) {
+                        vscode.commands.executeCommand(commandId).then(
+                            () => {
+                                this._panel.webview.postMessage({ command: 'operationComplete', operation: commandId });
+                            },
+                            () => {
+                                this._panel.webview.postMessage({ command: 'operationComplete', operation: commandId });
+                            }
+                        );
+                    } else {
+                        vscode.commands.executeCommand(commandId);
+                    }
                 }
                 break;
 
@@ -693,7 +710,12 @@ export class MessageHandler {
      * 生成代码
      */
     private async handleGenerateCode(): Promise<void> {
-        await CodeGenerationService.generateFromFile(this._fileManager.currentFilePath, this._codeGenerator);
+        try {
+            await CodeGenerationService.generateFromFile(this._fileManager.currentFilePath, this._codeGenerator);
+        } finally {
+            // 通知前端操作完成
+            this._panel.webview.postMessage({ command: 'operationComplete', operation: 'codegen' });
+        }
     }
 
     /**

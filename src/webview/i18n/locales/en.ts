@@ -868,6 +868,10 @@ const en = {
   'Sender ID': 'Sender ID',
   'Claw Face': 'Claw Face',
   'OpenClaw Target ID': 'OpenClaw Target ID',
+
+  // Toolbar operation states
+  'Generating...': 'Generating...',
+  'Starting...': 'Starting...',
 };
 
 export default en;

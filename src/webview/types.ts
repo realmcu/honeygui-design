@@ -105,6 +105,7 @@ export interface DesignerState {
   projectConfig?: any; // Project configuration (resolution, etc.)
   assetCategory: 'all' | 'images' | 'svgs' | 'videos' | 'models' | 'fonts' | 'glass' | 'lottie' | 'trmap'; // 资源面板分类
   isSimulationRunning: boolean; // 仿真运行状态
+  operationInProgress: 'codegen' | 'simulate' | 'clean' | 'download' | null; // 当前正在执行的操作（互斥）
 }
 
 export interface VSCodeAPI {
