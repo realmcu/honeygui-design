@@ -17,9 +17,9 @@ export class LvglLabelGenerator extends LvglBaseGenerator {
     const fontSize = Number(component.style?.fontSize || component.data?.fontSize || 16);
     const fontFile = component.data?.fontFile;
     const isTimerLabel = component.data?.isTimerLabel === true;
-    const wordWrap = component.data?.wordWrap === true;
-    const hAlign = String(component.data?.hAlign || 'LEFT');
-    const vAlign = String(component.data?.vAlign || 'TOP');
+    const wordWrap = component.style?.wordWrap === true || component.data?.wordWrap === true;
+    const hAlign = String(component.style?.hAlign || component.data?.hAlign || 'LEFT');
+    const vAlign = String(component.style?.vAlign || component.data?.vAlign || 'TOP');
 
     let code = `    ${component.id} = lv_label_create(${parentRef});\n`;
     code += `    lv_obj_set_pos(${component.id}, ${x}, ${y});\n`;
@@ -59,27 +59,31 @@ export class LvglLabelGenerator extends LvglBaseGenerator {
     }
 
     // --- Letter spacing ---
-    const letterSpacing = Number(component.data?.letterSpacing || 0);
+    const letterSpacing = Number(component.style?.letterSpacing || component.data?.letterSpacing || 0);
     if (letterSpacing !== 0) {
       code += `    lv_obj_set_style_text_letter_space(${component.id}, ${letterSpacing}, LV_PART_MAIN);\n`;
     }
 
     // --- Line spacing ---
-    const lineSpacing = Number(component.data?.lineSpacing || 0);
+    const lineSpacing = Number(component.style?.lineSpacing || component.data?.lineSpacing || 0);
     if (lineSpacing !== 0) {
       code += `    lv_obj_set_style_text_line_space(${component.id}, ${lineSpacing}, LV_PART_MAIN);\n`;
     }
 
-    // --- Word wrap ---
+    // --- Word wrap / long mode ---
     if (wordWrap) {
       code += `    lv_obj_set_size(${component.id}, ${width}, LV_SIZE_CONTENT);\n`;
       code += `    lv_label_set_long_mode(${component.id}, LV_LABEL_LONG_MODE_WRAP);\n`;
+    } else {
+      // No wrap: clip text at label boundary
+      code += `    lv_obj_set_size(${component.id}, ${width}, ${height});\n`;
+      code += `    lv_label_set_long_mode(${component.id}, LV_LABEL_LONG_MODE_CLIP);\n`;
     }
 
     // --- Scroll mode (only when not timer and not word wrap) ---
     if (!isTimerLabel && !wordWrap && component.data?.scrollDirection) {
       const scrollInterval = Number(component.data?.scrollInterval || 3000);
-      code += `    lv_obj_set_size(${component.id}, ${width}, ${height});\n`;
+      // Override the CLIP size/mode set above with scroll mode
       code += `    lv_label_set_long_mode(${component.id}, LV_LABEL_LONG_MODE_SCROLL_CIRCULAR);\n`;
       if (scrollInterval > 0) {
         code += `    lv_obj_set_style_anim_duration(${component.id}, ${scrollInterval}, LV_PART_MAIN);\n`;
