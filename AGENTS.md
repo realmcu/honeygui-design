@@ -1,5 +1,7 @@
 # AGENTS.md - AI 助手指南
 
+**Generated:** 2026-04-14 08:28 UTC | **Commit:** d0fca06 | **Branch:** master
+
 本文件为 AI 编程助手提供项目上下文和协作指南。
 
 ## 项目概述

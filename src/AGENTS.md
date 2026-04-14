@@ -1,5 +1,6 @@
 # VSCode Extension Source Knowledge Base
 
+**Generated:** 2026-04-14 08:28 UTC | **Commit:** d0fca06  
 **Parent:** [honeygui-design](../AGENTS.md)  
 **Purpose:** Extension implementation and webview UI
 
