@@ -411,6 +411,7 @@
   "SConscript file generated": "SConscript file generated",
   "Build directory ready": "Build directory ready",
   "Scanning asset references in HML files...": "Scanning asset references in HML files...",
+  "Scanning all assets for full packaging...": "Scanning all assets for full packaging...",
   "Converting image assets...": "Converting image assets...",
   "Copying SVG assets...": "Copying SVG assets...",
   "Checking video assets...": "Checking video assets...",

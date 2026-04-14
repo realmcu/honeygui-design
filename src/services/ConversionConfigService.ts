@@ -112,6 +112,8 @@ export interface ConversionConfig {
   items: Record<string, ItemSettings>;
   /** 强制转换列表（即使 HML 未引用也会被转换打包） */
   alwaysConvert?: AlwaysConvertConfig;
+  /** 灵活打包模式：true=只转换被引用的资源（按需），false/undefined=转换所有资源（全量） */
+  smartPacking?: boolean;
 }
 
 
@@ -290,7 +292,8 @@ export class ConversionConfigService {
       version: config.version || DEFAULT_CONFIG.version,
       defaultSettings: { ...DEFAULT_CONFIG.defaultSettings, ...config.defaultSettings },
       items: config.items || {},
-      alwaysConvert: config.alwaysConvert
+      alwaysConvert: config.alwaysConvert,
+      smartPacking: config.smartPacking
     };
   }
 

@@ -588,6 +588,8 @@ const zhCN = {
   'Add to always convert': '标记为强制转换',
   'Force convert': '强制转换',
   'This asset will always be converted during build': '此资源在编译时将始终被转换',
+  'Smart packing enabled: only referenced assets are converted': '灵活打包已开启：仅转换 HML 引用的资源',
+  'Smart packing disabled: all assets are converted': '灵活打包已关闭：转换所有资源（默认）',
 
   // ComponentTree
   'Drag from component library to add': '从组件库拖拽添加组件',

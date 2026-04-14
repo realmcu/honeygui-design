@@ -504,6 +504,10 @@ export class MessageHandler {
                 this._handleToggleAlwaysConvert(message.assetPath);
                 break;
 
+            case 'toggleSmartPacking':
+                this._handleToggleSmartPacking();
+                break;
+
             // Collaboration commands
             case 'startHost':
                 this._handleStartHost(message.port);
@@ -1091,6 +1095,40 @@ export class MessageHandler {
         } catch (error) {
             logger.error(`[MessageHandler] 切换强制转换失败: ${error}`);
             vscode.window.showErrorMessage(vscode.l10n.t('Failed to toggle always convert: {0}', error instanceof Error ? error.message : String(error)));
+        }
+    }
+
+    /**
+     * 处理切换灵活打包模式
+     */
+    private _handleToggleSmartPacking(): void {
+        try {
+            const projectRoot = this._fileManager.currentFilePath
+                ? ProjectUtils.findProjectRoot(this._fileManager.currentFilePath)
+                : undefined;
+
+            if (!projectRoot) {
+                logger.warn('[MessageHandler] 无法确定项目根目录');
+                return;
+            }
+
+            const configService = ConversionConfigService.getInstance();
+            const conversionConfig = configService.loadConfig(projectRoot);
+
+            // 切换 smartPacking 状态
+            conversionConfig.smartPacking = !conversionConfig.smartPacking;
+
+            configService.saveConfig(projectRoot, conversionConfig);
+
+            // 通知前端更新状态
+            this._panel.webview.postMessage({
+                command: 'smartPackingUpdated',
+                smartPacking: conversionConfig.smartPacking
+            });
+
+            logger.debug(`[MessageHandler] 灵活打包模式: ${conversionConfig.smartPacking ? '开启' : '关闭'}`);
+        } catch (error) {
+            logger.error(`[MessageHandler] 切换灵活打包模式失败: ${error}`);
         }
     }
 

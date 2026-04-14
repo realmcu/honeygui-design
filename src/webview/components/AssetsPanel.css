@@ -140,6 +140,17 @@
   border-color: var(--vscode-focusBorder);
 }
 
+/* 灵活打包模式按钮 */
+.smart-packing-btn.active {
+  color: var(--vscode-charts-green);
+  border-color: var(--vscode-charts-green);
+  background: rgba(0, 200, 83, 0.15);
+}
+
+.smart-packing-btn.active:hover {
+  background: rgba(0, 200, 83, 0.25);
+}
+
 .assets-content {
   flex: 1;
   overflow-y: auto;

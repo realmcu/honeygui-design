@@ -410,6 +410,7 @@
   "SConscript file generated": "SConscript 文件已生成",
   "Build directory ready": "编译目录准备完成",
   "Scanning asset references in HML files...": "扫描 HML 文件中的资源引用...",
+  "Scanning all assets for full packaging...": "扫描所有资源（全量打包模式）...",
   "Converting image assets...": "转换图片资源...",
   "Copying SVG assets...": "拷贝 SVG 资源...",
   "Checking video assets...": "检查视频资源...",

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trash2, Edit2, Upload, FolderUp, Zap } from 'lucide-react';
+import { Trash2, Edit2, Upload, FolderUp, Zap, PackageCheck } from 'lucide-react';
 import { AssetFile } from '../types';
 import { useDesignerStore } from '../store';
 import { t } from '../i18n';
@@ -427,6 +427,7 @@ const AssetsPanel: React.FC = () => {
   const [gridColumns, setGridColumns] = useState(3);
   const [currentPath, setCurrentPath] = useState<string[]>([]);  // 当前浏览路径
   const [alwaysConvertAssets, setAlwaysConvertAssets] = useState<Set<string>>(new Set());  // 强制转换的资源集合
+  const [smartPacking, setSmartPacking] = useState(false);  // 灵活打包模式
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
 
@@ -545,6 +546,8 @@ const AssetsPanel: React.FC = () => {
           ...(alwaysConvert.fonts || [])
         ]);
         setAlwaysConvertAssets(allAssets);
+      } else if (message.command === 'smartPackingUpdated') {
+        setSmartPacking(message.smartPacking === true);
       }
     };
 
@@ -658,7 +661,7 @@ const AssetsPanel: React.FC = () => {
     return (
       <div 
         key={asset.path} 
-        className={`asset-grid-item${isSelected ? ' selected' : ''}${isMarkedAlwaysConvert ? ' always-convert' : ''}`}
+        className={`asset-grid-item${isSelected ? ' selected' : ''}${smartPacking && isMarkedAlwaysConvert ? ' always-convert' : ''}`}
         draggable
         onClick={(e) => handleAssetClick(asset, e)}
         onDragStart={(e) => {
@@ -717,6 +720,7 @@ const AssetsPanel: React.FC = () => {
             <span className="asset-name" title={asset.name}>{asset.name}</span>
           )}
           <div className="asset-actions">
+            {smartPacking && (
             <button 
               onClick={(e) => {
                 e.stopPropagation();
@@ -730,6 +734,7 @@ const AssetsPanel: React.FC = () => {
             >
               <Zap size={12} />
             </button>
+            )}
             <button onClick={(e) => { e.stopPropagation(); handleRename(asset); }} title={t('Rename')} className="action-btn">
               <Edit2 size={12} />
             </button>
@@ -750,7 +755,7 @@ const AssetsPanel: React.FC = () => {
     return (
       <div 
         key={folder.path} 
-        className={`asset-grid-item folder-item${isSelected ? ' selected' : ''}${isMarkedAlwaysConvert ? ' always-convert' : ''}`}
+        className={`asset-grid-item folder-item${isSelected ? ' selected' : ''}${smartPacking && isMarkedAlwaysConvert ? ' always-convert' : ''}`}
         onClick={(e) => handleFolderClick(folder, e)}
         onDoubleClick={(e) => handleFolderDoubleClick(folder, e)}
       >
@@ -776,6 +781,7 @@ const AssetsPanel: React.FC = () => {
             <span className="asset-name" title={folder.name}>{folder.name}</span>
           )}
           <div className="asset-actions">
+            {smartPacking && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -786,6 +792,7 @@ const AssetsPanel: React.FC = () => {
             >
               <Zap size={12} />
             </button>
+            )}
             <button 
               onClick={(e) => { 
                 e.stopPropagation(); 
@@ -997,6 +1004,15 @@ const AssetsPanel: React.FC = () => {
           title={t('Upload folder')}
         >
           <FolderUp size={16} />
+        </button>
+        <button
+          className={`upload-btn smart-packing-btn${smartPacking ? ' active' : ''}`}
+          onClick={() => {
+            window.vscodeAPI?.postMessage({ command: 'toggleSmartPacking' });
+          }}
+          title={smartPacking ? t('Smart packing enabled: only referenced assets are converted') : t('Smart packing disabled: all assets are converted')}
+        >
+          <PackageCheck size={16} />
         </button>
 
         <input

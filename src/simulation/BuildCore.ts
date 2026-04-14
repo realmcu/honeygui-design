@@ -152,10 +152,30 @@ Return('objs')
             fs.mkdirSync(outputDir, { recursive: true });
         }
 
-        // 扫描 HML 文件，获取所有使用的资源
-        this.logger.log(vscode.l10n.t('Scanning asset references in HML files...'));
-        const usedAssets = await this.scanUsedAssets();
-        this.logger.log(`找到 ${usedAssets.images.size} 个图片, ${usedAssets.videos.size} 个视频, ${usedAssets.models.size} 个3D模型`);
+        // 检查是否启用灵活打包模式
+        const configService = ConversionConfigService.getInstance();
+        const conversionConfig = configService.loadConfig(this.projectRoot);
+        const smartPacking = conversionConfig.smartPacking === true;
+
+        let usedAssets: {
+            images: Set<string>;
+            videos: Set<string>;
+            models: Set<string>;
+            fonts: Set<string>;
+            mapFonts: Set<string>;
+        };
+
+        if (smartPacking) {
+            // 灵活打包：只转换 HML 引用的资源 + alwaysConvert 列表
+            this.logger.log(vscode.l10n.t('Scanning asset references in HML files...'));
+            usedAssets = await this.scanUsedAssets();
+            this.logger.log(`找到 ${usedAssets.images.size} 个图片, ${usedAssets.videos.size} 个视频, ${usedAssets.models.size} 个3D模型`);
+        } else {
+            // 全量打包（默认）：转换 assets 目录下所有资源
+            this.logger.log(vscode.l10n.t('Scanning all assets for full packaging...'));
+            usedAssets = await this.scanAllAssets();
+            this.logger.log(`找到 ${usedAssets.images.size} 个图片, ${usedAssets.videos.size} 个视频, ${usedAssets.models.size} 个3D模型, ${usedAssets.fonts.size} 个字体`);
+        }
 
         // 转换图片资源（只转换使用的）
         this.logger.log(vscode.l10n.t('Converting image assets...'));
@@ -596,6 +616,86 @@ Return('objs')
 
         return { images, videos, models, fonts, mapFonts };
     }
+
+    /**
+     * 全量扫描 assets 目录，返回所有资源文件
+     * 仍需扫描 HML 获取 mapFonts（地图字体需特殊拷贝处理）
+     */
+    private async scanAllAssets(): Promise<{
+        images: Set<string>;
+        videos: Set<string>;
+        models: Set<string>;
+        fonts: Set<string>;
+        mapFonts: Set<string>;
+    }> {
+        const images = new Set<string>();
+        const videos = new Set<string>();
+        const models = new Set<string>();
+        const fonts = new Set<string>();
+        const mapFonts = new Set<string>();
+
+        const imageExts = new Set(['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp']);
+        const videoExts = new Set(['.mp4', '.avi', '.mov', '.mkv', '.webm']);
+        const modelExts = new Set(['.gltf', '.glb', '.obj']);
+        const fontExts  = new Set(['.ttf', '.otf', '.woff', '.woff2']);
+
+        const assetsDir = path.join(this.projectRoot, 'assets');
+        if (fs.existsSync(assetsDir)) {
+            const scanDir = (dir: string) => {
+                const entries = fs.readdirSync(dir, { withFileTypes: true });
+                for (const entry of entries) {
+                    const fullPath = path.join(dir, entry.name);
+                    if (entry.isDirectory()) {
+                        scanDir(fullPath);
+                    } else {
+                        const relativePath = path.relative(assetsDir, fullPath).replace(/\\/g, '/');
+                        const ext = path.extname(entry.name).toLowerCase();
+                        if (imageExts.has(ext)) {
+                            images.add(relativePath);
+                        } else if (videoExts.has(ext)) {
+                            videos.add(relativePath);
+                        } else if (modelExts.has(ext)) {
+                            models.add(relativePath);
+                        } else if (fontExts.has(ext)) {
+                            fonts.add(relativePath);
+                        }
+                    }
+                }
+            };
+            scanDir(assetsDir);
+
+            // 扫描 3D 模型中引用的纹理图片
+            this.scanModelTextures(assetsDir, models, images);
+        }
+
+        // mapFonts 仍需从 HML 中获取（hg_map/hg_openclaw 组件的字体需直接拷贝）
+        const uiDir = path.join(this.projectRoot, 'ui');
+        if (fs.existsSync(uiDir)) {
+            const dummyImages = new Set<string>();
+            const dummyVideos = new Set<string>();
+            const dummyModels = new Set<string>();
+            const scanDir = (dir: string) => {
+                const entries = fs.readdirSync(dir, { withFileTypes: true });
+                for (const entry of entries) {
+                    const fullPath = path.join(dir, entry.name);
+                    if (entry.isDirectory()) {
+                        scanDir(fullPath);
+                    } else if (entry.name.endsWith('.hml')) {
+                        try {
+                            const content = fs.readFileSync(fullPath, 'utf-8');
+                            this.extractAssetReferences(content, dummyImages, dummyVideos, dummyModels, mapFonts);
+                        } catch (error) {
+                            this.logger.log(`读取 HML 文件失败: ${fullPath} - ${error}`, true);
+                        }
+                    }
+                }
+            };
+            scanDir(uiDir);
+        }
+
+        return { images, videos, models, fonts, mapFonts };
+    }
+
     private addAlwaysConvertAssets(
         images: Set<string>,
         videos: Set<string>,

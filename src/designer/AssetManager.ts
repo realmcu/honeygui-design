@@ -146,6 +146,12 @@ export class AssetManager extends EventEmitter {
                 command: 'alwaysConvertUpdated',
                 alwaysConvert: conversionConfig.alwaysConvert || { images: [], videos: [], models: [], fonts: [] }
             });
+
+            // 发送灵活打包模式状态到webview
+            this._panel.webview.postMessage({
+                command: 'smartPackingUpdated',
+                smartPacking: conversionConfig.smartPacking === true
+            });
         } catch (error) {
             logger.error(`加载资源列表失败: ${error}`);
         }

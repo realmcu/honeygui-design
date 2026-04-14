@@ -588,6 +588,8 @@ const en = {
   'Add to always convert': 'Mark as always convert',
   'Force convert': 'Force convert',
   'This asset will always be converted during build': 'This asset will always be converted during build',
+  'Smart packing enabled: only referenced assets are converted': 'Smart packing ON: only assets referenced by HML are converted',
+  'Smart packing disabled: all assets are converted': 'Smart packing OFF: all assets are converted (default)',
 
   // ComponentTree
   'Drag from component library to add': 'Drag from component library to add',
