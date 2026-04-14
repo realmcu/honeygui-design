@@ -261,12 +261,7 @@ HmlEditorProvider.resolveCustomTextEditor()
 
 ## VSCode 插件市场发布
 
-### Personal Access Token (PAT)
-```
-56pIFgjdNu3lkylqZ1gnFI5nQ2VkGWJeFOYufaqzpd56iW5a3rvgJQQJ99CAACAAAAAAAAAAAAASAZDO2UL2
-```
-
 ### 发布命令
 ```bash
-vsce publish -p 56pIFgjdNu3lkylqZ1gnFI5nQ2VkGWJeFOYufaqzpd56iW5a3rvgJQQJ99CAACAAAAAAAAAAAAASAZDO2UL2
+vsce publish -p $VSCODE_MARKETPLACE_PAT
 ```
