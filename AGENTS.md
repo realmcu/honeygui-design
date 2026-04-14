@@ -261,6 +261,9 @@ HmlEditorProvider.resolveCustomTextEditor()
 
 ## VSCode 插件市场发布
 
+### 获取 Token
+发布前请联系 **王浩** 获取 VSCode Marketplace 的 PAT (Personal Access Token)。
+
 ### 发布命令
 ```bash
 vsce publish -p $VSCODE_MARKETPLACE_PAT
