@@ -412,6 +412,18 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       });
     }
 
+    // Generate normal button press/release callback functions
+    const normalButtons = this.components.filter(c => c.type === 'hg_button' && !(c.data?.toggleMode === true || c.data?.toggleMode === 'true') && (c.data?.imageOn || c.data?.imageOff));
+    if (normalButtons.length > 0) {
+      code += `// Normal button press/release callback functions\n`;
+      normalButtons.forEach(comp => {
+        const generator = ComponentGeneratorFactory.getGenerator('hg_button');
+        if ('generateNormalCallback' in generator) {
+          code += (generator as any).generateNormalCallback(comp);
+        }
+      });
+    }
+
     // Generate hg_menu_cellular switch_view callback functions
     const hasMenuCellular = this.components.some(c => c.type === 'hg_menu_cellular');
     if (hasMenuCellular) {
@@ -526,8 +538,8 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
     // Generate property setter code
     code += this.generatePropertySetters(component, indent);
 
-    // Toggle button: generate click event binding
-    if (component.type === 'hg_button' && (component.data?.toggleMode === true || component.data?.toggleMode === 'true')) {
+    // Button: generate event binding (toggle or normal mode)
+    if (component.type === 'hg_button') {
       const generator = ComponentGeneratorFactory.getGenerator('hg_button');
       if ('generateEventBinding' in generator) {
         code += (generator as any).generateEventBinding(component, indent);

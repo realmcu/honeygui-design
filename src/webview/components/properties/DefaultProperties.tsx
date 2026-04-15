@@ -149,7 +149,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
     }
   }, [component.id, component.type]);
 
-  const renderCallbackSelector = (propertyName: 'onCallback' | 'offCallback') => {
+  const renderCallbackSelector = (propertyName: 'onCallback' | 'offCallback' | 'clickCallback') => {
     const value = (component.data as any)?.[propertyName] || '';
     const eventFunctions = userFunctions.filter(f => f.type === 'event');
     return (
@@ -1078,6 +1078,20 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                 <div className="property-group-title">数据</div>
                 {definition.properties
                   .filter(p => p.group === 'data')
+                  .filter(p => {
+                    // Button: show/hide properties based on toggleMode
+                    if (component.type === 'hg_button') {
+                      const isToggle = component.data?.toggleMode === true;
+                      if (isToggle) {
+                        // Toggle mode: hide clickCallback, text
+                        if (p.name === 'clickCallback' || p.name === 'text') return false;
+                      } else {
+                        // Normal mode: hide initialState, onCallback, offCallback
+                        if (p.name === 'initialState' || p.name === 'onCallback' || p.name === 'offCallback') return false;
+                      }
+                    }
+                    return true;
+                  })
                   .map((property) => (
                     <div key={property.name} className="property-item">
                       <label>{t(property.label as any)}</label>
@@ -1088,15 +1102,15 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                           'src'
                         )
                       ) : (property.name === 'imageOn' || property.name === 'imageOff') && component.type === 'hg_button' ? (
-                        // 双态按钮的图片选择器
+                        // 按钮图片选择器（Normal 和 Toggle 共用）
                         renderImageProperty(
                           (component.data as any)?.[property.name],
                           (value) => handleDataChange(property.name, value),
                           property.name
                         )
-                      ) : (property.name === 'onCallback' || property.name === 'offCallback') && component.type === 'hg_button' ? (
-                        // 双态按钮的回调函数选择器
-                        renderCallbackSelector(property.name as 'onCallback' | 'offCallback')
+                      ) : (property.name === 'onCallback' || property.name === 'offCallback' || property.name === 'clickCallback') && component.type === 'hg_button' ? (
+                        // 按钮回调函数选择器
+                        renderCallbackSelector(property.name as 'onCallback' | 'offCallback' | 'clickCallback')
                       ) : (property.name === 'buttonStateOnImage' || property.name === 'buttonStateOffImage') && component.type === 'hg_image' ? (
                         // Image 组件双态按键的图片选择器
                         renderImageProperty(

@@ -51,6 +51,7 @@ const en = {
   'Initial State': 'Initial State',
   'On State Callback': 'On State Callback',
   'Off State Callback': 'Off State Callback',
+  'Click Callback': 'Click Callback',
   'Control Target': 'Control Target',
   'Enabled': 'Enabled',
   'Disabled': 'Disabled',

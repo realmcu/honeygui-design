@@ -1,7 +1,8 @@
 /**
  * hg_button component code generator
- * Implements dual-state image button using gui_img control
- * State transitions via gui_img_set_src image switching
+ * Toggle mode: dual-state image button with persistent state
+ * Normal mode: momentary press button with press/release image switching
+ * Both use gui_img control since SDK has no native gui_button
  */
 import { Component } from '../../../hml/types';
 import { ComponentCodeGenerator, GeneratorContext } from './ComponentGenerator';
@@ -10,34 +11,38 @@ import * as fs from 'fs';
 
 export class ButtonGenerator implements ComponentCodeGenerator {
 
+  private isToggleMode(component: Component): boolean {
+    return component.data?.toggleMode === true || component.data?.toggleMode === 'true';
+  }
+
   generateCreation(component: Component, indent: number, context: GeneratorContext): string {
     const indentStr = '    '.repeat(indent);
     const parentRef = context.getParentRef(component);
     const { x, y, width, height } = component.position;
 
-    // Check for toggle mode (compatible with boolean and string "true")
-    const toggleMode = component.data?.toggleMode === true || component.data?.toggleMode === 'true';
-    
-    if (toggleMode) {
+    if (this.isToggleMode(component)) {
       // Toggle mode: create image button using gui_img
-      // Initially use off image as placeholder, then set correct image based on runtime state
       const imageOn = component.data?.imageOn || '';
       const imageOff = component.data?.imageOff || '';
       const binOn = this.convertToBinPath(imageOn);
       const binOff = this.convertToBinPath(imageOff);
 
-      // Create widget (using off image as placeholder)
       let code = `${indentStr}${component.id} = (gui_obj_t *)gui_img_create_from_fs(${parentRef}, "${component.name}", "${binOff}", ${x}, ${y}, ${width}, ${height});\n`;
-      // Set initial image based on runtime state variable (restore state on page re-entry)
       code += `${indentStr}if (${component.id}_state) {\n`;
       code += `${indentStr}    gui_img_set_src((gui_img_t *)${component.id}, "${binOn}", IMG_SRC_FILESYS);\n`;
       code += `${indentStr}}\n`;
       return code;
     }
 
-    // Normal mode: also uses gui_img (SDK has no gui_button)
-    // Consider overlaying gui_text for text content
-    return `${indentStr}// Normal button not supported, please use toggle mode\n${indentStr}// ${component.id} = gui_img_create_from_fs(${parentRef}, "${component.name}", "", ${x}, ${y}, ${width}, ${height});\n`;
+    // Normal mode: create image button with default (off) image
+    const imageOff = component.data?.imageOff || '';
+    const binOff = this.convertToBinPath(imageOff);
+
+    if (!binOff) {
+      return `${indentStr}// Button ${component.id}: no image configured\n`;
+    }
+
+    return `${indentStr}${component.id} = (gui_obj_t *)gui_img_create_from_fs(${parentRef}, "${component.name}", "${binOff}", ${x}, ${y}, ${width}, ${height});\n`;
   }
 
   generatePropertySetters(component: Component, indent: number, context: GeneratorContext): string {
@@ -49,9 +54,9 @@ export class ButtonGenerator implements ComponentCodeGenerator {
       code += `${indentStr}gui_obj_show((gui_obj_t *)${component.id}, ${component.visible ? 'true' : 'false'});\n`;
     }
 
-    // Check for toggle mode
-    const toggleMode = component.data?.toggleMode === true || component.data?.toggleMode === 'true';
-    if (!toggleMode) {
+    // Normal mode without images — skip scaling
+    const hasImages = !!(component.data?.imageOn || component.data?.imageOff);
+    if (!hasImages) {
       return code;
     }
 
@@ -70,45 +75,35 @@ export class ButtonGenerator implements ComponentCodeGenerator {
 
   /**
    * Get original image dimensions
-   * Read image size info from asset configuration
    */
   private getImageSize(component: Component, context: GeneratorContext): { width: number; height: number } | null {
-    const toggleMode = component.data?.toggleMode === true || component.data?.toggleMode === 'true';
-    if (!toggleMode) {
-      return null;
-    }
-
-    // Get image path for initial state
-    const initialState = component.data?.initialState === 'on';
     const imageOn = component.data?.imageOn || '';
     const imageOff = component.data?.imageOff || '';
-    const imagePath = initialState ? imageOn : imageOff;
+    // For toggle mode use initial state image; for normal use off image
+    const imagePath = this.isToggleMode(component)
+      ? (component.data?.initialState === 'on' ? imageOn : imageOff)
+      : (imageOff || imageOn);
 
     if (!imagePath) {
       return null;
     }
 
-    // Get project root from context
     let projectRoot = context.projectRoot;
     if (!projectRoot) {
       return null;
     }
 
-    // If projectRoot is .preview directory, go up one level to find actual project root
     if (projectRoot.endsWith('.preview')) {
       projectRoot = path.dirname(projectRoot);
     }
 
-    // Build full image path
     const fullImagePath = path.join(projectRoot, imagePath);
     
-    // Check if file exists
     if (!fs.existsSync(fullImagePath)) {
       return null;
     }
 
     try {
-      // Read image file header to get dimensions
       const buffer = fs.readFileSync(fullImagePath);
       return this.parseImageSize(buffer, imagePath);
     } catch (err) {
@@ -124,25 +119,21 @@ export class ButtonGenerator implements ComponentCodeGenerator {
     const ext = path.extname(filename).toLowerCase();
 
     if (ext === '.png') {
-      // PNG: read IHDR chunk
       if (buffer.length >= 24 && buffer.toString('ascii', 1, 4) === 'PNG') {
         const width = buffer.readUInt32BE(16);
         const height = buffer.readUInt32BE(20);
         return { width, height };
       }
     } else if (ext === '.jpg' || ext === '.jpeg') {
-      // JPEG: find SOF0 marker
       let offset = 2;
       while (offset < buffer.length - 9) {
         if (buffer[offset] === 0xFF) {
           const marker = buffer[offset + 1];
-          // SOF0, SOF1, SOF2
           if (marker === 0xC0 || marker === 0xC1 || marker === 0xC2) {
             const height = buffer.readUInt16BE(offset + 5);
             const width = buffer.readUInt16BE(offset + 7);
             return { width, height };
           }
-          // Skip this segment
           const segmentLength = buffer.readUInt16BE(offset + 2);
           offset += 2 + segmentLength;
         } else {
@@ -150,7 +141,6 @@ export class ButtonGenerator implements ComponentCodeGenerator {
         }
       }
     } else if (ext === '.bmp') {
-      // BMP: read DIB header
       if (buffer.length >= 26) {
         const width = buffer.readInt32LE(18);
         const height = Math.abs(buffer.readInt32LE(22));
@@ -162,13 +152,10 @@ export class ButtonGenerator implements ComponentCodeGenerator {
   }
 
   /**
-   * Generate dual-state button callback function
-   * Switches images via gui_img_set_src, merges onClick event actions into the same callback
+   * Generate toggle mode callback (state-based toggle)
    */
   generateToggleCallback(component: Component): string {
-    // Check for toggle mode (compatible with boolean and string "true")
-    const toggleMode = component.data?.toggleMode === true || component.data?.toggleMode === 'true';
-    if (!toggleMode) {
+    if (!this.isToggleMode(component)) {
       return '';
     }
 
@@ -177,18 +164,15 @@ export class ButtonGenerator implements ComponentCodeGenerator {
     const binOn = this.convertToBinPath(imageOn);
     const binOff = this.convertToBinPath(imageOff);
 
-    // User-configured callback function name (empty means no call)
     const onCallback = component.data?.onCallback || '';
     const offCallback = component.data?.offCallback || '';
 
-    // Generate callback invocation code (skip if empty)
     const onCallLinedefine = onCallback ? `        extern void ${onCallback}(void *obj, gui_event_t *e);\n` : '';
     const onCallLine = onCallback ? `        ${onCallback}(obj, e);\n` : '';
     const offCallLine = offCallback ? `        ${offCallback}(obj, e);\n` : '';
     const onCallLineNull = onCallback ? `        ${onCallback}(NULL, NULL);\n` : '';
     const offCallLineNull = offCallback ? `        ${offCallback}(NULL, NULL);\n` : '';
 
-    // Collect onClick event actions, merge into toggle_cb
     const onClickActions = (component.eventConfigs || [])
       .filter(e => e.type === 'onClick')
       .flatMap(e => e.actions || []);
@@ -241,7 +225,61 @@ ${onCallLinedefine}${offCallLineNull}        }
   }
 
   /**
-   * Generate onClick actions as inline code (merged into toggle_cb)
+   * Generate normal mode callbacks (momentary press/release)
+   */
+  generateNormalCallback(component: Component): string {
+    if (this.isToggleMode(component)) {
+      return '';
+    }
+
+    const imageOn = component.data?.imageOn || '';
+    const imageOff = component.data?.imageOff || '';
+    const binOn = this.convertToBinPath(imageOn);
+    const binOff = this.convertToBinPath(imageOff);
+
+    if (!binOn && !binOff) {
+      return '';
+    }
+
+    const clickCallback = component.data?.clickCallback || '';
+
+    const onClickActions = (component.eventConfigs || [])
+      .filter(e => e.type === 'onClick')
+      .flatMap(e => e.actions || []);
+
+    const extraCode = onClickActions.length > 0
+      ? this.generateOnClickActionsCode(onClickActions, component)
+      : '';
+
+    let clickCallCode = '';
+    if (clickCallback) {
+      clickCallCode += `    extern void ${clickCallback}(void *obj, gui_event_t *e);\n`;
+      clickCallCode += `    ${clickCallback}(obj, e);\n`;
+    }
+
+    return `
+// ${component.id} button press callback - switch to highlight image
+void ${component.id}_press_cb(void *obj, gui_event_t *e)
+{
+    GUI_UNUSED(obj);
+    GUI_UNUSED(e);
+    gui_img_set_src((gui_img_t *)${component.id}, "${binOn}", IMG_SRC_FILESYS);
+    gui_fb_change();
+}
+
+// ${component.id} button release callback - restore default image and trigger click
+void ${component.id}_release_cb(void *obj, gui_event_t *e)
+{
+    GUI_UNUSED(obj);
+    GUI_UNUSED(e);
+    gui_img_set_src((gui_img_t *)${component.id}, "${binOff}", IMG_SRC_FILESYS);
+    gui_fb_change();
+${clickCallCode}${extraCode}}
+`;
+  }
+
+  /**
+   * Generate onClick actions as inline code
    */
   private generateOnClickActionsCode(actions: any[], component: Component): string {
     let code = `\n    // onClick event actions\n`;
@@ -260,33 +298,39 @@ ${onCallLinedefine}${offCallLineNull}        }
   }
 
   /**
-   * Generate dual-state button state callback declarations (for header file)
-   * Callback functions are declared by user in _user.h, not generated here
+   * Callback declarations (not needed — user declares in _user.h)
    */
   generateCallbackDeclarations(_component: Component): string {
     return '';
   }
 
   /**
-   * Generate dual-state button state callback implementations (for callbacks.c)
-   * Callback functions are implemented by user, not generated here
+   * Callback implementations (not needed — user implements)
    */
   generateCallbackImplementations(_component: Component): string {
     return '';
   }
 
   /**
-   * Generate dual-state button event bindings
+   * Generate event bindings
    */
   generateEventBinding(component: Component, indent: number): string {
-    // Check for toggle mode (compatible with boolean and string "true")
-    const toggleMode = component.data?.toggleMode === true || component.data?.toggleMode === 'true';
-    if (!toggleMode) {
+    const indentStr = '    '.repeat(indent);
+
+    if (this.isToggleMode(component)) {
+      return `${indentStr}gui_obj_add_event_cb((gui_obj_t *)${component.id}, ${component.id}_toggle_cb, GUI_EVENT_TOUCH_CLICKED, NULL);\n`;
+    }
+
+    // Normal mode: bind press and release events
+    const hasImages = !!(component.data?.imageOn || component.data?.imageOff);
+    if (!hasImages) {
       return '';
     }
-    
-    const indentStr = '    '.repeat(indent);
-    return `${indentStr}gui_obj_add_event_cb((gui_obj_t *)${component.id}, ${component.id}_toggle_cb, GUI_EVENT_TOUCH_CLICKED, NULL);\n`;
+
+    let code = '';
+    code += `${indentStr}gui_obj_add_event_cb((gui_obj_t *)${component.id}, ${component.id}_press_cb, GUI_EVENT_TOUCH_PRESSED, NULL);\n`;
+    code += `${indentStr}gui_obj_add_event_cb((gui_obj_t *)${component.id}, ${component.id}_release_cb, GUI_EVENT_TOUCH_RELEASED, NULL);\n`;
+    return code;
   }
 
   /**
@@ -295,11 +339,8 @@ ${onCallLinedefine}${offCallLineNull}        }
   private convertToBinPath(src: string): string {
     if (!src) return '';
     
-    // Replace image extension with .bin
     let binSrc = src.replace(/\.(png|jpe?g|bmp|gif|tiff?|webp)$/i, '.bin');
-    // Strip assets/ prefix
     binSrc = binSrc.replace(/^assets\//, '');
-    // Ensure path starts with /
     if (!binSrc.startsWith('/')) {
       binSrc = '/' + binSrc;
     }

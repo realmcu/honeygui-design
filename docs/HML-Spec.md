@@ -168,7 +168,7 @@ All components support these base attributes:
 | Category | Tags |
 |----------|------|
 | **Containers** | `hg_view`, `hg_window`,  `hg_list`, `hg_list_item`, `hg_menu_cellular` |
-| **Basic** |  `hg_label`, `hg_time_label`, `hg_image` |
+| **Basic** |  `hg_button`, `hg_label`, `hg_time_label`, `hg_image` |
 | **Graphics** | `hg_arc`, `hg_circle`, `hg_rect`|
 | **Mini-App** | `hg_openclaw`, `hg_claw_face` |
 
@@ -296,6 +296,59 @@ A hexagonal scrolling menu.
 ---
 
 ## 7. Basic Controls
+
+### 7.1 `hg_button` — Button
+
+Image-based button with two modes: **Normal** (momentary press) and **Toggle** (latching switch).
+Both modes use `gui_img` at runtime since the HoneyGUI SDK has no native button widget.
+
+#### Common Attributes
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `toggleMode` | boolean | `false` | `false` = Normal mode, `true` = Toggle mode |
+| `imageOn` | string | — | Normal: pressed/highlight image; Toggle: ON state image |
+| `imageOff` | string | — | Normal: default image; Toggle: OFF state image |
+| `enabled` | boolean | `true` | Enable/disable user interaction |
+
+#### Normal Mode Attributes (toggleMode=false)
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `clickCallback` | string | `""` | C function called on release (click) |
+
+**Behavior**: Press → show `imageOn`; Release → show `imageOff` + call `clickCallback`.
+
+**Generated C events**: `GUI_EVENT_TOUCH_PRESSED` + `GUI_EVENT_TOUCH_RELEASED`.
+
+#### Toggle Mode Attributes (toggleMode=true)
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `initialState` | `"on"` \| `"off"` | `"off"` | Initial toggle state |
+| `onCallback` | string | `""` | C function called when entering ON state |
+| `offCallback` | string | `""` | C function called when entering OFF state |
+
+**Behavior**: Click → toggle state permanently; show `imageOn`/`imageOff` accordingly.
+
+**Generated C events**: `GUI_EVENT_TOUCH_CLICKED`.
+
+**State management functions**: `bool {id}_get_state(void)`, `void {id}_set_state(bool state)`.
+
+#### Examples
+
+```xml
+<!-- Normal button: press highlight, release restore -->
+<hg_button id="btn_ok" x="100" y="200" width="120" height="48"
+  imageOn="assets/btn_ok_pressed.png" imageOff="assets/btn_ok_default.png"
+  clickCallback="on_btn_ok_click" />
+
+<!-- Toggle button: click to switch on/off -->
+<hg_button id="btn_power" x="100" y="200" width="80" height="80"
+  toggleMode="true" initialState="off"
+  imageOn="assets/power_on.png" imageOff="assets/power_off.png"
+  onCallback="power_on_handler" offCallback="power_off_handler" />
+```
 
 
 
@@ -600,6 +653,7 @@ Multiple actions per event and multiple events per component are supported:
 | Component | Supported Events |
 |-----------|-----------------|
 | `hg_view` | All (click, longPress, touch, key, swipe, lifecycle, message) |
+| `hg_button` | click (Normal: via press/release; Toggle: via clicked) |
 | `hg_label` | click, longPress, message |
 | `hg_image` | click, longPress, touchDown, touchUp, key, message |
 
@@ -717,6 +771,7 @@ The designer generates C source code from HML. Here is the component-to-API mapp
 |---------|-------------------|--------|
 | `hg_view` | `GUI_VIEW_INSTANCE` macro | `gui_view.h` |
 | `hg_window` | `gui_win_create` | `gui_win.h` |
+| `hg_button` | `gui_img_create_from_fs` (image-based) | `gui_img.h` |
 | `hg_label` | `gui_text_create` / `gui_scroll_text_create` | `gui_text.h` |
 | `hg_image` | `gui_img_create_from_fs` | `gui_img.h` |
 | `hg_arc` | `gui_arc_create` | `gui_arc.h` |

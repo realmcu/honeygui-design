@@ -4,35 +4,51 @@ import { useWebviewUri } from '../../hooks/useWebviewUri';
 import { useDesignerStore } from '../../store';
 
 export const ButtonWidget: React.FC<WidgetProps> = ({ component, style, handlers }) => {
-  // 检查是否是双态模式
   const toggleMode = component.data?.toggleMode === true;
   const [isOn, setIsOn] = React.useState(component.data?.initialState === 'on');
+  const [isPressed, setIsPressed] = React.useState(false);
   const updateComponent = useDesignerStore(s => s.updateComponent);
 
-  // 当 initialState 属性变化时同步状态
   React.useEffect(() => {
     setIsOn(component.data?.initialState === 'on');
   }, [component.data?.initialState]);
 
-  // 双态模式：根据状态选择图片
   const imageOn = component.data?.imageOn || '';
   const imageOff = component.data?.imageOff || '';
-  const currentImage = isOn ? imageOn : imageOff;
 
-  // 如果没有设置当前状态的图片，尝试使用另一个状态的图片
-  const displayImage = currentImage || (isOn ? imageOff : imageOn);
-  const webviewUri = useWebviewUri(toggleMode ? displayImage : '');
+  // Toggle 模式：根据开关状态选图；Normal 模式：根据按下状态选图
+  const currentImage = toggleMode
+    ? (isOn ? imageOn : imageOff)
+    : (isPressed ? imageOn : imageOff);
 
-  // 双态模式的点击处理
+  const displayImage = currentImage || (toggleMode ? (isOn ? imageOff : imageOn) : (isPressed ? imageOff : imageOn));
+  const hasImages = !!(imageOn || imageOff);
+  const webviewUri = useWebviewUri(hasImages ? displayImage : '');
+
   const handleMouseDown = (e: React.MouseEvent) => {
     if (toggleMode) {
       setIsOn(!isOn);
+    } else if (hasImages) {
+      setIsPressed(true);
     }
-    // 调用原有的 handlers
     handlers.onMouseDown(e);
   };
 
-  // 图片加载后，将组件尺寸同步为原图大小
+  const handleMouseUp = () => {
+    if (!toggleMode && hasImages) {
+      setIsPressed(false);
+    }
+  };
+
+  React.useEffect(() => {
+    if (!toggleMode && isPressed) {
+      const handleGlobalUp = () => setIsPressed(false);
+      window.addEventListener('mouseup', handleGlobalUp);
+      return () => window.removeEventListener('mouseup', handleGlobalUp);
+    }
+    return undefined;
+  }, [toggleMode, isPressed]);
+
   const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
     const naturalW = img.naturalWidth;
@@ -46,14 +62,24 @@ export const ButtonWidget: React.FC<WidgetProps> = ({ component, style, handlers
     }
   };
 
-  if (toggleMode) {
+  const placeholderIcon = toggleMode ? '🔄' : '🔘';
+  const placeholderText = toggleMode
+    ? `双态按钮 (当前: ${isOn ? '开启' : '关闭'})`
+    : '按钮';
+  const titleText = toggleMode
+    ? `双态按钮 (当前: ${isOn ? '开启' : '关闭'})`
+    : `按钮${isPressed ? ' (按下)' : ''}`;
+
+  // 图片模式渲染（Toggle 和 Normal 共用）
+  if (hasImages) {
     return (
       <div
         key={component.id}
         style={{ ...style, overflow: 'hidden', cursor: 'pointer' }}
         {...handlers}
         onMouseDown={handleMouseDown}
-        title={`双态按钮 (当前: ${isOn ? '开启' : '关闭'})`}
+        onMouseUp={handleMouseUp}
+        title={titleText}
       >
         {webviewUri ? (
           <img
@@ -78,15 +104,15 @@ export const ButtonWidget: React.FC<WidgetProps> = ({ component, style, handlers
             gap: '4px',
             boxSizing: 'border-box'
           }}>
-            <span style={{ fontSize: '24px' }}>🔄</span>
-            <span>双态按钮</span>
+            <span style={{ fontSize: '24px' }}>{placeholderIcon}</span>
+            <span>{placeholderText}</span>
           </div>
         )}
       </div>
     );
   }
 
-  // 普通模式：显示文本按钮
+  // 无图片的文本按钮（Normal 模式且未配图片时的 fallback）
   return (
     <button
       key={component.id}
