@@ -16,6 +16,19 @@ import { buildSConstruct } from './SConstructTemplate';
 import { ProjectUtils } from '../utils/ProjectUtils';
 
 /**
+ * romfs 打包前需要清理的文件规则
+ * 这些文件由各转换工具生成，但不是运行时必需的，不应打包到 romfs 中
+ * 
+ * 支持两种格式：
+ * - 扩展名匹配：以 '*' 开头，如 '*.cst'
+ * - 精确文件名匹配：如 'NotSupportedChars.txt'
+ */
+const ROMFS_CLEANUP_PATTERNS: string[] = [
+    '*.cst',                    // 字体转换工具生成的字符集文件，仅供客户后续复用
+    'NotSupportedChars.txt',    // 字体转换工具生成的不支持字符列表
+];
+
+/**
  * 日志接口
  */
 export interface Logger {
@@ -318,8 +331,50 @@ Return('objs')
             this.logger.log('project.json 已拷贝到 assets');
         }
 
+        // 清理非运行时文件（规则见 ROMFS_CLEANUP_PATTERNS）
+        this.cleanupNonRuntimeFiles(outputDir);
+
         // 打包 romfs
         await this.packRomfs();
+    }
+
+    /**
+     * 根据 ROMFS_CLEANUP_PATTERNS 清理输出目录中不需要打包的文件
+     */
+    private cleanupNonRuntimeFiles(dir: string): void {
+        if (!fs.existsSync(dir)) { return; }
+        let count = 0;
+        const walk = (d: string) => {
+            for (const entry of fs.readdirSync(d, { withFileTypes: true })) {
+                const fullPath = path.join(d, entry.name);
+                if (entry.isDirectory()) {
+                    walk(fullPath);
+                } else if (entry.isFile() && this.matchCleanupPattern(entry.name)) {
+                    fs.unlinkSync(fullPath);
+                    count++;
+                }
+            }
+        };
+        walk(dir);
+        if (count > 0) {
+            this.logger.log(`已清理 ${count} 个非运行时文件`);
+        }
+    }
+
+    /**
+     * 检查文件名是否匹配清理规则
+     */
+    private matchCleanupPattern(fileName: string): boolean {
+        for (const pattern of ROMFS_CLEANUP_PATTERNS) {
+            if (pattern.startsWith('*.')) {
+                // 扩展名匹配
+                if (fileName.endsWith(pattern.substring(1))) { return true; }
+            } else {
+                // 精确文件名匹配
+                if (fileName === pattern) { return true; }
+            }
+        }
+        return false;
     }
 
     private async packRomfs(): Promise<void> {
