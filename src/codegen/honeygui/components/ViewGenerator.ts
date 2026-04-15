@@ -45,15 +45,23 @@ export class ViewGenerator implements ComponentCodeGenerator {
     // Generate switch_in callback
     code += `${indentStr}static void ${name}_switch_in(gui_view_t *view)\n`;
     code += `${indentStr}{\n`;
-    
+
     // Set animation step (always set, using default or user-configured value)
     code += `${indentStr}    // Set animation step\n`;
     code += `${indentStr}    gui_view_set_animate_step(view, ${animateStep});\n`;
     code += '\n';
-    
+
     // Set opacity
     code += `${indentStr}    // Set opacity\n`;
     code += `${indentStr}    gui_view_set_opacity(view, ${opacity});\n`;
+
+    // Set background color if specified
+    const bgColor = component.style?.backgroundColor;
+    if (bgColor) {
+      code += '\n';
+      code += `${indentStr}    // Set background color\n`;
+      code += `${indentStr}    gui_set_bg_color(${this.convertColor(bgColor)});\n`;
+    }
     
     // Generate timer binding code for hg_view (placed after setter calls)
     const viewTimerBindings = this.generateViewTimerBindings(component, indent + 1);
@@ -352,5 +360,22 @@ export class ViewGenerator implements ComponentCodeGenerator {
     });
 
     return code;
+  }
+
+  /**
+   * Convert color value to gui_rgb() format
+   */
+  private convertColor(color?: string): string {
+    if (!color) return 'APP_COLOR_WHITE';
+
+    if (color.startsWith('#')) {
+      const hex = color.substring(1);
+      const r = parseInt(hex.substring(0, 2), 16);
+      const g = parseInt(hex.substring(2, 4), 16);
+      const b = parseInt(hex.substring(4, 6), 16);
+      return `gui_rgb(${r}, ${g}, ${b})`;
+    }
+
+    return color;
   }
 }
