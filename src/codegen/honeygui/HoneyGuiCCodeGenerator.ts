@@ -600,9 +600,17 @@ export class HoneyGuiCCodeGenerator implements ICodeGenerator {
       const arcGroups = ArcGenerator.collectArcGroups(childComponents);
       const processedGroups = new Set<string>();
       
-      // Use children array order directly without additional sorting
-      // Earlier components in the tree are created first (bottom layer), later ones on top
-      component.children.forEach(childId => {
+      // Sort children by zIndex ascending (lower zIndex created first = bottom layer)
+      // For same zIndex, maintain children array original order
+      const sortedChildIds = [...component.children].sort((a, b) => {
+        const compA = this.componentMap.get(a);
+        const compB = this.componentMap.get(b);
+        const zIndexA = compA?.zIndex ?? 0;
+        const zIndexB = compB?.zIndex ?? 0;
+        return zIndexA - zIndexB;  // Ascending: lower zIndex created first = bottom layer
+      });
+      
+      sortedChildIds.forEach(childId => {
         const child = this.componentMap.get(childId);
         if (child) {
           // Check if this is an arc group member
