@@ -76,7 +76,7 @@ export class CodeGenerator {
             try {
                 // 从 HML 文件中查找 entry view 的 ID
                 const entryViewId = await this.findEntryViewId(hmlFiles);
-                const entryFile = EntryFileGenerator.generate(srcDir, config.name || 'HoneyGUI', entryViewId);
+                const entryFile = EntryFileGenerator.generate(srcDir, config.name || 'HoneyGUI', entryViewId, config.romfsBaseAddr);
                 logger.info(`入口文件: ${path.basename(entryFile)}`);
             } catch (error) {
                 logger.error(`生成入口文件失败: ${error}`);
