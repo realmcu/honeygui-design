@@ -828,6 +828,10 @@ const zhCN = {
   'Touch': '触摸',
   'Particle Control': '粒子控制',
   'Restart Effect': '重新开始',
+  'Pause preview': '暂停预览',
+  'Play preview': '播放预览',
+  'Pause': '暂停',
+  'Play': '播放',
   'Interactive Preview': '交互预览',
   'Enable to use mouse interaction on particle. Alt+Click also works as shortcut.': '开启后可用鼠标在粒子上交互。也可用 Alt+点击 作为快捷方式。',
   // 'Custom' 已在 EventsPanel 部分定义为 '自定义'

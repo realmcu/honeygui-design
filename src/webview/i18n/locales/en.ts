@@ -828,6 +828,10 @@ const en = {
   'Touch': 'Touch',
   'Particle Control': 'Particle Control',
   'Restart Effect': 'Restart Effect',
+  'Pause preview': 'Pause preview',
+  'Play preview': 'Play preview',
+  'Pause': 'Pause',
+  'Play': 'Play',
   'Interactive Preview': 'Interactive Preview',
   'Enable to use mouse interaction on particle. Alt+Click also works as shortcut.': 'Enable to use mouse interaction on particle. Alt+Click also works as shortcut.',
   // 'Custom' already exists in EventsPanel section

@@ -566,6 +566,7 @@ export const ParticleWidget: React.FC<WidgetProps> = ({ component, style, handle
   const mousePosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const emitAccumRef = useRef<number>(0);
   const restartFlagRef = useRef<number>(0);  // 递增触发 restart
+  const isPlayingRef = useRef<boolean>(true);  // 预览播放状态
 
   const width = component.position?.width ?? 200;
   const height = component.position?.height ?? 200;
@@ -638,6 +639,10 @@ export const ParticleWidget: React.FC<WidgetProps> = ({ component, style, handle
       if (detail.componentId !== component.id) return;
       if (detail.action === 'restart') {
         restartFlagRef.current++;
+      } else if (detail.action === 'pause') {
+        isPlayingRef.current = false;
+      } else if (detail.action === 'play') {
+        isPlayingRef.current = true;
       }
     };
     window.addEventListener('particleControl', handleControl);
@@ -825,12 +830,21 @@ export const ParticleWidget: React.FC<WidgetProps> = ({ component, style, handle
     const emitRate = isInteractive ? 2 : 0;
 
     const draw = (timestamp: number) => {
+      let forceRender = false;
+
       // 检查 restart
       if (restartFlagRef.current !== lastRestartRef.current) {
         lastRestartRef.current = restartFlagRef.current;
         frameCountRef.current = 0;
         burstTimerRef.current = 0;
         initParticles(config, width, height);
+        forceRender = true;
+      }
+
+      // 暂停时仅维持 rAF 循环，不更新粒子（restart 后强制渲染一帧）
+      if (!isPlayingRef.current && !forceRender) {
+        animFrameRef.current = requestAnimationFrame(draw);
+        return;
       }
 
       const elapsed = timestamp - lastFrameTimeRef.current;
