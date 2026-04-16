@@ -343,7 +343,7 @@ const ComponentTreeNode: React.FC<ComponentTreeNodeProps> = ({ componentId, leve
     }
   };
 
-  const isSelected = selectedComponent === componentId;
+  const isSelected = selectedComponent === componentId || selectedComponents.includes(componentId);
 
   // 获取组件图标
   const getComponentIcon = () => {
