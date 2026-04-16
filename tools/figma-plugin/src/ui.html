@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Export to HML</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        font-size: 12px;
+        color: #333;
+        background: #fff;
+        padding: 16px;
+    }
+    h2 { font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #1a1a1a; }
+    h3 { font-size: 13px; font-weight: 600; margin-bottom: 8px; color: #444; }
+
+    .section { margin-bottom: 16px; }
+
+    label {
+        display: block;
+        font-size: 11px;
+        font-weight: 500;
+        color: #666;
+        margin-bottom: 4px;
+    }
+
+    input[type="text"], select {
+        width: 100%;
+        height: 32px;
+        padding: 0 8px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 12px;
+        background: #fafafa;
+        outline: none;
+        transition: border-color 0.15s;
+    }
+    input:focus, select:focus { border-color: #0d99ff; }
+
+    .row { display: flex; gap: 8px; margin-bottom: 8px; }
+    .row > .col { flex: 1; }
+
+    .frame-list {
+        max-height: 120px;
+        overflow-y: auto;
+        border: 1px solid #eee;
+        border-radius: 6px;
+        padding: 4px;
+        margin-bottom: 8px;
+    }
+    .frame-item {
+        display: flex;
+        align-items: center;
+        padding: 4px 6px;
+        border-radius: 4px;
+        cursor: pointer;
+        user-select: none;
+    }
+    .frame-item:hover { background: #f0f7ff; }
+    .frame-item input { margin-right: 8px; }
+    .frame-item .name { flex: 1; font-size: 12px; }
+    .frame-item .size { color: #999; font-size: 11px; }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 36px;
+        padding: 0 16px;
+        border: none;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+    .btn-primary {
+        background: #0d99ff;
+        color: #fff;
+        width: 100%;
+    }
+    .btn-primary:hover { background: #0b85e0; }
+    .btn-primary:disabled { background: #ccc; cursor: default; }
+
+    .btn-cancel {
+        background: #f0f0f0;
+        color: #666;
+    }
+    .btn-cancel:hover { background: #e5e5e5; }
+
+    .progress-bar {
+        width: 100%;
+        height: 6px;
+        background: #eee;
+        border-radius: 3px;
+        overflow: hidden;
+        margin: 8px 0;
+    }
+    .progress-bar .fill {
+        height: 100%;
+        background: #0d99ff;
+        border-radius: 3px;
+        transition: width 0.3s;
+    }
+
+    .status { font-size: 12px; color: #666; margin-top: 4px; }
+    .status.error { color: #e74c3c; }
+    .status.success { color: #27ae60; }
+
+    .stats {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 12px;
+        margin-top: 12px;
+    }
+    .stats-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 2px 0;
+        font-size: 12px;
+    }
+    .stats-row .label { color: #888; }
+    .stats-row .value { font-weight: 600; }
+
+    .toggle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 6px 0;
+    }
+    .toggle-label { font-size: 12px; }
+
+    .divider { height: 1px; background: #eee; margin: 12px 0; }
+
+    .loading-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(255, 255, 255, 0.92);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 50;
+        transition: opacity 0.2s ease;
+    }
+    .loading-overlay.hidden {
+        opacity: 0;
+        pointer-events: none;
+    }
+    .loading-card {
+        min-width: 220px;
+        padding: 18px 20px;
+        background: #fff;
+        border: 1px solid #e7e7e7;
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        text-align: center;
+    }
+    .spinner {
+        width: 28px;
+        height: 28px;
+        margin: 0 auto 10px;
+        border: 3px solid #d9ecff;
+        border-top-color: #0d99ff;
+        border-radius: 50%;
+        animation: spin 0.85s linear infinite;
+    }
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    .loading-text {
+        font-size: 12px;
+        color: #444;
+        font-weight: 500;
+    }
+    .frame-placeholder {
+        padding: 12px 8px;
+        color: #888;
+        text-align: center;
+        font-size: 12px;
+    }
+    .download-tip {
+        margin-top: 10px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        display: none;
+    }
+    .download-tip.info {
+        display: block;
+        color: #0b5fb3;
+        background: #edf6ff;
+        border: 1px solid #d2e8ff;
+    }
+    .download-tip.success {
+        display: block;
+        color: #1d7d3f;
+        background: #edf9f0;
+        border: 1px solid #cfead8;
+    }
+    .download-tip.error {
+        display: block;
+        color: #b33a2a;
+        background: #fff2ef;
+        border: 1px solid #ffd7cf;
+    }
+    .download-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(255, 255, 255, 0.88);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 60;
+        opacity: 1;
+        transition: opacity 0.2s ease;
+    }
+    .download-overlay.hidden {
+        opacity: 0;
+        pointer-events: none;
+    }
+    .download-card {
+        min-width: 240px;
+        padding: 20px 22px;
+        background: #fff;
+        border: 1px solid #e5eef8;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        text-align: center;
+    }
+    .toast {
+        position: fixed;
+        right: 16px;
+        bottom: 16px;
+        max-width: 280px;
+        padding: 12px 14px;
+        border-radius: 10px;
+        font-size: 12px;
+        line-height: 1.5;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+        z-index: 70;
+        opacity: 0;
+        transform: translateY(10px);
+        pointer-events: none;
+        transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+    .toast.show {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    .toast.success {
+        color: #1d7d3f;
+        background: #edf9f0;
+        border: 1px solid #cfead8;
+    }
+    .toast.error {
+        color: #b33a2a;
+        background: #fff2ef;
+        border: 1px solid #ffd7cf;
+    }
+
+    #view-setup { display: block; }
+    #view-progress { display: none; }
+    #view-done { display: none; }
+</style>
+</head>
+<body>
+
+<div id="loading-overlay" class="loading-overlay">
+    <div class="loading-card">
+        <div class="spinner"></div>
+        <div id="loading-text" class="loading-text">Loading pages...</div>
+    </div>
+</div>
+
+<div id="download-overlay" class="download-overlay hidden">
+    <div class="download-card">
+        <div class="spinner"></div>
+        <div id="download-overlay-text" class="loading-text">Preparing ZIP...</div>
+    </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<!-- ========== 设置界面 ========== -->
+<div id="view-setup">
+    <h2>🎨 Export to HML</h2>
+
+    <div class="section">
+        <label>Project Name</label>
+        <input type="text" id="inp-name" value="" placeholder="MyProject" />
+    </div>
+
+    <div class="section">
+        <label>Page</label>
+        <select id="sel-page">
+            <option value="">Loading...</option>
+        </select>
+    </div>
+
+    <div class="section">
+        <h3>Frames (select which to export)</h3>
+        <div id="frame-list" class="frame-list">
+            <div style="color:#999;padding:8px;">Select a page first</div>
+        </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section">
+        <div class="row">
+            <div class="col">
+                <label>Resolution</label>
+                <input type="text" id="inp-resolution" value="454x454" />
+            </div>
+            <div class="col">
+                <label>Pixel Mode</label>
+                <select id="sel-pixelmode">
+                    <option value="RGB565" selected>RGB565</option>
+                    <option value="ARGB8888">ARGB8888</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col">
+                <label>Image Format</label>
+                <select id="sel-imgfmt">
+                    <option value="PNG" selected>PNG</option>
+                    <option value="JPG">JPG</option>
+                </select>
+            </div>
+            <div class="col">
+                <label>Image Scale</label>
+                <select id="sel-imgscale">
+                    <option value="0.5">0.5x</option>
+                    <option value="1" selected>1x</option>
+                    <option value="2">2x</option>
+                    <option value="3">3x</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col">
+                <label>Default Font File</label>
+                <input type="text" id="inp-font" value="NotoSansSC-Bold.ttf" />
+            </div>
+        </div>
+
+        <div class="toggle-row">
+            <span class="toggle-label">Export image assets</span>
+            <input type="checkbox" id="chk-images" checked />
+        </div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:12px;">
+        <button class="btn btn-cancel" onclick="cancel()" style="width:80px;">Cancel</button>
+        <button class="btn btn-primary" id="btn-export" onclick="startExport()">Export to HML</button>
+    </div>
+</div>
+
+<!-- ========== 进度界面 ========== -->
+<div id="view-progress">
+    <h2>⏳ Exporting...</h2>
+    <div class="progress-bar"><div class="fill" id="progress-fill" style="width:0%"></div></div>
+    <div class="status" id="progress-status">Preparing...</div>
+</div>
+
+<!-- ========== 完成界面 ========== -->
+<div id="view-done">
+    <h2>✅ Export Complete</h2>
+    <div id="done-stats" class="stats"></div>
+    <div id="done-warnings" style="margin-top:8px;"></div>
+    <div id="download-tip" class="download-tip"></div>
+    <div style="display:flex;gap:8px;margin-top:16px;">
+        <button class="btn btn-cancel" onclick="cancel()" style="width:80px;">Close</button>
+        <button class="btn btn-primary" id="btn-download" onclick="downloadZip()">Download ZIP</button>
+    </div>
+</div>
+
+<!-- ========== JSZip 库 (内联精简版) ========== -->
+<script>
+/**
+ * 极简 ZIP 生成器 (无压缩，纯 STORE 模式)
+ * 适合 Figma Plugin 沙箱环境，不依赖外部库
+ */
+class SimpleZip {
+    constructor() { this.files = []; }
+
+    addFile(name, data) {
+        // data 可以是 string 或 Uint8Array
+        if (typeof data === 'string') {
+            data = new TextEncoder().encode(data);
+        }
+        this.files.push({ name, data });
+    }
+
+    generate() {
+        const localHeaders = [];
+        const centralHeaders = [];
+        let offset = 0;
+
+        for (const file of this.files) {
+            const nameBytes = new TextEncoder().encode(file.name);
+            const crc = this._crc32(file.data);
+            const size = file.data.length;
+
+            // Local file header
+            const local = new Uint8Array(30 + nameBytes.length + size);
+            const lv = new DataView(local.buffer);
+            lv.setUint32(0, 0x04034b50, true);  // signature
+            lv.setUint16(4, 20, true);           // version needed
+            lv.setUint16(6, 0, true);            // flags
+            lv.setUint16(8, 0, true);            // compression (STORE)
+            lv.setUint16(10, 0, true);           // mod time
+            lv.setUint16(12, 0, true);           // mod date
+            lv.setUint32(14, crc, true);         // crc32
+            lv.setUint32(18, size, true);        // compressed size
+            lv.setUint32(22, size, true);        // uncompressed size
+            lv.setUint16(26, nameBytes.length, true);
+            lv.setUint16(28, 0, true);           // extra length
+            local.set(nameBytes, 30);
+            local.set(file.data, 30 + nameBytes.length);
+            localHeaders.push(local);
+
+            // Central directory header
+            const central = new Uint8Array(46 + nameBytes.length);
+            const cv = new DataView(central.buffer);
+            cv.setUint32(0, 0x02014b50, true);
+            cv.setUint16(4, 20, true);
+            cv.setUint16(6, 20, true);
+            cv.setUint16(8, 0, true);
+            cv.setUint16(10, 0, true);
+            cv.setUint16(12, 0, true);
+            cv.setUint16(14, 0, true);
+            cv.setUint32(16, crc, true);
+            cv.setUint32(20, size, true);
+            cv.setUint32(24, size, true);
+            cv.setUint16(28, nameBytes.length, true);
+            cv.setUint16(30, 0, true);
+            cv.setUint16(32, 0, true);
+            cv.setUint16(34, 0, true);
+            cv.setUint16(36, 0, true);
+            cv.setUint32(38, 0x20, true);
+            cv.setUint32(42, offset, true);
+            central.set(nameBytes, 46);
+            centralHeaders.push(central);
+
+            offset += local.length;
+        }
+
+        // End of central directory
+        const centralSize = centralHeaders.reduce((s, c) => s + c.length, 0);
+        const eocd = new Uint8Array(22);
+        const ev = new DataView(eocd.buffer);
+        ev.setUint32(0, 0x06054b50, true);
+        ev.setUint16(4, 0, true);
+        ev.setUint16(6, 0, true);
+        ev.setUint16(8, this.files.length, true);
+        ev.setUint16(10, this.files.length, true);
+        ev.setUint32(12, centralSize, true);
+        ev.setUint32(16, offset, true);
+        ev.setUint16(20, 0, true);
+
+        // Concatenate
+        const totalSize = offset + centralSize + 22;
+        const result = new Uint8Array(totalSize);
+        let pos = 0;
+        for (const lh of localHeaders) { result.set(lh, pos); pos += lh.length; }
+        for (const ch of centralHeaders) { result.set(ch, pos); pos += ch.length; }
+        result.set(eocd, pos);
+
+        return result;
+    }
+
+    _crc32(data) {
+        if (!SimpleZip._table) {
+            const t = new Uint32Array(256);
+            for (let i = 0; i < 256; i++) {
+                let c = i;
+                for (let j = 0; j < 8; j++) {
+                    c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+                }
+                t[i] = c;
+            }
+            SimpleZip._table = t;
+        }
+        let crc = 0xFFFFFFFF;
+        for (let i = 0; i < data.length; i++) {
+            crc = SimpleZip._table[(crc ^ data[i]) & 0xFF] ^ (crc >>> 8);
+        }
+        return (crc ^ 0xFFFFFFFF) >>> 0;
+    }
+}
+SimpleZip._table = null;
+</script>
+
+<script>
+    // ==================== 状态 ====================
+    let pages = [];
+    let frames = [];
+    let fileName = 'Project';
+    let exportResult = null;  // 保存导出结果供下载
+    let pageChangeHandlerBound = false;
+    let isDownloading = false;
+    let toastTimer = null;
+
+    // ==================== 初始化 ====================
+    setOverlayLoading(true, 'Loading pages...');
+    parent.postMessage({ pluginMessage: { type: 'get-pages' } }, '*');
+
+    // ==================== UI 函数 ====================
+    function showView(name) {
+        document.getElementById('view-setup').style.display = name === 'setup' ? 'block' : 'none';
+        document.getElementById('view-progress').style.display = name === 'progress' ? 'block' : 'none';
+        document.getElementById('view-done').style.display = name === 'done' ? 'block' : 'none';
+    }
+
+    function cancel() {
+        parent.postMessage({ pluginMessage: { type: 'cancel' } }, '*');
+    }
+
+    function setOverlayLoading(visible, text) {
+        const overlay = document.getElementById('loading-overlay');
+        const loadingText = document.getElementById('loading-text');
+        loadingText.textContent = text || 'Loading...';
+        overlay.classList.toggle('hidden', !visible);
+    }
+
+    function setFrameListLoading(text) {
+        const container = document.getElementById('frame-list');
+        container.innerHTML = `
+            <div class="frame-placeholder">
+                <div class="spinner" style="width:22px;height:22px;margin-bottom:8px;"></div>
+                ${text || 'Loading frames...'}
+            </div>
+        `;
+    }
+
+    function setDownloadTip(message, type) {
+        const el = document.getElementById('download-tip');
+        if (!message) {
+            el.className = 'download-tip';
+            el.textContent = '';
+            return;
+        }
+        el.className = `download-tip ${type || 'info'}`;
+        el.textContent = message;
+    }
+
+    function setDownloadOverlay(visible, text) {
+        const overlay = document.getElementById('download-overlay');
+        const label = document.getElementById('download-overlay-text');
+        label.textContent = text || 'Preparing ZIP...';
+        overlay.classList.toggle('hidden', !visible);
+    }
+
+    function showToast(message, type) {
+        const toast = document.getElementById('toast');
+        if (toastTimer) {
+            clearTimeout(toastTimer);
+        }
+        toast.className = `toast ${type || 'success'} show`;
+        toast.textContent = message;
+        toastTimer = setTimeout(() => {
+            toast.className = 'toast';
+            toast.textContent = '';
+        }, 2800);
+    }
+
+    function setDownloadState(state) {
+        const btn = document.getElementById('btn-download');
+        if (state === 'idle') {
+            isDownloading = false;
+            btn.disabled = false;
+            btn.textContent = 'Download ZIP';
+            setDownloadOverlay(false, '');
+            setDownloadTip('', '');
+            return;
+        }
+        if (state === 'processing') {
+            isDownloading = true;
+            btn.disabled = true;
+            btn.textContent = 'Preparing ZIP...';
+            setDownloadOverlay(true, 'Preparing ZIP...');
+            setDownloadTip('正在准备压缩包，请稍候…', 'info');
+            return;
+        }
+        if (state === 'done') {
+            isDownloading = false;
+            btn.disabled = false;
+            btn.textContent = 'Download Again';
+            setDownloadOverlay(false, '');
+            setDownloadTip('压缩包已开始下载。如浏览器拦截，请允许下载后重试。', 'success');
+            return;
+        }
+        if (state === 'error') {
+            isDownloading = false;
+            btn.disabled = false;
+            btn.textContent = 'Download ZIP';
+            setDownloadOverlay(false, '');
+            setDownloadTip('压缩包生成失败，请重试。', 'error');
+        }
+    }
+
+    function wait(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    function updateFrameList() {
+        const container = document.getElementById('frame-list');
+        if (frames.length === 0) {
+            container.innerHTML = '<div style="color:#999;padding:8px;">No frames found on this page</div>';
+            return;
+        }
+        container.innerHTML = frames.map((f, i) => `
+            <label class="frame-item">
+                <input type="checkbox" value="${f.id}" checked />
+                <span class="name">${f.name}</span>
+                <span class="size">${f.width}×${f.height}</span>
+            </label>
+        `).join('');
+    }
+
+    function getSelectedFrameIds() {
+        const checkboxes = document.querySelectorAll('#frame-list input[type=checkbox]:checked');
+        return Array.from(checkboxes).map(cb => cb.value);
+    }
+
+    // ==================== 导出 ====================
+    function startExport() {
+        const selectedFrames = getSelectedFrameIds();
+        if (selectedFrames.length === 0) {
+            alert('Please select at least one frame');
+            return;
+        }
+
+        showView('progress');
+
+        const msg = {
+            type: 'export',
+            pageId: document.getElementById('sel-page').value,
+            frameIds: selectedFrames,
+            projectName: document.getElementById('inp-name').value || 'MyProject',
+            resolution: document.getElementById('inp-resolution').value || '454x454',
+            pixelMode: document.getElementById('sel-pixelmode').value,
+            imageFormat: document.getElementById('sel-imgfmt').value,
+            imageScale: parseFloat(document.getElementById('sel-imgscale').value),
+            defaultFont: document.getElementById('inp-font').value || 'NotoSansSC-Bold.ttf',
+            exportImages: document.getElementById('chk-images').checked,
+        };
+
+        parent.postMessage({ pluginMessage: msg }, '*');
+    }
+
+    // ==================== ZIP 下载 ====================
+    async function downloadZip() {
+        if (!exportResult || isDownloading) return;
+
+        const startTime = Date.now();
+        setDownloadState('processing');
+
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        await wait(220);
+
+        try {
+            const zip = new SimpleZip();
+            const projName = exportResult.projectName || 'project';
+            const mainHmlFile = exportResult.mainHmlFile || `ui/${projName}.hml`;
+
+            // HML 文件
+            zip.addFile(`${projName}/${mainHmlFile}`, exportResult.hmlContent);
+
+            // project.json
+            zip.addFile(`${projName}/project.json`, exportResult.projectJson);
+
+            // 图片资源
+            if (exportResult.imageDataMap) {
+                for (const [fileName, dataArray] of Object.entries(exportResult.imageDataMap)) {
+                    const data = new Uint8Array(dataArray);
+                    zip.addFile(`${projName}/assets/${fileName}`, data);
+                }
+            }
+
+            // 空的 src/user 目录 (用 .gitkeep 占位)
+            zip.addFile(`${projName}/src/user/.gitkeep`, '');
+
+            // 生成并下载
+            const blob = new Blob([zip.generate()], { type: 'application/zip' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${projName}.zip`;
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+            const elapsed = Date.now() - startTime;
+            if (elapsed < 700) {
+                await wait(700 - elapsed);
+            }
+
+            setDownloadState('done');
+            showToast('ZIP 下载已触发。', 'success');
+        } catch (error) {
+            console.error(error);
+            setDownloadState('error');
+            showToast('ZIP 生成失败，请重试。', 'error');
+        }
+    }
+
+    // ==================== 消息处理 ====================
+    window.onmessage = (event) => {
+        const msg = event.data.pluginMessage;
+        if (!msg) return;
+
+        switch (msg.type) {
+            case 'page-list':
+                pages = msg.pages;
+                fileName = msg.fileName || 'Project';
+                document.getElementById('inp-name').value = fileName.replace(/[^a-zA-Z0-9_-]/g, '_');
+
+                const sel = document.getElementById('sel-page');
+                sel.innerHTML = pages.map(p =>
+                    `<option value="${p.id}">${p.name} (${p.childCount} items)</option>`
+                ).join('');
+
+                if (pages.length > 0) {
+                    setOverlayLoading(true, 'Loading frames...');
+                    setFrameListLoading('Loading frames...');
+                    parent.postMessage({ pluginMessage: { type: 'get-frames', pageId: pages[0].id } }, '*');
+                } else {
+                    setOverlayLoading(false, '');
+                }
+
+                // page 切换时刷新 frame 列表
+                if (!pageChangeHandlerBound) {
+                    sel.addEventListener('change', () => {
+                        setOverlayLoading(true, 'Loading frames...');
+                        setFrameListLoading('Loading frames...');
+                        parent.postMessage({ pluginMessage: { type: 'get-frames', pageId: sel.value } }, '*');
+                    });
+                    pageChangeHandlerBound = true;
+                }
+                break;
+
+            case 'frame-list':
+                frames = msg.frames;
+                updateFrameList();
+                setOverlayLoading(false, '');
+
+                // 自动检测分辨率
+                if (frames.length > 0) {
+                    const f = frames[0];
+                    document.getElementById('inp-resolution').value = `${f.width}x${f.height}`;
+                }
+                break;
+
+            case 'export-progress':
+                const fill = document.getElementById('progress-fill');
+                const status = document.getElementById('progress-status');
+                fill.style.width = msg.progress + '%';
+                const stepNames = {
+                    'converting': 'Converting nodes...',
+                    'exporting-images': 'Exporting images...',
+                    'packaging': 'Packaging...',
+                };
+                status.textContent = (stepNames[msg.step] || msg.step) + (msg.detail ? ` (${msg.detail})` : '');
+                break;
+
+            case 'export-result': {
+                showView('done');
+                setDownloadState('idle');
+                document.getElementById('btn-download').style.display = 'inline-flex';
+
+                exportResult = {
+                    projectName: msg.projectName,
+                    hmlContent: msg.hmlContent,
+                    projectJson: msg.projectJson,
+                    mainHmlFile: msg.mainHmlFile,
+                    imageDataMap: msg.imageDataMap || {},
+                };
+
+                // 显示统计
+                const statsHtml = `
+                    <div class="stats-row"><span class="label">Views</span><span class="value">${msg.stats.viewCount}</span></div>
+                    <div class="stats-row"><span class="label">Components</span><span class="value">${msg.stats.nodeCount}</span></div>
+                    <div class="stats-row"><span class="label">Images</span><span class="value">${msg.stats.imageCount}</span></div>
+                `;
+                document.getElementById('done-stats').innerHTML = statsHtml;
+
+                // 显示警告
+                if (msg.warnings && msg.warnings.length > 0) {
+                    const warnHtml = `<details><summary style="cursor:pointer;color:#e67e22;">⚠ ${msg.warnings.length} warning(s)</summary>
+                        <ul style="font-size:11px;color:#888;margin-top:4px;">${msg.warnings.slice(0, 20).map(w => `<li>${w}</li>`).join('')}</ul>
+                    </details>`;
+                    document.getElementById('done-warnings').innerHTML = warnHtml;
+                } else {
+                    document.getElementById('done-warnings').innerHTML = '';
+                }
+                break;
+            }
+
+            case 'export-error':
+                showView('done');
+                setDownloadState('idle');
+                document.getElementById('done-stats').innerHTML =
+                    `<div class="status error">❌ Error: ${msg.message}</div>`;
+                document.getElementById('btn-download').style.display = 'none';
+                break;
+        }
+    };
+</script>
+</body>
+</html>

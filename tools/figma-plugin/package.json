@@ -1,0 +1,19 @@
+{
+  "name": "@honeygui/figma-plugin",
+  "version": "1.0.0",
+  "description": "Figma plugin: Export designs to HoneyGUI HML projects",
+  "scripts": {
+    "build": "npm run build:code && npm run build:ui",
+    "build:code": "esbuild src/code.ts --bundle --outfile=dist/code.js --target=es2020 --platform=neutral",
+    "build:ui": "node scripts/build-ui.js",
+    "watch": "concurrently \"npm run watch:code\" \"npm run watch:ui\"",
+    "watch:code": "esbuild src/code.ts --bundle --outfile=dist/code.js --target=es2020 --platform=neutral --watch",
+    "watch:ui": "node scripts/build-ui.js --watch"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.100.0",
+    "esbuild": "^0.20.0",
+    "concurrently": "^8.0.0",
+    "typescript": "^5.3.0"
+  }
+}
