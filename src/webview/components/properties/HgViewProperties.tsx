@@ -86,7 +86,7 @@ export const HgViewProperties: React.FC<PropertyPanelProps> = ({ component, onUp
             {/* View Specific Properties */}
             <div className="property-group">
               <div className="property-group-title">{t('View Properties')}</div>
-              <div className="property-item">
+              <div className="property-item" style={{ opacity: 0.4, pointerEvents: 'none' }} title="Coming soon">
                 <label>{t('Resident Memory')}</label>
                 <PropertyEditor
                   type="boolean"
