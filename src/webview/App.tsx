@@ -15,7 +15,7 @@ import { Component, ComponentType } from './types';
 import useKeyboardShortcuts from './utils/keyboardShortcuts';
 import { generateComponentId } from './utils/componentNaming';
 import { getAbsolutePosition, findComponentAtPosition, isDropTargetType, isContainerType } from './utils/componentUtils';
-import { createImageComponentAtPosition, create3DComponentAtPosition, createVideoComponentAtPosition, createSvgComponentAtPosition, createGlassComponentAtPosition, createLottieComponentAtPosition, createGifComponentAtPosition } from './services/messageHandler';
+import { createImageComponentAtPosition, create3DComponentAtPosition, createVideoComponentAtPosition, createSvgComponentAtPosition, createGlassComponentAtPosition, createLottieComponentAtPosition, createGifComponentAtPosition, createLabelComponentAtPosition } from './services/messageHandler';
 import { processImageFiles } from './utils/fileUtils';
 import { parseObjDependencies, parseMtlDependencies, findDependencyFiles } from './utils/objDependencyParser';
 import { clearUriCache } from './hooks/useWebviewUri';
@@ -1188,8 +1188,21 @@ const App: React.FC = () => {
         const isGlass = ext === 'glass';  // .glass 文件作为 SVG 处理
         const isLottie = ext && ['json', 'lottie'].includes(ext);
         const isGif = ext === 'gif';  // GIF 动画
+        const isFont = ext && ['ttf', 'otf', 'woff', 'woff2'].includes(ext);
         
-        if (is3DModel) {
+        if (isFont) {
+          // 字体文件：直接创建 Label 组件，fontFile 使用 VFS 路径格式
+          const fontFileName = assetPath.split('/').pop() || assetPath;
+          const store = useDesignerStore.getState();
+          const newId = createLabelComponentAtPosition(
+            `/${fontFileName}`,
+            { x, y },
+            targetContainer.id,
+            store.components,
+            store.addComponent
+          );
+          if (newId) store.selectComponent(newId);
+        } else if (is3DModel) {
           // 3D 模型：直接创建组件
           api.postMessage({
             command: 'create3DComponent',

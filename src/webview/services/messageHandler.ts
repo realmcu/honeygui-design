@@ -20,6 +20,21 @@ const getNextZIndex = (components: Component[], parentId: string): number => {
 };
 
 /**
+ * 计算组件相对于目标容器的整数坐标
+ */
+const getRelativePosition = (
+  dropPosition: { x: number; y: number },
+  targetContainer: Component,
+  components: Component[]
+): { x: number; y: number } => {
+  const targetAbsPos = getAbsolutePosition(targetContainer, components);
+  return {
+    x: Math.max(0, Math.round(dropPosition.x - targetAbsPos.x)),
+    y: Math.max(0, Math.round(dropPosition.y - targetAbsPos.y)),
+  };
+};
+
+/**
  * 创建图片组件的统一函数
  */
 export const createImageComponentAtPosition = (
@@ -33,9 +48,7 @@ export const createImageComponentAtPosition = (
   const targetContainer = components.find(c => c.id === targetContainerId);
   if (!targetContainer) return;
 
-  const targetAbsPos = getAbsolutePosition(targetContainer, components);
-  const relativeX = Math.max(0, dropPosition.x - targetAbsPos.x);
-  const relativeY = Math.max(0, dropPosition.y - targetAbsPos.y);
+  const { x: relativeX, y: relativeY } = getRelativePosition(dropPosition, targetContainer, components);
 
   const width = imageSize?.width || 100;
   const height = imageSize?.height || 100;
@@ -75,9 +88,7 @@ export const createGifComponentAtPosition = (
   const targetContainer = components.find(c => c.id === targetContainerId);
   if (!targetContainer) return;
 
-  const targetAbsPos = getAbsolutePosition(targetContainer, components);
-  const relativeX = Math.max(0, dropPosition.x - targetAbsPos.x);
-  const relativeY = Math.max(0, dropPosition.y - targetAbsPos.y);
+  const { x: relativeX, y: relativeY } = getRelativePosition(dropPosition, targetContainer, components);
 
   const width = imageSize?.width || 150;
   const height = imageSize?.height || 150;
@@ -104,6 +115,50 @@ export const createGifComponentAtPosition = (
 };
 
 /**
+ * 创建 Label 组件（从字体文件拖拽）
+ */
+export const createLabelComponentAtPosition = (
+  fontPath: string,
+  dropPosition: { x: number; y: number },
+  targetContainerId: string,
+  components: Component[],
+  addComponent: (component: Component) => void
+): string | undefined => {
+  const targetContainer = components.find(c => c.id === targetContainerId);
+  if (!targetContainer) return;
+
+  const { x: relativeX, y: relativeY } = getRelativePosition(dropPosition, targetContainer, components);
+  const zIndex = getNextZIndex(components, targetContainerId);
+
+  const labelId = generateComponentId('hg_label', components, getOtherFileIds());
+  const labelComponent: Component = {
+    id: labelId,
+    type: 'hg_label',
+    name: labelId,
+    position: { x: relativeX, y: relativeY, width: 150, height: 30 },
+    visible: true,
+    enabled: true,
+    locked: false,
+    zIndex,
+    children: [],
+    parent: targetContainerId,
+    style: {},
+    data: {
+      text: 'Label',
+      fontFile: fontPath,
+      fontSize: 16,
+      fontType: 'bitmap',
+      color: '#ffffff',
+      hAlign: 'LEFT',
+      vAlign: 'TOP',
+    },
+  };
+
+  addComponent(labelComponent);
+  return labelId;
+};
+
+/**
  * 创建3D组件的统一函数
  */
 export const create3DComponentAtPosition = (
@@ -116,9 +171,7 @@ export const create3DComponentAtPosition = (
   const targetContainer = components.find(c => c.id === targetContainerId);
   if (!targetContainer) return;
 
-  const targetAbsPos = getAbsolutePosition(targetContainer, components);
-  const relativeX = Math.max(0, dropPosition.x - targetAbsPos.x);
-  const relativeY = Math.max(0, dropPosition.y - targetAbsPos.y);
+  const { x: relativeX, y: relativeY } = getRelativePosition(dropPosition, targetContainer, components);
   const zIndex = getNextZIndex(components, targetContainerId);
 
   const id3D = generateComponentId('hg_3d', components, getOtherFileIds());
@@ -170,9 +223,7 @@ export const createVideoComponentAtPosition = (
   const targetContainer = components.find(c => c.id === targetContainerId);
   if (!targetContainer) return;
 
-  const targetAbsPos = getAbsolutePosition(targetContainer, components);
-  const relativeX = Math.max(0, dropPosition.x - targetAbsPos.x);
-  const relativeY = Math.max(0, dropPosition.y - targetAbsPos.y);
+  const { x: relativeX, y: relativeY } = getRelativePosition(dropPosition, targetContainer, components);
 
   // 使用视频真实尺寸，如果没有则使用默认值 320x240
   const { width, height } = videoSize || { width: 320, height: 240 };
@@ -212,9 +263,7 @@ export const createSvgComponentAtPosition = (
   const targetContainer = components.find(c => c.id === targetContainerId);
   if (!targetContainer) return;
 
-  const targetAbsPos = getAbsolutePosition(targetContainer, components);
-  const relativeX = Math.max(0, dropPosition.x - targetAbsPos.x);
-  const relativeY = Math.max(0, dropPosition.y - targetAbsPos.y);
+  const { x: relativeX, y: relativeY } = getRelativePosition(dropPosition, targetContainer, components);
   const zIndex = getNextZIndex(components, targetContainerId);
 
   const svgId = generateComponentId('hg_svg', components, getOtherFileIds());
@@ -256,9 +305,7 @@ export const createGlassComponentAtPosition = (
   const targetContainer = components.find(c => c.id === targetContainerId);
   if (!targetContainer) return;
 
-  const targetAbsPos = getAbsolutePosition(targetContainer, components);
-  const relativeX = Math.max(0, dropPosition.x - targetAbsPos.x);
-  const relativeY = Math.max(0, dropPosition.y - targetAbsPos.y);
+  const { x: relativeX, y: relativeY } = getRelativePosition(dropPosition, targetContainer, components);
   const zIndex = getNextZIndex(components, targetContainerId);
 
   const glassId = generateComponentId('hg_glass', components, getOtherFileIds());
@@ -304,9 +351,7 @@ export const createLottieComponentAtPosition = (
   const targetContainer = components.find(c => c.id === targetContainerId);
   if (!targetContainer) return;
 
-  const targetAbsPos = getAbsolutePosition(targetContainer, components);
-  const relativeX = Math.max(0, dropPosition.x - targetAbsPos.x);
-  const relativeY = Math.max(0, dropPosition.y - targetAbsPos.y);
+  const { x: relativeX, y: relativeY } = getRelativePosition(dropPosition, targetContainer, components);
   const zIndex = getNextZIndex(components, targetContainerId);
 
   const lottieId = generateComponentId('hg_lottie', components, getOtherFileIds());
