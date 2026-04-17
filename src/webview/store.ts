@@ -346,6 +346,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   clipboardMultiple: [], // 多选剪贴板
   isSimulationRunning: false, // 仿真运行状态
   operationInProgress: null, // 当前正在执行的操作
+  guiVersion: null, // GUI 库版本信息
   selectedAsset: null, // 选中的资源（文件夹或图片）
   conversionConfig: null, // 转换配置
 

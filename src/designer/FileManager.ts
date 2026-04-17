@@ -7,6 +7,7 @@ import { HmlController } from '../hml/HmlController';
 import { ProjectConfigLoader } from '../utils/ProjectConfigLoader';
 import { SaveManager } from './SaveManager';
 import { HmlContentComparator } from '../utils/HmlContentComparator';
+import { GuiVersionReader } from '../utils/GuiVersionReader';
 
 /**
  * 文件管理器 - 处理文件的加载、保存和更新
@@ -668,6 +669,10 @@ export class FileManager {
         const SimulationService = require('../simulation/SimulationService').SimulationService;
         const isSimulationRunning = SimulationService.isSimulationRunning();
         
+        // 获取 GUI 库版本信息
+        const targetEngine = projectConfig?.targetEngine || 'honeygui';
+        const guiVersion = GuiVersionReader.getVersion(targetEngine);
+        
         this._panel.webview.postMessage({
             command: 'loadHml',
             content: hmlContent,
@@ -687,7 +692,8 @@ export class FileManager {
             otherFileComponentIds: otherFileComponentIds,
             currentFilePath: this._filePath,
             locale: locale,
-            isSimulationRunning: isSimulationRunning
+            isSimulationRunning: isSimulationRunning,
+            guiVersion: guiVersion
         });
     }
 

@@ -322,3 +322,19 @@
   color: var(--vscode-descriptionForeground);
   font-size: 12px;
 }
+
+/* GUI 版本标签 */
+.gui-version-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  background-color: color-mix(in oklab, var(--vscode-badge-background) 30%, transparent);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 10px;
+  cursor: default;
+  white-space: pre-line;
+  user-select: text;
+}
