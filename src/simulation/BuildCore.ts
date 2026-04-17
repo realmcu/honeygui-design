@@ -187,7 +187,7 @@ Return('objs')
             // 全量打包（默认）：转换 assets 目录下所有资源
             this.logger.log(vscode.l10n.t('Scanning all assets for full packaging...'));
             usedAssets = await this.scanAllAssets();
-            this.logger.log(`找到 ${usedAssets.images.size} 个图片, ${usedAssets.videos.size} 个视频, ${usedAssets.models.size} 个3D模型, ${usedAssets.fonts.size} 个字体`);
+            this.logger.log(`找到 ${usedAssets.images.size} 个图片, ${usedAssets.videos.size} 个视频, ${usedAssets.models.size} 个3D模型`);
         }
 
         // 转换图片资源（只转换使用的）
@@ -692,7 +692,7 @@ Return('objs')
         const imageExts = new Set(['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp']);
         const videoExts = new Set(['.mp4', '.avi', '.mov', '.mkv', '.webm']);
         const modelExts = new Set(['.gltf', '.glb', '.obj']);
-        const fontExts  = new Set(['.ttf', '.otf', '.woff', '.woff2']);
+        // 字体不在全量扫描中收集，只转换 HML 中 Label 引用的字体
 
         const assetsDir = path.join(this.projectRoot, 'assets');
         if (fs.existsSync(assetsDir)) {
@@ -711,8 +711,6 @@ Return('objs')
                             videos.add(relativePath);
                         } else if (modelExts.has(ext)) {
                             models.add(relativePath);
-                        } else if (fontExts.has(ext)) {
-                            fonts.add(relativePath);
                         }
                     }
                 }
