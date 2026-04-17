@@ -58,6 +58,14 @@
   "Code generated successfully, {0} files written": "Code generated successfully, {0} files written",
   "Code generated with warnings: {0}": "Code generated with warnings: {0}",
 
+  "Detected orphaned generated files (HML deleted/renamed): {0}. Clean up?": "Detected orphaned generated files (HML deleted/renamed): {0}. Clean up?",
+  "Delete All": "Delete All",
+  "Select Items": "Select Items",
+  "Ignore": "Ignore",
+  "Cleaned {0} orphaned files": "Cleaned {0} orphaned files",
+  "ui + callbacks + user (up to 9 files)": "ui + callbacks + user (up to 9 files)",
+  "Select designs to clean up": "Select designs to clean up",
+
   "Preview started: {0}": "Preview started: {0}",
   "Preview failed: {0}": "Preview failed: {0}",
   "Preview feature is under development...": "Preview feature is under development...",

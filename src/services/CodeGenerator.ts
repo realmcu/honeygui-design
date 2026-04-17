@@ -12,6 +12,7 @@ export interface GenerationResult {
     successCount: number;
     totalFiles: number;
     errors: Array<{ designName: string; error: string }>;
+    orphanedDesigns?: string[];
 }
 
 export interface GenerationProgress {
@@ -116,8 +117,84 @@ export class CodeGenerator {
             success: errors.length === 0,
             successCount,
             totalFiles,
-            errors
+            errors,
+            orphanedDesigns: this.detectOrphanedDesigns(srcDir, hmlFiles)
         };
+    }
+
+    /**
+     * 检测孤立的生成文件（HML 已删除/重命名但生成文件仍存在）
+     */
+    public detectOrphanedDesigns(srcDir: string, hmlFiles: string[]): string[] {
+        const validDesignNames = new Set(
+            hmlFiles.map(f => path.basename(f, '.hml'))
+        );
+
+        const uiDir = path.join(srcDir, 'ui');
+        if (!fs.existsSync(uiDir)) {
+            return [];
+        }
+
+        // 从 src/ui/ 目录中提取已生成的 designName
+        const existingDesignNames = new Set<string>();
+        try {
+            const files = fs.readdirSync(uiDir);
+            for (const file of files) {
+                const match = file.match(/^(.+)_ui\.c$/);
+                if (match) {
+                    existingDesignNames.add(match[1]);
+                }
+            }
+        } catch {
+            return [];
+        }
+
+        // 差集：已生成但无对应 HML 的 designName
+        const orphaned: string[] = [];
+        for (const name of existingDesignNames) {
+            if (!validDesignNames.has(name)) {
+                orphaned.push(name);
+            }
+        }
+
+        return orphaned;
+    }
+
+    /**
+     * 删除指定 designName 的所有生成文件
+     */
+    public static cleanOrphanedFiles(srcDir: string, designNames: string[]): { deleted: string[]; failed: string[] } {
+        const deleted: string[] = [];
+        const failed: string[] = [];
+
+        for (const name of designNames) {
+            const filesToDelete = [
+                path.join(srcDir, 'ui', `${name}_ui.h`),
+                path.join(srcDir, 'ui', `${name}_ui.c`),
+                path.join(srcDir, 'ui', `${name}_ui.o`),
+                path.join(srcDir, 'callbacks', `${name}_callbacks.h`),
+                path.join(srcDir, 'callbacks', `${name}_callbacks.c`),
+                path.join(srcDir, 'callbacks', `${name}_callbacks.o`),
+                path.join(srcDir, 'user', `${name}_user.h`),
+                path.join(srcDir, 'user', `${name}_user.c`),
+                path.join(srcDir, 'user', `${name}_user.o`),
+            ];
+
+            for (const filePath of filesToDelete) {
+                try {
+                    if (fs.existsSync(filePath)) {
+                        fs.unlinkSync(filePath);
+                        deleted.push(filePath);
+                        logger.info(`已删除孤立文件: ${filePath}`);
+                    }
+                } catch (error) {
+                    failed.push(filePath);
+                    logger.error(`删除失败: ${filePath}, ${error}`);
+                }
+            }
+        }
+
+        return { deleted, failed };
     }
 
     /**

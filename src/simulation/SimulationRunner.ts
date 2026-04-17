@@ -219,6 +219,12 @@ export class SimulationRunner {
         }
 
         this.log(vscode.l10n.t('Code generation completed: {0} files', result.totalFiles));
+
+        // 检测并提示清理孤立文件
+        if (result.orphanedDesigns && result.orphanedDesigns.length > 0) {
+            const { CodeGenerationService } = await import('../services/CodeGenerationService');
+            await CodeGenerationService.promptOrphanCleanup(this.projectRoot, result.orphanedDesigns);
+        }
     }
 
     /**

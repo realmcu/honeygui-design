@@ -58,6 +58,14 @@
   "Code generated successfully, {0} files written": "代码生成成功，已写入 {0} 个文件",
   "Code generated with warnings: {0}": "代码生成完成，但有警告: {0}",
 
+  "Detected orphaned generated files (HML deleted/renamed): {0}. Clean up?": "检测到孤立的生成文件（HML 已删除/重命名）：{0}。是否清理？",
+  "Delete All": "全部删除",
+  "Select Items": "逐个选择",
+  "Ignore": "忽略",
+  "Cleaned {0} orphaned files": "已清理 {0} 个孤立文件",
+  "ui + callbacks + user (up to 9 files)": "ui + callbacks + user（最多 9 个文件）",
+  "Select designs to clean up": "选择要清理的设计",
+
   "Preview started: {0}": "预览已启动: {0}",
   "Preview failed: {0}": "预览失败: {0}",
   "Preview feature is under development...": "预览功能开发中...",

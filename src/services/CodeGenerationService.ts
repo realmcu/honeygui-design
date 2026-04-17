@@ -60,7 +60,62 @@ export class CodeGenerationService {
                         }
                     });
                 }
+
+                // 检测并提示清理孤立文件
+                if (result.orphanedDesigns && result.orphanedDesigns.length > 0) {
+                    await this.promptOrphanCleanup(projectRoot, result.orphanedDesigns);
+                }
             }
         );
+    }
+
+    /**
+     * 提示用户清理孤立的生成文件
+     */
+    public static async promptOrphanCleanup(projectRoot: string, orphanedDesigns: string[]): Promise<void> {
+        const srcDir = ProjectUtils.getSrcDir(projectRoot);
+        const nameList = orphanedDesigns.join(', ');
+
+        const deleteAll = vscode.l10n.t('Delete All');
+        const selectItems = vscode.l10n.t('Select Items');
+        const ignore = vscode.l10n.t('Ignore');
+
+        const choice = await vscode.window.showWarningMessage(
+            vscode.l10n.t(
+                'Detected orphaned generated files (HML deleted/renamed): {0}. Clean up?',
+                nameList
+            ),
+            { modal: true },
+            deleteAll,
+            selectItems,
+            ignore
+        );
+
+        if (choice === deleteAll) {
+            const result = CodeGenerator.cleanOrphanedFiles(srcDir, orphanedDesigns);
+            vscode.window.showInformationMessage(
+                vscode.l10n.t('Cleaned {0} orphaned files', result.deleted.length)
+            );
+        } else if (choice === selectItems) {
+            const items = orphanedDesigns.map(name => ({
+                label: name,
+                description: vscode.l10n.t('ui + callbacks + user (up to 9 files)'),
+                picked: true
+            }));
+
+            const selected = await vscode.window.showQuickPick(items, {
+                canPickMany: true,
+                placeHolder: vscode.l10n.t('Select designs to clean up')
+            });
+
+            if (selected && selected.length > 0) {
+                const selectedNames = selected.map(s => s.label);
+                const result = CodeGenerator.cleanOrphanedFiles(srcDir, selectedNames);
+                vscode.window.showInformationMessage(
+                    vscode.l10n.t('Cleaned {0} orphaned files', result.deleted.length)
+                );
+            }
+        }
+        // ignore: do nothing
     }
 }
