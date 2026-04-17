@@ -87,6 +87,9 @@ interface ConvertContext {
     warnings: string[];
     defaultFont: string;
     zCounter: number;
+    frameIdToViewId: Map<string, string>; // Figma frame ID → HML view ID
+    exportInteractions: boolean;
+    interactionCount: number;
 }
 
 export interface ConvertResult {
@@ -99,8 +102,185 @@ export interface ConvertResult {
         viewCount: number;
         nodeCount: number;
         imageCount: number;
+        interactionCount: number;
     };
     warnings: string[];
+}
+
+// ==================== 原型交互转换 ====================
+
+/**
+ * 将 Figma 触发类型映射为 HML 事件类型
+ * 返回 'ON_DRAG' 表示需要根据 transition direction 推导 swipe 方向
+ */
+function mapFigmaTriggerToHmlEvent(triggerType: string): string | null {
+    switch (triggerType) {
+        case 'ON_CLICK': return 'onClick';
+        case 'ON_PRESS':
+        case 'MOUSE_DOWN': return 'onTouchDown';
+        case 'MOUSE_UP': return 'onTouchUp';
+        case 'ON_DRAG': return 'ON_DRAG'; // 特殊标记，后续根据方向解析
+        default: return null;
+    }
+}
+
+/**
+ * 根据 Figma transition direction 推导 swipe 方向对应的 HML 事件
+ * Figma direction 表示内容运动方向，swipe 方向与之一致
+ */
+function mapDragDirectionToSwipeEvent(transition: any): string {
+    if (!transition) return 'onSwipeLeft'; // 默认
+    const dir = (transition.direction as string) || 'LEFT';
+    switch (dir) {
+        case 'LEFT': return 'onSwipeLeft';
+        case 'RIGHT': return 'onSwipeRight';
+        case 'TOP': return 'onSwipeUp';
+        case 'BOTTOM': return 'onSwipeDown';
+        default: return 'onSwipeLeft';
+    }
+}
+
+/**
+ * 将 Figma 过渡动画映射为 HML 切换动画风格
+ */
+function mapFigmaTransitionToHmlStyles(transition: any): { switchOutStyle: string; switchInStyle: string } {
+    const defaults = {
+        switchOutStyle: 'SWITCH_OUT_TO_LEFT_USE_TRANSLATION',
+        switchInStyle: 'SWITCH_IN_FROM_RIGHT_USE_TRANSLATION',
+    };
+
+    if (!transition) return defaults;
+
+    const type = transition.type as string;
+    const dir = (transition.direction as string) || 'LEFT';
+
+    if (type === 'DISSOLVE') {
+        return {
+            switchOutStyle: 'SWITCH_OUT_ANIMATION_FADE',
+            switchInStyle: 'SWITCH_IN_ANIMATION_FADE',
+        };
+    }
+
+    // PUSH / MOVE_IN / MOVE_OUT / SLIDE_IN / SLIDE_OUT / SMART_ANIMATE → translation
+    switch (dir) {
+        case 'RIGHT':
+            return {
+                switchOutStyle: 'SWITCH_OUT_TO_RIGHT_USE_TRANSLATION',
+                switchInStyle: 'SWITCH_IN_FROM_LEFT_USE_TRANSLATION',
+            };
+        case 'TOP':
+            return {
+                switchOutStyle: 'SWITCH_OUT_TO_TOP_USE_TRANSLATION',
+                switchInStyle: 'SWITCH_IN_FROM_BOTTOM_USE_TRANSLATION',
+            };
+        case 'BOTTOM':
+            return {
+                switchOutStyle: 'SWITCH_OUT_TO_BOTTOM_USE_TRANSLATION',
+                switchInStyle: 'SWITCH_IN_FROM_TOP_USE_TRANSLATION',
+            };
+        case 'LEFT':
+        default:
+            return defaults;
+    }
+}
+
+/**
+ * 从 Figma 节点提取原型交互，转换为 HML event 节点列表
+ */
+function extractInteractions(node: SceneNode, ctx: ConvertContext): HmlNode[] {
+    if (!ctx.exportInteractions) return [];
+    if (!('reactions' in node)) return [];
+
+    const reactions = (node as any).reactions as ReadonlyArray<any>;
+    if (!reactions || reactions.length === 0) return [];
+
+    const eventNodes: HmlNode[] = [];
+
+    for (const reaction of reactions) {
+        const trigger = reaction.trigger;
+        if (!trigger) continue;
+
+        const rawEventType = mapFigmaTriggerToHmlEvent(trigger.type);
+        if (!rawEventType) {
+            ctx.warnings.push(`Unsupported trigger "${trigger.type}" on "${node.name}" — skipped`);
+            continue;
+        }
+
+        const isDrag = rawEventType === 'ON_DRAG';
+
+        // Figma old API: single action; new API: actions array
+        const actions: any[] = reaction.actions
+            ? Array.from(reaction.actions)
+            : reaction.action
+                ? [reaction.action]
+                : [];
+
+        // ON_DRAG: 每个 action 可能对应不同的 swipe 方向，按方向分组
+        const swipeGroups: Map<string, HmlNode[]> = new Map();
+        const actionNodes: HmlNode[] = [];
+
+        for (const action of actions) {
+            if (!action) continue;
+
+            if (action.type === 'NODE' && action.navigation === 'NAVIGATE' && action.destinationId) {
+                const targetViewId = ctx.frameIdToViewId.get(action.destinationId);
+                if (targetViewId) {
+                    const styles = mapFigmaTransitionToHmlStyles(action.transition);
+                    const actionNode: HmlNode = {
+                        tag: 'action',
+                        attrs: {
+                            type: 'switchView',
+                            target: targetViewId,
+                            switchOutStyle: styles.switchOutStyle,
+                            switchInStyle: styles.switchInStyle,
+                        },
+                        children: [],
+                    };
+
+                    if (isDrag) {
+                        const swipeEvent = mapDragDirectionToSwipeEvent(action.transition);
+                        if (!swipeGroups.has(swipeEvent)) swipeGroups.set(swipeEvent, []);
+                        swipeGroups.get(swipeEvent)!.push(actionNode);
+                    } else {
+                        actionNodes.push(actionNode);
+                    }
+                } else {
+                    ctx.warnings.push(
+                        `Navigate target not in exported frames (node: "${node.name}", destinationId: ${action.destinationId})`
+                    );
+                }
+            } else if (action.type === 'NODE' && action.navigation === 'OVERLAY') {
+                ctx.warnings.push(`Overlay interaction on "${node.name}" — not supported, skipped`);
+            } else if (action.type === 'NODE' && action.navigation === 'SWAP') {
+                ctx.warnings.push(`Swap interaction on "${node.name}" — not supported, skipped`);
+            } else if (action.type === 'BACK') {
+                ctx.warnings.push(`"Back" interaction on "${node.name}" — target view must be set manually`);
+            } else if (action.type === 'URL') {
+                ctx.warnings.push(`URL interaction on "${node.name}" — not supported (offline)`);
+            }
+        }
+
+        if (isDrag) {
+            // ON_DRAG: 按 swipe 方向分别生成 event 节点
+            for (const [swipeEvent, swipeActions] of swipeGroups.entries()) {
+                eventNodes.push({
+                    tag: 'event',
+                    attrs: { type: swipeEvent },
+                    children: swipeActions,
+                });
+                ctx.interactionCount += swipeActions.length;
+            }
+        } else if (actionNodes.length > 0) {
+            eventNodes.push({
+                tag: 'event',
+                attrs: { type: rawEventType },
+                children: actionNodes,
+            });
+            ctx.interactionCount += actionNodes.length;
+        }
+    }
+
+    return eventNodes;
 }
 
 // ==================== 节点转换 ====================
@@ -352,28 +532,48 @@ function convertSceneNode(node: SceneNode, ctx: ConvertContext): HmlNode | null 
     if (node.visible === false) return null;
     if (node.type === 'SLICE') return null;
 
+    let result: HmlNode | null = null;
+
     if (shouldFlattenAsImage(node)) {
-        return convertAsImage(node, ctx);
+        result = convertAsImage(node, ctx);
+    } else {
+        switch (node.type) {
+            case 'TEXT':
+                result = convertText(node as TextNode, { x: 0, y: 0 }, ctx);
+                break;
+            case 'ELLIPSE':
+                result = convertEllipse(node as EllipseNode, ctx);
+                break;
+            case 'RECTANGLE':
+                result = convertRectangle(node as RectangleNode, ctx);
+                break;
+            case 'FRAME':
+            case 'GROUP':
+            case 'COMPONENT':
+            case 'COMPONENT_SET':
+            case 'INSTANCE':
+                result = convertContainer(node as any, ctx);
+                break;
+            default:
+                ctx.warnings.push(`Node "${node.name}" (${node.type}) exported as image`);
+                result = convertAsImage(node, ctx);
+                break;
+        }
     }
 
-    switch (node.type) {
-        case 'TEXT':
-            return convertText(node as TextNode, { x: 0, y: 0 }, ctx);
-        case 'ELLIPSE':
-            return convertEllipse(node as EllipseNode, ctx);
-        case 'RECTANGLE':
-            return convertRectangle(node as RectangleNode, ctx);
-        case 'FRAME':
-        case 'GROUP':
-        case 'COMPONENT':
-        case 'COMPONENT_SET':
-        case 'INSTANCE':
-            return convertContainer(node as any, ctx);
-        default:
-            // 其他类型尝试导出为图片
-            ctx.warnings.push(`Node "${node.name}" (${node.type}) exported as image`);
-            return convertAsImage(node, ctx);
+    // 附加原型交互事件
+    if (result) {
+        const eventNodes = extractInteractions(node, ctx);
+        if (eventNodes.length > 0) {
+            result.children.unshift({
+                tag: 'events',
+                attrs: {},
+                children: eventNodes,
+            });
+        }
     }
+
+    return result;
 }
 
 // ==================== HML 序列化 ====================
@@ -391,13 +591,13 @@ function serializeNode(node: HmlNode, depth: number): string {
         }
     }
 
-    const attrStr = attrParts.join(' ');
+    const attrStr = attrParts.length > 0 ? ' ' + attrParts.join(' ') : '';
 
     if (node.children.length === 0) {
-        return `${indent}<${node.tag} ${attrStr} />`;
+        return `${indent}<${node.tag}${attrStr} />`;
     }
 
-    const lines = [`${indent}<${node.tag} ${attrStr}>`];
+    const lines = [`${indent}<${node.tag}${attrStr}>`];
     for (const child of node.children) {
         lines.push(serializeNode(child, depth + 1));
     }
@@ -431,6 +631,7 @@ export function convertPageToHml(
         resolution: string;
         pixelMode: string;
         defaultFont: string;
+        exportInteractions?: boolean;
     }
 ): ConvertResult {
     const ctx: ConvertContext = {
@@ -440,6 +641,9 @@ export function convertPageToHml(
         warnings: [],
         defaultFont: opts.defaultFont,
         zCounter: 0,
+        frameIdToViewId: new Map(),
+        exportInteractions: opts.exportInteractions !== false,
+        interactionCount: 0,
     };
 
     const resolution = parseResolution(opts.resolution);
@@ -449,9 +653,25 @@ export function convertPageToHml(
     const mainHmlFile = `ui/${projectBaseName}Main.hml`;
     const views: HmlNode[] = [];
 
+    // 第一遍: 预计算 view ID，构建 frameId → viewId 映射 (用于交互目标解析)
+    const viewIdList: string[] = [];
+    {
+        const tempIds = new Set<string>();
+        for (const frame of frames) {
+            const viewId = ensureUniqueId('view_' + sanitizeId(frame.name), tempIds);
+            viewIdList.push(viewId);
+            ctx.frameIdToViewId.set(frame.id, viewId);
+        }
+    }
+    // 预留所有 view ID
+    for (const vid of viewIdList) {
+        ctx.usedIds.add(vid);
+    }
+
+    // 第二遍: 转换节点
     for (let i = 0; i < frames.length; i++) {
         const frame = frames[i];
-        const viewId = ensureUniqueId('view_' + sanitizeId(frame.name), ctx.usedIds);
+        const viewId = viewIdList[i];
         const isEntry = i === 0;
 
         const viewAttrs: Record<string, string | number | boolean> = {
@@ -488,6 +708,16 @@ export function convertPageToHml(
                 const converted = convertSceneNode(child as SceneNode, ctx);
                 if (converted) children.push(converted);
             }
+        }
+
+        // 附加帧级别的原型交互事件
+        const frameEventNodes = extractInteractions(frame, ctx);
+        if (frameEventNodes.length > 0) {
+            children.unshift({
+                tag: 'events',
+                attrs: {},
+                children: frameEventNodes,
+            });
         }
 
         views.push({ tag: 'hg_view', attrs: viewAttrs, children });
@@ -543,6 +773,7 @@ export function convertPageToHml(
             viewCount: views.length,
             nodeCount: ctx.usedIds.size,
             imageCount: ctx.imageNodeIds.length,
+            interactionCount: ctx.interactionCount,
         },
         warnings: ctx.warnings,
     };

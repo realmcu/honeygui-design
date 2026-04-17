@@ -282,7 +282,7 @@
 
 <div id="toast" class="toast"></div>
 
-<!-- ========== 设置界面 ========== -->
+<!-- ========== Setup View ========== -->
 <div id="view-setup">
     <h2>🎨 Export to HML</h2>
 
@@ -352,6 +352,11 @@
             <span class="toggle-label">Export image assets</span>
             <input type="checkbox" id="chk-images" checked />
         </div>
+
+        <div class="toggle-row">
+            <span class="toggle-label">Export prototype interactions</span>
+            <input type="checkbox" id="chk-interactions" checked />
+        </div>
     </div>
 
     <div style="display:flex;gap:8px;margin-top:12px;">
@@ -360,14 +365,14 @@
     </div>
 </div>
 
-<!-- ========== 进度界面 ========== -->
+<!-- ========== Progress View ========== -->
 <div id="view-progress">
     <h2>⏳ Exporting...</h2>
     <div class="progress-bar"><div class="fill" id="progress-fill" style="width:0%"></div></div>
     <div class="status" id="progress-status">Preparing...</div>
 </div>
 
-<!-- ========== 完成界面 ========== -->
+<!-- ========== Done View ========== -->
 <div id="view-done">
     <h2>✅ Export Complete</h2>
     <div id="done-stats" class="stats"></div>
@@ -379,17 +384,17 @@
     </div>
 </div>
 
-<!-- ========== JSZip 库 (内联精简版) ========== -->
+<!-- ========== Minimal ZIP generator (inline, STORE only) ========== -->
 <script>
 /**
- * 极简 ZIP 生成器 (无压缩，纯 STORE 模式)
- * 适合 Figma Plugin 沙箱环境，不依赖外部库
+ * Minimal ZIP generator (no compression, STORE only)
+ * Designed for Figma Plugin sandbox — no external dependencies
  */
 class SimpleZip {
     constructor() { this.files = []; }
 
     addFile(name, data) {
-        // data 可以是 string 或 Uint8Array
+        // data can be string or Uint8Array
         if (typeof data === 'string') {
             data = new TextEncoder().encode(data);
         }
@@ -497,20 +502,20 @@ SimpleZip._table = null;
 </script>
 
 <script>
-    // ==================== 状态 ====================
+    // ==================== State ====================
     let pages = [];
     let frames = [];
     let fileName = 'Project';
-    let exportResult = null;  // 保存导出结果供下载
+    let exportResult = null;  // Saved export result for download
     let pageChangeHandlerBound = false;
     let isDownloading = false;
     let toastTimer = null;
 
-    // ==================== 初始化 ====================
+    // ==================== Initialization ====================
     setOverlayLoading(true, 'Loading pages...');
     parent.postMessage({ pluginMessage: { type: 'get-pages' } }, '*');
 
-    // ==================== UI 函数 ====================
+    // ==================== UI Functions ====================
     function showView(name) {
         document.getElementById('view-setup').style.display = name === 'setup' ? 'block' : 'none';
         document.getElementById('view-progress').style.display = name === 'progress' ? 'block' : 'none';
@@ -584,7 +589,7 @@ SimpleZip._table = null;
             btn.disabled = true;
             btn.textContent = 'Preparing ZIP...';
             setDownloadOverlay(true, 'Preparing ZIP...');
-            setDownloadTip('正在准备压缩包，请稍候…', 'info');
+            setDownloadTip('Preparing ZIP, please wait...', 'info');
             return;
         }
         if (state === 'done') {
@@ -592,7 +597,7 @@ SimpleZip._table = null;
             btn.disabled = false;
             btn.textContent = 'Download Again';
             setDownloadOverlay(false, '');
-            setDownloadTip('压缩包已开始下载。如浏览器拦截，请允许下载后重试。', 'success');
+            setDownloadTip('ZIP download started. If blocked by the browser, allow the download and try again.', 'success');
             return;
         }
         if (state === 'error') {
@@ -600,7 +605,7 @@ SimpleZip._table = null;
             btn.disabled = false;
             btn.textContent = 'Download ZIP';
             setDownloadOverlay(false, '');
-            setDownloadTip('压缩包生成失败，请重试。', 'error');
+            setDownloadTip('Failed to generate ZIP. Please try again.', 'error');
         }
     }
 
@@ -628,7 +633,7 @@ SimpleZip._table = null;
         return Array.from(checkboxes).map(cb => cb.value);
     }
 
-    // ==================== 导出 ====================
+    // ==================== Export ====================
     function startExport() {
         const selectedFrames = getSelectedFrameIds();
         if (selectedFrames.length === 0) {
@@ -649,12 +654,13 @@ SimpleZip._table = null;
             imageScale: parseFloat(document.getElementById('sel-imgscale').value),
             defaultFont: document.getElementById('inp-font').value || 'NotoSansSC-Bold.ttf',
             exportImages: document.getElementById('chk-images').checked,
+            exportInteractions: document.getElementById('chk-interactions').checked,
         };
 
         parent.postMessage({ pluginMessage: msg }, '*');
     }
 
-    // ==================== ZIP 下载 ====================
+    // ==================== ZIP Download ====================
     async function downloadZip() {
         if (!exportResult || isDownloading) return;
 
@@ -669,13 +675,13 @@ SimpleZip._table = null;
             const projName = exportResult.projectName || 'project';
             const mainHmlFile = exportResult.mainHmlFile || `ui/${projName}.hml`;
 
-            // HML 文件
+            // HML file
             zip.addFile(`${projName}/${mainHmlFile}`, exportResult.hmlContent);
 
             // project.json
             zip.addFile(`${projName}/project.json`, exportResult.projectJson);
 
-            // 图片资源
+            // Image assets
             if (exportResult.imageDataMap) {
                 for (const [fileName, dataArray] of Object.entries(exportResult.imageDataMap)) {
                     const data = new Uint8Array(dataArray);
@@ -683,10 +689,10 @@ SimpleZip._table = null;
                 }
             }
 
-            // 空的 src/user 目录 (用 .gitkeep 占位)
+            // Empty src/user directory (.gitkeep placeholder)
             zip.addFile(`${projName}/src/user/.gitkeep`, '');
 
-            // 生成并下载
+            // Generate and download
             const blob = new Blob([zip.generate()], { type: 'application/zip' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -701,15 +707,15 @@ SimpleZip._table = null;
             }
 
             setDownloadState('done');
-            showToast('ZIP 下载已触发。', 'success');
+            showToast('ZIP download triggered.', 'success');
         } catch (error) {
             console.error(error);
             setDownloadState('error');
-            showToast('ZIP 生成失败，请重试。', 'error');
+            showToast('Failed to generate ZIP. Please try again.', 'error');
         }
     }
 
-    // ==================== 消息处理 ====================
+    // ==================== Message Handling ====================
     window.onmessage = (event) => {
         const msg = event.data.pluginMessage;
         if (!msg) return;
@@ -733,7 +739,7 @@ SimpleZip._table = null;
                     setOverlayLoading(false, '');
                 }
 
-                // page 切换时刷新 frame 列表
+                // Refresh frame list on page change
                 if (!pageChangeHandlerBound) {
                     sel.addEventListener('change', () => {
                         setOverlayLoading(true, 'Loading frames...');
@@ -749,7 +755,7 @@ SimpleZip._table = null;
                 updateFrameList();
                 setOverlayLoading(false, '');
 
-                // 自动检测分辨率
+                // Auto-detect resolution
                 if (frames.length > 0) {
                     const f = frames[0];
                     document.getElementById('inp-resolution').value = `${f.width}x${f.height}`;
@@ -781,15 +787,16 @@ SimpleZip._table = null;
                     imageDataMap: msg.imageDataMap || {},
                 };
 
-                // 显示统计
+                // Display stats
                 const statsHtml = `
                     <div class="stats-row"><span class="label">Views</span><span class="value">${msg.stats.viewCount}</span></div>
                     <div class="stats-row"><span class="label">Components</span><span class="value">${msg.stats.nodeCount}</span></div>
                     <div class="stats-row"><span class="label">Images</span><span class="value">${msg.stats.imageCount}</span></div>
+                    <div class="stats-row"><span class="label">Interactions</span><span class="value">${msg.stats.interactionCount || 0}</span></div>
                 `;
                 document.getElementById('done-stats').innerHTML = statsHtml;
 
-                // 显示警告
+                // Display warnings
                 if (msg.warnings && msg.warnings.length > 0) {
                     const warnHtml = `<details><summary style="cursor:pointer;color:#e67e22;">⚠ ${msg.warnings.length} warning(s)</summary>
                         <ul style="font-size:11px;color:#888;margin-top:4px;">${msg.warnings.slice(0, 20).map(w => `<li>${w}</li>`).join('')}</ul>

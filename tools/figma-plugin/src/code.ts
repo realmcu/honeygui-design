@@ -62,6 +62,7 @@ async function doExport(msg: {
     imageScale: number;
     defaultFont: string;
     exportImages: boolean;
+    exportInteractions: boolean;
 }): Promise<void> {
     try {
         figma.ui.postMessage({ type: 'export-progress', step: 'converting', progress: 0 });
@@ -97,6 +98,7 @@ async function doExport(msg: {
             resolution: msg.resolution,
             pixelMode: msg.pixelMode,
             defaultFont: msg.defaultFont,
+            exportInteractions: msg.exportInteractions,
         });
 
         figma.ui.postMessage({ type: 'export-progress', step: 'exporting-images', progress: 40 });

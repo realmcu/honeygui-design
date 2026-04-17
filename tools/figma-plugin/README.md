@@ -1,128 +1,180 @@
 # Figma Plugin: Export to HML
 
-在 Figma 中直接将设计稿导出为 HoneyGUI HML 工程的插件。
+A Figma plugin that exports designs directly to HoneyGUI HML projects.
 
-## 功能特性
+## Quick Start
 
-- **一键导出**：在 Figma 内直接将当前设计导出为 HML 工程 ZIP 包
-- **可视化配置**：选择 Page、Frame，设置分辨率、像素格式等参数
-- **图片资源导出**：自动将图片填充、矢量图形导出为图片文件
-- **ZIP 打包下载**：直接下载包含完整 HML 工程目录结构的 ZIP 文件
-- **离线运行**：不需要网络连接，所有转换在本地完成
-
-## 安装到 Figma
-
-### 开发模式安装
-
-1. **构建插件**：
+1. **Build the plugin:**
    ```bash
    cd tools/figma-plugin
    npm install
    npm run build
    ```
 
-2. **在 Figma 桌面版中加载**：
-   - 打开 Figma Desktop App
-   - 菜单 → Plugins → Development → Import plugin from manifest...
-   - 选择 `tools/figma-plugin/manifest.json`
+2. **Load in Figma Desktop:**
+   - Open the Figma Desktop App
+   - Menu → Plugins → Development → **Import plugin from manifest...**
+   - Select `tools/figma-plugin/manifest.json`
 
-3. **运行插件**：
-   - 在任意 Figma 文件中：右键 → Plugins → Development → Figma to HML
-   - 或使用快速操作 (Ctrl/Cmd + /)，搜索 "Export to HML"
+3. **Run the plugin:**
+   - In any Figma file: **Right-click → Plugins → Development → Figma to HML**
+   - Or press `Ctrl/Cmd + /`, search for **"Export to HML"**
 
-### 发布到 Figma Community（可选）
+4. **Export your design:**
+   - Select the Page and check the Frames you want to export
+   - Configure project name, resolution, pixel format, etc.
+   - Click **Export to HML** → wait for conversion
+   - Click **Download ZIP** → get the complete HML project
 
-1. 前往 [Figma Plugin 发布页面](https://www.figma.com/developers/submit-plugin)
-2. 打包上传 `manifest.json` + `dist/` 目录
+## Release Notes
 
-## 使用流程
+### v1.0.0
 
-1. **打开 Figma 文件**，运行插件
-2. **选择 Page** — 插件自动列出所有 Page
-3. **勾选要导出的 Frame** — 每个顶层 Frame 对应一个 `hg_view`
-4. **配置参数**：
-   - 项目名称
-   - 目标分辨率（如 454x454）
-   - 像素格式（RGB565 / ARGB8888）
-   - 图片格式和缩放
-   - 默认字体文件名
-5. **点击 Export** → 等待转换完成
-6. **Download ZIP** → 获得完整 HML 工程
+**Supported Features:**
 
-## 输出结构
+- Export top-level Frames from a Figma Page as HML `hg_view`
+- Convert nested Frame / Group / Component / Instance to `hg_window` containers
+- Text → `hg_label`, Rectangle → `hg_rect`, Ellipse → `hg_circle`
+- Automatically export image fills and vector shapes as `hg_image` assets
+- Prototype interaction export:
+  - `ON_CLICK` → `onClick` event
+  - `ON_PRESS` / `MOUSE_DOWN` → `onTouchDown` event
+  - `MOUSE_UP` → `onTouchUp` event
+  - `ON_DRAG` → `onSwipeLeft` / `onSwipeRight` / `onSwipeUp` / `onSwipeDown` (automatically derived from transition direction)
+  - `NAVIGATE` action → `switchView`, with automatic target view resolution and transition animation mapping
+- Export configuration: resolution, pixel format, image format/scale, default font
+- ZIP download of a complete HML project (includes project.json, HML file, image assets)
+- Fully offline — no network dependency
+
+**Known Limitations:**
+
+- ⚠️ **Exported projects are not guaranteed to run directly in the simulator.** The export serves as a starting point from design to code — manual adjustments to attribute values, font files, and hierarchy structure may be required before it can compile and run successfully
+- Overlay / Swap / Back / URL interaction types are not yet supported
+- Figma effects (shadows, blur, etc.) are not converted
+- Auto Layout is converted to absolute coordinates — flexible layout semantics are not preserved
+- Font files must be prepared by the user and placed in the assets directory
+
+## Features
+
+- **One-click export** — Export the current design to an HML project ZIP directly within Figma
+- **Visual configuration** — Select Pages, Frames, and set resolution, pixel format, and other parameters
+- **Image asset export** — Automatically export image fills and vector shapes as image files
+- **ZIP download** — Download a ZIP containing the complete HML project directory structure
+- **Offline** — No network connection required; all conversion happens locally
+
+## Installation
+
+### Development Mode
+
+1. **Build the plugin:**
+   ```bash
+   cd tools/figma-plugin
+   npm install
+   npm run build
+   ```
+
+2. **Load in Figma Desktop:**
+   - Open the Figma Desktop App
+   - Menu → Plugins → Development → Import plugin from manifest...
+   - Select `tools/figma-plugin/manifest.json`
+
+3. **Run the plugin:**
+   - In any Figma file: Right-click → Plugins → Development → Figma to HML
+   - Or use Quick Actions (Ctrl/Cmd + /), search for "Export to HML"
+
+### Publish to Figma Community (Optional)
+
+1. Go to the [Figma Plugin submission page](https://www.figma.com/developers/submit-plugin)
+2. Upload `manifest.json` + the `dist/` directory
+
+## Usage
+
+1. **Open a Figma file** and run the plugin
+2. **Select a Page** — the plugin automatically lists all Pages
+3. **Check the Frames to export** — each top-level Frame maps to an `hg_view`
+4. **Configure parameters:**
+   - Project name
+   - Target resolution (e.g., 454x454)
+   - Pixel format (RGB565 / ARGB8888)
+   - Image format and scale
+   - Default font filename
+5. **Click Export** → wait for conversion to complete
+6. **Download ZIP** → get the complete HML project
+
+## Output Structure
 
 ```
 MyProject.zip
 └── MyProject/
-    ├── project.json          # 项目配置
+    ├── project.json          # Project configuration
     ├── ui/
-    │   └── MyProject.hml     # HML 设计文件
-    ├── assets/               # 图片资源
+    │   └── MyProject.hml     # HML design file
+    ├── assets/               # Image assets
     │   ├── image_0.png
     │   ├── image_1.png
     │   └── ...
     └── src/
-        └── user/             # 用户代码目录
+        └── user/             # User code directory
             └── .gitkeep
 ```
 
-## 转换映射
+## Conversion Mapping
 
-| Figma 节点 | HML 组件 | 说明 |
-|------------|----------|------|
-| FRAME (顶层) | `hg_view` | 独立页面/视图 |
-| FRAME (嵌套) | `hg_window` | 嵌套容器 |
-| GROUP | `hg_window` | 分组 |
-| COMPONENT / INSTANCE | `hg_window` | 组件 |
-| TEXT | `hg_label` | 文本 |
-| RECTANGLE | `hg_rect` | 矩形 |
-| RECTANGLE (图片填充) | `hg_image` | 图片 |
-| ELLIPSE | `hg_circle` | 圆形 |
-| VECTOR / STAR / LINE | `hg_image` | 矢量导出为图片 |
+| Figma Node | HML Component | Description |
+|------------|---------------|-------------|
+| FRAME (top-level) | `hg_view` | Independent page/view |
+| FRAME (nested) | `hg_window` | Nested container |
+| GROUP | `hg_window` | Group |
+| COMPONENT / INSTANCE | `hg_window` | Component |
+| TEXT | `hg_label` | Text |
+| RECTANGLE | `hg_rect` | Rectangle |
+| RECTANGLE (image fill) | `hg_image` | Image |
+| ELLIPSE | `hg_circle` | Circle |
+| VECTOR / STAR / LINE | `hg_image` | Vector exported as image |
 
-## 开发
+## Development
 
 ```bash
-# 安装依赖
+# Install dependencies
 npm install
 
-# 构建
+# Build
 npm run build
 
-# 开发模式 (监听文件变更)
+# Watch mode (auto-rebuild on changes)
 npm run watch
 ```
 
-### 目录结构
+### Directory Structure
 
 ```
 figma-plugin/
-├── manifest.json           # Figma 插件清单
+├── manifest.json           # Figma plugin manifest
 ├── package.json
 ├── tsconfig.json
 ├── scripts/
-│   └── build-ui.js         # UI 构建脚本
+│   └── build-ui.js         # UI build script
 ├── src/
-│   ├── code.ts             # 插件后端 (Figma 沙箱)
-│   ├── converter.ts        # 节点转换逻辑
-│   ├── image-exporter.ts   # 图片导出
-│   └── ui.html             # 插件 UI 界面
-└── dist/                   # 构建输出
+│   ├── code.ts             # Plugin backend (Figma sandbox)
+│   ├── converter.ts        # Node conversion logic
+│   ├── image-exporter.ts   # Image export
+│   └── ui.html             # Plugin UI
+└── dist/                   # Build output
     ├── code.js
     └── ui.html
 ```
 
-### 架构说明
+### Architecture
 
-- **code.ts** — 运行在 Figma 沙箱中，可以访问 `figma.*` API 读取节点数据、导出图片
-- **ui.html** — 运行在 iframe 中，提供用户界面，通过 `postMessage` 与 code.ts 通信
-- **converter.ts** — 纯转换逻辑，将 Figma 节点树转为 HML XML
-- **ZIP 打包** — 在 UI 层使用内嵌的 SimpleZip 类生成 ZIP（纯 JS，无外部依赖）
+- **code.ts** — Runs in the Figma sandbox; accesses `figma.*` API to read node data and export images
+- **ui.html** — Runs in an iframe; provides the user interface and communicates with code.ts via `postMessage`
+- **converter.ts** — Pure conversion logic; transforms the Figma node tree into HML XML
+- **ZIP packaging** — Uses an embedded SimpleZip class in the UI layer to generate ZIPs (pure JS, no external dependencies)
 
-## 限制
+## Limitations
 
-- Figma 插件沙箱不支持文件系统访问，只能通过浏览器下载 ZIP
-- 复杂矢量路径（SVG 曲线）会被导出为位图
-- Figma 特效（阴影、模糊）不会转换到 HML
-- Auto Layout 按绝对位置转换
-- 字体文件需要用户自行准备并放入 assets 目录
+- The Figma plugin sandbox does not support filesystem access — ZIP can only be downloaded via browser
+- Complex vector paths (SVG curves) are exported as bitmaps
+- Figma effects (shadows, blur) are not converted to HML
+- Auto Layout is converted using absolute positions
+- Font files must be prepared by the user and placed in the assets directory
