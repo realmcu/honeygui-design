@@ -879,6 +879,10 @@ const en = {
   // Toolbar operation states
   'Generating...': 'Generating...',
   'Starting...': 'Starting...',
+
+  // GUI Version
+  'Branch': 'Branch',
+  'Build Date': 'Build Date',
 };
 
 export default en;

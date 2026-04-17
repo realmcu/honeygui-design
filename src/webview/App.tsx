@@ -322,6 +322,11 @@ const App: React.FC = () => {
                 batchUpdate.isSimulationRunning = message.isSimulationRunning;
               }
               
+              // 添加 GUI 库版本信息
+              if (message.guiVersion) {
+                batchUpdate.guiVersion = message.guiVersion;
+              }
+              
               // 【关键】一次性更新所有状态，只触发一次渲染
               useDesignerStore.setState(batchUpdate);
               
@@ -361,6 +366,10 @@ const App: React.FC = () => {
               
               if (message.otherFileComponentIds) {
                 useDesignerStore.setState({ otherFileComponentIds: message.otherFileComponentIds });
+              }
+              
+              if (message.guiVersion) {
+                useDesignerStore.setState({ guiVersion: message.guiVersion });
               }
               
               if (message.components) {

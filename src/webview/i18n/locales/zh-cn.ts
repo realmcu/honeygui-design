@@ -881,6 +881,10 @@ const zhCN = {
   // Toolbar operation states
   'Generating...': '生成中...',
   'Starting...': '启动中...',
+
+  // GUI Version
+  'Branch': '分支',
+  'Build Date': '构建日期',
 };
 
 export default zhCN;

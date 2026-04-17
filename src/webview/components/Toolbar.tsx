@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useDesignerStore } from '../store';
-import { Save, Code, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, GitBranch, Palette, AlignLeft, Grid, Download, Rocket, BrushCleaning, Square, Users } from 'lucide-react';
+import { Save, Code, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, GitBranch, Palette, AlignLeft, Grid, Download, Rocket, BrushCleaning, Square, Users, Info } from 'lucide-react';
 import { AlignType, DistributeType, ResizeType, getAlignmentConfigsByCategory } from '../utils/alignmentUtils';
 import { t } from '../i18n';
 import './Toolbar.css';
@@ -31,6 +31,7 @@ const Toolbar: React.FC<{
     isSimulationRunning,
     operationInProgress,
     setOperationInProgress,
+    guiVersion,
   } = useDesignerStore();
 
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -338,6 +339,21 @@ const Toolbar: React.FC<{
       </div>
 
       <div style={{ flex: 1 }} />
+
+      {guiVersion && (
+        <div className="toolbar-section">
+          <div
+            className="gui-version-badge"
+            title={guiVersion.engine === 'LVGL'
+              ? `LVGL ${guiVersion.tag}`
+              : `HoneyGUI ${guiVersion.tag}\n${t('Branch')}: ${guiVersion.branch}\nCommit: ${guiVersion.commit}\n${t('Build Date')}: ${guiVersion.buildDate}`
+            }
+          >
+            <Info size={14} strokeWidth={1.4} />
+            <span>{guiVersion.engine} {guiVersion.tag}</span>
+          </div>
+        </div>
+      )}
 
       <div className="toolbar-section">
         <button
