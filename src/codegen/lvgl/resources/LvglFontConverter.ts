@@ -8,6 +8,11 @@ import { spawnSync } from 'child_process';
 import { Component } from '../../../hml/types';
 import { normalizeFontKey, buildFontVarName } from '../LvglUtils';
 
+interface CharacterSetSource {
+  type: 'range' | 'string' | 'file' | 'codepage';
+  value: string;
+}
+
 export class LvglFontConverter {
   private builtinFontVarMap: Map<string, string> = new Map();
   private builtinFontVars: string[] = [];
@@ -33,7 +38,7 @@ export class LvglFontConverter {
     const projectRoot = path.dirname(srcDir);
     const assetsDir = path.join(projectRoot, 'assets');
 
-    const fontConfigs = this.collectFontConfigs(components);
+    const fontConfigs = this.collectFontConfigs(components, projectRoot);
     if (fontConfigs.length === 0) {
       return;
     }
@@ -44,6 +49,7 @@ export class LvglFontConverter {
     }
 
     for (const config of fontConfigs) {
+      console.log(`[LvglFontConverter] Font: ${config.fontFile}, size: ${config.fontSize}, chars(${config.characters.length}): "${config.characters.substring(0, 80)}${config.characters.length > 80 ? '...' : ''}"`);
       const inputPath = this.resolveFontPath(projectRoot, assetsDir, config.fontFile);
       if (!inputPath) {
         console.warn(`Font file not found, skipping: ${config.fontFile}`);
@@ -61,14 +67,22 @@ export class LvglFontConverter {
   }
 
   /**
-   * Collect font configurations used by all hg_label components
+   * Collect font configurations used by all label components
+   * (hg_label, hg_time_label, hg_timer_label)
+   * Includes text characters + additional character sets (range, string, file, codepage)
    */
-  private collectFontConfigs(components: Component[]): Array<{ fontFile: string; fontSize: number; characters: string }> {
+  private collectFontConfigs(components: Component[], projectRoot: string): Array<{ fontFile: string; fontSize: number; characters: string }> {
     const fontExts = new Set(['.ttf', '.otf', '.woff', '.woff2']);
-    const seen = new Map<string, { fontFile: string; fontSize: number; characters: Set<string> }>();
+    const labelTypes = new Set(['hg_label', 'hg_time_label', 'hg_timer_label']);
+    const seen = new Map<string, {
+      fontFile: string;
+      fontSize: number;
+      characters: Set<string>;
+      additionalCharSets: Set<string>; // JSON-serialized for dedup
+    }>();
 
     for (const component of components) {
-      if (component.type !== 'hg_label') {
+      if (!labelTypes.has(component.type)) {
         continue;
       }
 
@@ -92,33 +106,136 @@ export class LvglFontConverter {
         for (const char of text) {
           existing.characters.add(char);
         }
+        // Merge additional character sets
+        const charSets = (component.data as any)?.characterSets;
+        if (Array.isArray(charSets)) {
+          for (const cs of charSets) {
+            existing.additionalCharSets.add(JSON.stringify(cs));
+          }
+        }
       } else {
+        const additionalCharSets = new Set<string>();
+        const charSets = (component.data as any)?.characterSets;
+        if (Array.isArray(charSets)) {
+          for (const cs of charSets) {
+            additionalCharSets.add(JSON.stringify(cs));
+          }
+        }
         seen.set(key, {
           fontFile: fontFileStr,
           fontSize,
-          characters: new Set(text)
+          characters: new Set(text),
+          additionalCharSets
         });
       }
     }
 
-    return Array.from(seen.values()).map(config => ({
-      fontFile: config.fontFile,
-      fontSize: config.fontSize,
-      characters: this.buildCharacterSet(config.characters)
-    }));
+    return Array.from(seen.values()).map(config => {
+      // Resolve additional character sets into code points
+      const extraChars = this.resolveAdditionalCharSets(
+        Array.from(config.additionalCharSets).map(s => JSON.parse(s)),
+        projectRoot
+      );
+      // Merge text characters + additional characters
+      const allChars = new Set<string>(config.characters);
+      for (const cp of extraChars) {
+        allChars.add(String.fromCodePoint(cp));
+      }
+      return {
+        fontFile: config.fontFile,
+        fontSize: config.fontSize,
+        characters: this.buildCharacterSet(allChars)
+      };
+    });
   }
 
   /**
-   * Build character set: merge characters from user text with basic ASCII characters
+   * Resolve additional character set sources into code points
+   */
+  private resolveAdditionalCharSets(charSets: CharacterSetSource[], projectRoot: string): number[] {
+    const result = new Set<number>();
+
+    for (const cs of charSets) {
+      if (!cs.value) {
+        continue;
+      }
+
+      try {
+        switch (cs.type) {
+          case 'range': {
+            // Parse "0xXXXX-0xYYYY" format
+            const match = cs.value.trim().match(/^(0x)?([0-9a-fA-F]+)\s*-\s*(0x)?([0-9a-fA-F]+)$/);
+            if (match) {
+              const start = parseInt(match[2], 16);
+              const end = parseInt(match[4], 16);
+              if (!isNaN(start) && !isNaN(end) && start <= end) {
+                for (let i = start; i <= end; i++) {
+                  result.add(i);
+                }
+              }
+            }
+            break;
+          }
+          case 'string': {
+            // Extract characters from string
+            for (const char of cs.value) {
+              const cp = char.codePointAt(0);
+              if (cp !== undefined) {
+                result.add(cp);
+              }
+            }
+            break;
+          }
+          case 'file': {
+            // Read .cst binary file (uint16_t little-endian)
+            const filePath = path.isAbsolute(cs.value)
+              ? cs.value
+              : path.resolve(projectRoot, cs.value);
+            if (fs.existsSync(filePath)) {
+              const data = fs.readFileSync(filePath);
+              if (data.length % 2 === 0) {
+                for (let i = 0; i < data.length / 2; i++) {
+                  result.add(data.readUInt16LE(i * 2));
+                }
+              }
+            } else {
+              console.warn(`Character set file not found: ${filePath}`);
+            }
+            break;
+          }
+          case 'codepage': {
+            // CodePage files - try to find and parse
+            const cpPath = path.isAbsolute(cs.value)
+              ? cs.value
+              : path.resolve(projectRoot, cs.value);
+            if (fs.existsSync(cpPath)) {
+              const data = fs.readFileSync(cpPath);
+              if (data.length % 2 === 0) {
+                for (let i = 0; i < data.length / 2; i++) {
+                  result.add(data.readUInt16LE(i * 2));
+                }
+              }
+            } else {
+              console.warn(`CodePage file not found: ${cpPath}`);
+            }
+            break;
+          }
+        }
+      } catch (error) {
+        console.warn(`Failed to resolve character set (${cs.type}: ${cs.value}): ${error}`);
+      }
+    }
+
+    return Array.from(result);
+  }
+
+  /**
+   * Build character set: only include user-used characters + space
+   * Space (0x20) is always included as it's essential for text rendering and costs minimal ROM.
    */
   private buildCharacterSet(userChars: Set<string>): string {
-    const chars = new Set<string>();
-    for (let i = 0x20; i <= 0x7E; i++) {
-      chars.add(String.fromCharCode(i));
-    }
-    for (const char of userChars) {
-      chars.add(char);
-    }
+    const chars = new Set<string>(userChars);
+    chars.add(' '); // always include space
     return Array.from(chars).sort().join('');
   }
 
@@ -159,6 +276,16 @@ export class LvglFontConverter {
     try {
       const outputFile = path.join(outputDir, `${varName}.c`);
 
+      // Build lv_font_conv arguments
+      // Use --range for individual code points to avoid shell escaping issues with --symbols
+      // (space and other special chars get eaten by shell when using --symbols with shell: true)
+      const codePoints = Array.from(new Set(characters))
+        .map(ch => ch.codePointAt(0)!)
+        .filter(cp => cp !== undefined)
+        .sort((a, b) => a - b);
+
+      const ranges = this.compactRanges(codePoints);
+
       const args = [
         'lv_font_conv',
         '--font', inputPath,
@@ -166,8 +293,11 @@ export class LvglFontConverter {
         '--format', 'lvgl',
         '--output', outputFile,
         '--bpp', '4',
-        '--symbols', characters
       ];
+
+      for (const range of ranges) {
+        args.push('--range', range);
+      }
 
       const result = spawnSync('npx', args, {
         encoding: 'utf-8',
@@ -187,5 +317,32 @@ export class LvglFontConverter {
       console.warn(`Font conversion error ${varName}: ${error}`);
       return false;
     }
+  }
+
+  /**
+   * Compact sorted code points into range strings for lv_font_conv --range
+   * e.g. [0x20, 0x21, 0x22, 0x41, 0x43] => ['0x20-0x22', '0x41', '0x43']
+   */
+  private compactRanges(sortedCodePoints: number[]): string[] {
+    if (sortedCodePoints.length === 0) {
+      return ['0x20']; // fallback: at least space
+    }
+
+    const ranges: string[] = [];
+    let start = sortedCodePoints[0];
+    let end = start;
+
+    for (let i = 1; i < sortedCodePoints.length; i++) {
+      if (sortedCodePoints[i] === end + 1) {
+        end = sortedCodePoints[i];
+      } else {
+        ranges.push(start === end ? `0x${start.toString(16)}` : `0x${start.toString(16)}-0x${end.toString(16)}`);
+        start = sortedCodePoints[i];
+        end = start;
+      }
+    }
+    ranges.push(start === end ? `0x${start.toString(16)}` : `0x${start.toString(16)}-0x${end.toString(16)}`);
+
+    return ranges;
   }
 }
