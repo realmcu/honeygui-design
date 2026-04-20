@@ -740,26 +740,38 @@ export const GlassWidget: React.FC<WidgetProps> = ({ component, style, handlers 
       
       // 复选框
       else if (comp.type === 'hg_checkbox') {
-        const checked = d.checked ?? false;
+        const checked = d.checked ?? d.value ?? false;
         const boxSize = Math.min(compW, compH, 20);
+        const boxY = relY + (compH - boxSize) / 2;
         
         tempCtx.strokeStyle = '#666666';
         tempCtx.lineWidth = 2;
-        tempCtx.strokeRect(relX, relY + (compH - boxSize) / 2, boxSize, boxSize);
+        tempCtx.strokeRect(relX, boxY, boxSize, boxSize);
         
         if (checked) {
           tempCtx.strokeStyle = '#007acc';
           tempCtx.beginPath();
-          tempCtx.moveTo(relX + 4, relY + (compH - boxSize) / 2 + boxSize / 2);
-          tempCtx.lineTo(relX + boxSize / 3, relY + (compH - boxSize) / 2 + boxSize - 4);
-          tempCtx.lineTo(relX + boxSize - 4, relY + (compH - boxSize) / 2 + 4);
+          tempCtx.moveTo(relX + 4, boxY + boxSize / 2);
+          tempCtx.lineTo(relX + boxSize / 3, boxY + boxSize - 4);
+          tempCtx.lineTo(relX + boxSize - 4, boxY + 4);
           tempCtx.stroke();
+        }
+
+        // Draw text
+        const cbText = d.text || '';
+        if (cbText) {
+          const fontSize = d.fontSize || 16;
+          const textColor = comp.style?.color || d.color || '#ffffff';
+          tempCtx.fillStyle = textColor;
+          tempCtx.font = `${fontSize}px sans-serif`;
+          tempCtx.textBaseline = 'middle';
+          tempCtx.fillText(cbText, relX + boxSize + 6, relY + compH / 2);
         }
       }
       
       // 单选框
       else if (comp.type === 'hg_radio') {
-        const checked = d.checked ?? false;
+        const checked = d.checked ?? d.value ?? false;
         const radius = Math.min(compW, compH, 20) / 2;
         const cx = relX + radius;
         const cy = relY + compH / 2;
@@ -775,6 +787,17 @@ export const GlassWidget: React.FC<WidgetProps> = ({ component, style, handlers 
           tempCtx.beginPath();
           tempCtx.arc(cx, cy, radius - 5, 0, Math.PI * 2);
           tempCtx.fill();
+        }
+
+        // Draw text
+        const radioText = d.text || '';
+        if (radioText) {
+          const fontSize = d.fontSize || 16;
+          const textColor = comp.style?.color || d.color || '#ffffff';
+          tempCtx.fillStyle = textColor;
+          tempCtx.font = `${fontSize}px sans-serif`;
+          tempCtx.textBaseline = 'middle';
+          tempCtx.fillText(radioText, relX + radius * 2 + 6, relY + compH / 2);
         }
       }
       

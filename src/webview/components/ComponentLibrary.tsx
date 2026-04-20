@@ -1,5 +1,5 @@
 ﻿import React, { useState, useRef, useEffect } from 'react';
-import { ComponentType, ComponentDefinition } from '../types';
+import { ComponentType, ComponentDefinition, PropertyDefinition } from '../types';
 import { t } from '../i18n';
 import { PARTICLE_EFFECT_TYPES } from '../constants/particleEffects';
 import { useDesignerStore } from '../store';
@@ -90,6 +90,22 @@ interface ContextMenuState {
   componentType: string;
 }
 
+/**
+ * Common text properties for components that display text.
+ * Use spread syntax to mix into component definitions.
+ * Override defaultValue for 'text' per component as needed.
+ */
+const TEXT_PROPERTIES: PropertyDefinition[] = [
+  { name: 'text', label: 'Display Text', type: 'string', defaultValue: '', group: 'data' },
+  { name: 'color', label: 'Color', type: 'color', defaultValue: '#ffffff', group: 'style' },
+  { name: 'fontFile', label: 'Font File', type: 'string', defaultValue: '', group: 'font' },
+  { name: 'fontSize', label: 'Font Size', type: 'number', defaultValue: 16, group: 'font' },
+];
+
+/** Helper: create TEXT_PROPERTIES with a custom default text value */
+const textProps = (defaultText: string): PropertyDefinition[] =>
+  TEXT_PROPERTIES.map(p => p.name === 'text' ? { ...p, defaultValue: defaultText } : p) as PropertyDefinition[];
+
 const componentDefinitions: ComponentDefinition[] = [
   {
     type: 'hg_button',
@@ -97,7 +113,7 @@ const componentDefinitions: ComponentDefinition[] = [
     icon: '🔘',
     defaultSize: { width: 100, height: 32 },
     properties: [
-      { name: 'text', label: 'Display Text', type: 'string', defaultValue: 'Button', group: 'data' },
+      ...textProps('Button'),
       { name: 'toggleMode', label: 'Toggle Mode', type: 'boolean', defaultValue: false, group: 'data' },
       { name: 'imageOn', label: 'On Image', type: 'string', group: 'data' },
       { name: 'imageOff', label: 'Off Image', type: 'string', group: 'data' },
@@ -227,8 +243,9 @@ const componentDefinitions: ComponentDefinition[] = [
     name: 'Checkbox',
     icon: '☑️',
     engineSupport: { honeygui: 'unsupported', lvgl: 'ready' },
-    defaultSize: { width: 20, height: 20 },
+    defaultSize: { width: 120, height: 24 },
     properties: [
+      ...textProps('Checkbox'),
       { name: 'value', label: 'Checked', type: 'boolean', defaultValue: false, group: 'data' },
     ],
   },
@@ -237,8 +254,9 @@ const componentDefinitions: ComponentDefinition[] = [
     name: 'Radio',
     icon: '⭕',
     engineSupport: { honeygui: 'unsupported', lvgl: 'ready' },
-    defaultSize: { width: 20, height: 20 },
+    defaultSize: { width: 120, height: 24 },
     properties: [
+      ...textProps('Option'),
       { name: 'value', label: 'Checked', type: 'boolean', defaultValue: false, group: 'data' },
     ],
   },

@@ -9,25 +9,16 @@ import { LvglBaseGenerator } from './LvglBaseGenerator';
 export class LvglCheckboxGenerator extends LvglBaseGenerator {
   generateCreation(component: Component, parentRef: string, ctx: LvglGeneratorContext): string {
     const { x, y } = this.resolvePosition(component);
-    const { width, height } = this.resolveSize(component);
 
-    const text = component.data?.label || component.data?.text || component.name || '';
-    const checked = component.data?.checked === true || component.data?.value === true;
+    const text = component.data?.text || component.data?.label || '';
+    const checked = component.data?.checked === true || component.data?.checked === 'true' 
+      || component.data?.value === true || component.data?.value === 'true';
     const color = component.style?.color || component.data?.color;
     const fontSize = Number(component.style?.fontSize || component.data?.fontSize || 16);
     const fontFile = component.data?.fontFile;
-    const indicatorSize = Math.min(width, height);
 
     let code = `    ${component.id} = lv_checkbox_create(${parentRef});\n`;
     code += `    lv_obj_set_pos(${component.id}, ${x}, ${y});\n`;
-
-    code += `    {\n`;
-    code += `        const lv_font_t * _font = lv_obj_get_style_text_font(${component.id}, LV_PART_MAIN);\n`;
-    code += `        lv_coord_t _fh = lv_font_get_line_height(_font);\n`;
-    code += `        lv_coord_t _pad = (${indicatorSize} - _fh) / 2;\n`;
-    code += `        if(_pad < 0) _pad = 0;\n`;
-    code += `        lv_obj_set_style_pad_all(${component.id}, _pad, LV_PART_INDICATOR);\n`;
-    code += `    }\n`;
 
     if (text) {
       code += `    lv_checkbox_set_text(${component.id}, "${escapeCString(String(text))}");\n`;

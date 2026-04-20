@@ -18,26 +18,16 @@ import { LvglBaseGenerator } from './LvglBaseGenerator';
 export class LvglRadioGenerator extends LvglBaseGenerator {
   generateCreation(component: Component, parentRef: string, ctx: LvglGeneratorContext): string {
     const { x, y } = this.resolvePosition(component);
-    const { width, height } = this.resolveSize(component);
 
-    const text = component.data?.label || component.data?.text || component.name || '';
-    const checked = component.data?.checked === true || component.data?.value === true;
+    const text = component.data?.text || component.data?.label || '';
+    const checked = component.data?.checked === true || component.data?.checked === 'true'
+      || component.data?.value === true || component.data?.value === 'true';
     const color = component.style?.color || component.data?.color;
     const fontSize = Number(component.style?.fontSize || component.data?.fontSize || 16);
     const fontFile = component.data?.fontFile;
-    const indicatorSize = Math.min(width, height);
 
     let code = `    ${component.id} = lv_checkbox_create(${parentRef});\n`;
     code += `    lv_obj_set_pos(${component.id}, ${x}, ${y});\n`;
-
-    // Adjust indicator padding to match the desired size
-    code += `    {\n`;
-    code += `        const lv_font_t * _font = lv_obj_get_style_text_font(${component.id}, LV_PART_MAIN);\n`;
-    code += `        lv_coord_t _fh = lv_font_get_line_height(_font);\n`;
-    code += `        lv_coord_t _pad = (${indicatorSize} - _fh) / 2;\n`;
-    code += `        if(_pad < 0) _pad = 0;\n`;
-    code += `        lv_obj_set_style_pad_all(${component.id}, _pad, LV_PART_INDICATOR);\n`;
-    code += `    }\n`;
 
     if (text) {
       code += `    lv_checkbox_set_text(${component.id}, "${escapeCString(String(text))}");\n`;
@@ -100,7 +90,9 @@ export class LvglRadioGenerator extends LvglBaseGenerator {
     for (const parentId of parentIds) {
       // Find the initially checked radio index within this parent
       const siblings = radios.filter(r => r.parent === parentId);
-      const checkedIndex = siblings.findIndex(r => r.data?.checked === true || r.data?.value === true);
+      const checkedIndex = siblings.findIndex(r => 
+        r.data?.checked === true || r.data?.checked === 'true' 
+        || r.data?.value === true || r.data?.value === 'true');
       code += `static int32_t ${parentId}_radio_active_index = ${checkedIndex >= 0 ? checkedIndex : 0};\n`;
     }
     code += `\n`;
@@ -115,14 +107,14 @@ export class LvglRadioGenerator extends LvglBaseGenerator {
     code += `    lv_style_set_bg_image_src(&style_radio_chk, NULL);\n`;
     code += `}\n\n`;
 
-    // Generate mutual exclusion event handler for each parent container
+    // Generate mutual exclusion event handler
     code += `static void radio_event_handler(lv_event_t * e)\n`;
     code += `{\n`;
     code += `    int32_t * active_id = (int32_t *)lv_event_get_user_data(e);\n`;
     code += `    lv_obj_t * cont = (lv_obj_t *)lv_event_get_current_target(e);\n`;
     code += `    lv_obj_t * act_cb = lv_event_get_target_obj(e);\n`;
     code += `    lv_obj_t * old_cb = lv_obj_get_child(cont, *active_id);\n\n`;
-    code += `    /* Do nothing if the container itself was clicked */\n`;
+    code += `    /* Do nothing if the container was clicked */\n`;
     code += `    if(act_cb == cont) return;\n\n`;
     code += `    lv_obj_remove_state(old_cb, LV_STATE_CHECKED);  /* Uncheck the previous radio button */\n`;
     code += `    lv_obj_add_state(act_cb, LV_STATE_CHECKED);     /* Check the current radio button */\n\n`;

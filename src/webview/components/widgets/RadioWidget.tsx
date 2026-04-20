@@ -1,9 +1,16 @@
 import React from 'react';
 import { WidgetProps } from './types';
 
-export const RadioWidget: React.FC<WidgetProps> = ({ component, style, handlers }) => (
-  <label key={component.id} style={style} {...handlers}>
-    <input type="radio" checked={!!component.data?.checked} onChange={() => {}} />
-    {component.data?.label || component.name}
-  </label>
-);
+export const RadioWidget: React.FC<WidgetProps> = ({ component, style, handlers }) => {
+  const text = component.data?.text || '';
+  const checked = component.data?.checked ?? component.data?.value ?? false;
+  const fontSize = component.data?.fontSize || 16;
+  const color = component.style?.color || component.data?.color;
+
+  return (
+    <label key={component.id} style={{ ...style, display: 'flex', alignItems: 'center', gap: '4px' }} {...handlers}>
+      <input type="radio" checked={!!checked} onChange={() => {}} />
+      <span style={{ fontSize: `${fontSize}px`, color: color || undefined }}>{text}</span>
+    </label>
+  );
+};

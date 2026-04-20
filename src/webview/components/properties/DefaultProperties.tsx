@@ -132,7 +132,8 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
   // 当字体文件改变时，请求字体度量信息
   React.useEffect(() => {
     const fontFile = (component.data as any)?.fontFile;
-    if (fontFile && (component.type === 'hg_label' || component.type === 'hg_time_label' || component.type === 'hg_timer_label')) {
+    const hasFontProps = definition?.properties.some(p => p.group === 'font');
+    if (fontFile && hasFontProps) {
       window.vscodeAPI?.postMessage({
         command: 'getFontMetrics',
         fontPath: fontFile
@@ -1348,11 +1349,12 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
               </div>
             )}
 
-            {/* Font Properties - 对 hg_label / hg_time_label / hg_timer_label 显示 */}
-            {definition && (component.type === 'hg_label' || component.type === 'hg_time_label' || component.type === 'hg_timer_label') && definition.properties.filter(p => p.group === 'font').length > 0 && (
+            {/* Font Properties - 对所有包含 font 组属性的控件显示 */}
+            {definition && definition.properties.filter(p => p.group === 'font').length > 0 && (
               <div className="property-group">
                 <div className="property-group-title">{t('Font')}</div>
                 {/* 字体文件 */}
+                {definition.properties.some(p => p.name === 'fontFile') && (
                 <div className="property-item">
                   <label>{t('Font File')}</label>
                   {renderFontProperty(
@@ -1361,7 +1363,9 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                     'fontFile'
                   )}
                 </div>
+                )}
                 {/* 字体大小 */}
+                {definition.properties.some(p => p.name === 'fontSize') && (
                 <div className="property-item">
                   <label>{t('Font Size')}</label>
                   <PropertyEditor
@@ -1371,7 +1375,9 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                     min={1}
                   />
                 </div>
-                {/* 字体类型 */}
+                )}
+                {/* 字体类型 - 仅定义了 fontType 属性的控件显示 */}
+                {definition.properties.some(p => p.name === 'fontType') && (
                 <div className="property-item">
                   <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                     {t('Font Type')}
@@ -1404,8 +1410,9 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                     ]}
                   />
                 </div>
-                {/* 渲染模式 - 仅点阵字体显示 */}
-                {((component.data as any)?.fontType || 'bitmap') === 'bitmap' && (
+                )}
+                {/* 渲染模式 - 仅定义了 renderMode 属性且点阵字体时显示 */}
+                {definition.properties.some(p => p.name === 'renderMode') && ((component.data as any)?.fontType || 'bitmap') === 'bitmap' && (
                   <div className="property-item">
                     <label>{t('Render Mode')}</label>
                     <PropertyEditor
@@ -1419,14 +1426,17 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                     </span>
                   </div>
                 )}
-                {/* 附加字符集 */}
+                {/* 附加字符集 - 仅定义了 fontType 属性的控件显示（label 系列） */}
+                {definition.properties.some(p => p.name === 'fontType') && (
                 <div className="property-item">
                   <label>{t('Additional Character Sets')}</label>
                   <div style={{ marginTop: '4px' }}>
                     {renderCharacterSets()}
                   </div>
                 </div>
-                {/* 预览模式开关 */}
+                )}
+                {/* 预览模式开关 - 仅定义了 fontType 属性的控件显示（label 系列） */}
+                {definition.properties.some(p => p.name === 'fontType') && (
                 <div className="property-item">
                   <label>{t('Preview mode (does not change actual rendering)')}</label>
                   <div style={{ marginTop: '4px' }}>
@@ -1489,6 +1499,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                     </div>
                   </div>
                 </div>
+                )}
                 {/* 字体度量警告 - 动态显示 */}
                 {fontMetrics && fontMetrics.needsWarning && (
                   <div style={{
