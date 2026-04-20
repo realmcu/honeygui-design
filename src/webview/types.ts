@@ -48,13 +48,23 @@ export type ComponentType =
   | 'hg_claw_face'
   | 'hg_menu_cellular';
 
+export type EngineSupport = 'ready' | 'planned' | 'unsupported';
+
 export interface ComponentDefinition {
   type: ComponentType;
   name: string;
   icon: string;
   defaultSize: { width: number; height: number };
   properties: PropertyDefinition[];
-  comingSoon?: boolean; // SDK 尚未实现，禁止拖放
+  /** 
+   * Per-engine support status. 
+   * - 'ready': fully supported, normal display
+   * - 'planned': planned but not yet implemented, greyed out with TODO badge
+   * - 'unsupported': not supported, hidden from component library
+   * 
+   * If omitted, defaults to 'ready' for all engines.
+   */
+  engineSupport?: Partial<Record<string, EngineSupport>>;
 }
 
 export interface PropertyDefinition {

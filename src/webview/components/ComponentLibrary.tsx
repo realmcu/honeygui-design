@@ -2,6 +2,7 @@
 import { ComponentType, ComponentDefinition } from '../types';
 import { t } from '../i18n';
 import { PARTICLE_EFFECT_TYPES } from '../constants/particleEffects';
+import { useDesignerStore } from '../store';
 import './ComponentLibrary.css';
 
 interface ComponentLibraryProps {
@@ -225,7 +226,7 @@ const componentDefinitions: ComponentDefinition[] = [
     type: 'hg_checkbox',
     name: 'Checkbox',
     icon: '☑️',
-    comingSoon: true,
+    engineSupport: { honeygui: 'unsupported', lvgl: 'ready' },
     defaultSize: { width: 20, height: 20 },
     properties: [
       { name: 'value', label: 'Checked', type: 'boolean', defaultValue: false, group: 'data' },
@@ -235,7 +236,7 @@ const componentDefinitions: ComponentDefinition[] = [
     type: 'hg_radio',
     name: 'Radio',
     icon: '⭕',
-    comingSoon: true,
+    engineSupport: { honeygui: 'unsupported', lvgl: 'ready' },
     defaultSize: { width: 20, height: 20 },
     properties: [
       { name: 'value', label: 'Checked', type: 'boolean', defaultValue: false, group: 'data' },
@@ -527,6 +528,8 @@ const componentIconMap: Record<string, string> = componentDefinitions.reduce((ac
 componentIconMap['hg_list_item'] = '▫️';
 
 const ComponentLibrary: React.FC<ComponentLibraryProps> = ({ onComponentDragStart, onCreateComponent }) => {
+  const projectConfig = useDesignerStore(state => state.projectConfig);
+  const targetEngine = projectConfig?.targetEngine || 'honeygui';
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(componentCategories.map(c => c.name))
   );
@@ -623,25 +626,35 @@ const ComponentLibrary: React.FC<ComponentLibraryProps> = ({ onComponentDragStar
               </div>
               {isExpanded && (
                 <div className="category-content">
-                  {components.map((component) => (
+                  {components
+                    .filter((component) => {
+                      // Hide components that are 'unsupported' for the current engine
+                      const status = component.engineSupport?.[targetEngine] ?? 'ready';
+                      return status !== 'unsupported';
+                    })
+                    .map((component) => {
+                    const status = component.engineSupport?.[targetEngine] ?? 'ready';
+                    const isPlanned = status === 'planned';
+                    return (
                     <div
                       key={component.type}
-                      className={`component-item${component.comingSoon ? ' component-item--coming-soon' : ''}`}
-                      draggable={!component.comingSoon}
+                      className={`component-item${isPlanned ? ' component-item--coming-soon' : ''}`}
+                      draggable={!isPlanned}
                       onDragStart={(e) => {
-                        if (component.comingSoon) { e.preventDefault(); return; }
+                        if (isPlanned) { e.preventDefault(); return; }
                         handleDragStart(e, component.type);
                       }}
                       onContextMenu={(e) => handleContextMenu(e, component.type)}
-                      title={component.comingSoon ? t('Coming Soon' as any) : t(component.name as any)}
+                      title={isPlanned ? t('Coming Soon' as any) : t(component.name as any)}
                     >
                       <div className="component-icon">{component.icon}</div>
                       <div className="component-name">{t(component.name as any)}</div>
-                      {component.comingSoon && (
+                      {isPlanned && (
                         <div className="component-coming-soon-badge">TODO</div>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
