@@ -1,36 +1,30 @@
 /**
  * hg_radio event generator
- * Migrated from LvglRadioGenerator.generateEventCallbacks()
+ *
+ * Radio mutual exclusion is handled by the parent container's LV_EVENT_CLICKED callback
+ * (generated in LvglRadioGenerator.generateGlobalDefinitions).
+ * Individual radio buttons use LV_OBJ_FLAG_EVENT_BUBBLE to propagate clicks to the parent.
+ *
+ * This generator produces the event binding on the parent container (not on each radio),
+ * and provides an empty per-radio callback since the logic is centralized.
  */
 import { Component } from '../../../hml/types';
 import { LvglEventCodeGenerator } from './LvglEventCodeGenerator';
 
 export class LvglRadioEventGenerator implements LvglEventCodeGenerator {
-  generateEventBindings(component: Component): string {
-    const cbName = `${component.id}_event_cb`;
-    return `    lv_obj_add_event_cb(${component.id}, ${cbName}, LV_EVENT_VALUE_CHANGED, NULL);\n`;
+  /**
+   * Radio event binding is handled at the parent container level via
+   * radio_event_handler, not per-radio. Return empty string here.
+   */
+  generateEventBindings(_component: Component): string {
+    return '';
   }
 
-  collectCallbackFunctions(component: Component): string[] {
-    return [`${component.id}_event_cb`];
+  collectCallbackFunctions(_component: Component): string[] {
+    return [];
   }
 
-  getEventCallbackImpl(component: Component): string[] {
-    const cbName = `${component.id}_event_cb`;
-    let code = `static void ${cbName}(lv_event_t * e)\n`;
-    code += `{\n`;
-    code += `    lv_event_code_t code = lv_event_get_code(e);\n`;
-    code += `    lv_obj_t * obj = lv_event_get_target(e);\n`;
-    code += `    (void)obj; // Avoid unused warning\n\n`;
-    code += `    if(code == LV_EVENT_VALUE_CHANGED) {\n`;
-    code += `        const char * txt = lv_checkbox_get_text(obj);\n`;
-    code += `        if(lv_obj_has_state(obj, LV_STATE_CHECKED)) {\n`;
-    code += `            LV_LOG_USER("%s is selected.", txt);\n`;
-    code += `        } else {\n`;
-    code += `            LV_LOG_USER("%s is de-selected.", txt);\n`;
-    code += `        }\n`;
-    code += `    }\n`;
-    code += `}\n`;
-    return [code];
+  getEventCallbackImpl(_component: Component): string[] {
+    return [];
   }
 }

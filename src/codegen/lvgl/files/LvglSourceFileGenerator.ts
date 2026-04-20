@@ -79,6 +79,19 @@ export class LvglSourceFileGenerator {
       code += `\n`;
     });
 
+    // Bind radio mutual exclusion event handler on parent containers
+    const radioComponents = orderedComponents.filter(c => c.type === 'hg_radio');
+    if (radioComponents.length > 0) {
+      const parentIds = new Set<string>();
+      for (const radio of radioComponents) {
+        if (radio.parent && !parentIds.has(radio.parent)) {
+          parentIds.add(radio.parent);
+          code += `    // Radio group mutual exclusion for ${radio.parent}\n`;
+          code += `    lv_obj_add_event_cb(${radio.parent}, radio_event_handler, LV_EVENT_CLICKED, &${radio.parent}_radio_active_index);\n\n`;
+        }
+      }
+    }
+
     code += `}\n`;
     return code;
   }
