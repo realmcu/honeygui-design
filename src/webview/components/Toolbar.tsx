@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useDesignerStore } from '../store';
-import { Save, Code, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, GitBranch, Palette, AlignLeft, Grid, Download, Rocket, BrushCleaning, Square, Users, Info } from 'lucide-react';
+import { Save, Code, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2, GitBranch, Palette, AlignLeft, Grid, Download, Rocket, BrushCleaning, Square, Users, Info, ChevronDown, Bug } from 'lucide-react';
 import { AlignType, DistributeType, ResizeType, getAlignmentConfigsByCategory } from '../utils/alignmentUtils';
 import { t } from '../i18n';
 import './Toolbar.css';
@@ -36,11 +36,13 @@ const Toolbar: React.FC<{
 
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showAlignMenu, setShowAlignMenu] = useState(false);
+  const [showSimMenu, setShowSimMenu] = useState(false);
   const alignMenuRef = useRef<HTMLDivElement>(null);
+  const simMenuRef = useRef<HTMLDivElement>(null);
 
   // 点击外部关闭颜色选择器
   React.useEffect(() => {
-    if (!showColorPicker && !showAlignMenu) return;
+    if (!showColorPicker && !showAlignMenu && !showSimMenu) return;
 
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
@@ -50,11 +52,14 @@ const Toolbar: React.FC<{
       if (showAlignMenu && alignMenuRef.current && !alignMenuRef.current.contains(target)) {
         setShowAlignMenu(false);
       }
+      if (showSimMenu && simMenuRef.current && !simMenuRef.current.contains(target)) {
+        setShowSimMenu(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showColorPicker, showAlignMenu]);
+  }, [showColorPicker, showAlignMenu, showSimMenu]);
 
   const handleZoomIn = () => {
     setZoom(Math.min(zoom * 1.2, 8));
@@ -124,6 +129,16 @@ const Toolbar: React.FC<{
         commandId: 'honeygui.simulation',
       });
     }
+  };
+
+  const handleDebugSimulation = () => {
+    if (isBusy || isSimulationRunning) return;
+    setShowSimMenu(false);
+    setOperationInProgress('simulate');
+    window.vscodeAPI?.postMessage({
+      command: 'executeCommand',
+      commandId: 'honeygui.simulation.debug',
+    });
   };
 
   const handleClean = () => {
@@ -377,15 +392,39 @@ const Toolbar: React.FC<{
           <Code size={16} strokeWidth={1.4} />
           <span>{operationInProgress === 'codegen' ? t('Generating...') : t('Generate Code')}</span>
         </button>
-        <button
-          className={`toolbar-button primary ${isSimulationRunning ? 'running' : ''}`}
-          onClick={handleSimulation}
-          title={isSimulationRunning ? t('Stop Simulation') : t('Compile & Simulate')}
-          disabled={isBusy && !isSimulationRunning}
-        >
-          {isSimulationRunning ? <Square size={16} strokeWidth={1.4} /> : <Rocket size={16} strokeWidth={1.4} />}
-          <span>{isSimulationRunning ? t('Stop') : operationInProgress === 'simulate' ? t('Starting...') : t('Simulate')}</span>
-        </button>
+        <div className="toolbar-split-button" ref={simMenuRef}>
+          <button
+            className={`toolbar-button primary split-main ${isSimulationRunning ? 'running' : ''}`}
+            onClick={handleSimulation}
+            title={isSimulationRunning ? t('Stop Simulation') : t('Compile & Simulate')}
+            disabled={isBusy && !isSimulationRunning}
+          >
+            {isSimulationRunning ? <Square size={16} strokeWidth={1.4} /> : <Rocket size={16} strokeWidth={1.4} />}
+            <span>{isSimulationRunning ? t('Stop') : operationInProgress === 'simulate' ? t('Starting...') : t('Simulate')}</span>
+          </button>
+          {!isSimulationRunning && (
+            <button
+              className="toolbar-button primary split-arrow"
+              onClick={() => setShowSimMenu(!showSimMenu)}
+              disabled={isBusy}
+              title={t('More simulation options')}
+            >
+              <ChevronDown size={12} strokeWidth={2} />
+            </button>
+          )}
+          {showSimMenu && (
+            <div className="sim-dropdown-menu">
+              <button
+                className="sim-menu-item"
+                onClick={handleDebugSimulation}
+                title={t('Debug Simulate Tooltip')}
+              >
+                <Bug size={14} strokeWidth={1.4} />
+                <span>{t('Debug Simulate')}</span>
+              </button>
+            </div>
+          )}
+        </div>
         <div className="toolbar-segmented">
           <button
             className="toolbar-icon-button"

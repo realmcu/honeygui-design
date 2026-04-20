@@ -182,6 +182,12 @@
         "icon": "$(rocket)"
       },
       {
+        "command": "honeygui.simulation.debug",
+        "title": "%command.simulationDebug%",
+        "category": "HoneyGUI",
+        "icon": "$(bug)"
+      },
+      {
         "command": "honeygui.simulation.stop",
         "title": "%command.simulationStop%",
         "category": "HoneyGUI",

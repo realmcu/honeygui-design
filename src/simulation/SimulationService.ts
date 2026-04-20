@@ -43,6 +43,13 @@ export class SimulationService {
             })
         );
 
+        // 调试仿真（跳过代码生成）
+        this.context.subscriptions.push(
+            vscode.commands.registerCommand('honeygui.simulation.debug', async () => {
+                await this.startSimulation({ skipCodeGen: true });
+            })
+        );
+
         // 停止编译仿真
         this.context.subscriptions.push(
             vscode.commands.registerCommand('honeygui.simulation.stop', async () => {
@@ -72,7 +79,7 @@ export class SimulationService {
     /**
      * 启动编译仿真
      */
-    async startSimulation(): Promise<void> {
+    async startSimulation(options?: { skipCodeGen?: boolean }): Promise<void> {
         try {
             // 获取项目根目录
             const projectRoot = await this.getProjectRoot();
@@ -95,7 +102,7 @@ export class SimulationService {
             this.setupRunnerListeners();
 
             // 启动仿真
-            await this.runner.start();
+            await this.runner.start(options);
 
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);

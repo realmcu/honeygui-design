@@ -44,8 +44,9 @@ export class SimulationRunner {
     /**
      * 启动编译仿真
      */
-    async start(): Promise<void> {
+    async start(options?: { skipCodeGen?: boolean }): Promise<void> {
         this.isCancelled = false;
+        const skipCodeGen = options?.skipCodeGen ?? false;
         try {
             this.listener?.onStart?.();
 
@@ -53,8 +54,12 @@ export class SimulationRunner {
             this.log(`目标引擎: ${targetEngine}`);
 
             if (targetEngine === 'lvgl') {
-                await this.generateCode();
-                this.throwIfCancelled();
+                if (!skipCodeGen) {
+                    await this.generateCode();
+                    this.throwIfCancelled();
+                } else {
+                    this.log(vscode.l10n.t('Skipping code generation (debug mode)'));
+                }
                 await this.startLvglSimulation();
                 this.isRunning = true;
                 this.listener?.onSuccess?.();
@@ -66,8 +71,12 @@ export class SimulationRunner {
             this.throwIfCancelled();
 
             // 2. 生成代码（所有 HML 文件）
-            await this.generateCode();
-            this.throwIfCancelled();
+            if (!skipCodeGen) {
+                await this.generateCode();
+                this.throwIfCancelled();
+            } else {
+                this.log(vscode.l10n.t('Skipping code generation (debug mode)'));
+            }
 
             // 3. 准备编译环境
             await this.setupBuildEnvironment();

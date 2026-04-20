@@ -288,6 +288,84 @@
   background: var(--vscode-menu-separatorBackground, #454545);
   margin: 4px 0;
 }
+
+/* Split button (Simulate + dropdown arrow) */
+.toolbar-split-button {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+}
+
+.toolbar-split-button .split-main {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  padding-right: 6px;
+}
+
+.toolbar-split-button .split-main.running {
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+
+.toolbar-split-button .split-arrow {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-left: none;
+  padding: 0 5px;
+  min-width: unset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toolbar-split-button .split-arrow::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 25%;
+  height: 50%;
+  width: 1px;
+  background: var(--vscode-focusBorder);
+  opacity: 0.4;
+}
+
+.toolbar-split-button .split-arrow:hover:not(:disabled) {
+  background-color: color-mix(in oklab, var(--vscode-focusBorder) 20%, transparent);
+}
+
+.sim-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background-color: var(--vscode-menu-background, #252526);
+  border: 1px solid var(--vscode-menu-border, #454545);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  min-width: 180px;
+  padding: 4px 0;
+}
+
+.sim-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 12px;
+  background: transparent;
+  border: none;
+  color: var(--vscode-menu-foreground, #cccccc);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.sim-menu-item:hover {
+  background: var(--vscode-menu-selectionBackground, #094771);
+  color: var(--vscode-menu-selectionForeground, #ffffff);
+}
+
 .toolbar-segmented {
   display: inline-flex;
   align-items: center;

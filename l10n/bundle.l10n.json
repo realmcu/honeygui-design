@@ -220,6 +220,7 @@
   "Compile and run simulation": "Compile and run simulation",
   "Stop running simulation": "Stop running simulation",
   "Simulate": "Simulate",
+  "Skipping code generation (debug mode)": "Skipping code generation (debug mode)",
   "Stop": "Stop",
   "Clean": "Clean",
   "Download": "Download",

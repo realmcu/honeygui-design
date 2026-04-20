@@ -8,6 +8,7 @@
   "command.tools": "HoneyGUI: 资源转换工具",
   "command.codegen": "HoneyGUI: 生成代码",
   "command.simulation": "HoneyGUI: 编译仿真",
+  "command.simulationDebug": "HoneyGUI: 调试仿真（跳过代码生成）",
   "command.simulationStop": "HoneyGUI: 停止仿真",
   "command.openInTextEditor": "用文本编辑器打开",
   "command.openInDesigner": "用 HoneyGUI 设计器打开",

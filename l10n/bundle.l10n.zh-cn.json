@@ -220,6 +220,7 @@
   "Compile and run simulation": "编译并运行仿真",
   "Stop running simulation": "停止运行中的仿真",
   "Simulate": "仿真",
+  "Skipping code generation (debug mode)": "跳过代码生成（调试模式）",
   "Stop": "停止",
   "Clean": "清理",
   "Download": "下载",
