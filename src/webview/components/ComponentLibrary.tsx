@@ -106,7 +106,6 @@ const componentDefinitions: ComponentDefinition[] = [
       { name: 'onCallback', label: 'On State Callback', type: 'string', defaultValue: '', group: 'data' },
       { name: 'offCallback', label: 'Off State Callback', type: 'string', defaultValue: '', group: 'data' },
       { name: 'controlTarget', label: 'Control Target', type: 'string', defaultValue: '', group: 'data' },
-      { name: 'enabled', label: 'Enabled', type: 'boolean', defaultValue: true, group: 'general' },
     ],
   },
   {
@@ -210,7 +209,6 @@ const componentDefinitions: ComponentDefinition[] = [
     defaultSize: { width: 200, height: 32 },
     properties: [
       { name: 'placeholder', label: 'Placeholder', type: 'string', group: 'data' },
-      { name: 'enabled', label: 'Enabled', type: 'boolean', defaultValue: true, group: 'general' },
     ],
   },
   {
@@ -231,7 +229,6 @@ const componentDefinitions: ComponentDefinition[] = [
     defaultSize: { width: 20, height: 20 },
     properties: [
       { name: 'value', label: 'Checked', type: 'boolean', defaultValue: false, group: 'data' },
-      { name: 'enabled', label: 'Enabled', type: 'boolean', defaultValue: true, group: 'general' },
     ],
   },
   {
@@ -242,7 +239,6 @@ const componentDefinitions: ComponentDefinition[] = [
     defaultSize: { width: 20, height: 20 },
     properties: [
       { name: 'value', label: 'Checked', type: 'boolean', defaultValue: false, group: 'data' },
-      { name: 'enabled', label: 'Enabled', type: 'boolean', defaultValue: true, group: 'general' },
     ],
   },
   {
