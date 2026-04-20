@@ -88,7 +88,7 @@ AI 生成/修改 HML
              ↓
 ┌─────────────────────────────────────┐
 │ VSCode Extension (HTTP Server)      │  ← 所有功能在这里执行 ✅
-│   McpBridgeService (port 38912)     │
+│   ExtensionApiService (port 38912)  │
 │   ├─ POST /api/validate-hml         │  → HmlValidator
 │   ├─ POST /api/preview-ui           │  → Webview 预览
 │   ├─ POST /api/create-project       │  → ProjectTemplate
@@ -288,7 +288,7 @@ Claude Code:
 
 ### 实现计划
 
-**文件**：`src/services/McpBridgeService.ts`
+**文件**：`src/services/ExtensionApiService.ts`
 
 **关键代码**：
 ```typescript
@@ -297,7 +297,7 @@ import * as vscode from 'vscode';
 import { HmlValidator } from '../validators/HmlValidator';
 import { CodeGenerationService } from './CodeGenerationService';
 
-export class McpBridgeService implements vscode.Disposable {
+export class ExtensionApiService implements vscode.Disposable {
     private server: http.Server | undefined;
     private port: number = 38912;
 
@@ -350,13 +350,13 @@ export class McpBridgeService implements vscode.Disposable {
 **在 Extension 入口启动**：
 ```typescript
 // src/extension.ts
-import { McpBridgeService } from './services/McpBridgeService';
+import { ExtensionApiService } from './services/ExtensionApiService';
 
 export async function activate(context: vscode.ExtensionContext) {
     // ... 现有代码 ...
     
-    // 启动 HTTP Server
-    const httpServer = new McpBridgeService();
+    // 启动 HTTP API Server
+    const httpServer = new ExtensionApiService();
     try {
         await httpServer.start(context);
         context.subscriptions.push(httpServer);
@@ -389,8 +389,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
 **任务清单**：
 
-1. **创建 McpBridgeService**（2-3 天，P0）
-   - [x] 创建 `src/services/McpBridgeService.ts`
+1. **创建 ExtensionApiService**（2-3 天，P0）
+   - [ ] 创建 `src/services/ExtensionApiService.ts`
    - [ ] 实现 HTTP Server（Node.js http 模块）
    - [ ] 实现 `/health` 端点
    - [ ] 实现 `/api/validate-hml` 端点
@@ -400,7 +400,7 @@ export async function activate(context: vscode.ExtensionContext) {
    - [ ] 错误处理和日志
 
 2. **集成到 Extension**（1 天，P0）
-   - [ ] 在 `src/extension.ts` 中启动 McpBridgeService
+   - [ ] 在 `src/extension.ts` 中启动 ExtensionApiService
    - [ ] 添加必要的 VSCode 命令（preview、create-project）
    - [ ] 测试 Extension 启动流程
 
