@@ -1,6 +1,6 @@
 # HoneyGUI Vibe Designer
 
-将 HoneyGUI Designer 转型为 **AI 驱动的嵌入式 UI 生成与收敛平台**，通过 MCP (Model Context Protocol) 暴露能力给 AI 编程工具（Codex, Cursor 等）。
+将 HoneyGUI Designer 转型为 **AI 驱动的嵌入式 UI 生成平台**，通过 Skills + Extension HTTP API 让 AI 工具（Claude Code 等）能够生成和验证 HoneyGUI 项目。
 
 **核心理念**：AI 生成 → Schema 约束 → 程序化校验 → 预览确认 → 导出代码
 
@@ -8,63 +8,94 @@
 
 ## 📖 快速导航
 
-- [两大核心场景](#两大核心场景)
+- [核心场景](#核心场景)
+- [架构设计](#架构设计)
 - [目录结构](#目录结构)
 - [核心概念](#核心概念)
 - [快速开始](#快速开始)
+- [Extension HTTP API](#extension-http-api)
 - [开发计划](#开发计划)
 - [技术栈](#技术栈)
-- [相关文档](#相关文档)
 
 ---
 
-## 两大核心场景
+## 核心场景
 
-### 场景 1：从零开始生成（AI Generation）
+### 从零开始生成（AI Generation）
+
 **描述**：用户通过自然语言描述需求，AI 生成完整的 HoneyGUI 项目。
 
 **工作流**：
 ```
 用户需求（自然语言）
   ↓
-AI 读取 skills/honeygui-designer/ (Skill 1)
+Claude Code 读取 skills/honeygui-designer/
   ↓
-生成 HML + 资源列表
+AI 生成 HML
   ↓
-MCP: validate-hml → preview-ui → create-project
+通过 Bash tool 调用 Extension HTTP API
+  - POST /api/validate-hml → 验证语法
+  - POST /api/preview-ui → 在 VSCode 中预览
+  - POST /api/create-project → 生成完整项目
   ↓
-输出：完整项目（HML + assets/ + project.json）
+输出：完整项目（HML + C 代码 + project.json）
 ```
 
 **关键技术**：
-- Skill 1: `skills/honeygui-designer/` - HML 生成指导
-- Schema: `skills/schema/hml-schema.json` - 组件定义
-- MCP Tools: validate, preview, export
+- Skill: `skills/honeygui-designer/` - HML 生成指导（包含 HTTP API 调用示例）
+- Schema: `skills/schema/hml-schema.json` - 组件定义和验证规则
+- Extension HTTP API: VSCode Extension 暴露的 REST API（端口 38912）
 
 ---
 
-### 场景 2：设计稿转换（Design Import）
-**描述**：用户提供 Figma/MasterGo 设计稿，AI 转换为 HoneyGUI 项目。
+## 架构设计
 
-**工作流**：
+### 整体架构
+
 ```
-设计稿（Figma/MasterGo URL 或 JSON）
-  ↓
-AI 读取 skills/honeygui-import/ (Skill 2)
-  ↓
-MCP: import-figma/import-mastergo
-  ↓
-解析设计稿 → 组件映射 → 生成 HML
-  ↓
-MCP: download-assets → validate-hml → preview-ui
-  ↓
-输出：完整项目（HML + assets/ + project.json）
+┌─────────────────────────────────────┐
+│ Claude Code CLI                     │
+│ - 用户输入自然语言                  │
+│ - 读取 Skills 文档                  │
+│ - 使用 Bash tool 调用 HTTP API     │
+└────────────┬────────────────────────┘
+             │ HTTP (curl/fetch)
+             │
+             ↓
+┌─────────────────────────────────────┐
+│ VSCode Extension (HTTP Server)      │  ← 所有功能在这里执行 ✅
+│   McpBridgeService (port 38912)     │
+│   ├─ POST /api/validate-hml         │  → HmlValidator
+│   ├─ POST /api/preview-ui           │  → Webview 预览
+│   ├─ POST /api/create-project       │  → ProjectTemplate
+│   └─ POST /api/export-code          │  → CodeGenerationService
+│                                      │
+│ - HmlValidator (语法验证)            │
+│ - CodeGenerationService (生成 C 代码)│
+│ - Webview (在 VSCode 中预览)         │
+│ - ProjectTemplate (创建项目结构)     │
+└─────────────────────────────────────┘
 ```
 
-**关键技术**：
-- Skill 2: `skills/honeygui-import/` - 设计稿转换指导
-- 组件映射规则：Figma/MasterGo → HoneyGUI 组件
-- MCP Tools: import-figma, import-mastergo, download-assets
+### 设计原则
+
+1. **VSCode 内执行**：所有功能在 VSCode Extension 中执行，开发过程不离开 VSCode
+2. **Skills 指导**：通过 Skills 文档教 AI 如何调用 HTTP API
+3. **HTTP 解耦**：Extension 暴露通用的 HTTP API，任何 AI 工具都可以调用
+4. **简单直接**：无需 MCP Server，减少中间层，降低维护成本
+
+### 为什么不用 MCP Server？
+
+**原因**：
+- Claude Code CLI 支持 Bash tool，可以直接调用 HTTP API（curl/fetch）
+- Skills 文档可以包含 HTTP API 调用示例，AI 能够理解和执行
+- 减少一层协议适配器（MCP Server），架构更简单
+
+**优势**：
+- ✅ 更简单：只需实现 Extension HTTP Server
+- ✅ 更直接：AI 直接调用 HTTP API
+- ✅ 更灵活：Skills 可以随时更新 API 调用方式
+- ✅ 维护成本低：只需维护 Extension + Skills
 
 ---
 
@@ -72,87 +103,52 @@ MCP: download-assets → validate-hml → preview-ui
 
 ```
 vibe-designer/
-├── README.md                    # 本文件：整体说明和开发计划
-├── skills/                      # Skill 定义（软约束）
-│   ├── honeygui-designer/       # Skill 1：从零生成 HML
+├── README.md                    # 本文件：整体说明和架构设计
+├── skills/                      # Skills 定义（AI 学习材料）
+│   ├── honeygui-designer/       # 从零生成 HML 的指导文档
 │   │   ├── SKILL.md             # 核心工作流和快速指南
 │   │   ├── README.md            # Skill 使用说明
 │   │   ├── references/          # 详细参考文档
 │   │   │   ├── components.md    # 组件库完整文档
 │   │   │   ├── hml-syntax.md    # HML 语法规范
 │   │   │   ├── design-principles.md  # 设计原则
-│   │   │   └── layout-patterns.md    # 布局模式
+│   │   │   ├── layout-patterns.md    # 布局模式
+│   │   │   └── http-api.md      # HTTP API 调用指南（新增）
 │   │   └── assets/examples/     # HML 示例文件
-│   ├── honeygui-import/         # Skill 2：设计稿转换
-│   │   ├── SKILL.md             # 设计稿转换指导
-│   │   ├── README.md            # 使用说明
-│   │   ├── mappings/            # 组件映射规则
-│   │   │   ├── figma-mapping.md      # Figma → HoneyGUI 映射
-│   │   │   ├── mastergo-mapping.md   # MasterGo → HoneyGUI 映射
-│   │   │   └── component-recognition.md # 组件识别规则
-│   │   └── examples/            # 转换示例
-│   └── schema/                  # JSON Schema 定义（硬边界）
+│   └── schema/                  # JSON Schema 定义（验证规则）
 │       ├── hml-schema.json      # HML 完整 schema
-│       ├── validation-rules.json # 验证规则
-│       └── design-tokens.json   # 设计 token 定义
-└── mcp/                         # MCP Server 实现（能力接线）
-    ├── TODO.md                  # 开发待办事项
-    ├── honeygui-mcp/            # MCP Server 核心实现（待创建）
-    │   ├── src/
-    │   │   ├── index.ts         # MCP 入口
-    │   │   ├── server.ts        # MCP Server 主逻辑
-    │   │   ├── resources/       # Resources 实现
-    │   │   ├── prompts/         # Prompts 实现
-    │   │   ├── tools/           # Tools 实现
-    │   │   ├── converters/      # 设计稿转换器（场景 2）
-    │   │   └── utils/           # 工具函数
-    │   └── tests/               # 单元测试
-    └── docs/                    # MCP 使用文档
+│       └── README.md            # Schema 说明
 ```
+
+**说明**：
+- `skills/` - AI 学习如何生成 HML 的文档
+- `schema/` - 程序化验证 HML 的 JSON Schema
+- 无 `mcp/` 目录 - 不使用 MCP Server
 
 ---
 
 ## 核心概念
 
-### 1. 两个独立 Skill
+### 1. Skills（软约束）
 
-| Skill | 用途 | 输入 | 输出 |
-|-------|------|------|------|
-| **honeygui-designer** | 从零生成 | 自然语言描述 | HML |
-| **honeygui-import** | 设计稿转换 | Figma/MasterGo 数据 | HML + 资源列表 + 警告 |
+**定义**：告诉 AI "应该如何生成 HML 以及如何调用 Extension API"
 
-**共享资源**：
-- `skills/schema/` - HML JSON Schema（两个 Skill 输出相同格式）
-- MCP Server - 统一的校验、预览、导出工具
-
----
-
-### 2. Skill（软约束）
-
-**定义**：告诉 AI "应该如何生成或转换 HML"
-
-**Skill 1 - honeygui-designer**：
+**内容**：
 - 组件用法说明
 - 设计原则和最佳实践
 - 常见布局模式
 - HML 语法规则
 - 示例 HML 文件
-
-**Skill 2 - honeygui-import**：
-- Figma/MasterGo 数据结构说明
-- 组件识别和映射规则
-- 布局和样式转换规则
-- 资源处理流程
-- 警告和人工介入场景
+- **HTTP API 调用指南**（新增）
 
 **使用方式**：
-- AI 编程工具（Codex, Cursor）加载对应 Skill
-- Skill 1: 触发关键词 - 设计、创建界面、生成 HML
-- Skill 2: 触发关键词 - 转换、导入、Figma、MasterGo
+- AI 工具（Claude Code）加载 Skill
+- Skill 触发关键词：设计、创建界面、生成 HML
+- AI 根据 Skill 生成 HML，并调用 HTTP API 验证和创建项目
 
 ---
 
-### 3. Schema（硬边界）
+### 2. Schema（硬边界）
 
 **定义**：程序化定义 HML 的合法边界
 
@@ -169,65 +165,156 @@ vibe-designer/
 
 ---
 
-### 4. MCP Server（能力接线）
+### 3. Extension HTTP API（能力暴露）
 
-**定义**：暴露 Designer 能力给 AI 工具的接口层
+**定义**：VSCode Extension 暴露的 REST API，让 AI 工具能够调用 Extension 功能
 
-**内容**：
-- **Resources**：规则数据（schema、templates、tokens）
-- **Prompts**：生成指导（generate-ui、fix-errors）
-- **Tools**：操作能力（validate、preview、export、import-figma 等）
+**端口**：`localhost:38912`
 
-**支持的 MCP Tools**：
+**支持的 API 端点**：
 
-| Tool | 用途 | 场景 |
-|------|------|------|
-| `validate-hml` | 校验 HML 结构 | 两个场景通用 |
-| `preview-ui` | 生成预览截图 | 两个场景通用 |
-| `create-project` | 创建完整项目 | 两个场景通用 |
-| `export-code` | 导出 C 代码 | 场景 1 |
-| `import-figma` | 导入 Figma 设计 | 场景 2 |
-| `import-mastergo` | 导入 MasterGo 设计 | 场景 2 |
-| `download-assets` | 下载设计稿资源 | 场景 2 |
-| `optimize-layout` | 优化 HML 布局 | 两个场景通用 |
-| `batch-edit` | 批量修改组件 | 两个场景通用 |
+| 端点 | 方法 | 功能 | 输入 | 输出 |
+|------|------|------|------|------|
+| `/health` | GET | 健康检查 | 无 | `{"status":"ok"}` |
+| `/api/validate-hml` | POST | 验证 HML 语法 | `{hml: string}` | `{valid: boolean, errors: [...]}` |
+| `/api/preview-ui` | POST | 在 VSCode 中预览 | `{hml: string}` | `{success: boolean}` |
+| `/api/create-project` | POST | 创建完整项目 | `{name, hml, outputDir}` | `{success, projectPath, files}` |
+| `/api/export-code` | POST | 导出 C 代码 | `{hml: string}` | `{success, code: {...}}` |
 
 ---
 
 ## 快速开始
 
-### 使用场景 1：从零生成
+### 前置条件
+
+1. 安装并启动 VSCode
+2. 安装 HoneyGUI Designer Extension
+3. Extension 自动启动 HTTP Server（端口 38912）
+
+### 测试 Extension HTTP API
 
 ```bash
-# 1. 配置 AI 工具（Codex/Cursor）连接 MCP Server
-# （MCP Server 待实现）
+# 1. 检查 Extension 是否运行
+curl http://localhost:38912/health
+# 预期输出：{"status":"ok","port":38912}
 
-# 2. 在 AI 工具中描述需求
-User: "创建一个智能手表设置界面，包含亮度和音量滑块"
+# 2. 验证 HML
+curl -X POST http://localhost:38912/api/validate-hml \
+  -H "Content-Type: application/json" \
+  -d '{"hml":"<?xml version=\"1.0\"?><hml><view id=\"view_main\"></view></hml>"}'
+# 预期输出：{"valid":true}
 
-# 3. AI 自动生成 HML 并校验
-AI: [读取 honeygui-designer skill] → [生成 HML] → [校验] → [预览]
+# 3. 创建项目
+curl -X POST http://localhost:38912/api/create-project \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "test_project",
+    "hml": "<?xml version=\"1.0\"?>...",
+    "outputDir": "/tmp"
+  }'
+```
 
-# 4. 确认后生成完整项目
-AI: [创建项目目录] → [导出 C 代码]
+### 在 Claude Code 中使用
+
+Claude Code 会自动读取 `skills/honeygui-designer/` 中的 Skills 文档，并根据文档中的 HTTP API 调用示例来执行操作。
+
+**示例对话**：
+```
+User: 创建一个智能手表界面，包含一个确认按钮
+
+Claude Code:
+1. 读取 skills/honeygui-designer/
+2. 生成 HML
+3. 使用 Bash tool 调用：
+   curl -X POST http://localhost:38912/api/validate-hml ...
+4. 如果验证通过，调用：
+   curl -X POST http://localhost:38912/api/create-project ...
+5. 在 VSCode 中自动打开项目
 ```
 
 ---
 
-### 使用场景 2：设计稿转换
+## Extension HTTP API
 
-```bash
-# 1. 提供 Figma 设计稿
-User: "将这个 Figma 设计稿转换为 HoneyGUI 项目：https://www.figma.com/file/abc123"
+### 实现计划
 
-# 2. AI 解析设计稿并转换
-AI: [读取 honeygui-import skill] → [import-figma] → [组件映射] → [生成 HML]
+**文件**：`src/services/McpBridgeService.ts`
 
-# 3. 下载资源并校验
-AI: [download-assets] → [validate-hml] → [preview-ui]
+**关键代码**：
+```typescript
+import * as http from 'http';
+import * as vscode from 'vscode';
+import { HmlValidator } from '../validators/HmlValidator';
+import { CodeGenerationService } from './CodeGenerationService';
 
-# 4. 处理警告并生成项目
-AI: [提示警告] → [create-project]
+export class McpBridgeService implements vscode.Disposable {
+    private server: http.Server | undefined;
+    private port: number = 38912;
+
+    async start(context: vscode.ExtensionContext) {
+        this.server = http.createServer(async (req, res) => {
+            res.setHeader('Content-Type', 'application/json');
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            
+            try {
+                if (req.method === 'GET' && req.url === '/health') {
+                    res.statusCode = 200;
+                    res.end(JSON.stringify({ status: 'ok', port: this.port }));
+                }
+                else if (req.method === 'POST' && req.url === '/api/validate-hml') {
+                    const body = await this.readBody(req);
+                    const result = await this.validateHml(body.hml);
+                    res.statusCode = 200;
+                    res.end(JSON.stringify(result));
+                }
+                // ... 其他端点
+            } catch (error: any) {
+                res.statusCode = 500;
+                res.end(JSON.stringify({ error: error.message }));
+            }
+        });
+
+        return new Promise<void>((resolve, reject) => {
+            this.server!.listen(this.port, () => {
+                console.log(`HTTP Server listening on http://localhost:${this.port}`);
+                vscode.window.showInformationMessage(`HoneyGUI HTTP Server started on port ${this.port}`);
+                resolve();
+            });
+            this.server!.on('error', reject);
+        });
+    }
+
+    private async validateHml(hml: string) {
+        const validator = new HmlValidator();
+        return await validator.validate(hml);
+    }
+
+    dispose() {
+        if (this.server) {
+            this.server.close();
+        }
+    }
+}
+```
+
+**在 Extension 入口启动**：
+```typescript
+// src/extension.ts
+import { McpBridgeService } from './services/McpBridgeService';
+
+export async function activate(context: vscode.ExtensionContext) {
+    // ... 现有代码 ...
+    
+    // 启动 HTTP Server
+    const httpServer = new McpBridgeService();
+    try {
+        await httpServer.start(context);
+        context.subscriptions.push(httpServer);
+    } catch (error) {
+        console.error('Failed to start HTTP Server:', error);
+        vscode.window.showErrorMessage('Failed to start HoneyGUI HTTP Server');
+    }
+}
 ```
 
 ---
@@ -236,253 +323,158 @@ AI: [提示警告] → [create-project]
 
 ### 当前进度
 
-✅ **已完成**（2025-03-31）
+✅ **已完成**（2026-04-20）
 - [x] 创建 `vibe-designer/` 目录结构
-- [x] 创建 Skill 1: `honeygui-designer/`（从零生成）
-- [x] 创建 Skill 2: `honeygui-import/`（设计稿转换）
+- [x] 创建 Skill: `honeygui-designer/`（从零生成）
 - [x] 生成简化版 HML JSON Schema（4 个核心组件）
-- [x] 明确两大核心场景
+- [x] 明确架构设计（Skills + Extension HTTP）
+- [x] 删除 MCP 相关内容
+- [x] 删除设计稿转换相关内容
 
 ---
 
-### 阶段 0：基础设施（1-2 周）
+### 阶段 1：Extension HTTP Server 实现（1 周）
 
-**目标**：建立 Schema 验证和 MCP 接口的基础能力
+**目标**：实现 Extension HTTP Server，暴露 4 个核心 API
 
 **任务清单**：
 
-1. **Schema 测试与验证**（1-2 天，P0）
-   - [ ] 创建 Schema 测试脚本
-   - [ ] 准备测试用例（3 个合法 + 5 个非法）
+1. **创建 McpBridgeService**（2-3 天，P0）
+   - [x] 创建 `src/services/McpBridgeService.ts`
+   - [ ] 实现 HTTP Server（Node.js http 模块）
+   - [ ] 实现 `/health` 端点
+   - [ ] 实现 `/api/validate-hml` 端点
+   - [ ] 实现 `/api/preview-ui` 端点（调用 Webview）
+   - [ ] 实现 `/api/create-project` 端点
+   - [ ] 实现 `/api/export-code` 端点
+   - [ ] 错误处理和日志
+
+2. **集成到 Extension**（1 天，P0）
+   - [ ] 在 `src/extension.ts` 中启动 McpBridgeService
+   - [ ] 添加必要的 VSCode 命令（preview、create-project）
+   - [ ] 测试 Extension 启动流程
+
+3. **测试 HTTP API**（1-2 天，P0）
+   - [ ] 使用 curl 测试所有端点
+   - [ ] 验证错误处理
+   - [ ] 性能测试
+
+---
+
+### 阶段 2：Skills 文档完善（3-5 天）
+
+**目标**：在 Skills 中添加 HTTP API 调用指南
+
+**任务清单**：
+
+1. **创建 HTTP API 文档**（1-2 天，P0）
+   - [ ] 创建 `skills/honeygui-designer/references/http-api.md`
+   - [ ] 记录所有 API 端点的调用方式
+   - [ ] 提供 curl 和 Node.js fetch 示例
+   - [ ] 说明错误处理方式
+
+2. **更新 SKILL.md**（1 天，P0）
+   - [ ] 在工作流中加入 HTTP API 调用步骤
+   - [ ] 提供完整的端到端示例
+
+3. **添加示例代码**（1-2 天，P1）
+   - [ ] 在 `assets/examples/` 中添加更多示例 HML
+   - [ ] 包含常见错误和修复示例
+
+---
+
+### 阶段 3：Schema 扩展（1 周）
+
+**目标**：扩展 Schema 到完整组件库
+
+**任务清单**：
+
+1. **添加更多组件**（3-5 天，P1）
+   - [ ] 交互组件（slider, switch, progressbar）
+   - [ ] 输入组件（input, checkbox, radio）
+   - [ ] 容器组件（window, container）
+   - [ ] 高级组件（list, grid, canvas, tab）
+
+2. **Schema 测试**（1-2 天，P0）
+   - [ ] 创建测试用例（合法 + 非法）
    - [ ] 验证错误提示质量
-
-2. **扩展 Schema 到完整组件库**（3-5 天，P1）
-   - [ ] 添加交互组件（slider, switch, progressbar）
-   - [ ] 添加输入组件（input, checkbox, radio）
-   - [ ] 添加容器组件（window, container）
-   - [ ] 添加高级组件（list, grid, canvas, tab）
-
-3. **实现 HML Validator**（3-4 天，P0）
-   - [ ] 创建 `HmlValidator` 类（`src/hml/HmlValidator.ts`）
-   - [ ] 实现 Schema 验证（使用 ajv 库）
-   - [ ] 实现自定义验证规则（ID 唯一性、重叠检测、边界检测等）
-   - [ ] 单元测试
-
-4. **设计 MCP 接口**（2-3 天，P0）
-   - [ ] 定义 Resources（schema, components, templates, constraints）
-   - [ ] 定义 Prompts（generate-ui, fix-validation-errors, optimize-layout）
-   - [ ] 定义 Tools（完整列表见上文"核心概念 - MCP Server"）
-   - [ ] 创建接口文档
+   - [ ] 边界情况测试
 
 ---
 
-### 阶段 1：MCP Server 实现（场景 1）（2-3 周）
+### 阶段 4：集成测试（1 周）
 
-**目标**：实现场景 1（从零生成）的 MCP Server
-
-**任务清单**：
-
-1. **初始化 MCP Server 项目**（1 天，P0）
-   - [ ] 创建项目目录 `mcp/honeygui-mcp/`
-   - [ ] 初始化 npm 项目
-   - [ ] 安装依赖（@modelcontextprotocol/sdk, ajv 等）
-   - [ ] 配置 TypeScript 和构建脚本
-
-2. **实现 Resources**（2-3 天，P0）
-   - [ ] Schema Resource（读取 hml-schema.json）
-   - [ ] Templates Resource（读取示例 HML）
-   - [ ] Components Resource（返回组件列表）
-   - [ ] Constraints Resource（返回约束规则）
-
-3. **实现 Prompts**（1-2 天，P1）
-   - [ ] generate-ui Prompt（从 SKILL.md 加载）
-   - [ ] fix-validation-errors Prompt
-   - [ ] optimize-layout Prompt
-
-4. **实现 Tools（场景 1 专用）**（5-7 天，P0）
-   - [ ] validate-hml（调用 HmlValidator）
-   - [ ] preview-ui（集成 Designer 预览引擎）
-   - [ ] create-project（创建项目目录结构）
-   - [ ] export-code（调用 HoneyCCodeGenerator）
-
-5. **MCP Server 主逻辑**（1-2 天，P0）
-   - [ ] 实现 `src/server.ts`（注册 Resources/Prompts/Tools）
-   - [ ] 实现 `src/index.ts`（启动 MCP Server）
-   - [ ] 支持 stdio 传输
-
----
-
-### 阶段 1.5：设计稿转换能力（场景 2）（2-3 周）
-
-**目标**：实现场景 2（设计稿转换）的能力
+**目标**：端到端测试 AI 驱动的 HML 生成流程
 
 **任务清单**：
 
-1. **Figma/MasterGo API 调研**（2-3 天，P0）
-   - [ ] 注册 Figma Developer Account
-   - [ ] 测试 Figma REST API（获取文件数据、导出图片）
-   - [ ] 调研 MasterGo API
-   - [ ] 评估技术可行性
+1. **Claude Code 集成测试**（3-5 天，P0）
+   - [ ] 在 Claude Code 中加载 Skills
+   - [ ] 测试简单界面生成（单个按钮）
+   - [ ] 测试复杂界面生成（设置页面）
+   - [ ] 测试错误修复流程
+   - [ ] 测试项目创建和预览
 
-2. **实现 Figma 转换器**（5-7 天，P0）
-   - [ ] 创建 `src/converters/` 模块
-   - [ ] 实现 Figma JSON 解析（递归遍历节点树）
-   - [ ] 实现组件映射逻辑（FRAME→hg_view, RECTANGLE+TEXT→hg_button 等）
-   - [ ] 实现布局转换（绝对坐标 → 相对坐标）
-   - [ ] 实现样式转换（颜色、字体）
-   - [ ] 实现资源提取（图片、图标）
-   - [ ] 单元测试
-
-3. **实现 MCP Tools（场景 2 专用）**（3-5 天，P0）
-   - [ ] import-figma（调用 Figma API + 转换器）
-   - [ ] import-mastergo（调用 MasterGo API + 转换器）
-   - [ ] download-assets（批量下载图片/图标）
-
-4. **MasterGo 转换器**（3-5 天，P1，可选）
-   - [ ] 实现 `mastergo-converter.ts`
-   - [ ] 适配 MasterGo 数据格式差异
-
----
-
-### 阶段 2：集成测试（1-2 周）
-
-**目标**：端到端测试 AI 驱动的 HML 生成和转换流程
-
-**任务清单**：
-
-1. **Codex/Cursor 集成**（3-5 天，P0）
-   - [ ] 安装并配置 MCP Server
-   - [ ] 测试 Resources、Prompts、Tools
-
-2. **端到端测试用例**（2-3 天，P0）
-   - **场景 1 测试**：
-     - [ ] 简单按钮页面（需求 → 生成 → 校验 → 预览 → 导出）
-     - [ ] 设置页面（错误修复流程测试）
-     - [ ] 复杂仪表盘（布局合理性测试）
-   - **场景 2 测试**：
-     - [ ] 简单 Figma 设计稿（3 个 Frame）
-     - [ ] 复杂 Figma 设计稿（Auto Layout、组件实例）
-     - [ ] MasterGo 设计稿（可选）
-   - **共享工具测试**：
-     - [ ] 布局优化（optimize-layout）
-     - [ ] 批量编辑（batch-edit）
-
-3. **性能与稳定性测试**（1-2 天，P1）
-   - [ ] 压力测试（连续生成 10 个页面）
-   - [ ] 大文件测试（20+ 组件）
-   - [ ] 错误恢复测试
-
----
-
-### 阶段 3：增强功能（1 个月）
-
-**目标**：提升生成质量和用户体验
-
-**任务清单**：
-
-1. **设计 Token 系统**（3-5 天，P1）
-   - [ ] 定义 Token 结构（颜色、字体、间距）
-   - [ ] 创建默认 Token 文件
-   - [ ] 更新 Schema 支持 Token 引用
-   - [ ] 实现 Token 解析器
-
-2. **模板库扩展**（3-5 天，P1）
-   - [ ] 补充高频页面模板（首页、配对页、设置页、音乐播放器、通知中心）
-   - [ ] 每个模板包含 HML + 截图 + 说明
-   - [ ] 更新 MCP Resource
-
-3. **错误自动修复**（5-7 天，P2）
-   - [ ] 实现 FixSuggestion 生成器
-   - [ ] 自动修复规则（ID 格式、尺寸、颜色、缺少属性）
-   - [ ] MCP Tool: `auto-fix-hml`
-   - [ ] 测试自动修复质量
-
----
-
-### 阶段 4：文档与发布（1 周）
-
-**目标**：完善文档，准备发布
-
-**任务清单**：
-
-1. **用户文档**（2-3 天，P0）
-   - [ ] 快速开始指南
-   - [ ] 使用教程（从零生成 + 设计稿转换）
-   - [ ] 最佳实践
-   - [ ] 故障排查
-
-2. **开发者文档**（1-2 天，P1）
-   - [ ] 架构文档（架构图、数据流图）
-   - [ ] API 参考
-   - [ ] 扩展指南
-   - [ ] 贡献指南
-
-3. **发布准备**（1-2 天，P0）
-   - [ ] 版本号管理（MCP Server v1.0.0, Schema v1.0.0）
-   - [ ] CHANGELOG.md
-   - [ ] NPM 发布（可选）
-   - [ ] 示例项目
+2. **质量验证**（1-2 天，P0）
+   - [ ] 首次成功率统计
+   - [ ] 错误修复成功率统计
+   - [ ] 生成速度测试
+   - [ ] 用户体验评估
 
 ---
 
 ### 时间表
 
 | 阶段 | 时长 | 关键里程碑 |
-|---|---|---|
-| **阶段 0** | 1-2 周 | Schema 完成 + MCP 接口设计完成 |
-| **阶段 1** | 2-3 周 | MCP Server（场景 1）完成 + 单元测试通过 |
-| **阶段 1.5** | 2-3 周 | 设计稿转换能力完成 + Figma 转换器可用 |
-| **阶段 2** | 1-2 周 | 集成测试完成 + 两个场景闭环跑通 |
-| **阶段 3** | 1 个月 | Token 系统 + 模板库 + 自动修复 |
-| **阶段 4** | 1 周 | 文档完善 + 发布准备 |
-| **总计** | **2.5-3.5 个月** | 完整 AI 驱动系统上线 |
+|------|------|-----------|
+| **阶段 1** | 1 周 | Extension HTTP Server 完成 + API 测试通过 |
+| **阶段 2** | 3-5 天 | Skills 文档完善 + HTTP API 指南完成 |
+| **阶段 3** | 1 周 | Schema 扩展完成 + 测试通过 |
+| **阶段 4** | 1 周 | 集成测试完成 + Claude Code 可用 |
+| **总计** | **3-4 周** | 完整 AI 驱动系统上线 |
 
 ---
 
 ## 技术栈
 
-### Skill
+### Skills
 - **格式**：Markdown
 - **工具**：无需编译，直接被 AI 工具读取
 
 ### Schema
 - **格式**：JSON Schema (Draft-07)
-- **验证库**：ajv (JavaScript), jsonschema (Python)
+- **验证库**：ajv (JavaScript)
 
-### MCP Server
+### Extension HTTP Server
 - **语言**：TypeScript
-- **框架**：MCP SDK (@modelcontextprotocol/sdk)
-- **运行时**：Node.js 18+
-- **构建**：tsup / esbuild
-- **测试**：vitest / jest
+- **框架**：Node.js http 模块
+- **端口**：38912
+- **运行环境**：VSCode Extension Host
+
+### 复用的 Extension 模块
+- `HmlValidator` - HML 语法验证
+- `HmlParser` - HML 解析
+- `HmlSerializer` - HML 序列化
+- `CodeGenerationService` - C 代码生成
+- `ProjectTemplate` - 项目模板
+- Webview - 预览界面
 
 ---
 
 ## 与 Designer 主工程的关系
 
-MCP Server **不重复实现** Designer 已有功能，而是**调用**：
+Extension HTTP Server **不重复实现** Designer 已有功能，而是**调用**：
 
-| Designer 模块 | MCP 调用方式 |
-|---|---|
+| Designer 模块 | HTTP API 调用方式 |
+|--------------|------------------|
 | `HmlParser` | 直接导入，解析 HML |
 | `HmlSerializer` | 直接导入，生成 HML |
-| `HoneyCCodeGenerator` | 调用生成 C 代码 |
-| `HmlValidator`（待实现） | 导入校验逻辑 |
-| Webview 预览引擎 | 通过进程间通信调用 |
-| `AssetManager` | 查询资源路径 |
+| `HmlValidator` | 直接导入，校验 HML |
+| `CodeGenerationService` | 直接导入，生成 C 代码 |
+| `ProjectTemplate` | 直接导入，创建项目 |
+| Webview 预览引擎 | 通过 VSCode 命令调用 |
 
-**集成方式**：Monorepo（MCP Server 作为 Designer 工程的子包）
-
----
-
-## 风险与应对
-
-| 风险 | 应对策略 |
-|------|---------|
-| MCP Server 性能问题 | 缓存机制、异步处理、headless 渲染优化 |
-| AI 生成质量不稳定 | 强化 Skill 文档、细化 Prompt、多轮修复机制 |
-| Schema 维护成本高 | 自动生成 Schema、版本管理、向后兼容 |
-| 与 Designer 代码耦合 | 清晰的接口层、最小化依赖、独立测试 |
+**集成方式**：Extension 内部模块，无需额外集成
 
 ---
 
@@ -491,36 +483,29 @@ MCP Server **不重复实现** Designer 已有功能，而是**调用**：
 ### 技术指标
 - ✅ Schema 覆盖率 ≥ 90%（所有组件）
 - ✅ 校验准确率 ≥ 95%
+- ✅ HTTP API 响应时间 ≤ 500ms
 - ✅ 预览生成时间 ≤ 2 秒
 - ✅ AI 错误修复成功率 ≥ 80%（3 轮内）
-- ✅ 单元测试覆盖率 ≥ 80%
 
 ### 用户体验指标
 - ✅ 首次成功率 ≥ 70%（AI 首次生成即合法）
 - ✅ 错误提示清晰度 ≥ 4/5（用户评分）
 - ✅ 生成速度 ≤ 10 秒（从需求到预览）
+- ✅ 所有操作在 VSCode 内完成（不离开 VSCode）
 - ✅ 用户满意度 ≥ 4/5
 
 ---
 
 ## 相关文档
 
-**Skill 文档**：
+**Skills 文档**：
 - `skills/honeygui-designer/SKILL.md` - 从零生成指导
-- `skills/honeygui-import/SKILL.md` - 设计稿转换指导
-
-**MCP 文档**：
-- `mcp/TODO.md` - 开发待办事项
-- `mcp/docs/api-reference.md` - API 参考（待创建）
-- `mcp/docs/integration-guide.md` - 集成指南（待创建）
+- `skills/honeygui-designer/references/http-api.md` - HTTP API 调用指南（待创建）
 
 **主项目文档**：
 - `/AGENTS.md` - 项目整体说明
 - `/README.md` - HoneyGUI Designer 主文档
-
-**外部资源**：
-- [MCP 官方文档](https://modelcontextprotocol.io/)
-- [Figma API](https://www.figma.com/developers/api)
+- `/CLAUDE.md` - Claude Code 开发指南
 
 ---
 
@@ -537,4 +522,4 @@ MCP Server **不重复实现** Designer 已有功能，而是**调用**：
 
 ---
 
-**最后更新**：2025-03-31
+**最后更新**：2026-04-20
