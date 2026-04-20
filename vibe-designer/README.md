@@ -138,26 +138,25 @@ AI 生成/修改 HML
 ```
 vibe-designer/
 ├── README.md                    # 本文件：整体说明和架构设计
-├── skills/                      # Skills 定义（AI 学习材料）
-│   ├── honeygui-designer/       # AI 辅助生成和编辑 HML 的指导文档
-│   │   ├── SKILL.md             # 核心工作流和快速指南
-│   │   ├── README.md            # Skill 使用说明
-│   │   ├── references/          # 详细参考文档
-│   │   │   ├── components.md    # 组件库完整文档
-│   │   │   ├── hml-syntax.md    # HML 语法规范
-│   │   │   ├── design-principles.md  # 设计原则
-│   │   │   ├── layout-patterns.md    # 布局模式
-│   │   │   └── http-api.md      # HTTP API 调用指南（新增）
-│   │   └── assets/examples/     # HML 示例文件
-│   └── schema/                  # JSON Schema 定义（验证规则）
-│       ├── hml-schema.json      # HML 完整 schema
-│       └── README.md            # Schema 说明
+└── skills/                      # Skills 定义（AI 学习材料）
+    └── honeygui-designer/       # AI 辅助生成和编辑 HML 的指导文档
+        ├── SKILL.md             # 核心工作流和快速指南
+        ├── README.md            # Skill 使用说明
+        ├── references/          # 详细参考文档
+        │   ├── components.md    # 组件库完整文档
+        │   ├── hml-syntax.md    # HML 语法规范
+        │   ├── design-principles.md  # 设计原则
+        │   ├── layout-patterns.md    # 布局模式
+        │   └── http-api.md      # HTTP API 调用指南（新增）
+        ├── schema/              # JSON Schema 定义（验证规则）
+        │   ├── hml-schema.json  # HML 完整 schema
+        │   └── README.md        # Schema 说明
+        └── assets/examples/     # HML 示例文件
 ```
 
 **说明**：
-- `skills/` - AI 学习如何生成 HML 的文档
-- `schema/` - 程序化验证 HML 的 JSON Schema
-- 无 `mcp/` 目录 - 不使用 MCP Server
+- `skills/honeygui-designer/` - 完整的 skill，包含文档、schema 和示例
+- 无 `mcp/` 目录 - 不使用 MCP Server，采用 Skills + Extension HTTP API 方式
 
 ---
 

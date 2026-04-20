@@ -258,34 +258,55 @@ except ValidationError as e:
 
 ---
 
-## 集成到 MCP Server
+## 与 Extension HTTP API 的关系
 
-在 MCP Server 的 `validate-hml` tool 中使用：
+### JSON Schema 的作用
 
-```typescript
-// ai/mcp/honeygui-mcp/src/tools/validate.ts
-import Ajv from 'ajv';
-import hmlSchema from '../../../skills/schema/hml-schema.json';
+此 JSON Schema 主要用于 **AI 生成阶段的结构验证**：
+- 验证 JSON 格式的组件数据结构
+- 检查基础属性（id、尺寸、颜色格式等）
+- 提供类型约束和格式校验
 
-const ajv = new Ajv({ allErrors: true });
-const validate = ajv.compile(hmlSchema);
+### Extension HTTP API 的作用
 
-export async function validateHml(hmlJson: any) {
-  const valid = validate(hmlJson);
-  
-  if (!valid) {
-    return {
-      valid: false,
-      errors: validate.errors.map(err => ({
-        path: err.instancePath,
-        message: err.message,
-        value: err.data,
-        fix: generateFixSuggestion(err)
-      }))
-    };
+`/api/validate-hml` 端点用于 **最终的语义验证**：
+- 验证 HML XML 字符串
+- 检查跨节点约束（ID 唯一性、嵌套规则）
+- 验证 HML-Spec 规范
+
+### 使用流程
+
+```bash
+# 1. AI 生成 HML XML 后，调用 HTTP API 验证
+curl -X POST http://localhost:38912/api/validate-hml \
+  -H "Content-Type: application/json" \
+  -d '{"hmlContent": "<?xml version=\"1.0\"?>..."}'
+
+# 或使用文件路径
+curl -X POST http://localhost:38912/api/validate-hml \
+  -H "Content-Type: application/json" \
+  -d '{"filePath": "ui/main.hml"}'
+```
+
+**响应示例**：
+```json
+{
+  "success": true,
+  "data": {
+    "valid": true,
+    "errors": [],
+    "warnings": [],
+    "validationRules": [
+      "内容非空检查",
+      "XML 语法验证",
+      "文档结构验证",
+      "组件 ID 唯一性和格式验证",
+      "组件嵌套规则验证",
+      "hg_view 不嵌套验证",
+      "资源路径格式验证",
+      "Entry View 唯一性验证"
+    ]
   }
-  
-  return { valid: true, errors: [] };
 }
 ```
 
@@ -350,7 +371,7 @@ export async function validateHml(hmlJson: any) {
 4. **资源文件存在性** - 需要文件系统访问，需要自定义函数
 5. **颜色对比度** - 需要复杂计算，需要自定义函数
 
-这些约束将在 MCP Server 的 `HmlValidator` 类中实现。
+这些约束已在 Extension HTTP API 的 `HmlValidationService` 类中实现（见 `/api/validate-hml` 端点）。
 
 ---
 
@@ -358,9 +379,9 @@ export async function validateHml(hmlJson: any) {
 
 - **JSON Schema 官方文档**：https://json-schema.org/
 - **ajv 验证库**：https://ajv.js.org/
-- **HML 语法参考**：`../honeygui-designer/references/hml-syntax.md`
-- **组件文档**：`../honeygui-designer/references/components.md`
-- **设计原则**：`../honeygui-designer/references/design-principles.md`
+- **HML 语法参考**：`../references/hml-syntax.md`
+- **组件文档**：`../references/components.md`
+- **设计原则**：`../references/design-principles.md`
 
 ---
 

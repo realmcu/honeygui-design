@@ -12,6 +12,9 @@ honeygui-designer/
 │   ├── hml-syntax.md           # HML 语法规范
 │   ├── layout-patterns.md      # 常见布局模式和示例
 │   └── design-principles.md    # 嵌入式 GUI 设计原则
+├── schema/                       # JSON Schema 定义
+│   ├── hml-schema.json         # HML 结构验证规则
+│   └── README.md               # Schema 使用说明
 ├── assets/
 │   └── examples/               # 高质量示例 HML 文件
 │       ├── simple_watch_home.hml
