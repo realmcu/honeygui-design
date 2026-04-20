@@ -21,9 +21,32 @@
 
 ## 核心场景
 
-### 从零开始生成（AI Generation）
+### 自然语言驱动的 UI 开发
 
-**描述**：用户通过自然语言描述需求，AI 生成完整的 HoneyGUI 项目。
+**描述**：用户通过自然语言描述需求，AI 辅助生成或修改 HoneyGUI 项目。
+
+**支持的工作模式**：
+
+#### 模式 1：创建新项目
+```
+用户：创建一个智能手表设置界面，包含亮度和音量滑块
+  ↓
+AI 生成完整 HML → 验证 → 预览 → 创建项目
+```
+
+#### 模式 2：修改已有项目
+```
+用户：在现有项目中添加一个返回按钮
+  ↓
+AI 读取现有 HML → 生成修改后的 HML → 验证 → 预览 → 更新文件
+```
+
+#### 模式 3：优化和调整
+```
+用户：调整按钮间距为 20px，所有标签字号改为 18
+  ↓
+AI 批量修改 HML → 验证 → 预览
+```
 
 **工作流**：
 ```
@@ -31,14 +54,15 @@
   ↓
 Claude Code 读取 skills/honeygui-designer/
   ↓
-AI 生成 HML
+AI 生成/修改 HML
   ↓
 通过 Bash tool 调用 Extension HTTP API
   - POST /api/validate-hml → 验证语法
   - POST /api/preview-ui → 在 VSCode 中预览
-  - POST /api/create-project → 生成完整项目
+  - POST /api/create-project → 创建新项目（模式 1）
+  - 或直接保存文件 → 更新已有项目（模式 2/3）
   ↓
-输出：完整项目（HML + C 代码 + project.json）
+输出：完整项目或更新后的文件
 ```
 
 **关键技术**：
@@ -105,7 +129,7 @@ AI 生成 HML
 vibe-designer/
 ├── README.md                    # 本文件：整体说明和架构设计
 ├── skills/                      # Skills 定义（AI 学习材料）
-│   ├── honeygui-designer/       # 从零生成 HML 的指导文档
+│   ├── honeygui-designer/       # AI 辅助生成和编辑 HML 的指导文档
 │   │   ├── SKILL.md             # 核心工作流和快速指南
 │   │   ├── README.md            # Skill 使用说明
 │   │   ├── references/          # 详细参考文档
@@ -218,7 +242,7 @@ curl -X POST http://localhost:38912/api/create-project \
 
 Claude Code 会自动读取 `skills/honeygui-designer/` 中的 Skills 文档，并根据文档中的 HTTP API 调用示例来执行操作。
 
-**示例对话**：
+**示例 1：创建新项目**
 ```
 User: 创建一个智能手表界面，包含一个确认按钮
 
@@ -230,6 +254,32 @@ Claude Code:
 4. 如果验证通过，调用：
    curl -X POST http://localhost:38912/api/create-project ...
 5. 在 VSCode 中自动打开项目
+```
+
+**示例 2：修改已有项目**
+```
+User: 在 main.hml 中添加一个返回按钮，位置在左上角
+
+Claude Code:
+1. 读取 skills/honeygui-designer/
+2. 读取 ui/main.hml 文件
+3. 分析现有布局，生成新的 HML（添加返回按钮）
+4. 使用 Bash tool 调用：
+   curl -X POST http://localhost:38912/api/validate-hml ...
+5. 如果验证通过：
+   - 保存修改后的 HML 到 ui/main.hml
+   - 调用 POST /api/preview-ui 预览效果
+```
+
+**示例 3：批量调整**
+```
+User: 把所有按钮的高度改为 50px
+
+Claude Code:
+1. 读取 ui/main.hml
+2. 查找所有 hg_button 组件
+3. 修改 h 属性为 50
+4. 验证 → 保存 → 预览
 ```
 
 ---
@@ -325,7 +375,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 ✅ **已完成**（2026-04-20）
 - [x] 创建 `vibe-designer/` 目录结构
-- [x] 创建 Skill: `honeygui-designer/`（从零生成）
+- [x] 创建 Skill: `honeygui-designer/`（AI 辅助生成和编辑）
 - [x] 生成简化版 HML JSON Schema（4 个核心组件）
 - [x] 明确架构设计（Skills + Extension HTTP）
 - [x] 删除 MCP 相关内容
@@ -499,7 +549,7 @@ Extension HTTP Server **不重复实现** Designer 已有功能，而是**调用
 ## 相关文档
 
 **Skills 文档**：
-- `skills/honeygui-designer/SKILL.md` - 从零生成指导
+- `skills/honeygui-designer/SKILL.md` - AI 辅助生成和编辑指导
 - `skills/honeygui-designer/references/http-api.md` - HTTP API 调用指南（待创建）
 
 **主项目文档**：
