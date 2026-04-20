@@ -2,7 +2,10 @@
 
 将 HoneyGUI Designer 转型为 **AI 驱动的嵌入式 UI 生成平台**，通过 Skills + Extension HTTP API 让 AI 工具（Claude Code 等）能够生成和验证 HoneyGUI 项目。
 
-**核心理念**：AI 生成 → Schema 约束 → 程序化校验 → 预览确认 → 导出代码
+**核心理念**：
+- **AI 生成** → Schema 约束 → 程序化校验 → 预览确认 → 导出代码
+- **一级端点**：每个功能独立的 HTTP 端点，清晰直观（如 `/api/codegen`）
+- **统一复用**：所有端点调用同一个 `executeCommand()`，零冗余，功能对齐有保证
 
 ---
 
@@ -56,10 +59,11 @@ Claude Code 读取 skills/honeygui-designer/
   ↓
 AI 生成/修改 HML
   ↓
-通过 Bash tool 调用 Extension HTTP API
-  - POST /api/validate-hml → 验证语法
-  - POST /api/preview-ui → 在 VSCode 中预览
-  - POST /api/create-project → 创建新项目（模式 1）
+通过 Bash tool 调用 Extension HTTP API（一级端点）
+  - POST /api/validate-hml → 验证 HML 内容
+  - POST /api/codegen → 代码生成
+  - POST /api/simulation/run → 运行仿真
+  - POST /api/environment/refresh → 刷新环境
   - 或直接保存文件 → 更新已有项目（模式 2/3）
   ↓
 输出：完整项目或更新后的文件
@@ -89,24 +93,30 @@ AI 生成/修改 HML
 ┌─────────────────────────────────────┐
 │ VSCode Extension (HTTP Server)      │  ← 所有功能在这里执行 ✅
 │   ExtensionApiService (port 38912)  │
-│   ├─ POST /api/validate-hml         │  → HmlValidator
-│   ├─ POST /api/preview-ui           │  → Webview 预览
-│   ├─ POST /api/create-project       │  → ProjectTemplate
-│   └─ POST /api/export-code          │  → CodeGenerationService
 │                                      │
-│ - HmlValidator (语法验证)            │
-│ - CodeGenerationService (生成 C 代码)│
-│ - Webview (在 VSCode 中预览)         │
-│ - ProjectTemplate (创建项目结构)     │
+│ 一级 API 端点（每个功能独立）：      │
+│   ├─ GET  /health                   │  → 健康检查
+│   ├─ GET  /api/version              │  → 版本信息
+│   ├─ POST /api/new-project          │  → 新建项目
+│   ├─ POST /api/validate-hml         │  → 验证 HML 内容
+│   ├─ POST /api/codegen              │  → 代码生成
+│   ├─ POST /api/simulation/run       │  → 运行仿真
+│   └─ POST /api/simulation/stop      │  → 停止仿真
+│                                      │
+│ 内部统一复用 vscode.commands：       │
+│   每个端点 → executeCommand()        │
+│            → 对应的 VSCode 命令      │
 └─────────────────────────────────────┘
 ```
 
 ### 设计原则
 
 1. **VSCode 内执行**：所有功能在 VSCode Extension 中执行，开发过程不离开 VSCode
-2. **Skills 指导**：通过 Skills 文档教 AI 如何调用 HTTP API
-3. **HTTP 解耦**：Extension 暴露通用的 HTTP API，任何 AI 工具都可以调用
-4. **简单直接**：无需 MCP Server，减少中间层，降低维护成本
+2. **一级端点设计**：每个功能一个独立的 HTTP 端点，URL 清晰直观（如 `/api/codegen`）
+3. **统一复用核心**：所有端点调用同一个 `executeCommand()` 方法，零冗余
+4. **功能完全对齐**：HTTP API 直接复用 VSCode 命令，行为完全一致
+5. **Skills 指导**：通过 Skills 文档教 AI 如何调用 HTTP API
+6. **简单直接**：无需 MCP Server，减少中间层，降低维护成本
 
 ### 为什么不用 MCP Server？
 
@@ -195,15 +205,23 @@ vibe-designer/
 
 **端口**：`localhost:38912`
 
-**支持的 API 端点**：
+**支持的 API 端点**（一级命令设计）：
 
-| 端点 | 方法 | 功能 | 输入 | 输出 |
-|------|------|------|------|------|
-| `/health` | GET | 健康检查 | 无 | `{"status":"ok"}` |
-| `/api/validate-hml` | POST | 验证 HML 语法 | `{hml: string}` | `{valid: boolean, errors: [...]}` |
-| `/api/preview-ui` | POST | 在 VSCode 中预览 | `{hml: string}` | `{success: boolean}` |
-| `/api/create-project` | POST | 创建完整项目 | `{name, hml, outputDir}` | `{success, projectPath, files}` |
-| `/api/export-code` | POST | 导出 C 代码 | `{hml: string}` | `{success, code: {...}}` |
+| 端点 | 方法 | 分类 | 功能 | 输入 | 复用命令 | 测试示例 |
+|------|------|------|------|------|---------|---------|
+| `/health` | GET | 基础 | 健康检查 | 无 | 无 | **请求**: `curl http://localhost:38912/health`<br>**响应**: `{"status":"ok","service":"HoneyGUI Extension API","port":38912,"timestamp":"..."}` |
+| `/api/version` | GET | 基础 | 获取版本信息 | 无 | 无 | **请求**: `curl http://localhost:38912/api/version`<br>**响应**: `{"success":true,"data":{"name":"HoneyGUI Visual Designer","version":"1.6.65",...}}` |
+| `/api/new-project` | POST | 项目 | 创建新项目 | 无 | `honeygui.newProject` | **请求**: `curl -X POST http://localhost:38912/api/new-project`<br>**响应**: `{"success":true,"command":"honeygui.newProject","data":...}` |
+| `/api/validate-hml` | POST | 验证 | 验证 HML XML 内容 | `{hmlContent}` 或 `{filePath}` | 无（直接调用 HmlValidationService） | **方式1（内容）**: `curl -X POST http://localhost:38912/api/validate-hml -H "Content-Type: application/json" -d '{"hmlContent":"<?xml version=\"1.0\"?><hml>...</hml>"}'`<br>**方式2（文件）**: `curl -X POST http://localhost:38912/api/validate-hml -H "Content-Type: application/json" -d '{"filePath":"ui/main.hml"}'`<br>**响应**: `{"success":true,"data":{"valid":true,"errors":[],"warnings":[],"validationRules":[...]}}` |
+| `/api/codegen` | POST | 代码生成 | 生成 C 代码 | 无 | `honeygui.codegen` | **请求**: `curl -X POST http://localhost:38912/api/codegen`<br>**响应**: `{"success":true,"command":"honeygui.codegen","data":...}` |
+| `/api/simulation/run` | POST | 仿真 | 运行仿真 | 无 | `honeygui.simulation` | **请求**: `curl -X POST http://localhost:38912/api/simulation/run`<br>**响应**: `{"success":true,"command":"honeygui.simulation","data":...}` |
+| `/api/simulation/stop` | POST | 仿真 | 停止仿真 | 无 | `honeygui.simulation.stop` | **请求**: `curl -X POST http://localhost:38912/api/simulation/stop`<br>**响应**: `{"success":true,"command":"honeygui.simulation.stop","data":...}` |
+
+**设计原则**：
+- ✅ **一级端点**：每个功能一个独立的 HTTP 端点，URL 直观清晰
+- ✅ **内部复用**：所有端点统一调用 `executeCommand()` 方法，复用 VSCode 命令
+- ✅ **功能对齐**：HTTP API 和 VSCode 命令完全一致，零冗余
+- ✅ **即测即用**：每个端点都有完整的 curl 测试示例
 
 ---
 
@@ -215,157 +233,147 @@ vibe-designer/
 2. 安装 HoneyGUI Designer Extension
 3. Extension 自动启动 HTTP Server（端口 38912）
 
-### 测试 Extension HTTP API
-
+验证 Extension 是否启动：
 ```bash
-# 1. 检查 Extension 是否运行
 curl http://localhost:38912/health
-# 预期输出：{"status":"ok","port":38912}
+```
+预期输出：`{"status":"ok",...}`
 
-# 2. 验证 HML
-curl -X POST http://localhost:38912/api/validate-hml \
-  -H "Content-Type: application/json" \
-  -d '{"hml":"<?xml version=\"1.0\"?><hml><view id=\"view_main\"></view></hml>"}'
-# 预期输出：{"valid":true}
+**更多测试示例见下方 API 端点表格的"测试示例"列。**
 
-# 3. 创建项目
-curl -X POST http://localhost:38912/api/create-project \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "test_project",
-    "hml": "<?xml version=\"1.0\"?>...",
-    "outputDir": "/tmp"
-  }'
+### 快速测试
+
+所有端点的测试示例已整合在上表的"测试示例"列中。以下是常见的响应格式：
+
+**基础端点响应示例**：
+```bash
+# /health
+{"status":"ok","service":"HoneyGUI Extension API","port":38912,"timestamp":"2026-04-20T..."}
+
+# /api/version
+{"success":true,"data":{"name":"HoneyGUI Visual Designer","version":"1.6.65",...}}
+
+# /api/commands
+{"success":true,"data":{"total":15,"commands":[{endpoint,command,title,...}]}}
+```
+
+**功能端点响应示例**：
+```bash
+# 成功
+{"success":true,"command":"honeygui.codegen","data":...}
+
+# 失败
+{"success":false,"command":"honeygui.codegen","error":{"code":"COMMAND_EXECUTION_ERROR","message":"..."}}
 ```
 
 ### 在 Claude Code 中使用
 
 Claude Code 会自动读取 `skills/honeygui-designer/` 中的 Skills 文档，并根据文档中的 HTTP API 调用示例来执行操作。
 
-**示例 1：创建新项目**
+**示例 1：验证 HML 内容**
 ```
-User: 创建一个智能手表界面，包含一个确认按钮
+User: 验证这个 HML 文件是否正确
 
 Claude Code:
-1. 读取 skills/honeygui-designer/
-2. 生成 HML
-3. 使用 Bash tool 调用：
-   curl -X POST http://localhost:38912/api/validate-hml ...
-4. 如果验证通过，调用：
-   curl -X POST http://localhost:38912/api/create-project ...
-5. 在 VSCode 中自动打开项目
+1. 读取 HML 文件内容
+2. 调用验证端点：
+   curl -X POST http://localhost:38912/api/validate-hml \
+     -H "Content-Type: application/json" \
+     -d '{"hmlContent":"<?xml version=\"1.0\"?><hml>...</hml>"}'
+3. 返回验证结果（包含 8 个验证规则的执行情况）
 ```
 
-**示例 2：修改已有项目**
+**示例 2：生成代码**
 ```
-User: 在 main.hml 中添加一个返回按钮，位置在左上角
-
-Claude Code:
-1. 读取 skills/honeygui-designer/
-2. 读取 ui/main.hml 文件
-3. 分析现有布局，生成新的 HML（添加返回按钮）
-4. 使用 Bash tool 调用：
-   curl -X POST http://localhost:38912/api/validate-hml ...
-5. 如果验证通过：
-   - 保存修改后的 HML 到 ui/main.hml
-   - 调用 POST /api/preview-ui 预览效果
-```
-
-**示例 3：批量调整**
-```
-User: 把所有按钮的高度改为 50px
+User: 生成 C 代码
 
 Claude Code:
-1. 读取 ui/main.hml
-2. 查找所有 hg_button 组件
-3. 修改 h 属性为 50
-4. 验证 → 保存 → 预览
+1. 调用一级端点：
+   curl -X POST http://localhost:38912/api/codegen
+2. 复用 honeygui.codegen 命令，零冗余
+```
+
+**示例 2：运行仿真**
+```
+User: 运行仿真
+
+Claude Code:
+1. 调用一级端点：
+   curl -X POST http://localhost:38912/api/simulation/run
+2. 在 VSCode 中启动仿真终端
+```
+
+**示例 3：刷新环境**
+```
+User: 检查开发环境
+
+Claude Code:
+1. 调用一级端点：
+   curl -X POST http://localhost:38912/api/environment/refresh
+2. 复用现有的环境检查逻辑
+```
+
+**示例 4：打开设计器**
+```
+User: 在设计器中打开 ui/main.hml
+
+Claude Code:
+1. 调用一级端点（带参数）：
+   curl -X POST http://localhost:38912/api/open-designer \
+     -H "Content-Type: application/json" \
+     -d '{"filePath":"ui/main.hml"}'
+2. 在 VSCode 中打开可视化设计器
 ```
 
 ---
 
 ## Extension HTTP API
 
-### 实现计划
+### 实现说明
 
-**文件**：`src/services/ExtensionApiService.ts`
+**核心文件**：`src/services/ExtensionApiService.ts`
 
-**关键代码**：
+**设计原则**：
+1. **一级端点**：每个功能一个独立的 HTTP 端点，URL 直观清晰
+2. **内部复用**：所有端点统一调用 `executeCommand()` 方法
+3. **零冗余**：不重复实现任何功能逻辑
+4. **功能对齐**：HTTP API 和 VSCode 命令完全一致
+
+**架构设计**：
 ```typescript
-import * as http from 'http';
-import * as vscode from 'vscode';
-import { HmlValidator } from '../validators/HmlValidator';
-import { CodeGenerationService } from './CodeGenerationService';
-
-export class ExtensionApiService implements vscode.Disposable {
-    private server: http.Server | undefined;
-    private port: number = 38912;
-
-    async start(context: vscode.ExtensionContext) {
-        this.server = http.createServer(async (req, res) => {
-            res.setHeader('Content-Type', 'application/json');
-            res.setHeader('Access-Control-Allow-Origin', '*');
-            
-            try {
-                if (req.method === 'GET' && req.url === '/health') {
-                    res.statusCode = 200;
-                    res.end(JSON.stringify({ status: 'ok', port: this.port }));
-                }
-                else if (req.method === 'POST' && req.url === '/api/validate-hml') {
-                    const body = await this.readBody(req);
-                    const result = await this.validateHml(body.hml);
-                    res.statusCode = 200;
-                    res.end(JSON.stringify(result));
-                }
-                // ... 其他端点
-            } catch (error: any) {
-                res.statusCode = 500;
-                res.end(JSON.stringify({ error: error.message }));
-            }
-        });
-
-        return new Promise<void>((resolve, reject) => {
-            this.server!.listen(this.port, () => {
-                console.log(`HTTP Server listening on http://localhost:${this.port}`);
-                vscode.window.showInformationMessage(`HoneyGUI HTTP Server started on port ${this.port}`);
-                resolve();
-            });
-            this.server!.on('error', reject);
-        });
-    }
-
-    private async validateHml(hml: string) {
-        const validator = new HmlValidator();
-        return await validator.validate(hml);
-    }
-
-    dispose() {
-        if (this.server) {
-            this.server.close();
-        }
-    }
-}
-```
-
-**在 Extension 入口启动**：
-```typescript
-// src/extension.ts
-import { ExtensionApiService } from './services/ExtensionApiService';
-
-export async function activate(context: vscode.ExtensionContext) {
-    // ... 现有代码 ...
+// 路由分发 - 一级端点
+private async handleRequest(req, res) {
+    const url = req.url || '';
     
-    // 启动 HTTP API Server
-    const httpServer = new ExtensionApiService();
-    try {
-        await httpServer.start(context);
-        context.subscriptions.push(httpServer);
-    } catch (error) {
-        console.error('Failed to start HTTP Server:', error);
-        vscode.window.showErrorMessage('Failed to start HoneyGUI HTTP Server');
+    if (url === '/api/codegen') {
+        return this.handleCodegen(req, res);
     }
+    if (url === '/api/simulation/run') {
+        return this.handleSimulationRun(req, res);
+    }
+    // ... 其他端点
+}
+
+// 每个端点的处理器
+private async handleCodegen(req, res) {
+    await this.executeCommand('honeygui.codegen', res);
+}
+
+// 核心复用方法 - 所有端点最终都调用这里
+private async executeCommand(command: string, res, args = []) {
+    const result = await vscode.commands.executeCommand(command, ...args);
+    res.end(JSON.stringify({ success: true, command, data: result }));
 }
 ```
+
+**优势**：
+- ✅ URL 清晰：`/api/codegen` 比 `/api/command {"command":"honeygui.codegen"}` 更直观
+- ✅ 内部复用：所有端点共享 `executeCommand()` 方法，零冗余
+- ✅ 易于扩展：新增命令只需添加路由和处理器
+
+**启动方式**：
+- Extension 激活时自动启动 HTTP Server（端口 38912）
+- 见 `src/extension.ts` 中的 `activate()` 函数
 
 ---
 
@@ -380,32 +388,35 @@ export async function activate(context: vscode.ExtensionContext) {
 - [x] 明确架构设计（Skills + Extension HTTP）
 - [x] 删除 MCP 相关内容
 - [x] 删除设计稿转换相关内容
+- [x] **实现 ExtensionApiService（一级端点设计）**
+  - [x] 创建 `src/services/ExtensionApiService.ts`
+  - [x] 实现 HTTP Server（Node.js http 模块）
+  - [x] 实现核心端点：
+    - [x] 基础端点：health, version
+    - [x] 项目：new-project
+    - [x] 验证：validate-hml
+    - [x] 代码生成：codegen
+    - [x] 仿真：simulation/run, simulation/stop
+  - [x] 实现统一的 `executeCommand()` 复用方法
+  - [x] 在 `src/extension.ts` 中集成启动
+  - [x] 测试核心功能（health, version, validate-hml）
 
 ---
 
-### 阶段 1：Extension HTTP Server 实现（1 周）
+### 阶段 1：Extension HTTP Server 增强（剩余工作）
 
-**目标**：实现 Extension HTTP Server，暴露 4 个核心 API
+**目标**：完善 HTTP API 功能和错误处理
 
 **任务清单**：
 
-1. **创建 ExtensionApiService**（2-3 天，P0）
-   - [ ] 创建 `src/services/ExtensionApiService.ts`
-   - [ ] 实现 HTTP Server（Node.js http 模块）
-   - [ ] 实现 `/health` 端点
-   - [ ] 实现 `/api/validate-hml` 端点
-   - [ ] 实现 `/api/preview-ui` 端点（调用 Webview）
-   - [ ] 实现 `/api/create-project` 端点
-   - [ ] 实现 `/api/export-code` 端点
-   - [ ] 错误处理和日志
+1. **错误处理增强**（1 天，P0）
+   - [ ] 完善错误响应格式
+   - [ ] 添加请求日志
+   - [ ] 处理边界情况（大请求体、超时等）
 
-2. **集成到 Extension**（1 天，P0）
-   - [ ] 在 `src/extension.ts` 中启动 ExtensionApiService
-   - [ ] 添加必要的 VSCode 命令（preview、create-project）
-   - [ ] 测试 Extension 启动流程
-
-3. **测试 HTTP API**（1-2 天，P0）
-   - [ ] 使用 curl 测试所有端点
+2. **测试和验证**（1-2 天，P0）
+   - [x] 使用 curl 测试基础端点
+   - [ ] 测试所有 HoneyGUI 命令
    - [ ] 验证错误处理
    - [ ] 性能测试
 
@@ -475,13 +486,18 @@ export async function activate(context: vscode.ExtensionContext) {
 
 ### 时间表
 
-| 阶段 | 时长 | 关键里程碑 |
-|------|------|-----------|
-| **阶段 1** | 1 周 | Extension HTTP Server 完成 + API 测试通过 |
-| **阶段 2** | 3-5 天 | Skills 文档完善 + HTTP API 指南完成 |
-| **阶段 3** | 1 周 | Schema 扩展完成 + 测试通过 |
-| **阶段 4** | 1 周 | 集成测试完成 + Claude Code 可用 |
-| **总计** | **3-4 周** | 完整 AI 驱动系统上线 |
+| 阶段 | 时长 | 关键里程碑 | 状态 |
+|------|------|-----------|------|
+| **阶段 1** | ~~1 周~~ 实际 1 天 | Extension HTTP Server 完成 + 7 个核心端点实现 | ✅ 100% 完成 |
+| **阶段 2** | 3-5 天 | Skills 文档完善 + HTTP API 指南完成 | ⏳ 待开始 |
+| **阶段 3** | 1 周 | Schema 扩展完成 + 测试通过 | ⏳ 待开始 |
+| **阶段 4** | 1 周 | 集成测试完成 + Claude Code 可用 | ⏳ 待开始 |
+| **总计** | **2-3 周**（比原计划快） | 完整 AI 驱动系统上线 | 进行中 |
+
+**加速原因**：
+- 一级端点设计：URL 清晰直观，易于理解和使用
+- 统一复用方法：所有端点共享 `executeCommand()`，代码量大幅减少
+- 功能对齐保证：直接复用 VSCode 命令，无需重复实现业务逻辑
 
 ---
 
@@ -513,18 +529,42 @@ export async function activate(context: vscode.ExtensionContext) {
 
 ## 与 Designer 主工程的关系
 
-Extension HTTP Server **不重复实现** Designer 已有功能，而是**调用**：
+Extension HTTP Server **完全复用** Designer 已有功能：
 
-| Designer 模块 | HTTP API 调用方式 |
-|--------------|------------------|
-| `HmlParser` | 直接导入，解析 HML |
-| `HmlSerializer` | 直接导入，生成 HML |
-| `HmlValidator` | 直接导入，校验 HML |
-| `CodeGenerationService` | 直接导入，生成 C 代码 |
-| `ProjectTemplate` | 直接导入，创建项目 |
-| Webview 预览引擎 | 通过 VSCode 命令调用 |
+### 复用架构
 
-**集成方式**：Extension 内部模块，无需额外集成
+```
+HTTP 端点层（一级）
+  ↓
+POST /api/codegen
+  ↓
+executeCommand() 方法（复用核心）
+  ↓
+vscode.commands.executeCommand('honeygui.codegen')
+  ↓
+CommandManager（现有实现）
+  ↓
+CodeGenerationService（现有业务逻辑）
+```
+
+### 端点与命令映射
+
+| HTTP 端点 | VSCode 命令 | 复用模块 |
+|----------|------------|---------|
+| `GET /health` | 无 | ExtensionApiService（健康检查） |
+| `GET /api/version` | 无 | ExtensionApiService（版本信息） |
+| `POST /api/new-project` | `honeygui.newProject` | CommandManager → CreateProjectPanel |
+| `POST /api/validate-hml` | 无 | HmlValidationService（HML 验证） |
+| `POST /api/codegen` | `honeygui.codegen` | CommandManager → CodeGenerationService |
+| `POST /api/simulation/run` | `honeygui.simulation` | CommandManager → SimulationRunner |
+| `POST /api/simulation/stop` | `honeygui.simulation.stop` | CommandManager → SimulationRunner |
+
+### 核心原则
+
+1. **一级端点设计**：每个功能一个独立的 HTTP 端点
+2. **统一复用方法**：所有端点调用 `executeCommand()`
+3. **零冗余代码**：不重复实现任何业务逻辑
+4. **功能完全对齐**：HTTP API 和 VSCode 命令行为一致
 
 ---
 

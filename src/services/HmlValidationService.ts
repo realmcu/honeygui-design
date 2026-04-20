@@ -1,0 +1,475 @@
+import { HmlParser } from '../hml/HmlParser';
+import { validateComponentId } from '../webview/utils/validation';
+import { Component } from '../hml/types';
+
+/**
+ * HML 验证服务
+ *
+ * 功能：验证 HML XML 内容是否符合 HML-Spec.md 规范
+ * 用途：提供给 HTTP API (/api/validate-hml) 和内部模块使用
+ *
+ * 执行的验证规则（共 8 项）：
+ * ┌─────────────────────────────────────────────────────────────────────────┐
+ * │ 1. 内容非空检查         - 确保 HML 内容不为空                           │
+ * │ 2. XML 语法验证         - 使用 fast-xml-parser 验证 XML 格式            │
+ * │ 3. 文档结构验证         - 必须有 <meta> 和 <view> 元素                  │
+ * │ 4. 组件 ID 验证         - 全局唯一性 + C 标识符格式                     │
+ * │ 5. 组件嵌套规则验证     - 容器/非容器组件嵌套约束                       │
+ * │ 6. hg_view 不嵌套验证   - hg_view 不能嵌套在另一个 hg_view 中          │
+ * │ 7. 资源路径格式验证     - 所有资源路径必须以 '/' 开头                   │
+ * │ 8. Entry View 唯一性验证 - 必须有且只有一个 entry="true" 的 hg_view    │
+ * └─────────────────────────────────────────────────────────────────────────┘
+ *
+ * 验证依据：/docs/HML-Spec.md
+ *
+ * 返回结果：
+ * - valid: boolean           - 是否通过验证
+ * - errors: ValidationError[] - 错误列表（如果有）
+ * - warnings: ValidationWarning[] - 警告列表（如果有）
+ * - validationRules: string[] - 执行的验证规则列表
+ */
+export class HmlValidationService {
+    private parser: HmlParser;
+
+    // 容器组件类型（可以包含子组件）
+    private readonly containerTypes = new Set([
+        'hg_view', 'hg_window', 'hg_list', 'hg_list_item', 'hg_menu_cellular'
+    ]);
+
+    constructor() {
+        this.parser = new HmlParser();
+    }
+
+    /**
+     * 验证 HML XML 内容
+     * @param hmlContent HML XML 字符串
+     * @returns 验证结果
+     *
+     * 执行的验证规则（按 HML-Spec.md 规范）：
+     * 1. 基础检查：内容非空
+     * 2. XML 语法验证：使用 HmlParser 解析，检查 XML 格式是否正确
+     * 3. 文档结构验证：必须有 <meta> 和 <view> 元素
+     * 4. 组件 ID 验证：全局唯一性 + 格式符合 C 标识符规范
+     * 5. 组件嵌套规则验证：只有容器组件可以包含子组件
+     * 6. hg_view 不嵌套验证：hg_view 不能嵌套在另一个 hg_view 中
+     * 7. 资源路径格式验证：所有资源路径必须以 '/' 开头
+     * 8. Entry View 唯一性验证：必须有且只有一个 hg_view 的 entry="true"
+     */
+    public validateHml(hmlContent: string): ValidationResult {
+        const errors: ValidationError[] = [];
+        const warnings: ValidationWarning[] = [];
+        const validationRules: string[] = [];
+
+        try {
+            // ========================================
+            // 规则 1: 基础检查 - 内容非空
+            // ========================================
+            validationRules.push('内容非空检查');
+            if (!hmlContent || hmlContent.trim() === '') {
+                return {
+                    valid: false,
+                    errors: [{
+                        type: 'syntax',
+                        message: 'HML content is empty'
+                    }],
+                    warnings: [],
+                    validationRules
+                };
+            }
+
+            // ========================================
+            // 规则 2: XML 语法验证
+            // 使用 HmlParser（基于 fast-xml-parser）解析
+            // 会自动检查：标签闭合、属性格式、XML 声明等
+            // ========================================
+            validationRules.push('XML 语法验证');
+            const document = this.parser.parse(hmlContent);
+
+            // ========================================
+            // 规则 3: 文档结构验证
+            // HML-Spec 要求：必须有 <meta> 和 <view>
+            // ========================================
+            validationRules.push('文档结构验证（<meta> 和 <view> 必须存在）');
+            this.validateDocumentStructure(document, errors);
+
+            // ========================================
+            // 规则 4: 组件 ID 验证
+            // - 全局唯一性：同一个 HML 文件中不能有重复 ID
+            // - 格式验证：符合 C 标识符规范（lowercase_with_underscores）
+            // - 不能使用 C 语言关键字（如 int, void 等）
+            // ========================================
+            validationRules.push('组件 ID 唯一性和格式验证（C 标识符规范）');
+            const componentIds = new Set<string>();
+            this.validateComponentIds(document.view.components || [], componentIds, errors);
+
+            // ========================================
+            // 规则 5: 组件嵌套规则验证（HML-Spec Section 5）
+            // - 容器组件：hg_view, hg_window, hg_list, hg_list_item, hg_menu_cellular
+            // - 只有容器组件可以包含子组件
+            // - 非容器组件（如 hg_button, hg_label）不能有子组件
+            // - 特殊规则：hg_list 的子组件应该是 hg_list_item
+            // ========================================
+            validationRules.push('组件嵌套规则验证（容器/非容器规则）');
+            this.validateNestingRules(document.view.components || [], errors);
+
+            // ========================================
+            // 规则 6: hg_view 不嵌套验证（HML-Spec 特别说明）
+            // - hg_view 不能嵌套在另一个 hg_view 中
+            // - 这是 HML 的特殊设计约束
+            // ========================================
+            validationRules.push('hg_view 不嵌套规则验证');
+            this.validateNoNestedViews(document.view.components || [], errors);
+
+            // ========================================
+            // 规则 7: 资源路径格式验证（HML-Spec 开头说明）
+            // - 所有资源路径必须以 '/' 开头
+            // - 包括：src, imageOn, imageOff, fontFile, mapFile, emojiFontFile
+            // - 正确：/NotoSansSC-Bold.ttf
+            // - 错误：NotoSansSC-Bold.ttf
+            // ========================================
+            validationRules.push('资源路径格式验证（必须以 / 开头）');
+            this.validateResourcePaths(document.view.components || [], errors, warnings);
+
+            // ========================================
+            // 规则 8: Entry View 唯一性验证（HML-Spec Section 6.1）
+            // - 必须有且只有一个 hg_view 的 entry="true"
+            // - 这是 HML 应用的入口点
+            // ========================================
+            validationRules.push('Entry View 唯一性验证（必须有且只有一个 entry="true"）');
+            this.validateEntryView(document.view.components || [], errors);
+
+            // ========================================
+            // 返回验证结果
+            // ========================================
+            if (errors.length > 0) {
+                return {
+                    valid: false,
+                    errors,
+                    warnings,
+                    validationRules
+                };
+            }
+
+            return {
+                valid: true,
+                errors: [],
+                warnings,
+                validationRules
+            };
+
+        } catch (error: any) {
+            // 解析失败（XML 语法错误或结构错误）
+            return {
+                valid: false,
+                errors: [{
+                    type: 'syntax',
+                    message: error.message || 'HML parsing failed'
+                }],
+                warnings: [],
+                validationRules: validationRules.length > 0 ? validationRules : ['XML 语法验证（失败）']
+            };
+        }
+    }
+
+    /**
+     * 验证文档结构（必须有 meta 和 view）
+     *
+     * 验证内容：
+     * - 检查是否存在 <meta> 元素
+     * - 检查是否存在 <view> 元素
+     *
+     * 依据：HML-Spec.md 规定 HML 文档必须包含这两个顶层元素
+     */
+    private validateDocumentStructure(document: any, errors: ValidationError[]): void {
+        if (!document.meta) {
+            errors.push({
+                type: 'structure',
+                message: 'Missing <meta> section'
+            });
+        }
+        if (!document.view) {
+            errors.push({
+                type: 'structure',
+                message: 'Missing <view> section'
+            });
+        }
+    }
+
+    /**
+     * 验证组件 ID（唯一性和格式）
+     *
+     * 验证内容：
+     * 1. ID 唯一性：同一个 HML 文件中不能有重复的组件 ID
+     * 2. ID 格式验证：
+     *    - 必须符合 C 语言标识符规范
+     *    - 推荐使用 lowercase_with_underscores 命名约定
+     *    - 不能使用 C 语言关键字（如 int, void, return 等）
+     *    - 不能以数字开头
+     *    - 只能包含字母、数字、下划线
+     *
+     * 依据：HML-Spec.md，因为 HML 生成的 C 代码中组件 ID 会作为变量名
+     */
+    private validateComponentIds(
+        components: Component[],
+        existingIds: Set<string>,
+        errors: ValidationError[]
+    ): void {
+        // HmlParser 返回的是扁平化的组件数组，不需要递归
+        for (const component of components) {
+            // 检查 ID 是否已存在（唯一性）
+            if (existingIds.has(component.id)) {
+                errors.push({
+                    type: 'reference',
+                    message: `Duplicate component ID: ${component.id}`,
+                    componentId: component.id
+                });
+            }
+
+            existingIds.add(component.id);
+
+            // 验证 ID 格式（使用现有的验证函数）
+            const idValidation = validateComponentId(
+                component.id,
+                Array.from(existingIds),
+                component.id
+            );
+
+            if (!idValidation.valid && idValidation.error) {
+                errors.push({
+                    type: 'attribute',
+                    message: idValidation.error,
+                    componentId: component.id,
+                    attribute: 'id'
+                });
+            }
+        }
+    }
+
+    /**
+     * 验证组件嵌套规则（HML-Spec Section 5）
+     *
+     * 验证内容：
+     * 1. 容器组件识别：
+     *    - 容器：hg_view, hg_window, hg_list, hg_list_item, hg_menu_cellular
+     *    - 非容器：hg_button, hg_label, hg_image 等其他组件
+     *
+     * 2. 嵌套规则：
+     *    - 只有容器组件可以包含子组件
+     *    - 非容器组件不能有子组件
+     *    - 例如：hg_button 不能包含 hg_image
+     *
+     * 3. 特殊规则：
+     *    - hg_list 的直接子组件应该是 hg_list_item
+     *    - 这是为了保证列表结构的正确性
+     *
+     * 依据：HML-Spec.md Section 5（Component Hierarchy）
+     */
+    private validateNestingRules(components: Component[], errors: ValidationError[]): void {
+        for (const component of components) {
+            const isContainer = this.containerTypes.has(component.type);
+
+            // 如果是非容器组件，但有子组件，报错
+            if (!isContainer && component.children && component.children.length > 0) {
+                errors.push({
+                    type: 'structure',
+                    message: `Non-container component '${component.type}' cannot have children`,
+                    componentId: component.id
+                });
+            }
+
+            // 特殊规则：hg_list 的子组件应该是 hg_list_item
+            if (component.type === 'hg_list') {
+                const childComponents = components.filter(c => component.children?.includes(c.id));
+                for (const child of childComponents) {
+                    if (child.type !== 'hg_list_item') {
+                        errors.push({
+                            type: 'structure',
+                            message: `hg_list should only contain hg_list_item, found: ${child.type}`,
+                            componentId: component.id
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 验证 hg_view 不嵌套规则（HML-Spec 特别说明）
+     *
+     * 验证内容：
+     * - hg_view 不能嵌套在另一个 hg_view 中
+     * - 这是 HML 的设计约束，用于简化页面层级结构
+     *
+     * 正确示例：
+     * <view>
+     *   <hg_view id="page1" entry="true">
+     *     <hg_button id="btn1" />
+     *   </hg_view>
+     * </view>
+     *
+     * 错误示例：
+     * <view>
+     *   <hg_view id="page1" entry="true">
+     *     <hg_view id="page2">  <!-- 错误：嵌套 hg_view -->
+     *       <hg_button id="btn1" />
+     *     </hg_view>
+     *   </hg_view>
+     * </view>
+     *
+     * 依据：HML-Spec.md 开头特别说明
+     */
+    private validateNoNestedViews(components: Component[], errors: ValidationError[]): void {
+        const viewComponents = components.filter(c => c.type === 'hg_view');
+
+        for (const view of viewComponents) {
+            if (view.parent) {
+                const parentComp = components.find(c => c.id === view.parent);
+                if (parentComp && parentComp.type === 'hg_view') {
+                    errors.push({
+                        type: 'structure',
+                        message: 'hg_view cannot be nested inside another hg_view',
+                        componentId: view.id
+                    });
+                }
+            }
+        }
+    }
+
+    /**
+     * 验证资源路径格式（HML-Spec：必须以 '/' 开头）
+     *
+     * 验证内容：
+     * - 检查所有资源路径属性是否以 '/' 开头
+     * - 资源属性包括：
+     *   - src: 图片/视频资源路径（hg_image, hg_video 等）
+     *   - imageOn/imageOff: 开关图片（hg_switch 等）
+     *   - fontFile: 字体文件路径（hg_label 等）
+     *   - mapFile: 地图数据文件（hg_map 等）
+     *   - emojiFontFile: 表情字体文件
+     *
+     * 正确示例：
+     * - fontFile="/NotoSansSC-Bold.ttf"
+     * - src="/images/icon.png"
+     *
+     * 错误示例：
+     * - fontFile="NotoSansSC-Bold.ttf"  （缺少前导 /）
+     * - src="images/icon.png"           （缺少前导 /）
+     *
+     * 原因：HML 使用绝对路径以确保资源引用的一致性，
+     * 所有路径都相对于项目的 assetsDir 目录
+     *
+     * 依据：HML-Spec.md 开头特别说明
+     */
+    private validateResourcePaths(
+        components: Component[],
+        errors: ValidationError[],
+        warnings: ValidationWarning[]
+    ): void {
+        for (const component of components) {
+            // 检查常见的资源属性
+            const resourceAttrs = ['src', 'imageOn', 'imageOff', 'fontFile', 'mapFile', 'emojiFontFile'];
+
+            for (const attr of resourceAttrs) {
+                const value = (component.data as any)?.[attr];
+                if (value && typeof value === 'string' && value.trim() !== '') {
+                    if (!value.startsWith('/')) {
+                        errors.push({
+                            type: 'attribute',
+                            message: `Resource path must start with '/', got: '${value}'`,
+                            componentId: component.id,
+                            attribute: attr
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 验证 entry view 唯一性（只能有一个 entry="true"）
+     *
+     * 验证内容：
+     * - 必须有且只有一个 hg_view 的 entry="true"
+     * - entry view 是应用的入口点，定义了应用启动时显示的页面
+     *
+     * 正确示例：
+     * <view>
+     *   <hg_view id="page_main" entry="true">  <!-- 入口页面 -->
+     *     <hg_button id="btn1" />
+     *   </hg_view>
+     *   <hg_view id="page_settings">            <!-- 其他页面 -->
+     *     <hg_button id="btn2" />
+     *   </hg_view>
+     * </view>
+     *
+     * 错误示例 1（缺少 entry）：
+     * <view>
+     *   <hg_view id="page_main">               <!-- 错误：没有 entry="true" -->
+     *     <hg_button id="btn1" />
+     *   </hg_view>
+     * </view>
+     *
+     * 错误示例 2（多个 entry）：
+     * <view>
+     *   <hg_view id="page1" entry="true">      <!-- 错误：多个 entry -->
+     *   </hg_view>
+     *   <hg_view id="page2" entry="true">      <!-- 错误：多个 entry -->
+     *   </hg_view>
+     * </view>
+     *
+     * 依据：HML-Spec.md Section 6.1（Entry View）
+     */
+    private validateEntryView(components: Component[], errors: ValidationError[]): void {
+        const entryViews = components.filter(c => {
+            if (c.type !== 'hg_view') {
+                return false;
+            }
+            const entry = (c.data as any)?.entry;
+            // XML 属性可能是字符串 "true" 或 boolean true
+            return entry === true || entry === 'true';
+        });
+
+        if (entryViews.length === 0) {
+            errors.push({
+                type: 'structure',
+                message: 'Exactly one hg_view must have entry="true"'
+            });
+        } else if (entryViews.length > 1) {
+            errors.push({
+                type: 'structure',
+                message: `Multiple entry views found (${entryViews.length}), only one allowed: ${entryViews.map(v => v.id).join(', ')}`
+            });
+        }
+    }
+}
+
+/**
+ * 验证结果接口
+ */
+export interface ValidationResult {
+    valid: boolean;
+    errors: ValidationError[];
+    warnings: ValidationWarning[];
+    validationRules: string[];  // 执行的验证规则列表
+}
+
+/**
+ * 验证错误接口
+ */
+export interface ValidationError {
+    type: 'syntax' | 'structure' | 'attribute' | 'reference';
+    message: string;
+    componentId?: string;   // 组件 ID
+    attribute?: string;     // 属性名
+    line?: number;          // 行号（如果可用）
+    column?: number;        // 列号（如果可用）
+}
+
+/**
+ * 验证警告接口
+ */
+export interface ValidationWarning {
+    type: 'best-practice' | 'performance' | 'compatibility';
+    message: string;
+    componentId?: string;
+}

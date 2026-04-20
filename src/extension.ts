@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { logger } from './utils/Logger';
 import { ExtensionManager } from './core/ExtensionManager';
+import { ExtensionApiService } from './services/ExtensionApiService';
 
 /**
  * HoneyGUI Visual Designer Extension Entry
@@ -8,6 +9,7 @@ import { ExtensionManager } from './core/ExtensionManager';
  */
 
 let extensionManager: ExtensionManager | undefined;
+let apiService: ExtensionApiService | undefined;
 
 /**
  * Extension activation function
@@ -22,7 +24,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         
         // Initialize extension
         await extensionManager.initialize();
-        
+
+        // Start Extension HTTP API Service
+        apiService = new ExtensionApiService();
+        try {
+            await apiService.start(context);
+            context.subscriptions.push(apiService);
+        } catch (error) {
+            logger.error(`Failed to start Extension API Service: ${error}`);
+            // API Service 启动失败不影响 Extension 主要功能，继续执行
+        }
+
         // Check for pending new project activation
         const pendingActivation = context.globalState.get<{
             projectPath: string;
@@ -146,11 +158,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
  */
 export function deactivate(): void {
     logger.info(vscode.l10n.t('Extension deactivating'));
-    
+
+    if (apiService) {
+        apiService.dispose();
+        apiService = undefined;
+    }
+
     if (extensionManager) {
         extensionManager.dispose();
         extensionManager = undefined;
     }
-    
+
     logger.info(vscode.l10n.t('Extension deactivated'));
 }
