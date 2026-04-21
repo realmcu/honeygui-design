@@ -18,6 +18,8 @@ import { LvglLottieGenerator } from './LvglLottieGenerator';
 import { Lvgl3DGenerator } from './Lvgl3DGenerator';
 import { LvglTimeLabelGenerator } from './LvglTimeLabelGenerator';
 import { LvglTimerLabelGenerator } from './LvglTimerLabelGenerator';
+import { LvglListGenerator } from './LvglListGenerator';
+import { LvglListItemGenerator } from './LvglListItemGenerator';
 import { LvglDefaultGenerator } from './LvglDefaultGenerator';
 
 export class LvglComponentGeneratorFactory {
@@ -48,6 +50,10 @@ export class LvglComponentGeneratorFactory {
     this.generators.set('hg_video', new LvglVideoGenerator());
     this.generators.set('hg_lottie', new LvglLottieGenerator());
     this.generators.set('hg_3d', new Lvgl3DGenerator());
+
+    // List controls
+    this.generators.set('hg_list', new LvglListGenerator());
+    this.generators.set('hg_list_item', new LvglListItemGenerator());
   }
 
   static getGenerator(componentType: string): LvglComponentCodeGenerator {
