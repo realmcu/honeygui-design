@@ -10,20 +10,31 @@
   </meta>
 
   <view id="view_player">
-    <!-- Gradient Background -->
+    <!--
+      渐变背景
+      - 全屏背景图，提供视觉氛围
+      - 通常使用深色渐变，突出前景内容
+    -->
     <hg_image id="img_background"
               name="Background"
               x="0" y="0"
               w="454" h="454"
               src="assets/bg_gradient.bin" />
 
-    <!-- Album Cover -->
+    <!--
+      专辑封面容器
+      - 居中显示，200x200px 正方形
+      - 外层容器：圆角 20px，深灰背景
+      - 内层专辑图：10px 内边距，圆角 12px
+      - 双层结构形成阴影效果
+    -->
     <hg_view id="view_album_container"
              name="Album Container"
              x="127" y="70"
              w="200" h="200"
              borderRadius="20"
              backgroundColor="#1E1E1E">
+      <!-- 专辑封面图片 -->
       <hg_image id="img_album"
                 name="Album Art"
                 x="10" y="10"
@@ -32,7 +43,17 @@
                 borderRadius="12" />
     </hg_view>
 
-    <!-- Song Title -->
+    <!--
+      歌曲信息区域
+      - 位于专辑封面下方 20px
+      - 包含歌曲标题和艺术家名称
+    -->
+
+    <!--
+      歌曲标题
+      - 白色，22px 大字号
+      - 居中对齐，最多显示一行
+    -->
     <hg_label id="lbl_song_title"
               name="Song Title"
               x="77" y="290"
@@ -42,7 +63,11 @@
               color="#FFFFFF"
               textAlign="center" />
 
-    <!-- Artist Name -->
+    <!--
+      艺术家名称
+      - 浅灰色（#CCCCCC），16px
+      - 次要信息，位于标题下方
+    -->
     <hg_label id="lbl_artist"
               name="Artist"
               x="77" y="330"
@@ -52,7 +77,13 @@
               color="#CCCCCC"
               textAlign="center" />
 
-    <!-- Progress Bar -->
+    <!--
+      播放进度条
+      - 宽度 300px，高度 6px
+      - 绿色进度（#00FF88）+ 深灰背景（#333333）
+      - 圆角 3px，细长条形状
+      - 当前进度：45%
+    -->
     <hg_progressbar id="progress_playback"
                     name="Playback Progress"
                     x="77" y="375"
@@ -62,7 +93,12 @@
                     backgroundColor="#333333"
                     borderRadius="3" />
 
-    <!-- Time Labels -->
+    <!--
+      时间标签
+      - 左侧：当前播放时间
+      - 右侧：总时长
+      - 13px 小字号，灰色
+    -->
     <hg_label id="lbl_time_current"
               name="Current Time"
               x="77" y="390"
@@ -80,13 +116,22 @@
               color="#999999"
               textAlign="right" />
 
-    <!-- Control Buttons Container -->
+    <!--
+      播放控制按钮容器
+      - 3 个按钮水平排列：上一首 + 播放/暂停 + 下一首
+      - 中间的播放按钮更大（60x60px）以突出主要功能
+      - 两侧按钮较小（50x50px）
+    -->
     <hg_view id="view_controls"
              name="Controls"
              x="77" y="420"
              w="300" h="70">
 
-      <!-- Previous Button -->
+      <!--
+        上一首按钮
+        - 位于左侧，50x50px
+        - 满足触摸目标最小尺寸
+      -->
       <hg_button id="btn_previous"
                  name="Previous"
                  x="30" y="10"
@@ -94,7 +139,12 @@
                  src="assets/icon_previous.bin"
                  onClick="handlePrevious" />
 
-      <!-- Play/Pause Button (Larger) -->
+      <!--
+        播放/暂停按钮
+        - 位于中间，60x60px
+        - 最大尺寸，突出主要操作
+        - y 偏移 5px 使其略高于两侧按钮
+      -->
       <hg_button id="btn_play_pause"
                  name="Play/Pause"
                  x="120" y="5"
@@ -102,7 +152,11 @@
                  src="assets/icon_play.bin"
                  onClick="handlePlayPause" />
 
-      <!-- Next Button -->
+      <!--
+        下一首按钮
+        - 位于右侧，50x50px
+        - 与上一首按钮对称
+      -->
       <hg_button id="btn_next"
                  name="Next"
                  x="220" y="10"

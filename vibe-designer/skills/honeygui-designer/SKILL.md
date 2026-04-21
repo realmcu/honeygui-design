@@ -39,7 +39,13 @@ description: |
    - 包含元数据信息
    - 添加事件处理器以实现交互
 
-4. **迭代优化**
+4. **验证 HML** ⚠️
+   - **必须调用** `/api/validate-hml` 验证生成的代码
+   - 检查所有 8 项约束规则（见"关键约束"章节）
+   - 修复验证错误后重新验证
+   - 详见"HML 验证"章节
+
+5. **迭代优化**
    - 呈现生成的 HML
    - 接受反馈并改进
    - 基于嵌入式 UI 最佳实践提出改进建议
@@ -231,11 +237,26 @@ curl -X POST http://localhost:38912/api/validate-hml \
 - **`references/hml-syntax.md`** - HML XML 语法规则和最佳实践
 - **`references/layout-patterns.md`** - 常见 UI 模式及代码示例
 - **`references/design-principles.md`** - 嵌入式 UI 设计指南
+- **`references/constraints.md`** - 全部 8 项 HML 约束规则详细说明
+- **`references/http-api.md`** - Extension HTTP API 完整文档
+- **`references/common-mistakes.md`** - 常见错误和修复方法
 
 ## 使用提示
 
 - **从简单开始**：先完成基本布局，再逐步增加复杂性
-- **使用示例**：参考 `assets/examples/` 获取灵感
 - **边做边验证**：确保 ID 唯一，属性有效
 - **考虑嵌入式特性**：电池寿命、有限资源、手指友好的 UI
 - **快速迭代**：生成 → 反馈 → 改进
+
+## 示例文件
+
+参考 `assets/examples/` 中的完整示例获取设计灵感：
+
+| 示例文件 | 用途 | 适用场景 |
+|---------|------|---------|
+| `simple_watch_home.hml` | 简单的手表主屏幕 | 入门示例：时间显示 + 基础按钮 |
+| `dashboard.hml` | 健康数据仪表盘 | 网格布局：多个状态卡片（2x2 网格） |
+| `settings_screen.hml` | 设置界面 | 列表布局：垂直选项列表 + 开关/滑块 |
+| `music_player.hml` | 音乐播放器控制 | 媒体控制：专辑封面 + 播放控制按钮 |
+
+所有示例都遵循 HML 约束规则，可以直接作为生成代码的参考模板。
