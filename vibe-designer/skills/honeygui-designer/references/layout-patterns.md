@@ -14,6 +14,8 @@ Common UI layout patterns for embedded devices with complete examples.
 - [Timer / Stopwatch](#timer--stopwatch)
 - [Grid Menu](#grid-menu)
 - [Carousel / Swipe Pages](#carousel--swipe-pages)
+- [Scrollable List Menu](#scrollable-list-menu)
+- [Circular Progress / Activity Rings](#circular-progress--activity-rings)
 
 ---
 
@@ -829,6 +831,89 @@ Common UI layout patterns for embedded devices with complete examples.
 | Fitness tracking | Activity Tracking |
 | Time measurement | Timer / Stopwatch |
 | Multiple content pages | Carousel / Swipe Pages |
+
+---
+
+## Scrollable List Menu
+
+**Use Case**: Display a vertical list of apps, settings, or options that can be scrolled.
+
+**Layout**: Vertical list with icon + text items using `hg_list` and `hg_list_item`.
+
+**Key Components**:
+- `hg_list` - Container with scrolling behavior
+- `hg_list_item` - Individual list items with index
+- Vertical scrolling with inertia
+
+**Example**: See `assets/examples/list_menu_example.hml` for complete code.
+
+**Key Properties**:
+```xml
+<hg_list 
+  direction="VERTICAL"
+  itemHeight="100"
+  space="5"
+  loop="false"
+  autoAlign="true"
+  inertia="true">
+  
+  <hg_list_item index="0">...</hg_list_item>
+  <hg_list_item index="1">...</hg_list_item>
+  ...
+</hg_list>
+```
+
+**Tips**:
+- Each `hg_list_item` must have unique `index` starting from 0
+- Set `itemHeight` to match the height of list items
+- Use `space` to add gaps between items
+- `inertia="true"` enables smooth scrolling physics
+- `autoAlign="true"` snaps items to alignment points
+
+---
+
+## Circular Progress / Activity Rings
+
+**Use Case**: Fitness tracking with multiple concentric progress rings (move, exercise, stand).
+
+**Layout**: Overlapping circular arcs with gradient fills.
+
+**Key Components**:
+- `hg_arc` - Circular arc progress indicator
+- Gradient fills with `useGradient="true"`
+- Background arcs + foreground progress arcs
+
+**Example**: See `assets/examples/arc_progress_example.hml` for complete code.
+
+**Key Properties**:
+```xml
+<!-- Background arc (full circle) -->
+<hg_arc
+  radius="105"
+  startAngle="0"
+  endAngle="360"
+  strokeWidth="20"
+  color="#3a171d" />
+
+<!-- Progress arc (partial circle with gradient) -->
+<hg_arc
+  radius="105"
+  startAngle="270"
+  endAngle="90"
+  strokeWidth="20"
+  useGradient="true"
+  gradientStops="[{&quot;position&quot;:0,&quot;color&quot;:&quot;#e9402e&quot;},{&quot;position&quot;:1,&quot;color&quot;:&quot;#ea418f&quot;}]" />
+```
+
+**Tips**:
+- `startAngle="270"` starts from top (12 o'clock position)
+- `endAngle` determines progress: 270 + (progress% * 360)
+- Use dark background arcs to show incomplete portion
+- Gradient format: JSON array with position (0-1) and color
+- Stack multiple arcs with different radii for concentric rings
+- Center point calculation: `x + w/2`, `y + h/2`
+
+---
 
 ## General Layout Tips
 

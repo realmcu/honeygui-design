@@ -1,4 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ⚠️ 资源路径说明
+  本示例中的资源路径（如 assets/bg_gradient.bin）是占位符，仅用于演示 HML 结构。
+
+  在实际项目中，你需要：
+  1. 准备资源文件（PNG/JPG 图片、TTF 字体等）
+  2. 使用 VSCode Extension 的转换工具将资源转换为 .bin 格式
+  3. 将转换后的文件放入项目的 assets/ 目录
+
+  💡 快速开始：使用 Extension 的"新建项目"功能选择模板（如 Smart Watch），
+     模板中已包含完整的资源文件，可以直接运行。
+-->
 <hml>
   <meta>
     <title>Music Player</title>

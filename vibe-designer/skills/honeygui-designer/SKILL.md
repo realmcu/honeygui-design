@@ -252,12 +252,19 @@ curl -X POST http://localhost:38912/api/validate-hml \
 
 参考 `assets/examples/` 中的完整示例获取设计灵感：
 
-| 示例文件 | 用途 | 适用场景 |
-|---------|------|---------|
-| `simple_watch_home.hml` | 简单的手表主屏幕 | 入门示例：时间显示 + 基础按钮 |
-| `dashboard.hml` | 健康数据仪表盘 | 网格布局：多个状态卡片（2x2 网格） |
-| `settings_screen.hml` | 设置界面 | 列表布局：垂直选项列表 + 开关/滑块 |
-| `music_player.hml` | 音乐播放器控制 | 媒体控制：专辑封面 + 播放控制按钮 |
+| 示例文件 | 用途 | 适用场景 | 组件亮点 |
+|---------|------|---------|----------|
+| `simple_watch_home.hml` | 简单的手表主屏幕 | 入门示例：时间显示 + 基础按钮 | hg_label (timeFormat), hg_button |
+| `dashboard.hml` | 健康数据仪表盘 | 网格布局：多个状态卡片（2x2 网格） | hg_view 嵌套, 卡片布局 |
+| `settings_screen.hml` | 设置界面 | 列表布局：垂直选项列表 + 开关/滑块 | hg_slider, hg_container (滚动) |
+| `music_player.hml` | 音乐播放器控制 | 媒体控制：专辑封面 + 播放控制按钮 | hg_progressbar, 圆角容器 |
+| `list_menu_example.hml` | 应用菜单列表 | 长列表：10 个可滚动应用图标 | **hg_list + hg_list_item** |
+| `arc_progress_example.hml` | 活动圆环（运动表盘） | 圆弧进度：三个同心圆环 + 渐变 | **hg_arc + 渐变效果** |
+
+**⚠️ 资源路径说明**：
+- 所有示例中的资源路径（如 `assets/icon.bin`）是占位符，仅用于演示 HML 结构
+- 实际使用时，需要准备资源文件并使用 Extension 转换为 .bin 格式
+- 💡 快速开始：使用 Extension 的"新建项目"功能选择模板，模板中已包含完整资源
 
 所有示例都遵循 HML 约束规则，可以直接作为生成代码的参考模板。
 
