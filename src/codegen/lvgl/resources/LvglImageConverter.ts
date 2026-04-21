@@ -1,6 +1,9 @@
 /**
  * LVGL image resource converter
  * Converts project images to LVGL built-in C array format
+ *
+ * Incremental conversion: only converts images that are new or whose source
+ * file has been modified since the last conversion. Removes orphaned outputs.
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -23,7 +26,9 @@ export class LvglImageConverter {
   }
 
   /**
-   * Prepare built-in image resources: convert project images to LVGL built-in C array format
+   * Prepare built-in image resources (incremental).
+   * - Skips images whose output .c already exists and is newer than the source file.
+   * - Removes orphaned img_*.c files that are no longer referenced.
    */
   prepare(components: Component[], srcDir: string, lvglDir: string): void {
     this.builtinImageVarMap.clear();
@@ -42,11 +47,19 @@ export class LvglImageConverter {
     }
 
     const images = this.collectImageSources(components);
+
+    // Build the set of varNames that are currently needed
+    const neededVarNames = new Set<string>();
+    for (const imgSrc of images) {
+      neededVarNames.add(buildImageVarName(imgSrc));
+    }
+
+    // Remove orphaned img_*.c files (no longer referenced by any component)
+    this.cleanupOrphanedImages(lvglDir, neededVarNames);
+
     if (images.length === 0) {
       return;
     }
-
-    this.cleanupGeneratedImages(lvglDir);
 
     for (const imgSrc of images) {
       const inputPath = this.resolveImagePath(projectRoot, imgSrc);
@@ -56,12 +69,40 @@ export class LvglImageConverter {
       }
 
       const varName = buildImageVarName(imgSrc);
+      const outputFile = path.join(lvglDir, `${varName}.c`);
+
+      // Incremental check: skip if output exists and is newer than source
+      if (this.isUpToDate(inputPath, outputFile)) {
+        // Already converted and up-to-date, just register the mapping
+        const key = normalizeImageKey(imgSrc);
+        this.builtinImageVarMap.set(key, varName);
+        this.builtinImageVars.push(varName);
+        continue;
+      }
+
       const success = this.convertImageToLvgl(toolPath, inputPath, lvglDir, varName);
       if (success) {
         const key = normalizeImageKey(imgSrc);
         this.builtinImageVarMap.set(key, varName);
         this.builtinImageVars.push(varName);
       }
+    }
+  }
+
+  /**
+   * Check if the output file is up-to-date relative to the source file.
+   * Returns true if output exists and its mtime >= source mtime.
+   */
+  private isUpToDate(sourcePath: string, outputPath: string): boolean {
+    try {
+      if (!fs.existsSync(outputPath)) {
+        return false;
+      }
+      const srcStat = fs.statSync(sourcePath);
+      const outStat = fs.statSync(outputPath);
+      return outStat.mtimeMs >= srcStat.mtimeMs;
+    } catch {
+      return false;
     }
   }
 
@@ -214,9 +255,10 @@ export class LvglImageConverter {
   }
 
   /**
-   * Clean up previously generated image C files
+   * Remove orphaned img_*.c files that are no longer needed.
+   * Only deletes files whose varName is NOT in the neededVarNames set.
    */
-  private cleanupGeneratedImages(lvglDir: string): void {
+  private cleanupOrphanedImages(lvglDir: string, neededVarNames: Set<string>): void {
     if (!fs.existsSync(lvglDir)) {
       return;
     }
@@ -224,7 +266,11 @@ export class LvglImageConverter {
     const files = fs.readdirSync(lvglDir);
     for (const file of files) {
       if (file.startsWith(prefix) && file.endsWith('.c')) {
-        fs.unlinkSync(path.join(lvglDir, file));
+        const varName = file.replace(/\.c$/, '');
+        if (!neededVarNames.has(varName)) {
+          console.log(`[LvglImageConverter] Removing orphaned image: ${file}`);
+          fs.unlinkSync(path.join(lvglDir, file));
+        }
       }
     }
   }

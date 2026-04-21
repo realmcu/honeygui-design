@@ -126,7 +126,7 @@ export class LvglCCodeGenerator implements ICodeGenerator {
       getParentRef: (component: Component) => this.getParentRef(component),
       resources: this.resourceManager,
       getBuiltinImageVar: (source: string) => this.resourceManager.getImageVar(source),
-      getBuiltinFontVar: (fontFile: string, fontSize: number) => this.resourceManager.getFontVar(fontFile, fontSize),
+      getBuiltinFontVar: (fontFile: string, fontSize: number, bpp?: number) => this.resourceManager.getFontVar(fontFile, fontSize, bpp),
       getAncestorBackgroundColor: (component: Component) => this.getAncestorBackgroundColor(component),
     };
   }

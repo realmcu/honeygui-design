@@ -33,7 +33,8 @@ export class LvglTimerLabelGenerator extends LvglBaseGenerator {
     code += `    lv_obj_set_style_text_color(${component.id}, lv_color_hex(0x${color}), LV_PART_MAIN);\n`;
 
     // Font
-    const customFontVar = fontFile ? ctx.getBuiltinFontVar(String(fontFile), fontSize) : null;
+    const bpp = Number((component.data as any)?.renderMode || 4);
+    const customFontVar = fontFile ? ctx.getBuiltinFontVar(String(fontFile), fontSize, bpp) : null;
     if (customFontVar) {
       code += `    lv_obj_set_style_text_font(${component.id}, &${customFontVar}, LV_PART_MAIN);\n`;
     } else {

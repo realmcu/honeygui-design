@@ -184,11 +184,12 @@ export function normalizeImageKey(source: string): string {
 }
 
 /**
- * Normalize font key (fontFile + fontSize combination)
+ * Normalize font key (fontFile + fontSize + bpp combination)
+ * @param bpp Bits per pixel (render mode), defaults to 4
  */
-export function normalizeFontKey(fontFile: string, fontSize: number): string {
+export function normalizeFontKey(fontFile: string, fontSize: number, bpp: number = 4): string {
   const normalized = fontFile.replace(/\\/g, '/').toLowerCase().trim();
-  return `${normalized}@${fontSize}`;
+  return `${normalized}@${fontSize}@${bpp}`;
 }
 
 /**
@@ -210,11 +211,12 @@ export function buildImageVarName(source: string): string {
 
 /**
  * Build font variable name
+ * @param bpp Bits per pixel (render mode), defaults to 4
  */
-export function buildFontVarName(fontFile: string, fontSize: number): string {
+export function buildFontVarName(fontFile: string, fontSize: number, bpp: number = 4): string {
   const baseName = path.basename(fontFile, path.extname(fontFile))
     .replace(/[^a-zA-Z0-9_]/g, '_')
     .replace(/^_+|_+$/g, '')
     .replace(/_+/g, '_');
-  return `font_${baseName}_${fontSize}`;
+  return `font_${baseName}_${fontSize}_bpp${bpp}`;
 }

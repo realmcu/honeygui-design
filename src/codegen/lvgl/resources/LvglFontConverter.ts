@@ -1,9 +1,14 @@
 /**
  * LVGL font resource converter
  * Converts project TTF fonts to LVGL C format
+ *
+ * Incremental conversion: maintains a manifest file to track the configuration
+ * (font file, size, character set hash) used for each conversion. Only reconverts
+ * when the configuration changes or the source font file is modified.
  */
 import * as fs from 'fs';
 import * as path from 'path';
+import * as crypto from 'crypto';
 import { spawnSync } from 'child_process';
 import { Component } from '../../../hml/types';
 import { normalizeFontKey, buildFontVarName } from '../LvglUtils';
@@ -13,13 +18,30 @@ interface CharacterSetSource {
   value: string;
 }
 
+/** Manifest entry for a single converted font */
+interface FontManifestEntry {
+  varName: string;
+  fontFile: string;
+  fontSize: number;
+  /** SHA-256 hash of the sorted character set string */
+  charsHash: string;
+  /** mtime of the source font file at conversion time */
+  fontMtimeMs: number;
+}
+
+/** Manifest file structure */
+interface FontManifest {
+  version: 1;
+  entries: Record<string, FontManifestEntry>; // keyed by normalizeFontKey
+}
+
 export class LvglFontConverter {
   private builtinFontVarMap: Map<string, string> = new Map();
   private builtinFontVars: string[] = [];
 
   /** Get converted font variable name */
-  getBuiltinFontVar(fontFile: string, fontSize: number): string | null {
-    const key = normalizeFontKey(fontFile, fontSize);
+  getBuiltinFontVar(fontFile: string, fontSize: number, bpp: number = 4): string | null {
+    const key = normalizeFontKey(fontFile, fontSize, bpp);
     return this.builtinFontVarMap.get(key) || null;
   }
 
@@ -29,7 +51,11 @@ export class LvglFontConverter {
   }
 
   /**
-   * Prepare built-in font resources
+   * Prepare built-in font resources (incremental).
+   * - Loads a manifest from the previous run.
+   * - Skips fonts whose config (file mtime + character set hash) hasn't changed.
+   * - Removes orphaned font_*.c files no longer referenced.
+   * - Saves an updated manifest after conversion.
    */
   prepare(components: Component[], srcDir: string, lvglDir: string): void {
     this.builtinFontVarMap.clear();
@@ -39,50 +65,147 @@ export class LvglFontConverter {
     const assetsDir = path.join(projectRoot, 'assets');
 
     const fontConfigs = this.collectFontConfigs(components, projectRoot);
-    if (fontConfigs.length === 0) {
-      return;
-    }
 
     const fontOutputDir = path.join(lvglDir, 'fonts');
     if (!fs.existsSync(fontOutputDir)) {
       fs.mkdirSync(fontOutputDir, { recursive: true });
     }
 
+    const manifestPath = path.join(fontOutputDir, '.font_manifest.json');
+    const oldManifest = this.loadManifest(manifestPath);
+    const newManifest: FontManifest = { version: 1, entries: {} };
+
+    // Build the set of varNames that are currently needed
+    const neededVarNames = new Set<string>();
     for (const config of fontConfigs) {
-      console.log(`[LvglFontConverter] Font: ${config.fontFile}, size: ${config.fontSize}, chars(${config.characters.length}): "${config.characters.substring(0, 80)}${config.characters.length > 80 ? '...' : ''}"`);
+      neededVarNames.add(buildFontVarName(config.fontFile, config.fontSize, config.bpp));
+    }
+
+    // Remove orphaned font_*.c files
+    this.cleanupOrphanedFonts(fontOutputDir, neededVarNames);
+
+    if (fontConfigs.length === 0) {
+      this.saveManifest(manifestPath, newManifest);
+      return;
+    }
+
+    for (const config of fontConfigs) {
       const inputPath = this.resolveFontPath(projectRoot, assetsDir, config.fontFile);
       if (!inputPath) {
         console.warn(`Font file not found, skipping: ${config.fontFile}`);
         continue;
       }
 
-      const varName = buildFontVarName(config.fontFile, config.fontSize);
-      const success = this.convertFontToLvgl(inputPath, fontOutputDir, varName, config.fontSize, config.characters, srcDir);
-      if (success) {
-        const key = normalizeFontKey(config.fontFile, config.fontSize);
+      const varName = buildFontVarName(config.fontFile, config.fontSize, config.bpp);
+      const key = normalizeFontKey(config.fontFile, config.fontSize, config.bpp);
+      const charsHash = this.hashString(config.characters);
+      const fontMtimeMs = this.getFileMtime(inputPath);
+      const outputFile = path.join(fontOutputDir, `${varName}.c`);
+
+      // Incremental check: skip if output exists and config hasn't changed
+      const oldEntry = oldManifest.entries[key];
+      if (oldEntry
+        && oldEntry.varName === varName
+        && oldEntry.charsHash === charsHash
+        && oldEntry.fontMtimeMs === fontMtimeMs
+        && fs.existsSync(outputFile)) {
+        // Up-to-date, just register the mapping
         this.builtinFontVarMap.set(key, varName);
         this.builtinFontVars.push(varName);
+        newManifest.entries[key] = oldEntry;
+        console.log(`[LvglFontConverter] Skipping (up-to-date): ${varName}`);
+        continue;
+      }
+
+      console.log(`[LvglFontConverter] Converting font: ${config.fontFile}, size: ${config.fontSize}, bpp: ${config.bpp}, chars(${config.characters.length}): "${config.characters.substring(0, 80)}${config.characters.length > 80 ? '...' : ''}"`);
+      const success = this.convertFontToLvgl(inputPath, fontOutputDir, varName, config.fontSize, config.bpp, config.characters, srcDir);
+      if (success) {
+        this.builtinFontVarMap.set(key, varName);
+        this.builtinFontVars.push(varName);
+        newManifest.entries[key] = { varName, fontFile: config.fontFile, fontSize: config.fontSize, charsHash, fontMtimeMs };
+      }
+    }
+
+    this.saveManifest(manifestPath, newManifest);
+  }
+
+  /** Compute SHA-256 hash of a string */
+  private hashString(s: string): string {
+    return crypto.createHash('sha256').update(s, 'utf-8').digest('hex');
+  }
+
+  /** Get file mtime in milliseconds, or 0 if not found */
+  private getFileMtime(filePath: string): number {
+    try {
+      return fs.statSync(filePath).mtimeMs;
+    } catch {
+      return 0;
+    }
+  }
+
+  /** Load manifest from disk */
+  private loadManifest(manifestPath: string): FontManifest {
+    try {
+      if (fs.existsSync(manifestPath)) {
+        const data = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+        if (data && data.version === 1 && data.entries) {
+          return data as FontManifest;
+        }
+      }
+    } catch {
+      // Corrupted manifest, start fresh
+    }
+    return { version: 1, entries: {} };
+  }
+
+  /** Save manifest to disk */
+  private saveManifest(manifestPath: string, manifest: FontManifest): void {
+    try {
+      fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf-8');
+    } catch (e) {
+      console.warn(`[LvglFontConverter] Failed to save manifest: ${e}`);
+    }
+  }
+
+  /**
+   * Remove orphaned font_*.c files that are no longer needed.
+   */
+  private cleanupOrphanedFonts(fontOutputDir: string, neededVarNames: Set<string>): void {
+    if (!fs.existsSync(fontOutputDir)) {
+      return;
+    }
+    const files = fs.readdirSync(fontOutputDir);
+    for (const file of files) {
+      if (file.startsWith('font_') && file.endsWith('.c')) {
+        const varName = file.replace(/\.c$/, '');
+        if (!neededVarNames.has(varName)) {
+          console.log(`[LvglFontConverter] Removing orphaned font: ${file}`);
+          fs.unlinkSync(path.join(fontOutputDir, file));
+        }
       }
     }
   }
 
   /**
-   * Collect font configurations used by all label components
-   * (hg_label, hg_time_label, hg_timer_label)
+   * Collect font configurations used by all text-bearing components
+   * (hg_label, hg_time_label, hg_timer_label, hg_checkbox, hg_radio)
    * Includes text characters + additional character sets (range, string, file, codepage)
+   * Groups by (fontFile, fontSize, bpp) to avoid overwriting when different renderModes are used.
    */
-  private collectFontConfigs(components: Component[], projectRoot: string): Array<{ fontFile: string; fontSize: number; characters: string }> {
+  private collectFontConfigs(components: Component[], projectRoot: string): Array<{ fontFile: string; fontSize: number; bpp: number; characters: string }> {
     const fontExts = new Set(['.ttf', '.otf', '.woff', '.woff2']);
-    const labelTypes = new Set(['hg_label', 'hg_time_label', 'hg_timer_label']);
+    /** Component types that support custom fonts */
+    const fontComponentTypes = new Set(['hg_label', 'hg_time_label', 'hg_timer_label', 'hg_checkbox', 'hg_radio']);
     const seen = new Map<string, {
       fontFile: string;
       fontSize: number;
+      bpp: number;
       characters: Set<string>;
       additionalCharSets: Set<string>; // JSON-serialized for dedup
     }>();
 
     for (const component of components) {
-      if (!labelTypes.has(component.type)) {
+      if (!fontComponentTypes.has(component.type)) {
         continue;
       }
 
@@ -98,8 +221,10 @@ export class LvglFontConverter {
       }
 
       const fontSize = Number(component.style?.fontSize || component.data?.fontSize || 16);
-      const text = String(component.data?.text || '');
-      const key = normalizeFontKey(fontFileStr, fontSize);
+      const bpp = this.parseRenderMode((component.data as any)?.renderMode);
+      // checkbox/radio may store text in 'text' or 'label' field
+      const text = String(component.data?.text || component.data?.label || '');
+      const key = normalizeFontKey(fontFileStr, fontSize, bpp);
 
       if (seen.has(key)) {
         const existing = seen.get(key)!;
@@ -124,6 +249,7 @@ export class LvglFontConverter {
         seen.set(key, {
           fontFile: fontFileStr,
           fontSize,
+          bpp,
           characters: new Set(text),
           additionalCharSets
         });
@@ -144,9 +270,22 @@ export class LvglFontConverter {
       return {
         fontFile: config.fontFile,
         fontSize: config.fontSize,
+        bpp: config.bpp,
         characters: this.buildCharacterSet(allChars)
       };
     });
+  }
+
+  /**
+   * Parse renderMode from component data to a valid bpp value (1, 2, 4, or 8).
+   * Defaults to 4 if not specified or invalid.
+   */
+  private parseRenderMode(renderMode: any): number {
+    const value = Number(renderMode);
+    if ([1, 2, 4, 8].includes(value)) {
+      return value;
+    }
+    return 4; // default bpp
   }
 
   /**
@@ -270,6 +409,7 @@ export class LvglFontConverter {
     outputDir: string,
     varName: string,
     fontSize: number,
+    bpp: number,
     characters: string,
     srcDir: string
   ): boolean {
@@ -292,7 +432,7 @@ export class LvglFontConverter {
         '--size', String(fontSize),
         '--format', 'lvgl',
         '--output', outputFile,
-        '--bpp', '4',
+        '--bpp', String(bpp),
       ];
 
       for (const range of ranges) {

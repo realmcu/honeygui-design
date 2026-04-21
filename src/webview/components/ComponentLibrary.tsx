@@ -100,6 +100,10 @@ const TEXT_PROPERTIES: PropertyDefinition[] = [
   { name: 'color', label: 'Color', type: 'color', defaultValue: '#ffffff', group: 'style' },
   { name: 'fontFile', label: 'Font File', type: 'string', defaultValue: '', group: 'font' },
   { name: 'fontSize', label: 'Font Size', type: 'number', defaultValue: 16, group: 'font' },
+  { name: 'fontType', label: 'Font Type', type: 'select', defaultValue: 'bitmap',
+    options: ['bitmap', 'vector'], group: 'font' },
+  { name: 'renderMode', label: 'Render Mode', type: 'select', defaultValue: '4',
+    options: ['1', '2', '4', '8'], group: 'font' },
 ];
 
 /** Helper: create TEXT_PROPERTIES with a custom default text value */
