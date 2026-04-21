@@ -272,6 +272,13 @@ const en = {
   // Properties Panel
   'Properties': 'Properties',
   'Events': 'Events',
+
+  // Collapsible group titles
+  'Layout': 'Layout',
+  'Content': 'Content',
+  'Interaction': 'Interaction',
+  'Behavior': 'Behavior',
+  'Advanced': 'Advanced',
   'Timers': 'Timers',
   'Animations': 'Animations',
   'Timer': 'Timer',

@@ -272,6 +272,13 @@ const zhCN = {
   // Properties Panel
   'Properties': '属性',
   'Events': '事件',
+
+  // Collapsible group titles
+  'Layout': '布局',
+  'Content': '内容',
+  'Interaction': '交互',
+  'Behavior': '行为',
+  'Advanced': '高级',
   'Timers': '定时器',
   'Animations': '定时动画',
   'Timer': '定时器',

@@ -3,6 +3,7 @@ import { PropertyPanelProps } from './types';
 import { BaseProperties } from './BaseProperties';
 import { PropertyEditor } from './PropertyEditor';
 import { EventsPanel } from './EventsPanel';
+import { CollapsibleGroup } from './CollapsibleGroup';
 import { t } from '../../i18n';
 
 export const Hg3DProperties: React.FC<PropertyPanelProps> = ({ component, onUpdate, components }) => {
@@ -49,9 +50,8 @@ export const Hg3DProperties: React.FC<PropertyPanelProps> = ({ component, onUpda
           <>
             <BaseProperties component={component} onUpdate={onUpdate} components={components} />
 
-            <div className="property-section">
-              <h4>{t('Model Settings')}</h4>
-
+            {/* 内容 */}
+            <CollapsibleGroup title={t('Content')}>
               <div className="property-item">
                 <label>{t('Model Path')}</label>
                 <div style={{ display: 'flex', gap: '4px' }}>
@@ -98,10 +98,10 @@ export const Hg3DProperties: React.FC<PropertyPanelProps> = ({ component, onUpda
                   {t('Front only / Front and back / Front and sort (default)')}
                 </div>
               </div>
-            </div>
+            </CollapsibleGroup>
 
-            <div className="property-section">
-              <h4>{t('Camera Settings')}</h4>
+            {/* 样式 - 相机设置 */}
+            <CollapsibleGroup title={t('Style')} cacheKey="3d-style">
 
               <div className="property-item">
                 <label>{t('Camera Position')}</label>
@@ -162,10 +162,10 @@ export const Hg3DProperties: React.FC<PropertyPanelProps> = ({ component, onUpda
                   </div>
                 </div>
               </div>
-            </div>
+            </CollapsibleGroup>
 
-            <div className="property-section">
-              <h4>{t('World Coordinate Settings')}</h4>
+            {/* 变换 - 世界坐标 */}
+            <CollapsibleGroup title={t('Transform')} defaultCollapsed={true}>
 
               <div className="property-item">
                 <label>{t('Translation')}</label>
@@ -235,10 +235,10 @@ export const Hg3DProperties: React.FC<PropertyPanelProps> = ({ component, onUpda
                   onChange={(value) => onUpdate({ data: { ...component.data, scale: value } })}
                 />
               </div>
-            </div>
+            </CollapsibleGroup>
 
-            <div className="property-section">
-              <h4>{t('Interactive Animation')}</h4>
+            {/* 交互动画 */}
+            <CollapsibleGroup title={t('Interaction')}>
 
               <div className="property-item">
                 <label>
@@ -318,7 +318,7 @@ export const Hg3DProperties: React.FC<PropertyPanelProps> = ({ component, onUpda
                   </div>
                 </>
               )}
-            </div>
+            </CollapsibleGroup>
           </>
         )}
 

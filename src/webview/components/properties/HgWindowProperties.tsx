@@ -3,6 +3,7 @@ import { PropertyPanelProps } from './types';
 import { BaseProperties } from './BaseProperties';
 import { PropertyEditor } from './PropertyEditor';
 import { EventsPanel } from './EventsPanel';
+import { CollapsibleGroup } from './CollapsibleGroup';
 import { t } from '../../i18n';
 
 export const HgWindowProperties: React.FC<PropertyPanelProps> = ({ component, onUpdate, components }) => {
@@ -47,10 +48,8 @@ export const HgWindowProperties: React.FC<PropertyPanelProps> = ({ component, on
               components={components}
             />
 
-            {/* 样式属性 */}
-            <div className="property-group">
-              <div className="property-group-title">{t('Style')}</div>
-              
+            {/* 样式属性（合并背景 + 模糊） */}
+            <CollapsibleGroup title={t('Style')}>
               <div className="property-item">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <label>{t('Show Background')}</label>
@@ -72,12 +71,7 @@ export const HgWindowProperties: React.FC<PropertyPanelProps> = ({ component, on
                   />
                 </div>
               )}
-            </div>
 
-            {/* Blur 效果 */}
-            <div className="property-group">
-              <div className="property-group-title">{t('Blur Effect')}</div>
-              
               <div className="property-item">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <label>{t('Enable Blur')}</label>
@@ -105,7 +99,7 @@ export const HgWindowProperties: React.FC<PropertyPanelProps> = ({ component, on
                   </div>
                 </div>
               )}
-            </div>
+            </CollapsibleGroup>
           </>
         )}
 

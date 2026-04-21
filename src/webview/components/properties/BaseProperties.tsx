@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { PropertyPanelProps } from './types';
 import { PropertyEditor } from './PropertyEditor';
+import { CollapsibleGroup } from './CollapsibleGroup';
 import { isContainerType } from '../../utils/componentUtils';
 import { validateComponentId } from '../../utils/validation';
 import { useDesignerStore } from '../../store';
@@ -187,55 +188,59 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
 
   return (
     <>
-      {/* Name (ID) */}
+      {/* 基本信息（不可折叠） */}
       <div className="property-group">
-        <div className="property-item">
-          <label>{t('Name')}</label>
-          <input
-            type="text"
-            value={editingId}
-            onChange={(e) => handleIdChange(e.target.value)}
-            onBlur={handleIdBlur}
-            onKeyDown={(e) => { 
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                handleIdCommit();
-              }
-            }}
-            style={{
-              width: '100%',
-              padding: '4px 8px',
-              backgroundColor: 'var(--vscode-input-background)',
-              color: 'var(--vscode-input-foreground)',
-              border: idError 
-                ? '1px solid var(--vscode-inputValidation-errorBorder, #f44)' 
-                : '1px solid var(--vscode-input-border)',
-              borderRadius: '2px',
-              fontFamily: 'monospace',
-              fontSize: '13px',
-            }}
-          />
-          {idError && (
-            <div style={{ 
-              color: 'var(--vscode-inputValidation-errorForeground, #f44)', 
-              fontSize: '11px', 
-              marginTop: '4px' 
-            }}>
-              {idError}
-            </div>
-          )}
+        <div className="property-item" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <label style={{ minWidth: '42px', flexShrink: 0, marginBottom: 0 }}>{t('Name')}</label>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <input
+              type="text"
+              value={editingId}
+              onChange={(e) => handleIdChange(e.target.value)}
+              onBlur={handleIdBlur}
+              onKeyDown={(e) => { 
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleIdCommit();
+                }
+              }}
+              style={{
+                width: '100%',
+                padding: '4px 8px',
+                backgroundColor: 'var(--vscode-input-background)',
+                color: 'var(--vscode-input-foreground)',
+                border: idError 
+                  ? '1px solid var(--vscode-inputValidation-errorBorder, #f44)' 
+                  : '1px solid var(--vscode-input-border)',
+                borderRadius: '2px',
+                fontFamily: 'monospace',
+                fontSize: '13px',
+                boxSizing: 'border-box',
+              }}
+            />
+            {idError && (
+              <div style={{ 
+                color: 'var(--vscode-inputValidation-errorForeground, #f44)', 
+                fontSize: '11px', 
+                marginTop: '2px' 
+              }}>
+                {idError}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Parent selection */}
         {!hideParent && (
-          <div className="property-item">
-            <label>{t('Parent')}</label>
+          <div className="property-item" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <label style={{ minWidth: '42px', flexShrink: 0, marginBottom: 0 }}>{t('Parent')}</label>
             <select
               value={component.parent || ''}
               onChange={(e) => handleParentChange(e.target.value || null)}
               disabled={disableParent}
               style={{
-                width: '100%',
+                flex: 1,
+                minWidth: 0,
                 padding: '4px 8px',
                 backgroundColor: 'var(--vscode-input-background)',
                 color: 'var(--vscode-input-foreground)',
@@ -260,14 +265,13 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
         )}
       </div>
 
-      {/* 插入自定义内容（位置与大小之前） */}
+      {/* 插入自定义内容（布局之前） */}
       {children}
 
-      {/* Position and Size */}
-      <div className="property-group">
+      {/* 布局（可折叠） */}
+      <CollapsibleGroup title={t('Layout')} cacheKey="base-layout">
         <div className="property-item">
-          <label>{t('Position & Size')}</label>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '8px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
             <div>
               <label style={{ fontSize: '12px' }}>X</label>
               <PropertyEditor
@@ -312,12 +316,11 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
             </div>
           </div>
         </div>
-      </div>
+      </CollapsibleGroup>
 
-      {/* Visibility and State */}
-      <div className="property-group">
+      {/* 状态（可折叠） */}
+      <CollapsibleGroup title={t('State')} cacheKey="base-state">
         <div className="property-item">
-          <label>{t('State')}</label>
           <div style={{ display: 'flex', gap: '16px', marginTop: '4px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <PropertyEditor
@@ -359,7 +362,7 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
             </div>
           </div>
         )}
-      </div>
+      </CollapsibleGroup>
     </>
   );
 };

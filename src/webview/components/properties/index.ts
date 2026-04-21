@@ -60,4 +60,5 @@ export { HgParticleProperties } from './HgParticleProperties';
 export { HgMenuCellularProperties } from './HgMenuCellularProperties';
 export { BaseProperties } from './BaseProperties';
 export { PropertyEditor } from './PropertyEditor';
+export { CollapsibleGroup } from './CollapsibleGroup';
 export type { PropertyPanelProps, PropertyEditorProps } from './types';

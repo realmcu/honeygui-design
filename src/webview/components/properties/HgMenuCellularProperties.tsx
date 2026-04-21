@@ -3,6 +3,7 @@ import { PropertyPanelProps } from './types';
 import { PropertyEditor } from './PropertyEditor';
 import { BaseProperties } from './BaseProperties';
 import { EventsPanel } from './EventsPanel';
+import { CollapsibleGroup } from './CollapsibleGroup';
 import { t } from '../../i18n';
 import { SWITCH_OUT_STYLES, SWITCH_IN_STYLES } from '../../../hml/eventTypes';
 import { useDesignerStore } from '../../store';
@@ -178,8 +179,7 @@ export const HgMenuCellularProperties: React.FC<PropertyPanelProps> = ({ compone
           />
 
           {/* 图标配置 */}
-          <div className="property-group">
-            <div className="property-group-header">{t('Icon Configuration')}</div>
+          <CollapsibleGroup title={t('Content')}>
 
             <div className="property-item">
               <label>{t('Icon Folder')}</label>
@@ -324,11 +324,10 @@ export const HgMenuCellularProperties: React.FC<PropertyPanelProps> = ({ compone
                 </div>
               </div>
             )}
-          </div>
+          </CollapsibleGroup>
 
-          {/* 图标尺寸 */}
-          <div className="property-group">
-            <div className="property-group-header">{t('Icon Size')}</div>
+          {/* 样式（图标尺寸 + 偏移量） */}
+          <CollapsibleGroup title={t('Style')}>
             <div className="property-item">
               <label>icon_size</label>
               <PropertyEditor
@@ -341,11 +340,6 @@ export const HgMenuCellularProperties: React.FC<PropertyPanelProps> = ({ compone
                 }}
               />
             </div>
-          </div>
-
-          {/* 偏移量 */}
-          <div className="property-group">
-            <div className="property-group-header">{t('Offset')}</div>
             <div className="property-item">
               <label>offset_x</label>
               <input
@@ -380,7 +374,7 @@ export const HgMenuCellularProperties: React.FC<PropertyPanelProps> = ({ compone
                 style={{ ...inputStyle, marginTop: '4px' }}
               />
             </div>
-          </div>
+          </CollapsibleGroup>
         </>
       ) : (
         <EventsPanel component={component} onUpdate={onUpdate} />

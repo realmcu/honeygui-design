@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { PropertyPanelProps } from './types';
 import { BaseProperties } from './BaseProperties';
 import { EventsPanel } from './EventsPanel';
+import { CollapsibleGroup } from './CollapsibleGroup';
 import { t } from '../../i18n';
 
 const inputStyle: React.CSSProperties = {
@@ -87,93 +88,95 @@ export const HgVideoProperties: React.FC<PropertyPanelProps> = ({ component, onU
       <div className="properties-content">
         {activeTab === 'properties' && (
           <>
-            <h3 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 600 }}>{t('Video Properties')}</h3>
-            
             <BaseProperties component={component} onUpdate={onUpdate} components={components} disableSize={true} sizeTooltip={t('Video size is determined by source file')} />
             
-            {/* 视频设置 */}
-            <div style={{ marginTop: '16px' }}>
-              <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', fontWeight: 600 }}>{t('Video Settings')}</h4>
-              
-              <label style={labelStyle}>{t('Video Path')}</label>
-              <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
-                <input
-                  type="text"
-                  value={src}
-                  onChange={(e) => handlePropertyChange('src', e.target.value)}
-                  placeholder="assets/video.mp4"
-                  style={{
-                    flex: 1,
-                    padding: '4px 6px',
-                    backgroundColor: 'var(--vscode-input-background)',
-                    color: 'var(--vscode-input-foreground)',
-                    border: '1px solid var(--vscode-input-border)',
-                    borderRadius: '2px',
-                  }}
-                />
-                <button
-                  onClick={() => {
-                    window.vscodeAPI?.postMessage({
-                      command: 'selectVideoPath',
-                      componentId: component.id,
-                    });
-                  }}
-                  style={{
-                    padding: '4px 8px',
-                    backgroundColor: 'var(--vscode-button-background)',
-                    color: 'var(--vscode-button-foreground)',
-                    border: 'none',
-                    borderRadius: '2px',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                  }}
-                  title={t('Select Video File')}
-                >
-                  📁
-                </button>
+            {/* 内容 */}
+            <CollapsibleGroup title={t('Content')}>
+              <div className="property-item">
+                <label>{t('Video Path')}</label>
+                <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
+                  <input
+                    type="text"
+                    value={src}
+                    onChange={(e) => handlePropertyChange('src', e.target.value)}
+                    placeholder="assets/video.mp4"
+                    style={{
+                      flex: 1,
+                      padding: '4px 6px',
+                      backgroundColor: 'var(--vscode-input-background)',
+                      color: 'var(--vscode-input-foreground)',
+                      border: '1px solid var(--vscode-input-border)',
+                      borderRadius: '2px',
+                    }}
+                  />
+                  <button
+                    onClick={() => {
+                      window.vscodeAPI?.postMessage({
+                        command: 'selectVideoPath',
+                        componentId: component.id,
+                      });
+                    }}
+                    style={{
+                      padding: '4px 8px',
+                      backgroundColor: 'var(--vscode-button-background)',
+                      color: 'var(--vscode-button-foreground)',
+                      border: 'none',
+                      borderRadius: '2px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                    }}
+                    title={t('Select Video File')}
+                  >
+                    📁
+                  </button>
+                </div>
               </div>
 
-              <label style={labelStyle}>{t('Frame Rate (FPS)')}</label>
-              <input
-                type="number"
-                min="1"
-                max="60"
-                value={frameRate}
-                onChange={(e) => handlePropertyChange('frameRate', parseInt(e.target.value) || 30)}
-                style={inputStyle}
-              />
-              <small style={helpTextStyle}>{t('Output video frame rate')}</small>
-            </div>
-
-            {/* 播放设置 */}
-            <div style={{ marginTop: '16px' }}>
-              <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', fontWeight: 600 }}>{t('Playback Settings')}</h4>
-
-              <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+              <div className="property-item">
+                <label>{t('Frame Rate (FPS)')}</label>
                 <input
-                  type="checkbox"
-                  checked={autoPlay}
-                  onChange={(e) => handlePropertyChange('autoPlay', e.target.checked)}
-                  style={{ marginRight: '8px' }}
+                  type="number"
+                  min="1"
+                  max="60"
+                  value={frameRate}
+                  onChange={(e) => handlePropertyChange('frameRate', parseInt(e.target.value) || 30)}
+                  style={inputStyle}
                 />
-                {t('Autoplay')}
-              </label>
-              <small style={helpTextStyle}>{t('Start playing automatically after creation')}</small>
+                <small style={helpTextStyle}>{t('Output video frame rate')}</small>
+              </div>
+            </CollapsibleGroup>
 
-              <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', cursor: 'pointer', marginTop: '8px' }}>
-                <input
-                  type="checkbox"
-                  checked={loop}
-                  onChange={(e) => handlePropertyChange('loop', e.target.checked)}
-                  style={{ marginRight: '8px' }}
-                />
-                {t('Loop')}
-              </label>
-              <small style={helpTextStyle}>{t('Restart automatically when playback ends')}</small>
-            </div>
+            {/* 行为 */}
+            <CollapsibleGroup title={t('Behavior')}>
+              <div className="property-item">
+                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={autoPlay}
+                    onChange={(e) => handlePropertyChange('autoPlay', e.target.checked)}
+                    style={{ marginRight: '8px' }}
+                  />
+                  {t('Autoplay')}
+                </label>
+                <small style={helpTextStyle}>{t('Start playing automatically after creation')}</small>
+              </div>
+
+              <div className="property-item">
+                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={loop}
+                    onChange={(e) => handlePropertyChange('loop', e.target.checked)}
+                    style={{ marginRight: '8px' }}
+                  />
+                  {t('Loop')}
+                </label>
+                <small style={helpTextStyle}>{t('Restart automatically when playback ends')}</small>
+              </div>
+            </CollapsibleGroup>
 
             {/* 提示信息 */}
-            <div style={{ marginTop: '16px' }}>
+            <div style={{ marginTop: '8px', padding: '0 4px' }}>
               <div style={{
                 padding: '8px',
                 background: 'var(--vscode-textBlockQuote-background)',

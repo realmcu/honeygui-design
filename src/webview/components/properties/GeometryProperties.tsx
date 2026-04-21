@@ -3,6 +3,7 @@ import { PropertyPanelProps } from './types';
 import { PropertyEditor } from './PropertyEditor';
 import { BaseProperties } from './BaseProperties';
 import { EventsPanel } from './EventsPanel';
+import { CollapsibleGroup } from './CollapsibleGroup';
 import { componentDefinitions } from '../ComponentLibrary';
 import { t } from '../../i18n';
 
@@ -111,8 +112,7 @@ export const GeometryProperties: React.FC<PropertyPanelProps> = ({ component, on
 
             {/* Style Properties */}
             {definition && definition.properties.filter(p => p.group === 'style').length > 0 && (
-              <div className="property-group">
-                <div className="property-group-title">{t('Style')}</div>
+              <CollapsibleGroup title={t('Style')}>
                 {definition.properties
                   .filter(p => p.group === 'style')
                   .map((property) => (
@@ -128,18 +128,16 @@ export const GeometryProperties: React.FC<PropertyPanelProps> = ({ component, on
                       />
                     </div>
                   ))}
-              </div>
+              </CollapsibleGroup>
             )}
 
             {/* Gradient Settings */}
             {useGradient && (
-              <div className="property-group">
-                <div className="property-group-title">
-                  {t('Gradient Settings')}
+              <CollapsibleGroup title={t('Gradient Settings')}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
                   <button
                     onClick={handleAddGradientStop}
                     style={{
-                      marginLeft: '8px',
                       padding: '2px 8px',
                       fontSize: '12px',
                       backgroundColor: 'var(--vscode-button-background)',
@@ -344,13 +342,12 @@ export const GeometryProperties: React.FC<PropertyPanelProps> = ({ component, on
                     </ul>
                   </div>
                 )}
-              </div>
+              </CollapsibleGroup>
             )}
 
             {/* General Properties - 通用属性（如弧形群组） */}
             {definition && definition.properties.filter(p => p.group === 'general').length > 0 && (
-              <div className="property-group">
-                <div className="property-group-title">{t('General')}</div>
+              <CollapsibleGroup title={t('Advanced')} defaultCollapsed={true}>
                 {definition.properties
                   .filter(p => p.group === 'general')
                   .map((property) => (
@@ -364,7 +361,7 @@ export const GeometryProperties: React.FC<PropertyPanelProps> = ({ component, on
                       />
                     </div>
                   ))}
-              </div>
+              </CollapsibleGroup>
             )}
           </>
         )}

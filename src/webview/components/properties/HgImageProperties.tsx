@@ -3,6 +3,7 @@ import { PropertyPanelProps } from './types';
 import { PropertyEditor } from './PropertyEditor';
 import { BaseProperties } from './BaseProperties';
 import { EventsPanel } from './EventsPanel';
+import { CollapsibleGroup } from './CollapsibleGroup';
 import { t } from '../../i18n';
 
 export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onUpdate, components }) => {
@@ -190,17 +191,57 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
       <div className="properties-content">
       {activeTab === 'properties' ? (
         <>
-          <BaseProperties component={component} onUpdate={onUpdate} components={components} disableSize={true} sizeTooltip="图片尺寸由源文件决定">
-            {/* 图片路径 */}
+          <BaseProperties component={component} onUpdate={onUpdate} components={components} disableSize={true} sizeTooltip="图片尺寸由源文件决定" />
+
+          {/* 内容 */}
+          <CollapsibleGroup title={t('Content')}>
             <div className="property-item">
               <label>{t('Image Path')}</label>
               {renderImageProperty(component.data?.src, (value) => handleDataChange('src', value))}
             </div>
-          </BaseProperties>
+          </CollapsibleGroup>
+
+          {/* 样式 */}
+          <CollapsibleGroup title={t('Style')}>
+            {/* 透明度 */}
+            <div className="property-item">
+              <label>{t('Opacity (0-255)')}</label>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px' }}>
+                <input
+                  type="range"
+                  min="0"
+                  max="255"
+                  value={transform.opacity ?? 255}
+                  onChange={(e) => handleTransformChange('opacity', parseInt(e.target.value))}
+                  style={{
+                    flex: 1,
+                  }}
+                />
+                <div style={{ width: '60px' }}>
+                  <PropertyEditor
+                    type="number"
+                    value={transform.opacity ?? 255}
+                    min={0}
+                    max={255}
+                    onChange={(value) => {
+                      let val = parseInt(value);
+                      if (isNaN(val)) {
+                        val = 255;
+                      } else if (val < 0) {
+                        val = 0;
+                      } else if (val > 255) {
+                        val = 255;
+                      }
+                      handleTransformChange('opacity', val);
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </CollapsibleGroup>
 
           {/* Rendering 分组 */}
-          <div className="property-group">
-            <div className="property-group-header">{t('Rendering')}</div>
+          <CollapsibleGroup title={t('Rendering')} defaultCollapsed={true}>
             
             {/* 渲染模式 */}
             <div className="property-item">
@@ -330,11 +371,10 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
                 style={{ marginTop: '4px' }}
               />
             </div>
-          </div>
+          </CollapsibleGroup>
 
           {/* 变换属性 */}
-          <div className="property-group">
-            <div className="property-group-header">{t('Transform')}</div>
+          <CollapsibleGroup title={t('Transform')} defaultCollapsed={true}>
             
             {/* 缩放 */}
             <div className="property-item">
@@ -497,48 +537,7 @@ export const HgImageProperties: React.FC<PropertyPanelProps> = ({ component, onU
                 {t('Leave empty to use default (rotation: image center, scale: top-left)')}
               </div>
             </div>
-          </div>
-
-          {/* Appearance 分组 */}
-          <div className="property-group">
-            <div className="property-group-header">{t('Appearance')}</div>
-            
-            {/* 透明度 */}
-            <div className="property-item">
-              <label>{t('Opacity (0-255)')}</label>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px' }}>
-                <input
-                  type="range"
-                  min="0"
-                  max="255"
-                  value={transform.opacity ?? 255}
-                  onChange={(e) => handleTransformChange('opacity', parseInt(e.target.value))}
-                  style={{
-                    flex: 1,
-                  }}
-                />
-                <div style={{ width: '60px' }}>
-                  <PropertyEditor
-                    type="number"
-                    value={transform.opacity ?? 255}
-                    min={0}
-                    max={255}
-                    onChange={(value) => {
-                      let val = parseInt(value);
-                      if (isNaN(val)) {
-                        val = 255;
-                      } else if (val < 0) {
-                        val = 0;
-                      } else if (val > 255) {
-                        val = 255;
-                      }
-                      handleTransformChange('opacity', val);
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
+          </CollapsibleGroup>
         </>
       ) : (
         <EventsPanel component={component} onUpdate={onUpdate} />

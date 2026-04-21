@@ -3,6 +3,7 @@ import { PropertyPanelProps } from './types';
 import { PropertyEditor } from './PropertyEditor';
 import { BaseProperties } from './BaseProperties';
 import { EventsPanel } from './EventsPanel';
+import { CollapsibleGroup } from './CollapsibleGroup';
 import { useDesignerStore } from '../../store';
 import { t } from '../../i18n';
 
@@ -257,7 +258,7 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
               disableSize={false}
             />
 
-            {/* 列表总长度显示（仅显示，不生成代码） */}
+            {/* 列表总长度显示 */}
             <div className="property-group">
               <div className="property-item">
                 <label>{t('List Total Length')}（{direction === 'VERTICAL' ? t('Height') : t('Width')}）</label>
@@ -278,9 +279,20 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
               </div>
             </div>
 
+            {/* 内容 */}
+            <CollapsibleGroup title={t('Content')}>
+              <div className="property-item">
+                <label>{t('Item Count')}</label>
+                <PropertyEditor
+                  type="number"
+                  value={noteNum}
+                  onChange={(value) => handleDataChange('noteNum', value)}
+                />
+              </div>
+            </CollapsibleGroup>
+
             {/* 样式属性 */}
-            <div className="property-group">
-              <div className="property-group-title">{t('Style')}</div>
+            <CollapsibleGroup title={t('Style')}>
 
               {/* 项尺寸 */}
               <div className="property-item">
@@ -411,52 +423,10 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
                   </div>
                 </div>
               )}
-            </div>
+            </CollapsibleGroup>
 
-            {/* 数据属性 */}
-            <div className="property-group">
-              <div className="property-group-title">{t('Data')}</div>
-
-              {/* 项数量 */}
-              <div className="property-item">
-                <label>{t('Item Count')}</label>
-                <PropertyEditor
-                  type="number"
-                  value={noteNum}
-                  onChange={(value) => handleDataChange('noteNum', value)}
-                />
-              </div>
-
-              {/* 初始偏移 */}
-              <div className="property-item">
-                <label>{t('Initial Offset')}</label>
-                <PropertyEditor
-                  type="number"
-                  value={offset}
-                  onChange={(value) => handleDataChange('offset', value)}
-                />
-              </div>
-
-              {/* 超出范围 */}
-              <div className="property-item">
-                <label>{t('Out of Scope')}</label>
-                <PropertyEditor
-                  type="number"
-                  value={outScope}
-                  onChange={(value) => handleDataChange('outScope', value)}
-                />
-                {(loop || style === 'LIST_CARD') && outScope !== 0 && (
-                  <div style={{ fontSize: '11px', color: 'var(--vscode-errorForeground)', marginTop: '4px' }}>
-                    ⚠️ {t('Out of scope must be 0 when')} {loop ? t('loop scroll') : 'LIST_CARD'}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* 通用属性 */}
-            <div className="property-group">
-              <div className="property-group-title">{t('General')}</div>
-
+            {/* 行为 */}
+            <CollapsibleGroup title={t('Behavior')}>
               {/* 自动对齐 */}
               <div className="property-item">
                 <label>{t('Auto Align')}</label>
@@ -488,6 +458,31 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
                 {style === 'LIST_CARD' && (
                   <div style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '4px' }}>
                     {t('LIST_CARD style does not support loop scroll')}
+                  </div>
+                )}
+              </div>
+
+              {/* 初始偏移 */}
+              <div className="property-item">
+                <label>{t('Initial Offset')}</label>
+                <PropertyEditor
+                  type="number"
+                  value={offset}
+                  onChange={(value) => handleDataChange('offset', value)}
+                />
+              </div>
+
+              {/* 超出范围 */}
+              <div className="property-item">
+                <label>{t('Out of Scope')}</label>
+                <PropertyEditor
+                  type="number"
+                  value={outScope}
+                  onChange={(value) => handleDataChange('outScope', value)}
+                />
+                {(loop || style === 'LIST_CARD') && outScope !== 0 && (
+                  <div style={{ fontSize: '11px', color: 'var(--vscode-errorForeground)', marginTop: '4px' }}>
+                    ⚠️ {t('Out of scope must be 0 when')} {loop ? t('loop scroll') : 'LIST_CARD'}
                   </div>
                 )}
               </div>
@@ -526,11 +521,10 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
                   </div>
                 )}
               </div>
-            </div>
+            </CollapsibleGroup>
 
-            {/* 用户自定义 note_design */}
-            <div className="property-group">
-              <div className="property-group-title">{t('Note Design')}</div>
+            {/* 高级 - Note Design */}
+            <CollapsibleGroup title={t('Advanced')} defaultCollapsed={true}>
 
               <div className="property-item">
                 <label>{t('Use Custom Note Design')}</label>
@@ -579,7 +573,7 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
                   )}
                 </div>
               )}
-            </div>
+            </CollapsibleGroup>
           </>
         )}
 

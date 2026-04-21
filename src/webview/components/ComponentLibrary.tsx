@@ -136,13 +136,6 @@ const componentDefinitions: ComponentDefinition[] = [
     defaultSize: { width: 100, height: 24 },
     properties: [
       { name: 'text', label: 'Display Text', type: 'string', defaultValue: 'Label', group: 'data' },
-      { name: 'isTimerLabel', label: 'Timer Mode', type: 'boolean', defaultValue: false, group: 'timer' },
-      { name: 'timerType', label: 'Timer Type', type: 'select', defaultValue: 'stopwatch', 
-        options: ['stopwatch', 'countdown'], group: 'timer' },
-      { name: 'timerInitialValue', label: 'Initial Value (ms)', type: 'number', defaultValue: 0, group: 'timer' },
-      { name: 'timerFormat', label: 'Display Format', type: 'select', defaultValue: 'HH:MM:SS', 
-        options: ['HH:MM:SS', 'MM:SS', 'MM:SS:MS', 'SS'], group: 'timer' },
-      { name: 'timerAutoStart', label: 'Auto Start', type: 'boolean', defaultValue: true, group: 'timer' },
       { name: 'hAlign', label: 'Horizontal Align', type: 'select', defaultValue: 'LEFT', 
         options: ['LEFT', 'CENTER', 'RIGHT'], group: 'style' },
       { name: 'vAlign', label: 'Vertical Align', type: 'select', defaultValue: 'TOP', 

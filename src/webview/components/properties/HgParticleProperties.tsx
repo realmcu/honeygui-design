@@ -3,6 +3,7 @@ import { PropertyPanelProps } from './types';
 import { PropertyEditor } from './PropertyEditor';
 import { BaseProperties } from './BaseProperties';
 import { EventsPanel } from './EventsPanel';
+import { CollapsibleGroup } from './CollapsibleGroup';
 import { getEffectConfig, PARTICLE_EFFECTS } from '../../constants/particleEffects';
 import { t } from '../../i18n';
 
@@ -62,11 +63,8 @@ export const HgParticleProperties: React.FC<PropertyPanelProps> = ({ component, 
           <>
             <BaseProperties component={component} onUpdate={onUpdate} components={components} />
 
-            {/* 粒子控制（合并特效选择 + 控制按钮） */}
-            <div className="property-group">
-              <div className="property-group-title">{t('Particle Control')}</div>
-
-              {/* 特效类型选择 */}
+            {/* 特效类型选择 */}
+            <CollapsibleGroup title={t('Content')}>
               <div className="property-item">
                 <label>{t('Effect Type')}</label>
                 <PropertyEditor
@@ -76,7 +74,10 @@ export const HgParticleProperties: React.FC<PropertyPanelProps> = ({ component, 
                   options={effectOptions}
                 />
               </div>
+            </CollapsibleGroup>
 
+            {/* 粒子控制 */}
+            <CollapsibleGroup title={t('Advanced')} defaultCollapsed={true}>
               {/* 控制按钮行 */}
               <div className="property-item">
                 <div style={{ display: 'flex', gap: '6px' }}>
@@ -144,7 +145,7 @@ export const HgParticleProperties: React.FC<PropertyPanelProps> = ({ component, 
                   </div>
                 </div>
               )}
-            </div>
+            </CollapsibleGroup>
           </>
         )}
 

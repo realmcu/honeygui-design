@@ -3,6 +3,7 @@ import { PropertyPanelProps } from './types';
 import { PropertyEditor } from './PropertyEditor';
 import { BaseProperties } from './BaseProperties';
 import { EventsPanel } from './EventsPanel';
+import { CollapsibleGroup } from './CollapsibleGroup';
 import { t } from '../../i18n';
 
 export const HgViewProperties: React.FC<PropertyPanelProps> = ({ component, onUpdate, components }) => {
@@ -56,8 +57,22 @@ export const HgViewProperties: React.FC<PropertyPanelProps> = ({ component, onUp
               disableSize={true}
               sizeTooltip={t('hg_view size is determined by project resolution and cannot be modified')}
               hideParent={true}
-            >
-              {/* UI Entry View - 名称后、位置与大小前 */}
+            />
+
+            {/* Style Properties */}
+            <CollapsibleGroup title={t('Style')}>
+              <div className="property-item">
+                <label>{t('Background Color')}</label>
+                <PropertyEditor
+                  type="color"
+                  value={component.style?.backgroundColor}
+                  onChange={(value) => handleStyleChange('backgroundColor', value)}
+                />
+              </div>
+            </CollapsibleGroup>
+
+            {/* Advanced Properties */}
+            <CollapsibleGroup title={t('Advanced')} defaultCollapsed={true}>
               <div className="property-item">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <label>{t('UI Entry View')}</label>
@@ -68,24 +83,6 @@ export const HgViewProperties: React.FC<PropertyPanelProps> = ({ component, onUp
                   />
                 </div>
               </div>
-            </BaseProperties>
-
-            {/* Style Properties */}
-            <div className="property-group">
-              <div className="property-group-title">{t('Style')}</div>
-              <div className="property-item">
-                <label>{t('Background Color')}</label>
-                <PropertyEditor
-                  type="color"
-                  value={component.style?.backgroundColor}
-                  onChange={(value) => handleStyleChange('backgroundColor', value)}
-                />
-              </div>
-            </div>
-
-            {/* View Specific Properties */}
-            <div className="property-group">
-              <div className="property-group-title">{t('View Properties')}</div>
               <div className="property-item" style={{ opacity: 0.4, pointerEvents: 'none' }} title="Coming soon">
                 <label>{t('Resident Memory')}</label>
                 <PropertyEditor
@@ -112,7 +109,7 @@ export const HgViewProperties: React.FC<PropertyPanelProps> = ({ component, onUp
                   max={255}
                 />
               </div>
-            </div>
+            </CollapsibleGroup>
           </>
         )}
 

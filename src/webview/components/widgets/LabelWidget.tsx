@@ -9,68 +9,10 @@ export const LabelWidget: React.FC<WidgetProps> = ({ component, style, handlers,
   const timeFormat = component.data?.timeFormat || '';
   const isSplitTime = timeFormat === 'HH:mm-split';
   
-  // 计时器模式
-  const isTimerLabel = component.data?.isTimerLabel === true;
-  const timerType = component.data?.timerType || 'stopwatch';
-  const timerInitialValue = Number(component.data?.timerInitialValue) || 0;
-  const timerFormat = component.data?.timerFormat || 'HH:MM:SS';
-  
-  // 计时器状态（仅用于预览，单位：毫秒）
-  const [timerValue, setTimerValue] = React.useState(timerInitialValue);
-  
-  // 计时器预览动画
-  React.useEffect(() => {
-    if (!isTimerLabel) return;
-    
-    // 根据格式决定更新间隔
-    const updateInterval = timerFormat === 'MM:SS:MS' ? 10 : 1000;
-    const incrementValue = timerFormat === 'MM:SS:MS' ? 10 : 1000;
-    
-    const interval = setInterval(() => {
-      setTimerValue(prev => {
-        if (timerType === 'stopwatch') {
-          return prev + incrementValue;
-        } else {
-          // countdown
-          return prev > 0 ? prev - incrementValue : 0;
-        }
-      });
-    }, updateInterval);
-    
-    return () => clearInterval(interval);
-  }, [isTimerLabel, timerType, timerFormat]);
-  
-  // 格式化计时器显示（输入单位：毫秒）
-  const formatTimerValue = (milliseconds: number): string => {
-    const totalSeconds = Math.floor(milliseconds / 1000);
-    const h = Math.floor(totalSeconds / 3600);
-    const m = Math.floor((totalSeconds % 3600) / 60);
-    const s = totalSeconds % 60;
-    const ms = Math.floor((milliseconds % 1000) / 10); // 百分之一秒（00-99）
-    
-    const pad = (n: number) => n.toString().padStart(2, '0');
-    
-    switch (timerFormat) {
-      case 'HH:MM:SS':
-        return `${pad(h)}:${pad(m)}:${pad(s)}`;
-      case 'MM:SS':
-        return `${pad(m)}:${pad(s)}`;
-      case 'MM:SS:MS':
-        return `${pad(m)}:${pad(s)}:${pad(ms)}`;
-      case 'SS':
-        return pad(s);
-      default:
-        return `${pad(h)}:${pad(m)}:${pad(s)}`;
-    }
-  };
-  
   // 拆分时间模式下使用用户设置的文本，如果没有则使用默认示例
   let displayText = component.data?.text || component.name;
   
-  // 如果启用了计时器模式，显示格式化的计时器值
-  if (isTimerLabel) {
-    displayText = formatTimerValue(timerValue);
-  } else if (isSplitTime && !component.data?.text) {
+  if (isSplitTime && !component.data?.text) {
     displayText = '12:34'; // 拆分时间的默认预览（仅当用户未设置文本时）
   }
   

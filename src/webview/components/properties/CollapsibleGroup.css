@@ -1,0 +1,72 @@
+/* Collapsible Group */
+
+.collapsible-group.property-group {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.collapsible-group-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 4px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.collapsible-group-header:hover {
+  background-color: var(--vscode-list-hoverBackground);
+}
+
+.collapsible-group-header:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+.collapsible-group-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--vscode-foreground);
+  transition: transform 0.15s ease;
+}
+
+.collapsible-group-arrow.expanded {
+  transform: rotate(90deg);
+}
+
+.collapsible-group .collapsible-group-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--vscode-descriptionForeground);
+  margin-bottom: 0;
+  padding-left: 0;
+}
+
+.collapsible-group-content {
+  padding: 4px 4px 6px 4px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+/* 展开内容内的 property-item 间距压缩 */
+.collapsible-group-content .property-item {
+  margin-bottom: 6px;
+}
+
+.collapsible-group-content .property-item:last-child {
+  margin-bottom: 0;
+}
+
+.collapsible-group.collapsed {
+  border-bottom: 1px solid var(--vscode-panel-border);
+  padding-bottom: 0;
+}
+
+.collapsible-group.collapsed .collapsible-group-header {
+  border-bottom: none;
+}

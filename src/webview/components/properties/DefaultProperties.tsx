@@ -3,6 +3,7 @@ import { PropertyPanelProps } from './types';
 import { PropertyEditor } from './PropertyEditor';
 import { BaseProperties } from './BaseProperties';
 import { EventsPanel } from './EventsPanel';
+import { CollapsibleGroup } from './CollapsibleGroup';
 import { componentDefinitions } from '../ComponentLibrary';
 import { useDesignerStore } from '../../store';
 import { t } from '../../i18n';
@@ -756,8 +757,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
 
             {/* Canvas SVG 编辑按钮 */}
             {component.type === 'hg_canvas' && (
-              <div className="property-group">
-                <div className="property-group-title">SVG Content</div>
+              <CollapsibleGroup title={t('Content')}>
                 <div className="property-item">
                   <div style={{ 
                     fontSize: '12px', 
@@ -789,13 +789,12 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                     {t('canvasEditor.editSvg')}
                   </button>
                 </div>
-              </div>
+              </CollapsibleGroup>
             )}
 
             {/* Style Properties */}
             {definition && definition.properties.filter(p => p.group === 'style').length > 0 && (
-              <div className="property-group">
-                <div className="property-group-title">样式</div>
+              <CollapsibleGroup title={t('Style')}>
                 {/* hg_list 特殊处理：项宽度和项高度在一行 */}
                 {component.type === 'hg_list' ? (
                   <>
@@ -987,13 +986,12 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                       </div>
                     ))
                 )}
-              </div>
+              </CollapsibleGroup>
             )}
 
             {/* Scroll Properties - 仅对 hg_label / hg_time_label 且启用滚动时显示 */}
             {(component.type === 'hg_label' || component.type === 'hg_time_label') && (component.data as any)?.enableScroll && (
-              <div className="property-group">
-                <div className="property-group-title">{t('Scroll Settings')}</div>
+              <CollapsibleGroup title={t('Behavior')}>
                 {/* 滚动方向 */}
                 <div className="property-item">
                   <label>{t('Scroll Direction')}</label>
@@ -1070,13 +1068,12 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                     {t('Total scrolling duration, 0 = infinite')}
                   </span>
                 </div>
-              </div>
+              </CollapsibleGroup>
             )}
 
             {/* Data Properties */}
             {definition && definition.properties.filter(p => p.group === 'data').length > 0 && (
-              <div className="property-group">
-                <div className="property-group-title">数据</div>
+              <CollapsibleGroup title={t('Content')}>
                 {definition.properties
                   .filter(p => p.group === 'data')
                   .filter(p => {
@@ -1212,13 +1209,12 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                     </a>
                   </div>
                 )}
-              </div>
+              </CollapsibleGroup>
             )}
 
             {/* General Properties */}
             {definition && definition.properties.filter(p => p.group === 'general').length > 0 && (
-              <div className="property-group">
-                <div className="property-group-title">通用</div>
+              <CollapsibleGroup title={t('Advanced')} defaultCollapsed={true}>
                 {definition.properties
                   .filter(p => p.group === 'general')
                   .map((property) => (
@@ -1234,13 +1230,12 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                       />
                     </div>
                   ))}
-              </div>
+              </CollapsibleGroup>
             )}
 
             {/* Interaction Properties - 按键效果 */}
             {definition && definition.properties.filter(p => p.group === 'interaction').length > 0 && (
-              <div className="property-group">
-                <div className="property-group-title">{t('Button Effect')}</div>
+              <CollapsibleGroup title={t('Interaction')}>
                 
                 {/* 按键模式选择 */}
                 <div className="property-item">
@@ -1346,13 +1341,12 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                     </div>
                   </div>
                 )}
-              </div>
+              </CollapsibleGroup>
             )}
 
             {/* Font Properties - 对所有包含 font 组属性的控件显示 */}
             {definition && definition.properties.filter(p => p.group === 'font').length > 0 && (
-              <div className="property-group">
-                <div className="property-group-title">{t('Font')}</div>
+              <CollapsibleGroup title={t('Font')}>
                 {/* 字体文件 */}
                 {definition.properties.some(p => p.name === 'fontFile') && (
                 <div className="property-item">
@@ -1523,13 +1517,12 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                     </div>
                   </div>
                 )}
-              </div>
+              </CollapsibleGroup>
             )}
 
-            {/* Timer Properties - 对 hg_timer_label 或启用了计时器的 hg_label 显示 */}
-            {definition && (component.type === 'hg_timer_label' || (component.type === 'hg_label' && (component.data as any)?.isTimerLabel)) && definition.properties.filter(p => p.group === 'timer').length > 0 && (
-              <div className="property-group">
-                <div className="property-group-title">{t('Timer Settings')}</div>
+            {/* Timer Properties - 仅对 hg_timer_label 显示 */}
+            {definition && component.type === 'hg_timer_label' && definition.properties.filter(p => p.group === 'timer').length > 0 && (
+              <CollapsibleGroup title={t('Advanced')} defaultCollapsed={true}>
                 {/* 计时器类型 */}
                 <div className="property-item">
                   <label>{t('Timer Type')}</label>
@@ -1577,13 +1570,12 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                     {t('Start timer automatically on load')}
                   </span>
                 </div>
-              </div>
+              </CollapsibleGroup>
             )}
 
             {/* Time Properties - 对 hg_time_label 显示 */}
             {definition && component.type === 'hg_time_label' && definition.properties.filter(p => p.group === 'time').length > 0 && (
-              <div className="property-group">
-                <div className="property-group-title">{t('Time Settings')}</div>
+              <CollapsibleGroup title={t('Advanced')} defaultCollapsed={true}>
                 {/* 显示格式 */}
                 <div className="property-item">
                   <label>{t('Display Format')}</label>
@@ -1594,7 +1586,7 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
                     options={['HH:mm:ss', 'HH:mm', 'HH', 'mm', 'HH:mm-split', 'YYYY-MM-DD', 'YYYY-MM-DD HH:mm:ss', 'MM-DD HH:mm']}
                   />
                 </div>
-              </div>
+              </CollapsibleGroup>
             )}
           </>
         )}

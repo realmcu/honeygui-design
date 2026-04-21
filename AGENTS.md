@@ -114,6 +114,10 @@ HmlEditorProvider.resolveCustomTextEditor()
 3. 更新 `ComponentType` 类型定义
 4. **同步更新 `docs/HML-Spec.md`**：添加新组件的属性表和说明
 
+### 新增或修改控件属性
+- 属性面板采用统一的分类层级体系（基本信息、布局、状态、内容、字体、样式、变换、渲染、交互、行为、高级），新增属性应优先归入已有分组，仅在用户明确要求且理由充分时才可新增分组
+- 所有属性分组使用 `CollapsibleGroup` 组件（基本信息除外）
+
 ### 添加新项目模板
 项目模板通过 Git 仓库管理，添加新模板：
 1. 创建完整的项目模板仓库（包含 ui/, assets/, src/, project.json 等）

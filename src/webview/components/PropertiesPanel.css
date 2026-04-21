@@ -68,8 +68,8 @@
 
 /* Property groups */
 .property-group {
-  margin-bottom: 20px;
-  padding-bottom: 16px;
+  margin-bottom: 0;
+  padding-bottom: 0;
   border-bottom: 1px solid var(--vscode-panel-border);
 }
 
@@ -82,13 +82,17 @@
   font-weight: 600;
   text-transform: uppercase;
   color: var(--vscode-descriptionForeground);
-  margin-bottom: 12px;
+  margin-bottom: 6px;
   padding-left: 4px;
 }
 
 /* Property items */
 .property-item {
-  margin-bottom: 12px;
+  margin-bottom: 8px;
+}
+
+.property-item:last-child {
+  margin-bottom: 4px;
 }
 
 .property-item label {
