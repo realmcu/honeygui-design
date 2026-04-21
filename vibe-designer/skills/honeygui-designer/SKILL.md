@@ -260,3 +260,22 @@ curl -X POST http://localhost:38912/api/validate-hml \
 | `music_player.hml` | 音乐播放器控制 | 媒体控制：专辑封面 + 播放控制按钮 |
 
 所有示例都遵循 HML 约束规则，可以直接作为生成代码的参考模板。
+
+## 模板工程
+
+HoneyGUI 提供 5 个官方模板工程，包含完整的 HML 文件、资源文件和项目配置：
+
+| 模板 ID | 名称 | 说明 | 大小 |
+|---------|------|------|------|
+| `smartwatch` | Smart Watch | 智能手表界面，包含字体、图片、3D模型、视频等完整资源 | 20 MB |
+| `dashboard` | Car Dashboard | 汽车仪表盘界面，包含仪表盘 UI 资源 | 20 MB |
+| `chatbot` | Chat Bot | 聊天机器人界面（轻量级） | 20 MB |
+| `rotary` | Rotary Knob | 旋钮控制界面（轻量级） | 20 MB |
+| `settings` | Settings | 设置界面（轻量级） | 20 MB |
+
+**使用场景**：
+- 当用户请求"基于模板创建项目"时，可以推荐这些模板
+- 模板包含生产级的 HML 代码和资源，可以作为学习参考
+- 用户可以通过 VSCode Extension 的"新建项目"功能选择模板
+
+**注意**：模板从 Gitee 仓库克隆，需要网络连接。模板路径格式：`https://gitee.com/realmcu/honeygui-template-{id}.git`
