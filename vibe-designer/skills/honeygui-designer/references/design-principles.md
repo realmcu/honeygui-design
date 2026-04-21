@@ -2,6 +2,31 @@
 
 Best practices for designing effective user interfaces for embedded devices, wearables, and IoT systems.
 
+## Table of Contents
+
+- [Core Principles](#core-principles)
+  - [1. Simplicity First](#1-simplicity-first)
+  - [2. Touch-Friendly Design](#2-touch-friendly-design)
+  - [3. Readability](#3-readability)
+  - [4. Visual Hierarchy](#4-visual-hierarchy)
+  - [5. Feedback & Responsiveness](#5-feedback--responsiveness)
+  - [6. Performance Optimization](#6-performance-optimization)
+  - [7. Consistency](#7-consistency)
+  - [8. Error Prevention & Recovery](#8-error-prevention--recovery)
+  - [9. Accessibility](#9-accessibility)
+  - [10. Context Awareness](#10-context-awareness)
+- [Design Checklist](#design-checklist)
+- [Color Guidelines](#color-guidelines)
+- [Typography Guidelines](#typography-guidelines)
+- [Animation Guidelines](#animation-guidelines)
+- [Navigation Patterns](#navigation-patterns)
+- [Platform-Specific Considerations](#platform-specific-considerations)
+- [Testing & Validation](#testing--validation)
+- [Resources for Inspiration](#resources-for-inspiration)
+- [Summary: The 10 Commandments](#summary-the-10-commandments)
+
+---
+
 ## Core Principles
 
 ### 1. **Simplicity First**

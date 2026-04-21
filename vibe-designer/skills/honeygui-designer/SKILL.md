@@ -16,35 +16,35 @@ description: |
 
 # HoneyGUI Designer Skill
 
-Generate production-ready HoneyGUI HML files from natural language descriptions.
+根据自然语言描述生成生产级的 HoneyGUI HML 文件。
 
-## Quick Start
+## 快速开始
 
-When user requests a UI design:
+当用户请求 UI 设计时：
 
-1. **Understand Requirements**
-   - Clarify the device type (smartwatch, IoT panel, etc.)
-   - Screen resolution (default: 454x454 for smartwatch)
-   - Key features/components needed
-   - Visual style preferences
+1. **理解需求**
+   - 明确设备类型（智能手表、IoT 面板等）
+   - 屏幕分辨率（智能手表默认：454x454）
+   - 所需的关键功能/组件
+   - 视觉风格偏好
 
-2. **Plan the Layout**
-   - Sketch component hierarchy mentally
-   - Consider ergonomics for embedded devices (touch targets, readability)
-   - Plan navigation flow if multi-screen
+2. **规划布局**
+   - 在脑海中构思组件层次结构
+   - 考虑嵌入式设备的人机工程学（触摸目标、可读性）
+   - 如果是多屏幕，规划导航流程
 
-3. **Generate HML**
-   - Use appropriate components from the component library
-   - Follow HML syntax rules
-   - Include meta information
-   - Add event handlers for interactivity
+3. **生成 HML**
+   - 使用组件库中的适当组件
+   - 遵循 HML 语法规则
+   - 包含元数据信息
+   - 添加事件处理器以实现交互
 
-4. **Iterate**
-   - Present generated HML
-   - Accept feedback and refine
-   - Suggest improvements based on embedded UI best practices
+4. **迭代优化**
+   - 呈现生成的 HML
+   - 接受反馈并改进
+   - 基于嵌入式 UI 最佳实践提出改进建议
 
-## HML Structure
+## HML 结构
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -63,116 +63,179 @@ When user requests a UI design:
 </hml>
 ```
 
-## Component Library Overview
+## 组件库概览
 
-**Common Components**:
-- `hg_button` - Interactive buttons
-- `hg_label` - Text display (static or dynamic)
-- `hg_image` - Images with transform support
-- `hg_slider` - Value sliders
-- `hg_switch` - Toggle switches
-- `hg_progressbar` - Progress indicators
-- `hg_input` - Text input fields
+**常用组件**：
+- `hg_button` - 交互式按钮
+- `hg_label` - 文本显示（静态或动态）
+- `hg_image` - 支持变换的图片
+- `hg_slider` - 数值滑块
+- `hg_switch` - 开关切换
+- `hg_progressbar` - 进度指示器
+- `hg_input` - 文本输入框
 
-**Container Components**:
-- `hg_view` - Generic container
-- `hg_window` - Window container
-- `hg_container` - Layout container
+**容器组件**：
+- `hg_view` - 通用容器
+- `hg_window` - 窗口容器
+- `hg_container` - 布局容器
 
-**Advanced Components**:
-- `hg_list` / `hg_list_item` - Scrollable lists
-- `hg_grid` - Grid layouts
-- `hg_tab` - Tab navigation
-- `hg_canvas` - Custom drawing
-- `hg_menu_cellular` - Honeycomb menu
-- `hg_particle` - Particle effects
+**高级组件**：
+- `hg_list` / `hg_list_item` - 可滚动列表
+- `hg_grid` - 网格布局
+- `hg_tab` - 标签页导航
+- `hg_canvas` - 自定义绘图
+- `hg_menu_cellular` - 蜂窝菜单
+- `hg_particle` - 粒子效果
 
-**For detailed component documentation**: Read `references/components.md`
+**详细的组件文档**：阅读 `references/components.md`
 
-## Key Attributes
+## 关键属性
 
-Every component typically has:
-- `id` - Unique identifier
-- `name` - Display name
-- `x`, `y` - Position (pixels)
-- `w`, `h` - Size (pixels)
+每个组件通常具有：
+- `id` - 唯一标识符
+- `name` - 显示名称
+- `x`, `y` - 位置（像素）
+- `w`, `h` - 尺寸（像素）
 
-Component-specific attributes vary. See `references/components.md` for details.
+组件特定的属性各不相同。详见 `references/components.md`。
 
-## Event Handling
+## 事件处理
 
-Components support events like:
-- `onClick` - Button press
-- `onValueChange` - Slider/input change
-- `onLongPress` - Long press gesture
+组件支持的事件包括：
+- `onClick` - 按钮按下
+- `onValueChange` - 滑块/输入变化
+- `onLongPress` - 长按手势
 
-Event actions can:
-- Switch views
-- Update component properties
-- Trigger animations
-- Execute custom callbacks
+事件动作可以：
+- 切换视图
+- 更新组件属性
+- 触发动画
+- 执行自定义回调
 
-## Design Principles for Embedded UIs
+## 嵌入式 UI 设计原则
 
-1. **Touch Targets**: Minimum 44x44px for buttons
-2. **Readability**: Use legible font sizes (≥16px for body text)
-3. **Performance**: Minimize nesting, reuse resources
-4. **Simplicity**: Clean hierarchy, avoid overcomplication
-5. **Feedback**: Visual feedback for interactions
+1. **触摸目标**：按钮最小 44x44px
+2. **可读性**：使用清晰的字体大小（正文 ≥16px）
+3. **性能**：最小化嵌套，复用资源
+4. **简洁性**：清晰的层次结构，避免过度复杂
+5. **反馈**：为交互提供视觉反馈
 
-**For comprehensive guidelines**: Read `references/design-principles.md`
+**全面的指导方针**：阅读 `references/design-principles.md`
 
-## Layout Patterns
+## 布局模式
 
-Common patterns include:
-- **Dashboard** - Grid of status cards
-- **Settings** - Vertical list of options
-- **Media Control** - Centered playback controls
-- **Navigation** - Top/bottom nav bars
-- **Forms** - Vertical field arrangement
+常见模式包括：
+- **仪表盘** - 状态卡片网格
+- **设置** - 垂直选项列表
+- **媒体控制** - 居中的播放控件
+- **导航** - 顶部/底部导航栏
+- **表单** - 垂直字段排列
 
-**For detailed patterns with examples**: Read `references/layout-patterns.md`
+**详细模式和示例**：阅读 `references/layout-patterns.md`
 
-## Workflow Example
+## 关键约束（必须遵守）
 
-**User**: "Design a smart watch settings screen with brightness and volume sliders"
+生成 HML 时必须遵守严格的规则。**完整约束清单**：参见 `references/constraints.md`
 
-**Steps**:
-1. Clarify: Resolution? Additional features?
-2. Plan: Title label, two sliders with labels, back button
-3. Generate: Complete HML with proper layout
-4. Present: Show generated code
-5. Iterate: Adjust based on feedback
+**最关键的 3 条规则**：
 
-## Advanced Features
+1. ⚠️ **hg_view 嵌套**：`hg_view` 不能嵌套在另一个 `hg_view` 中
+2. ⚠️ **资源路径**：所有资源路径必须以 `/` 开头（如 `/font.ttf`，不能是 `font.ttf`）
+3. ⚠️ **字体文件**：`hg_label` 必须设置 `fontFile` 属性，字体文件必须在 assets 文件夹中
 
-**Animations & Timers**:
-- Components support timer-based animations
-- Multiple animation segments
-- Actions: size, position, opacity, rotation, scale, etc.
-- See `references/components.md` for timer configuration
+其他约束包括：组件嵌套规则、Entry View 唯一性、组件 ID 格式、事件函数位置、文档结构等。
 
-**Multi-Screen Navigation**:
-- Multiple `<view>` elements with unique IDs
-- Switch between views using events
-- Transition animations supported
+详见 `references/constraints.md` 查看全部 8 项约束的详细说明和示例。
 
-**Custom Styling**:
-- Colors, borders, backgrounds
-- Image transforms (scale, rotate, opacity)
-- Font customization
+## HML 验证
 
-## File References
+生成 HML 后，使用 Extension HTTP API 进行验证：
 
-- **`references/components.md`** - Complete component documentation with all attributes and examples
-- **`references/hml-syntax.md`** - HML XML syntax rules and best practices
-- **`references/layout-patterns.md`** - Common UI patterns with code examples
-- **`references/design-principles.md`** - Embedded UI design guidelines
+```bash
+# 方法 1：验证 HML 内容字符串
+curl -X POST http://localhost:38912/api/validate-hml \
+  -H "Content-Type: application/json" \
+  -d '{"hmlContent":"<?xml version=\"1.0\"?><hml>...</hml>"}'
 
-## Tips
+# 方法 2：通过文件路径验证 HML
+curl -X POST http://localhost:38912/api/validate-hml \
+  -H "Content-Type: application/json" \
+  -d '{"filePath":"ui/main.hml"}'
+```
 
-- **Start simple**: Basic layout first, add complexity gradually
-- **Use examples**: Reference `assets/examples/` for inspiration
-- **Validate as you go**: Ensure IDs are unique, attributes are valid
-- **Think embedded**: Battery life, limited resources, finger-friendly UI
-- **Iterate quickly**: Generate → feedback → refine
+**响应**：
+```json
+{
+  "success": true,
+  "data": {
+    "valid": true/false,
+    "errors": [...],
+    "warnings": [...],
+    "validationRules": [
+      "内容非空检查",
+      "XML 语法验证",
+      "文档结构验证",
+      "组件 ID 唯一性和格式验证",
+      "组件嵌套规则验证",
+      "hg_view 不嵌套验证",
+      "资源路径格式验证",
+      "Entry View 唯一性验证"
+    ]
+  }
+}
+```
+
+**验证检查项**：
+1. XML 语法和结构
+2. 组件 ID 唯一性和格式正确性
+3. 组件嵌套规则（容器 vs. 非容器）
+4. hg_view 不能嵌套在另一个 hg_view 中
+5. 资源路径必须以 `/` 开头
+6. 必须有且仅有一个视图具有 `entry="true"`
+
+**详细的 HTTP API 文档**：参见 `references/http-api.md`
+
+## 工作流示例
+
+**用户**："设计一个智能手表设置界面，包含亮度和音量滑块"
+
+**步骤**：
+1. 澄清需求：分辨率？其他功能？
+2. 规划布局：标题标签，两个带标签的滑块，返回按钮
+3. 生成 HML：完整布局的 HML 代码
+4. 验证：调用 `/api/validate-hml` 检查错误
+5. 呈现：显示生成的代码
+6. 迭代：根据反馈调整
+
+## 高级功能
+
+**动画与计时器**：
+- 组件支持基于计时器的动画
+- 多个动画段
+- 动作：尺寸、位置、不透明度、旋转、缩放等
+- 计时器配置参见 `references/components.md`
+
+**多屏幕导航**：
+- 多个具有唯一 ID 的 `<view>` 元素
+- 使用事件在视图之间切换
+- 支持过渡动画
+
+**自定义样式**：
+- 颜色、边框、背景
+- 图片变换（缩放、旋转、不透明度）
+- 字体自定义
+
+## 文件参考
+
+- **`references/components.md`** - 完整的组件文档，包含所有属性和示例
+- **`references/hml-syntax.md`** - HML XML 语法规则和最佳实践
+- **`references/layout-patterns.md`** - 常见 UI 模式及代码示例
+- **`references/design-principles.md`** - 嵌入式 UI 设计指南
+
+## 使用提示
+
+- **从简单开始**：先完成基本布局，再逐步增加复杂性
+- **使用示例**：参考 `assets/examples/` 获取灵感
+- **边做边验证**：确保 ID 唯一，属性有效
+- **考虑嵌入式特性**：电池寿命、有限资源、手指友好的 UI
+- **快速迭代**：生成 → 反馈 → 改进
