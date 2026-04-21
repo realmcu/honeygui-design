@@ -8,6 +8,8 @@ import { LvglArcEventGenerator } from './LvglArcEventGenerator';
 import { LvglCheckboxEventGenerator } from './LvglCheckboxEventGenerator';
 import { LvglInputEventGenerator } from './LvglInputEventGenerator';
 import { LvglRadioEventGenerator } from './LvglRadioEventGenerator';
+import { LvglSwitchEventGenerator } from './LvglSwitchEventGenerator';
+import { LvglSliderEventGenerator } from './LvglSliderEventGenerator';
 import { LvglViewEventGenerator } from './LvglViewEventGenerator';
 
 export class LvglEventGeneratorFactory {
@@ -20,6 +22,8 @@ export class LvglEventGeneratorFactory {
     this.generators.set('hg_checkbox', new LvglCheckboxEventGenerator());
     this.generators.set('hg_input', new LvglInputEventGenerator());
     this.generators.set('hg_radio', new LvglRadioEventGenerator());
+    this.generators.set('hg_switch', new LvglSwitchEventGenerator());
+    this.generators.set('hg_slider', new LvglSliderEventGenerator());
   }
 
   /** Get event generator for the specified component type, or undefined if none */

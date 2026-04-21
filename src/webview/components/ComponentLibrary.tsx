@@ -258,6 +258,28 @@ const componentDefinitions: ComponentDefinition[] = [
     ],
   },
   {
+    type: 'hg_switch',
+    name: 'Switch',
+    icon: '🔀',
+    engineSupport: { honeygui: 'unsupported', lvgl: 'ready' },
+    defaultSize: { width: 50, height: 28 },
+    properties: [
+      { name: 'value', label: 'Checked', type: 'boolean', defaultValue: false, group: 'data' },
+    ],
+  },
+  {
+    type: 'hg_slider',
+    name: 'Slider',
+    icon: '🎚️',
+    engineSupport: { honeygui: 'unsupported', lvgl: 'ready' },
+    defaultSize: { width: 200, height: 20 },
+    properties: [
+      { name: 'value', label: 'Value', type: 'number', defaultValue: 0, group: 'data' },
+      { name: 'min', label: 'Min', type: 'number', defaultValue: 0, group: 'data' },
+      { name: 'max', label: 'Max', type: 'number', defaultValue: 100, group: 'data' },
+    ],
+  },
+  {
     type: 'hg_view',
     name: 'View',
     icon: '📱',
@@ -524,7 +546,7 @@ const componentDefinitions: ComponentDefinition[] = [
 const componentCategories = [
   { name: 'Containers', types: ['hg_view', 'hg_window', 'hg_canvas', 'hg_list', 'hg_menu_cellular'] },
   { name: 'Basic Controls', types: ['hg_button', 'hg_label', 'hg_image'] },
-  { name: 'Input Controls', types: ['hg_input', 'hg_checkbox', 'hg_radio'] },
+  { name: 'Input Controls', types: ['hg_input', 'hg_checkbox', 'hg_radio', 'hg_switch', 'hg_slider'] },
   { name: 'Graphics', types: ['hg_arc', 'hg_circle', 'hg_rect', 'hg_svg', 'hg_glass', 'hg_particle'] },
   { name: 'Multimedia', types: ['hg_video', 'hg_gif', 'hg_3d', 'hg_lottie'] },
   { name: 'Mini App', types: ['hg_map', 'hg_openclaw', 'hg_claw_face'] },

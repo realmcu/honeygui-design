@@ -9,6 +9,7 @@ import { CheckboxWidget } from './CheckboxWidget';
 import { RadioWidget } from './RadioWidget';
 import { ProgressBarWidget } from './ProgressBarWidget';
 import { SliderWidget } from './SliderWidget';
+import { SwitchWidget } from './SwitchWidget';
 import { ContainerWidget } from './ContainerWidget';
 import { ImageWidget } from './ImageWidget';
 import { GifWidget } from './GifWidget';
@@ -44,6 +45,7 @@ export const widgetRegistry: Record<string, React.FC<WidgetProps>> = {
   hg_radio: RadioWidget,
   hg_progressbar: ProgressBarWidget,
   hg_slider: SliderWidget,
+  hg_switch: SwitchWidget,
   hg_view: ContainerWidget,
   hg_window: ContainerWidget,
   hg_image: ImageWidget,
