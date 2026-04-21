@@ -699,7 +699,8 @@ export class HmlParser {
 
     const metaProps = new Set([
       'id', 'name', 'x', 'y', 'width', 'height',
-      'visible', 'enabled', 'locked', 'zIndex', 'parent'
+      'visible', 'enabled', 'locked', 'zIndex', 'parent',
+      'showOverflow'
     ]);
 
     Object.keys(attributes).forEach(key => {

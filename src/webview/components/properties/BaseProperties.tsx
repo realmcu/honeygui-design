@@ -346,16 +346,16 @@ export const BaseProperties: React.FC<BasePropertiesProps> = ({
           </div>
         </div>
 
-        {/* Show overflow toggle for non-top-level containers */}
+        {/* Expand preview toggle for non-top-level containers */}
         {['hg_list', 'hg_canvas', 'hg_list_item'].includes(component.type) && (
           <div className="property-item">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <label>{t('Show Overflow')}</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <PropertyEditor
                 type="boolean"
                 value={component.showOverflow ?? false}
                 onChange={(value) => onUpdate({ showOverflow: value })}
               />
+              <span style={{ fontSize: '12px' }}>{t('Show Overflow')}</span>
             </div>
           </div>
         )}

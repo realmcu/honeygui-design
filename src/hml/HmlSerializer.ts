@@ -254,6 +254,10 @@ export class HmlSerializer {
                 if (propName === 'interactions' || propName === 'view_switch' || propName === 'events') {
                     return;
                 }
+                // 跳过元属性（已在后面单独序列化，避免重复输出）
+                if (['showOverflow', 'visible', 'enabled', 'locked', 'zIndex'].includes(propName)) {
+                    return;
+                }
                 
                 // 特殊处理：将 timerActions 数组序列化为 JSON 字符串（旧版兼容）
                 if (propName === 'timerActions') {

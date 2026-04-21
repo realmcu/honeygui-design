@@ -352,7 +352,7 @@ const en = {
   'Width': 'Width',
   'Height': 'Height',
   'State': 'State',
-  'Show Overflow': 'Show Overflow',
+  'Show Overflow': 'Expand Preview',
   'Locked': 'Locked',
   'Rename failed': 'Rename failed',
   'Item Size': 'Item Size',

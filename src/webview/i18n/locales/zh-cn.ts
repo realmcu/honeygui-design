@@ -352,7 +352,7 @@ const zhCN = {
   'Width': '宽度',
   'Height': '高度',
   'State': '状态',
-  'Show Overflow': '超出父容器',
+  'Show Overflow': '展开预览',
   'Locked': '锁定',
   'Rename failed': '重命名失败',
   'Item Size': '项尺寸',

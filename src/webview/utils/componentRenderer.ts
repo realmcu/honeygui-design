@@ -64,23 +64,17 @@ export const calculateComponentStyle = (
     const isDraggingChild = draggedComponentId && allComponents?.some(
       c => c.id === draggedComponentId && c.parent === component.id && !c.data?.needClip
     );
-    // 检查是否有子组件设置了 showOverflow
-    const hasChildWithOverflow = allComponents?.some(
-      c => c.parent === component.id && c.showOverflow
-    );
-    // 检查是否有子组件超出容器范围（排除启用了 needClip 的子组件，它们应被裁剪）
-    const hasOverflowingChild = allComponents?.some(c => {
-      if (c.parent !== component.id) return false;
-      if (c.data?.needClip) return false;
-      const childRight = c.position.x + c.position.width;
-      const childBottom = c.position.y + c.position.height;
-      return c.position.x < 0 || c.position.y < 0 || 
-             childRight > component.position.width || 
-             childBottom > component.position.height;
-    });
     
-    // 如果有溢出的子组件，在选中模式下显示溢出内容，方便用户操作
-    overflowValue = (isDraggingChild || hasChildWithOverflow || (hasOverflowingChild && editingMode === 'select')) 
+    // 组件自身设置了展开预览
+    const selfShowOverflow = component.showOverflow === true;
+    
+    // 检查是否有子组件开启了展开预览（父容器需要配合放开裁剪）
+    const hasChildWithOverflow = allComponents?.some(
+      c => c.parent === component.id && c.showOverflow === true
+    );
+    
+    // 展开预览由组件自身控制，子组件展开时父容器也需要放开裁剪，拖拽子组件时也临时展开
+    overflowValue = (isDraggingChild || selfShowOverflow || hasChildWithOverflow) 
       ? 'visible' 
       : 'hidden';
   }else if (borderRadiusValue) {
