@@ -897,6 +897,13 @@ const zhCN = {
   'Generating...': '生成中...',
   'Starting...': '启动中...',
 
+  // View Statistics
+  'Statistics': '统计',
+  'Child Components': '子控件数量',
+  'Draw Pixels': '绘制像素',
+  'Page Complexity': '页面复杂度',
+  'Render Cost': '渲染开销',
+
   // GUI Version
   'Branch': '分支',
   'Build Date': '构建日期',

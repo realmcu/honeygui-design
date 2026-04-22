@@ -1,16 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { PropertyPanelProps } from './types';
 import { PropertyEditor } from './PropertyEditor';
 import { BaseProperties } from './BaseProperties';
 import { EventsPanel } from './EventsPanel';
 import { CollapsibleGroup } from './CollapsibleGroup';
 import { t } from '../../i18n';
+import { calculateViewComplexity } from '../../utils/viewComplexity';
 
 export const HgViewProperties: React.FC<PropertyPanelProps> = ({ component, onUpdate, components }) => {
   const [activeTab, setActiveTab] = useState<'properties' | 'events'>('properties');
 
   // 计算默认动画步长（屏幕高度的 1/10）
   const defaultAnimateStep = Math.round(component.position.height / 10);
+
+  // 计算页面复杂度
+  const complexity = useMemo(
+    () => calculateViewComplexity(component, components),
+    [component, components]
+  );
 
   const handleStyleChange = (property: string, value: any) => {
     onUpdate({
@@ -108,6 +115,54 @@ export const HgViewProperties: React.FC<PropertyPanelProps> = ({ component, onUp
                   min={0}
                   max={255}
                 />
+              </div>
+            </CollapsibleGroup>
+
+            {/* 页面统计 */}
+            <CollapsibleGroup title={t('Statistics')} cacheKey="view-statistics" defaultCollapsed={false}>
+              <div className="property-item">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label>{t('Child Components')}</label>
+                  <span style={{ color: 'var(--vscode-descriptionForeground)', fontSize: '12px' }}>
+                    {complexity.childCount}
+                  </span>
+                </div>
+              </div>
+              <div className="property-item">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label>{t('Draw Pixels')}</label>
+                  <span style={{ color: 'var(--vscode-descriptionForeground)', fontSize: '12px' }}>
+                    {Math.round(complexity.totalPixelArea).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+              <div className="property-item">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label>{t('Page Complexity')}</label>
+                  <span style={{
+                    color: complexity.drawCoverage > 5 ? 'var(--vscode-errorForeground)' :
+                           complexity.drawCoverage > 3 ? 'var(--vscode-editorWarning-foreground)' :
+                           'var(--vscode-descriptionForeground)',
+                    fontSize: '12px',
+                    fontWeight: complexity.drawCoverage > 5 ? 'bold' : 'normal',
+                  }}>
+                    {complexity.drawCoverage.toFixed(2)}x ({(complexity.drawCoverage * 100).toFixed(0)}%)
+                  </span>
+                </div>
+              </div>
+              <div className="property-item">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label>{t('Render Cost')}</label>
+                  <span style={{
+                    color: complexity.complexity > 5 ? 'var(--vscode-errorForeground)' :
+                           complexity.complexity > 3 ? 'var(--vscode-editorWarning-foreground)' :
+                           'var(--vscode-descriptionForeground)',
+                    fontSize: '12px',
+                    fontWeight: complexity.complexity > 5 ? 'bold' : 'normal',
+                  }}>
+                    {complexity.complexity.toFixed(2)}x
+                  </span>
+                </div>
               </div>
             </CollapsibleGroup>
           </>

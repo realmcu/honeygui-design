@@ -895,6 +895,13 @@ const en = {
   'Generating...': 'Generating...',
   'Starting...': 'Starting...',
 
+  // View Statistics
+  'Statistics': 'Statistics',
+  'Child Components': 'Child Components',
+  'Draw Pixels': 'Draw Pixels',
+  'Page Complexity': 'Page Complexity',
+  'Render Cost': 'Render Cost',
+
   // GUI Version
   'Branch': 'Branch',
   'Build Date': 'Build Date',
