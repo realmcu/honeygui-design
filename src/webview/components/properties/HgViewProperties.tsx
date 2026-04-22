@@ -15,7 +15,7 @@ export const HgViewProperties: React.FC<PropertyPanelProps> = ({ component, onUp
 
   // 计算页面复杂度
   const complexity = useMemo(
-    () => calculateViewComplexity(component, components),
+    () => calculateViewComplexity(component, components ?? []),
     [component, components]
   );
 
