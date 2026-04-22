@@ -144,6 +144,20 @@ export const HgVideoProperties: React.FC<PropertyPanelProps> = ({ component, onU
                 />
                 <small style={helpTextStyle}>{t('Output video frame rate')}</small>
               </div>
+
+              <div className="property-item">
+                <div style={{
+                  padding: '8px',
+                  background: 'var(--vscode-textBlockQuote-background)',
+                  border: '1px solid var(--vscode-textBlockQuote-border)',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  color: 'var(--vscode-descriptionForeground)'
+                }}>
+                  <strong>{t('Format Note')}:</strong>
+                  <p style={{ margin: '4px 0 0 0' }}>{t('Video format is configured in Assets panel. Select video file to set output format (MJPEG/AVI/H264).')}</p>
+                </div>
+              </div>
             </CollapsibleGroup>
 
             {/* 行为 */}
@@ -174,21 +188,6 @@ export const HgVideoProperties: React.FC<PropertyPanelProps> = ({ component, onU
                 <small style={helpTextStyle}>{t('Restart automatically when playback ends')}</small>
               </div>
             </CollapsibleGroup>
-
-            {/* 提示信息 */}
-            <div style={{ marginTop: '8px', padding: '0 4px' }}>
-              <div style={{
-                padding: '8px',
-                background: 'var(--vscode-textBlockQuote-background)',
-                border: '1px solid var(--vscode-textBlockQuote-border)',
-                borderRadius: '4px',
-                fontSize: '11px',
-                color: 'var(--vscode-descriptionForeground)'
-              }}>
-                <strong>{t('Format Note')}:</strong>
-                <p style={{ margin: '4px 0 0 0' }}>{t('Video format is configured in Assets panel. Select video file to set output format (MJPEG/AVI/H264).')}</p>
-              </div>
-            </div>
           </>
         )}
 

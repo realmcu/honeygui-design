@@ -258,8 +258,18 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
               disableSize={false}
             />
 
-            {/* 列表总长度显示 */}
-            <div className="property-group">
+            {/* 内容 */}
+            <CollapsibleGroup title={t('Content')}>
+              <div className="property-item">
+                <label>{t('Item Count')}</label>
+                <PropertyEditor
+                  type="number"
+                  value={noteNum}
+                  onChange={(value) => handleDataChange('noteNum', value)}
+                />
+              </div>
+
+              {/* 列表总长度显示 */}
               <div className="property-item">
                 <label>{t('List Total Length')}（{direction === 'VERTICAL' ? t('Height') : t('Width')}）</label>
                 <div style={{
@@ -276,18 +286,6 @@ export const HgListProperties: React.FC<PropertyPanelProps> = ({ component, onUp
                 <div style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)', marginTop: '4px' }}>
                   {t('Formula')}：{direction === 'VERTICAL' ? t('Height') : t('Width')} × {t('Item Count')} + {t('Item Spacing')} × ({t('Item Count')} - 1)
                 </div>
-              </div>
-            </div>
-
-            {/* 内容 */}
-            <CollapsibleGroup title={t('Content')}>
-              <div className="property-item">
-                <label>{t('Item Count')}</label>
-                <PropertyEditor
-                  type="number"
-                  value={noteNum}
-                  onChange={(value) => handleDataChange('noteNum', value)}
-                />
               </div>
             </CollapsibleGroup>
 
