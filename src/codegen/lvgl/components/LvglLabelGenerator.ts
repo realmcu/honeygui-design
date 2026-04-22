@@ -17,7 +17,8 @@ export class LvglLabelGenerator extends LvglBaseGenerator {
     const fontSize = Number(component.style?.fontSize || component.data?.fontSize || 16);
     const fontFile = component.data?.fontFile;
     const isTimerLabel = component.data?.isTimerLabel === true;
-    const wordWrap = component.style?.wordWrap === true || component.data?.wordWrap === true;
+    const wordWrap = component.style?.wordWrap === true
+      || component.data?.wordWrap === true;
     const hAlign = String(component.style?.hAlign || component.data?.hAlign || 'LEFT');
     const vAlign = String(component.style?.vAlign || component.data?.vAlign || 'TOP');
 

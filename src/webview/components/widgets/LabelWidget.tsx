@@ -58,10 +58,10 @@ export const LabelWidget: React.FC<WidgetProps> = ({ component, style, handlers,
   const vAlign = component.style?.vAlign || 'TOP';
   
   // 滚动相关属性
-  const enableScroll = component.data?.enableScroll === true || component.data?.enableScroll === 'true';
-  const scrollPreview = component.data?.scrollPreview === true || component.data?.scrollPreview === 'true';
+  const enableScroll = (component.data as any)?.enableScroll;
+  const scrollPreview = (component.data as any)?.scrollPreview;
   const scrollDirection = component.data?.scrollDirection || 'horizontal';
-  const scrollReverse = component.data?.scrollReverse === true || component.data?.scrollReverse === 'true';
+  const scrollReverse = (component.data as any)?.scrollReverse;
   const scrollStartOffset = Number(component.data?.scrollStartOffset) || 0;
   const scrollEndOffset = Number(component.data?.scrollEndOffset) || 0;
   const scrollInterval = Number(component.data?.scrollInterval) || 3000;

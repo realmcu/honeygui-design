@@ -7,6 +7,7 @@ import { XMLParser } from 'fast-xml-parser';
 import { Component, Meta, View, Document, ComponentPosition } from './types';
 import type { EventConfig, Action, EventType, ActionType } from './eventTypes';
 import { logger } from '../utils/Logger';
+import { convertAttributeValue } from '../shared/componentPropertyTypes';
 
 /**
  * 组件注册表 - 集中管理所有支持的组件类型
@@ -305,7 +306,7 @@ export class HmlParser {
     };
 
     // 分离属性
-    const { style, data, events } = this._categorizeAttributes(attributes);
+    const { style, data, events } = this._categorizeAttributes(attributes, tagName);
 
     // 应用默认值（针对 list 控件）
     if (tagName === 'hg_list') {
@@ -557,7 +558,7 @@ export class HmlParser {
     };
 
     // 分离属性
-    const { style, data, events } = this._categorizeAttributes(attributes);
+    const { style, data, events } = this._categorizeAttributes(attributes, normalizedType);
 
     // 应用默认值（针对 list 控件）
     if (normalizedType === 'hg_list') {
@@ -621,7 +622,7 @@ export class HmlParser {
   /**
    * 分类属性到style、data、events
    */
-  private _categorizeAttributes(attributes: any): {
+  private _categorizeAttributes(attributes: any, tagName: string): {
     style: Record<string, any>;
     data: Record<string, any>;
     events: Record<string, any>;
@@ -716,15 +717,10 @@ export class HmlParser {
       if (dataProps.has(key)) {
         // dataProps 白名单优先（防止 onCallback 等被误判为事件）
         let value = attributes[key];
-        // 布尔值转换（loop, createBar, autoAlign, inertia, enableAreaDisplay, keepNoteAlive, toggleMode, movable, click, timerEnabled, timerReload, timerStopOnComplete, enableScroll, scrollReverse, highQuality, needClip, isTimerLabel, timerAutoStart 等）
-        if (['loop', 'createBar', 'autoAlign', 'inertia', 'enableAreaDisplay', 'keepNoteAlive', 'toggleMode', 'movable', 'click', 'timerEnabled', 'timerReload', 'timerStopOnComplete', 'enableScroll', 'scrollReverse', 'highQuality', 'needClip', 'isTimerLabel', 'timerAutoStart', 'useUserNoteDesign', 'value', 'checked'].includes(key)) {
-          value = value === 'true' || value === true;
-        }
-        // 数字类型属性转换（包括 opacity, timerInterval, timerDuration, timerInitialValue）
-        if (['noteNum', 'offset', 'outScope', 'opacity', 'animateStep', 'timerInterval', 'timerDuration', 'timerInitialValue', 'scrollStartOffset', 'scrollEndOffset', 'scrollInterval', 'scrollDuration', 'iconSize', 'offsetX', 'offsetY'].includes(key) && typeof value === 'string') {
-          const num = parseFloat(value);
-          value = isNaN(num) ? value : num;
-        }
+        // 根据共享组件定义做类型转换（boolean/number），不在定义中的属性保留字符串
+        value = convertAttributeValue(tagName, key, value);
+
+        // JSON 结构化数据反序列化（这些不是简单的标量类型转换）
         // characterSets 需要从 JSON 字符串解析为数组
         if (key === 'characterSets' && typeof value === 'string') {
           try { value = JSON.parse(value); } catch (e) { value = []; }
@@ -749,8 +745,9 @@ export class HmlParser {
       } else if (key.startsWith('on')) {
         events[key] = attributes[key];
       } else if (styleProps.has(key)) {
-        // 数字类型属性需要转换
-        let value = attributes[key];
+        // 根据共享组件定义做类型转换（style 属性也可能是 boolean/number）
+        let value = convertAttributeValue(tagName, key, attributes[key]);
+        // 兼容：numericProps 中的属性如果不在共享定义中，仍然做数值转换
         if (numericProps.has(key) && typeof value === 'string') {
           const num = parseFloat(value);
           value = isNaN(num) ? value : num;
@@ -763,14 +760,10 @@ export class HmlParser {
             console.warn(`Failed to parse transform JSON: ${value}`);
           }
         }
-        // 布尔值转换（useGradient, wordWrap, wordBreak, showBackground）
-        if (['useGradient', 'wordWrap', 'wordBreak', 'showBackground'].includes(key)) {
-          value = value === 'true' || value === true;
-        }
         style[key] = value;
       } else {
         // 未知属性放入data
-        let value = attributes[key];
+        let value = convertAttributeValue(tagName, key, attributes[key]);
         // gradientStops 需要从 JSON 字符串解析为数组
         if (key === 'gradientStops' && typeof value === 'string') {
           try {
@@ -780,23 +773,8 @@ export class HmlParser {
             value = [];
           }
         }
-        // gradientStartAngle 和 gradientEndAngle 需要转换为数字
-        if ((key === 'gradientStartAngle' || key === 'gradientEndAngle') && typeof value === 'string') {
-          const num = parseFloat(value);
-          value = isNaN(num) ? 0 : num;
-        }
-        // enableEndCap 需要转换为布尔值
-        if (key === 'enableEndCap') {
-          value = value === 'true' || value === true;
-        }
-        // enableBlur 需要转换为布尔值
-        if (key === 'enableBlur') {
-          value = value === 'true' || value === true;
-        }
-        // enableScroll 和 scrollReverse 需要转换为布尔值
-        if (key === 'enableScroll' || key === 'scrollReverse') {
-          value = value === 'true' || value === true;
-        }
+        // JSON 结构化数据反序列化
+
         // characterSets 需要从 JSON 字符串解析为数组
         if (key === 'characterSets' && typeof value === 'string') {
           try {
