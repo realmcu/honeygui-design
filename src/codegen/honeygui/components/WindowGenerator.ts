@@ -62,7 +62,7 @@ export class WindowGenerator implements ComponentCodeGenerator {
           const labelComp = context.componentMap.get(labelId);
           const timeFormat = labelComp?.data?.timeFormat;
           const formatCode = this.getTimeFormatCode(timeFormat);
-          code += `${indentStr}        sprintf(${labelId}_time_str, "${formatCode.format}", ${formatCode.args});\n`;
+          code += `${indentStr}        snprintf(${labelId}_time_str, sizeof(${labelId}_time_str), "${formatCode.format}", ${formatCode.args});\n`;
         });
         code += `${indentStr}    }\n`;
         code += `${indentStr}}\n`;
@@ -75,7 +75,7 @@ export class WindowGenerator implements ComponentCodeGenerator {
           const labelComp = context.componentMap.get(labelId);
           const timeFormat = labelComp?.data?.timeFormat;
           const formatCode = this.getTimeFormatCode(timeFormat);
-          code += `${indentStr}    sprintf(${labelId}_time_str, "${formatCode.format}", ${formatCode.args});\n`;
+          code += `${indentStr}    snprintf(${labelId}_time_str, sizeof(${labelId}_time_str), "${formatCode.format}", ${formatCode.args});\n`;
         });
         code += `${indentStr}}\n`;
       }
@@ -188,12 +188,12 @@ export class WindowGenerator implements ComponentCodeGenerator {
       case 'YYYY-MM-DD':
         return {
           format: '%04d-%02d-%02d',
-          args: 't->tm_year + 1900, t->tm_mon + 1, t->tm_mday'
+          args: '(t->tm_year + 1900) % 10000, t->tm_mon + 1, t->tm_mday'
         };
       case 'YYYY-MM-DD HH:mm:ss':
         return {
           format: '%04d-%02d-%02d %02d:%02d:%02d',
-          args: 't->tm_year + 1900, t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec'
+          args: '(t->tm_year + 1900) % 10000, t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec'
         };
       case 'MM-DD HH:mm':
         return {

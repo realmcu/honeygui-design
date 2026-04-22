@@ -119,9 +119,9 @@ export class LvglTimeLabelGenerator extends LvglBaseGenerator {
       case 'HH:mm-split':
         return `    lv_snprintf(buf, sizeof(buf), "%02d:%02d", t->tm_hour, t->tm_min);\n`;
       case 'YYYY-MM-DD':
-        return `    lv_snprintf(buf, sizeof(buf), "%04d-%02d-%02d", t->tm_year + 1900, t->tm_mon + 1, t->tm_mday);\n`;
+        return `    lv_snprintf(buf, sizeof(buf), "%04d-%02d-%02d", (t->tm_year + 1900) % 10000, t->tm_mon + 1, t->tm_mday);\n`;
       case 'YYYY-MM-DD HH:mm:ss':
-        return `    lv_snprintf(buf, sizeof(buf), "%04d-%02d-%02d %02d:%02d:%02d", t->tm_year + 1900, t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);\n`;
+        return `    lv_snprintf(buf, sizeof(buf), "%04d-%02d-%02d %02d:%02d:%02d", (t->tm_year + 1900) % 10000, t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);\n`;
       case 'MM-DD HH:mm':
         return `    lv_snprintf(buf, sizeof(buf), "%02d-%02d %02d:%02d", t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min);\n`;
       default:

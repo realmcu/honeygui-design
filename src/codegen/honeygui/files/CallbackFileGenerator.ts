@@ -1198,8 +1198,8 @@ void ${callback}(void *obj)\n{\n`;
       case 'HH': return 4;           // "HH\0" = 3，with extra margin
       case 'mm': return 4;           // "mm\0" = 3，with extra margin
       case 'HH:mm-split': return 10; // Split time format, same as HH:mm, needs access to str+3
-      case 'YYYY-MM-DD': return 12; // "YYYY-MM-DD\0" = 11
-      case 'YYYY-MM-DD HH:mm:ss': return 22; // "YYYY-MM-DD HH:MM:SS\0" = 20
+      case 'YYYY-MM-DD': return 16; // "YYYY-MM-DD\0" = 11, extra margin for -Werror=format-overflow
+      case 'YYYY-MM-DD HH:mm:ss': return 32; // "YYYY-MM-DD HH:MM:SS\0" = 20, extra margin for -Werror=format-overflow
       case 'MM-DD HH:mm': return 16; // "MM-DD HH:MM\0" = 13
       default: return 10;
     }
@@ -1267,7 +1267,7 @@ void ${callback}(void *obj)\n{\n`;
       code += `    }\n`;
       code += `    \n`;
       code += `    // Update time string\n`;
-      code += `    sprintf(${componentId}_time_str, "${formatStr}", t->tm_hour, t->tm_min);\n`;
+      code += `    snprintf(${componentId}_time_str, sizeof(${componentId}_time_str), "${formatStr}", t->tm_hour, t->tm_min);\n`;
       code += `    \n`;
       code += `    // Update hour component (first 2 characters)\n`;
       code += `    if (${componentId}_hour) {\n`;
@@ -1290,21 +1290,21 @@ void ${callback}(void *obj)\n{\n`;
       code += `    }\n`;
       code += `    \n`;
 
-      // Generate different sprintf calls based on format
+      // Generate different snprintf calls based on format
       if (timeFormat === 'HH:mm:ss') {
-        code += `    sprintf(${componentId}_time_str, "${formatStr}", t->tm_hour, t->tm_min, t->tm_sec);\n`;
+        code += `    snprintf(${componentId}_time_str, sizeof(${componentId}_time_str), "${formatStr}", t->tm_hour, t->tm_min, t->tm_sec);\n`;
       } else if (timeFormat === 'HH:mm') {
-        code += `    sprintf(${componentId}_time_str, "${formatStr}", t->tm_hour, t->tm_min);\n`;
+        code += `    snprintf(${componentId}_time_str, sizeof(${componentId}_time_str), "${formatStr}", t->tm_hour, t->tm_min);\n`;
       } else if (timeFormat === 'HH') {
-        code += `    sprintf(${componentId}_time_str, "${formatStr}", t->tm_hour);\n`;
+        code += `    snprintf(${componentId}_time_str, sizeof(${componentId}_time_str), "${formatStr}", t->tm_hour);\n`;
       } else if (timeFormat === 'mm') {
-        code += `    sprintf(${componentId}_time_str, "${formatStr}", t->tm_min);\n`;
+        code += `    snprintf(${componentId}_time_str, sizeof(${componentId}_time_str), "${formatStr}", t->tm_min);\n`;
       } else if (timeFormat === 'YYYY-MM-DD') {
-        code += `    sprintf(${componentId}_time_str, "${formatStr}", t->tm_year + 1900, t->tm_mon + 1, t->tm_mday);\n`;
+        code += `    snprintf(${componentId}_time_str, sizeof(${componentId}_time_str), "${formatStr}", (t->tm_year + 1900) % 10000, t->tm_mon + 1, t->tm_mday);\n`;
       } else if (timeFormat === 'YYYY-MM-DD HH:mm:ss') {
-        code += `    sprintf(${componentId}_time_str, "${formatStr}", t->tm_year + 1900, t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);\n`;
+        code += `    snprintf(${componentId}_time_str, sizeof(${componentId}_time_str), "${formatStr}", (t->tm_year + 1900) % 10000, t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);\n`;
       } else if (timeFormat === 'MM-DD HH:mm') {
-        code += `    sprintf(${componentId}_time_str, "${formatStr}", t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min);\n`;
+        code += `    snprintf(${componentId}_time_str, sizeof(${componentId}_time_str), "${formatStr}", t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min);\n`;
       }
 
       code += `    \n`;

@@ -962,8 +962,8 @@ static void ${component.id}_breath_anim_cb(void *p)
       case 'HH': return 4;
       case 'mm': return 4;
       case 'HH:mm-split': return 10;  // Split time format, needs access to str+3, so requires enough space
-      case 'YYYY-MM-DD': return 12;
-      case 'YYYY-MM-DD HH:mm:ss': return 22;
+      case 'YYYY-MM-DD': return 16;
+      case 'YYYY-MM-DD HH:mm:ss': return 32;
       case 'MM-DD HH:mm': return 16;
       default: return 10;
     }
