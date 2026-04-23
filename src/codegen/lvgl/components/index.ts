@@ -22,6 +22,7 @@ import { LvglListGenerator } from './LvglListGenerator';
 import { LvglListItemGenerator } from './LvglListItemGenerator';
 import { LvglSwitchGenerator } from './LvglSwitchGenerator';
 import { LvglSliderGenerator } from './LvglSliderGenerator';
+import { LvglProgressBarGenerator } from './LvglProgressBarGenerator';
 import { LvglDefaultGenerator } from './LvglDefaultGenerator';
 
 export class LvglComponentGeneratorFactory {
@@ -42,6 +43,7 @@ export class LvglComponentGeneratorFactory {
     this.generators.set('hg_radio', new LvglRadioGenerator());
     this.generators.set('hg_switch', new LvglSwitchGenerator());
     this.generators.set('hg_slider', new LvglSliderGenerator());
+    this.generators.set('hg_progressbar', new LvglProgressBarGenerator());
     this.generators.set('hg_time_label', new LvglTimeLabelGenerator());
     this.generators.set('hg_timer_label', new LvglTimerLabelGenerator());
 
