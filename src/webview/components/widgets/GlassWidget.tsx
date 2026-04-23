@@ -804,23 +804,47 @@ export const GlassWidget: React.FC<WidgetProps> = ({ component, style, handlers 
       // 开关
       else if (comp.type === 'hg_switch') {
         const checked = d.checked ?? false;
-        const trackHeight = Math.min(compH, 24);
-        const trackWidth = Math.min(compW, 44);
-        const trackY = relY + (compH - trackHeight) / 2;
-        const thumbRadius = trackHeight / 2 - 2;
-        
-        // 轨道
-        tempCtx.fillStyle = checked ? '#007acc' : '#cccccc';
-        tempCtx.beginPath();
-        tempCtx.roundRect(relX, trackY, trackWidth, trackHeight, trackHeight / 2);
-        tempCtx.fill();
-        
-        // 滑块
-        const thumbX = checked ? relX + trackWidth - thumbRadius - 2 : relX + thumbRadius + 2;
-        tempCtx.fillStyle = '#ffffff';
-        tempCtx.beginPath();
-        tempCtx.arc(thumbX, trackY + trackHeight / 2, thumbRadius, 0, Math.PI * 2);
-        tempCtx.fill();
+        const isVertical = compH > compW;
+
+        if (isVertical) {
+          // 纵向模式
+          const trackWidth = Math.min(compW, 24);
+          const trackHeight = Math.min(compH, 44);
+          const trackX = relX + (compW - trackWidth) / 2;
+          const thumbRadius = trackWidth / 2 - 2;
+
+          // 轨道
+          tempCtx.fillStyle = checked ? '#007acc' : '#cccccc';
+          tempCtx.beginPath();
+          tempCtx.roundRect(trackX, relY, trackWidth, trackHeight, trackWidth / 2);
+          tempCtx.fill();
+
+          // 滑块
+          const thumbY = checked ? relY + thumbRadius + 2 : relY + trackHeight - thumbRadius - 2;
+          tempCtx.fillStyle = '#ffffff';
+          tempCtx.beginPath();
+          tempCtx.arc(trackX + trackWidth / 2, thumbY, thumbRadius, 0, Math.PI * 2);
+          tempCtx.fill();
+        } else {
+          // 横向模式
+          const trackHeight = Math.min(compH, 24);
+          const trackWidth = Math.min(compW, 44);
+          const trackY = relY + (compH - trackHeight) / 2;
+          const thumbRadius = trackHeight / 2 - 2;
+
+          // 轨道
+          tempCtx.fillStyle = checked ? '#007acc' : '#cccccc';
+          tempCtx.beginPath();
+          tempCtx.roundRect(relX, trackY, trackWidth, trackHeight, trackHeight / 2);
+          tempCtx.fill();
+
+          // 滑块
+          const thumbX = checked ? relX + trackWidth - thumbRadius - 2 : relX + thumbRadius + 2;
+          tempCtx.fillStyle = '#ffffff';
+          tempCtx.beginPath();
+          tempCtx.arc(thumbX, trackY + trackHeight / 2, thumbRadius, 0, Math.PI * 2);
+          tempCtx.fill();
+        }
       }
       
       // 滑块
@@ -829,23 +853,57 @@ export const GlassWidget: React.FC<WidgetProps> = ({ component, style, handlers 
         const min = Number(d.min ?? 0);
         const max = Number(d.max ?? 100);
         const progress = (value - min) / (max - min);
-        const trackHeight = 4;
-        const trackY = relY + (compH - trackHeight) / 2;
-        
-        // 轨道背景
-        tempCtx.fillStyle = '#cccccc';
-        tempCtx.fillRect(relX, trackY, compW, trackHeight);
-        
-        // 进度
-        tempCtx.fillStyle = '#007acc';
-        tempCtx.fillRect(relX, trackY, compW * progress, trackHeight);
-        
-        // 滑块
-        const thumbX = relX + compW * progress;
-        tempCtx.fillStyle = '#007acc';
-        tempCtx.beginPath();
-        tempCtx.arc(thumbX, relY + compH / 2, 8, 0, Math.PI * 2);
-        tempCtx.fill();
+        const isVertical = compH > compW;
+        const shortSide = isVertical ? compW : compH;
+        const knobRadius = shortSide / 2;
+
+        if (isVertical) {
+          // 纵向模式
+          const trackX = relX + (compW - shortSide) / 2;
+
+          // 轨道背景
+          tempCtx.fillStyle = '#cccccc';
+          tempCtx.beginPath();
+          tempCtx.roundRect(trackX, relY, shortSide, compH, shortSide / 2);
+          tempCtx.fill();
+
+          // 进度（从底部向上填充）
+          const knobCenterY = relY + compH - knobRadius - progress * (compH - shortSide);
+          const fillHeight = relY + compH - knobCenterY;
+          tempCtx.fillStyle = '#007acc';
+          tempCtx.beginPath();
+          tempCtx.roundRect(trackX, knobCenterY, shortSide, fillHeight, shortSide / 2);
+          tempCtx.fill();
+
+          // 滑块
+          tempCtx.fillStyle = '#29b6f6';
+          tempCtx.beginPath();
+          tempCtx.arc(relX + compW / 2, knobCenterY, knobRadius, 0, Math.PI * 2);
+          tempCtx.fill();
+        } else {
+          // 横向模式
+          const trackY = relY + (compH - shortSide) / 2;
+
+          // 轨道背景
+          tempCtx.fillStyle = '#cccccc';
+          tempCtx.beginPath();
+          tempCtx.roundRect(relX, trackY, compW, shortSide, shortSide / 2);
+          tempCtx.fill();
+
+          // 进度
+          const knobCenterX = relX + knobRadius + progress * (compW - shortSide);
+          const fillWidth = knobCenterX - relX;
+          tempCtx.fillStyle = '#007acc';
+          tempCtx.beginPath();
+          tempCtx.roundRect(relX, trackY, fillWidth, shortSide, shortSide / 2);
+          tempCtx.fill();
+
+          // 滑块
+          tempCtx.fillStyle = '#29b6f6';
+          tempCtx.beginPath();
+          tempCtx.arc(knobCenterX, relY + compH / 2, knobRadius, 0, Math.PI * 2);
+          tempCtx.fill();
+        }
       }
       
       // 列表
