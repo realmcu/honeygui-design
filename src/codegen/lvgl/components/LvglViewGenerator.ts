@@ -40,19 +40,6 @@ export class LvglViewGenerator extends LvglBaseGenerator {
     code += LvglStyleGenerator.generateBorderWidth(component.id, 0);
     code += LvglStyleGenerator.generatePadding(component.id, 0);
 
-    // Event bindings (swipe gestures for screen switching, click, etc.)
-    const eventConfigs = (component as any).eventConfigs || [];
-    if (eventConfigs.length > 0) {
-      const { LvglEventGeneratorFactory } = require('../events');
-      const eventGen = LvglEventGeneratorFactory.getGenerator('hg_view');
-      if (eventGen) {
-        const bindings = eventGen.generateEventBindings(component);
-        if (bindings) {
-          code += bindings;
-        }
-      }
-    }
-
     // Entry view → load as active screen
     if (isRootView && (component.data?.entry === true || component.data?.entry === 'true')) {
       code += `    lv_screen_load(${component.id});\n`;

@@ -6,6 +6,7 @@
 import { Component } from '../../../hml/types';
 import { LvglGeneratorContext } from '../LvglComponentGenerator';
 import { LvglComponentGeneratorFactory } from '../components';
+import { LvglEventGeneratorFactory } from '../events';
 
 export class LvglSourceFileGenerator {
   /**
@@ -76,6 +77,16 @@ export class LvglSourceFileGenerator {
       if (component.enabled === false) {
         code += `    lv_obj_add_state(${component.id}, LV_STATE_DISABLED);\n`;
       }
+
+      // Event bindings (unified via event generator)
+      const eventGen = LvglEventGeneratorFactory.getGenerator(component.type);
+      if (eventGen) {
+        const bindings = eventGen.generateEventBindings(component);
+        if (bindings) {
+          code += bindings;
+        }
+      }
+
       code += `\n`;
     });
 

@@ -26,9 +26,6 @@ export class LvglSwitchGenerator extends LvglBaseGenerator {
       code += `    lv_obj_add_state(${component.id}, LV_STATE_CHECKED);\n`;
     }
 
-    const cbName = `${component.id}_event_cb`;
-    code += `    lv_obj_add_event_cb(${component.id}, ${cbName}, LV_EVENT_VALUE_CHANGED, NULL);\n`;
-
     return code;
   }
 }

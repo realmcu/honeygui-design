@@ -50,9 +50,6 @@ export class LvglArcGenerator extends LvglBaseGenerator {
     code += LvglStyleGenerator.generateBorderWidth(component.id, 0);
     code += LvglStyleGenerator.generatePadding(component.id, 0);
 
-    const cbName = `${component.id}_event_cb`;
-    code += `    lv_obj_add_event_cb(${component.id}, ${cbName}, LV_EVENT_VALUE_CHANGED, NULL);\n`;
-
     return code;
   }
 }

@@ -37,9 +37,6 @@ export class LvglInputGenerator extends LvglBaseGenerator {
       code += `    lv_obj_set_style_bg_opa(${component.id}, LV_OPA_COVER, LV_PART_MAIN);\n`;
     }
 
-    const cbName = `${component.id}_event_cb`;
-    code += `    lv_obj_add_event_cb(${component.id}, ${cbName}, LV_EVENT_ALL, NULL);\n`;
-
     return code;
   }
 }

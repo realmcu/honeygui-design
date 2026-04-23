@@ -30,9 +30,6 @@ export class LvglSliderGenerator extends LvglBaseGenerator {
       code += `    lv_slider_set_value(${component.id}, ${value}, LV_ANIM_OFF);\n`;
     }
 
-    const cbName = `${component.id}_event_cb`;
-    code += `    lv_obj_add_event_cb(${component.id}, ${cbName}, LV_EVENT_VALUE_CHANGED, NULL);\n`;
-
     return code;
   }
 }

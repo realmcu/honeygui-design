@@ -1,29 +1,32 @@
 /**
  * LVGL event generator factory
- * Registers event generators for each component type
+ *
+ * Uses LvglGenericEventGenerator for all component types except:
+ * - hg_view: has special gesture direction handling (uses LvglGenericEventGenerator too,
+ *   since gesture support is built into the generic generator)
+ * - hg_radio: mutual exclusion handled at parent container level, no per-component event
  */
 import { LvglEventCodeGenerator } from './LvglEventCodeGenerator';
-import { LvglButtonEventGenerator } from './LvglButtonEventGenerator';
-import { LvglArcEventGenerator } from './LvglArcEventGenerator';
-import { LvglCheckboxEventGenerator } from './LvglCheckboxEventGenerator';
-import { LvglInputEventGenerator } from './LvglInputEventGenerator';
 import { LvglRadioEventGenerator } from './LvglRadioEventGenerator';
-import { LvglSwitchEventGenerator } from './LvglSwitchEventGenerator';
-import { LvglSliderEventGenerator } from './LvglSliderEventGenerator';
-import { LvglViewEventGenerator } from './LvglViewEventGenerator';
+import { LvglGenericEventGenerator } from './LvglGenericEventGenerator';
+
+/** Singleton instance shared by all component types */
+const genericGenerator = new LvglGenericEventGenerator();
 
 export class LvglEventGeneratorFactory {
   private static generators: Map<string, LvglEventCodeGenerator> = new Map();
 
   static {
-    this.generators.set('hg_view', new LvglViewEventGenerator());
-    this.generators.set('hg_button', new LvglButtonEventGenerator());
-    this.generators.set('hg_arc', new LvglArcEventGenerator());
-    this.generators.set('hg_checkbox', new LvglCheckboxEventGenerator());
-    this.generators.set('hg_input', new LvglInputEventGenerator());
+    // Generic generator handles all standard components including view (gesture support built-in)
+    this.generators.set('hg_view', genericGenerator);
+    this.generators.set('hg_button', genericGenerator);
+    this.generators.set('hg_arc', genericGenerator);
+    this.generators.set('hg_checkbox', genericGenerator);
+    this.generators.set('hg_input', genericGenerator);
+    this.generators.set('hg_switch', genericGenerator);
+    this.generators.set('hg_slider', genericGenerator);
+    // Radio: mutual exclusion at parent level, no per-component event callback
     this.generators.set('hg_radio', new LvglRadioEventGenerator());
-    this.generators.set('hg_switch', new LvglSwitchEventGenerator());
-    this.generators.set('hg_slider', new LvglSliderEventGenerator());
   }
 
   /** Get event generator for the specified component type, or undefined if none */

@@ -50,9 +50,6 @@ export class LvglCheckboxGenerator extends LvglBaseGenerator {
       code += `    lv_obj_set_style_text_font(${component.id}, &${fontName}, LV_PART_MAIN);\n`;
     }
 
-    const cbName = `${component.id}_event_cb`;
-    code += `    lv_obj_add_event_cb(${component.id}, ${cbName}, LV_EVENT_VALUE_CHANGED, NULL);\n`;
-
     return code;
   }
 }
