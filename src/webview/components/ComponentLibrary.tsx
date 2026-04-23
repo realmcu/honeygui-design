@@ -239,7 +239,7 @@ const componentDefinitions: ComponentDefinition[] = [
     type: 'hg_checkbox',
     name: 'Checkbox',
     icon: '☑️',
-    engineSupport: { honeygui: 'unsupported', lvgl: 'ready' },
+    engineSupport: { honeygui: 'planned', lvgl: 'ready' },
     defaultSize: { width: 120, height: 24 },
     properties: [
       ...textProps('Checkbox'),
@@ -250,7 +250,7 @@ const componentDefinitions: ComponentDefinition[] = [
     type: 'hg_radio',
     name: 'Radio',
     icon: '⭕',
-    engineSupport: { honeygui: 'unsupported', lvgl: 'ready' },
+    engineSupport: { honeygui: 'planned', lvgl: 'ready' },
     defaultSize: { width: 120, height: 24 },
     properties: [
       ...textProps('Option'),
@@ -308,6 +308,7 @@ const componentDefinitions: ComponentDefinition[] = [
     type: 'hg_canvas',
     name: 'Canvas',
     icon: '🎨',
+    engineSupport: { honeygui: 'planned', lvgl: 'ready' },
     defaultSize: { width: 300, height: 200 },
     properties: [
       { name: 'backgroundColor', label: 'Background Color', type: 'color', defaultValue: '#ffffff', group: 'style', hint: 'Designer only - helps identify container boundaries' },
