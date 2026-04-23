@@ -172,19 +172,27 @@ const App: React.FC = () => {
 
       switch (message.command) {
         case 'updateProjectConfig':
-          // 更新项目配置（在 loadHml 之前就可以获取）
+          // 更新项目配置（project.json 文件变化时触发）
           if (message.projectConfig) {
-            const resolution = message.projectConfig.resolution;
-            if (resolution) {
-              const parts = resolution.split('X');
-              if (parts.length === 2) {
-                useDesignerStore.setState({
-                  projectConfig: message.projectConfig,
-                  canvasSize: {
-                    width: parseInt(parts[0], 10),
-                    height: parseInt(parts[1], 10)
-                  }
-                });
+            const store = useDesignerStore.getState();
+            store.setProjectConfig(message.projectConfig);
+
+            // 同步所有 hg_view 的尺寸为新的分辨率（与 cornerRadius 逻辑一致）
+            const res = message.projectConfig.resolution;
+            if (res) {
+              const parts = res.split('X');
+              const newWidth = parseInt(parts[0], 10);
+              const newHeight = parseInt(parts[1], 10);
+              if (newWidth > 0 && newHeight > 0) {
+                const views = store.components.filter(c => c.type === 'hg_view');
+                if (views.length > 0) {
+                  views.forEach(v => {
+                    store.updateComponent(v.id, {
+                      position: { ...v.position, width: newWidth, height: newHeight }
+                    }, { save: false });
+                  });
+                  store.saveToFile();
+                }
               }
             }
           }

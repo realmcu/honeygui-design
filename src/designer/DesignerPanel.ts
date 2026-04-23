@@ -284,6 +284,9 @@ export class DesignerPanel {
         }
         DesignerPanel.currentPanel = undefined;
 
+        // 清理 project.json watcher
+        this._fileManager.disposeProjectConfigWatcher();
+
         // 停止协同监听
         this._collaborationController.stop();
 

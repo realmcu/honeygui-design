@@ -412,6 +412,12 @@ export const handleBackendMessage = (
       }
       break;
 
+    case 'updateProjectConfig':
+      if (message.projectConfig) {
+        setProjectConfig(message.projectConfig);
+      }
+      break;
+
     case 'componentSelected':
       if (message.componentId) {
         selectComponent(message.componentId);

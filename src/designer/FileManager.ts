@@ -33,10 +33,110 @@ export class FileManager {
     // 事件
     public readonly onDidUpdateTitle = this._onDidUpdateTitle.event;
 
+    // project.json 文件监听器
+    private _projectConfigWatcher: vscode.FileSystemWatcher | undefined;
+
     constructor(panel: vscode.WebviewPanel, hmlController: HmlController, saveManager: SaveManager) {
         this._panel = panel;
         this._hmlController = hmlController;
         this._saveManager = saveManager;
+    }
+
+    /**
+     * 启动对 project.json 的监听，文件变化时自动推送新配置给前端
+     */
+    private _setupProjectConfigWatcher(filePath: string): void {
+        // 清理旧的 watcher
+        this._projectConfigWatcher?.dispose();
+
+        const projectRoot = ProjectUtils.findProjectRoot(filePath);
+        if (!projectRoot) { return; }
+
+        const projectJsonPath = path.join(projectRoot, 'project.json');
+        const pattern = new vscode.RelativePattern(projectRoot, 'project.json');
+        this._projectConfigWatcher = vscode.workspace.createFileSystemWatcher(pattern);
+
+        // 记录上一次的 resolution，用于判断是否变化
+        let lastResolution: string | undefined;
+        try {
+            const initial = ProjectConfigLoader.loadConfig(filePath);
+            lastResolution = initial?.resolution;
+        } catch { /* ignore */ }
+
+        const onChanged = () => {
+            // 清除缓存，确保下次读取最新内容
+            ProjectConfigLoader.clearCache();
+            const newConfig = ProjectConfigLoader.loadConfig(filePath);
+            if (newConfig) {
+                logger.info(`[FileManager] project.json 变化，推送新配置给前端: ${projectJsonPath}`);
+                this._panel.webview.postMessage({
+                    command: 'updateProjectConfig',
+                    projectConfig: newConfig
+                });
+
+                // 如果 resolution 发生变化，批量更新所有 HML 文件中的 hg_view 尺寸
+                if (newConfig.resolution && newConfig.resolution !== lastResolution) {
+                    lastResolution = newConfig.resolution;
+                    this._syncAllViewSizes(filePath, newConfig.resolution);
+                }
+            }
+        };
+
+        this._projectConfigWatcher.onDidChange(onChanged);
+        this._projectConfigWatcher.onDidCreate(onChanged);
+    }
+
+    /**
+     * 批量更新项目所有 HML 文件中 hg_view 的尺寸
+     */
+    private _syncAllViewSizes(currentFilePath: string, resolution: string): void {
+        const { width, height } = ProjectUtils.parseResolution(resolution);
+        if (!width || !height) { return; }
+
+        const hmlFiles = this.scanAllHmlFiles(currentFilePath);
+        logger.info(`[FileManager] 同步 hg_view 尺寸 ${width}x${height}，共 ${hmlFiles.length} 个 HML 文件`);
+
+        for (const hmlFile of hmlFiles) {
+            try {
+                const content = fs.readFileSync(hmlFile.path, 'utf-8');
+                const controller = new HmlController();
+                const doc = controller.parseContent(content, hmlFile.path);
+
+                // 找到所有 hg_view 并更新尺寸
+                const views = doc.view?.components?.filter((c: any) => c.type === 'hg_view') || [];
+                if (views.length === 0) { continue; }
+
+                let changed = false;
+                for (const view of views) {
+                    if (view.position.width !== width || view.position.height !== height) {
+                        view.position.width = width;
+                        view.position.height = height;
+                        changed = true;
+                    }
+                }
+
+                if (!changed) { continue; }
+
+                // 重新序列化并写回文件（当前文件由前端 save 消息处理，跳过避免冲突）
+                if (path.resolve(hmlFile.path) === path.resolve(currentFilePath)) {
+                    continue;
+                }
+
+                const newContent = controller.serializeDocument();
+                fs.writeFileSync(hmlFile.path, newContent, 'utf-8');
+                logger.info(`[FileManager] 已更新 hg_view 尺寸: ${hmlFile.path}`);
+            } catch (err) {
+                logger.warn(`[FileManager] 更新 hg_view 尺寸失败 ${hmlFile.path}: ${err}`);
+            }
+        }
+    }
+
+    /**
+     * 释放 project.json watcher
+     */
+    public disposeProjectConfigWatcher(): void {
+        this._projectConfigWatcher?.dispose();
+        this._projectConfigWatcher = undefined;
     }
 
     public get currentFilePath(): string | undefined {
@@ -495,6 +595,9 @@ export class FileManager {
             const fileName = path.basename(document.fileName);
             this._onDidUpdateTitle.fire(`HoneyGUI Designer: ${fileName}`);
             logger.info(`[FileManager] 文件加载完成并发送到前端: ${fileName}`);
+
+            // 启动 project.json 监听，文件变化时自动推送新配置给前端
+            this._setupProjectConfigWatcher(this._filePath!);
 
         } catch (error) {
             logger.error(`从文档加载HML失败: ${error}`);
