@@ -52,10 +52,44 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
   };
 
   const handleDataChange = (property: string, value: any) => {
+    let clampedValue = value;
+
+    // slider: value 不允许超过 min/max 范围
+    if (component.type === 'hg_slider') {
+      const data = component.data || {};
+      if (property === 'value') {
+        const min = Number(data.min ?? 0);
+        const max = Number(data.max ?? 100);
+        clampedValue = Math.max(min, Math.min(max, Number(clampedValue)));
+      } else if (property === 'min') {
+        const max = Number(data.max ?? 100);
+        const currentValue = Number(data.value ?? 0);
+        clampedValue = Math.min(Number(clampedValue), max);
+        // min 变大后，如果 value 小于新 min，自动调整 value
+        if (currentValue < Number(clampedValue)) {
+          onUpdate({
+            data: { ...data, [property]: clampedValue, value: clampedValue },
+          });
+          return;
+        }
+      } else if (property === 'max') {
+        const min = Number(data.min ?? 0);
+        const currentValue = Number(data.value ?? 0);
+        clampedValue = Math.max(Number(clampedValue), min);
+        // max 变小后，如果 value 大于新 max，自动调整 value
+        if (currentValue > Number(clampedValue)) {
+          onUpdate({
+            data: { ...data, [property]: clampedValue, value: clampedValue },
+          });
+          return;
+        }
+      }
+    }
+
     onUpdate({
       data: {
         ...component.data,
-        [property]: value,
+        [property]: clampedValue,
       },
     });
     
