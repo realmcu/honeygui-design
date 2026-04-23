@@ -11,6 +11,14 @@ export interface CodeGenOptions {
   srcDir: string;           // Root src directory
   designName: string;       // Design name (used for file naming)
   enableProtectedAreas?: boolean;
+  /** All design names in the project (for LVGL multi-design entry file) */
+  allDesignNames?: string[];
+  /** Entry view ID to load as the initial screen (for LVGL multi-design) */
+  entryViewId?: string;
+  /** Shared resource manager instance (for LVGL multi-design resource sharing) */
+  sharedResourceManager?: unknown;
+  /** Skip resource preparation (when using shared resource manager) */
+  skipResourcePrepare?: boolean;
 }
 
 export interface CodeGenResult {

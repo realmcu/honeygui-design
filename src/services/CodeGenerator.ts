@@ -5,6 +5,8 @@ import { HmlController } from '../hml/HmlController';
 import { CodeGenOptions } from '../codegen/ICodeGenerator';
 import { CodeGeneratorFactory, TargetEngine } from '../codegen/CodeGeneratorFactory';
 import { EntryFileGenerator } from '../codegen/EntryFileGenerator';
+import { LvglResourceManager } from '../codegen/lvgl/LvglResourceManager';
+import { Component } from '../hml/types';
 import { logger } from '../utils/Logger';
 
 export interface GenerationResult {
@@ -70,9 +72,9 @@ export class CodeGenerator {
 
         const config = ProjectUtils.loadProjectConfig(projectRoot);
         const srcDir = ProjectUtils.getSrcDir(projectRoot);
+        const targetEngine: TargetEngine = config.targetEngine || 'honeygui';
 
         // 生成项目入口文件（仅 HoneyGUI 引擎需要）
-        const targetEngine: TargetEngine = config.targetEngine || 'honeygui';
         if (targetEngine === 'honeygui') {
             try {
                 // 从 HML 文件中查找 entry view 的 ID
@@ -82,6 +84,43 @@ export class CodeGenerator {
             } catch (error) {
                 logger.error(`生成入口文件失败: ${error}`);
             }
+        }
+
+        // LVGL 引擎：先收集所有 HML 的组件，统一做资源转换，避免多个 HML 互相清理资源
+        let sharedResourceManager: LvglResourceManager | undefined;
+        let allDesignNames: string[] | undefined;
+        let lvglEntryViewId: string | undefined;
+        if (targetEngine === 'lvgl' && hmlFiles.length > 1) {
+            const allComponents: Component[] = [];
+            allDesignNames = [];
+            // 按 design 分组记录组件，用于查找 entry view
+            const componentsByDesign = new Map<string, Component[]>();
+            for (const hmlFile of hmlFiles) {
+                try {
+                    const hmlController = new HmlController();
+                    await hmlController.loadFile(hmlFile);
+                    const components = hmlController.currentDocument?.view.components || [];
+                    const designName = path.basename(hmlFile, '.hml');
+                    allComponents.push(...(components as Component[]));
+                    allDesignNames.push(designName);
+                    componentsByDesign.set(designName, components as Component[]);
+                } catch {
+                    // 跳过解析失败的文件
+                }
+            }
+
+            // 统一执行一次资源转换（图片 + 字体）
+            sharedResourceManager = new LvglResourceManager();
+            const lvglDir = path.join(srcDir, 'lvgl');
+            if (!fs.existsSync(lvglDir)) {
+                fs.mkdirSync(lvglDir, { recursive: true });
+            }
+            sharedResourceManager.prepare(allComponents, srcDir, lvglDir);
+
+            // 确定入口 view：从所有 design 中查找唯一的 entry="true" view
+            lvglEntryViewId = this.findLvglEntryViewId(componentsByDesign);
+
+            logger.info(`LVGL 多设计资源统一转换完成 (${allDesignNames.length} 个设计, ${allComponents.length} 个组件, entry: ${lvglEntryViewId || 'auto'})`);
         }
 
         let successCount = 0;
@@ -100,7 +139,7 @@ export class CodeGenerator {
             });
 
             try {
-                const result = await this.generateSingle(hmlFile, srcDir, designName);
+                const result = await this.generateSingle(hmlFile, srcDir, designName, sharedResourceManager, allDesignNames, lvglEntryViewId);
                 successCount++;
                 totalFiles += result.fileCount;
             } catch (error) {
@@ -220,12 +259,32 @@ export class CodeGenerator {
     }
 
     /**
+     * 查找 LVGL 多设计项目的入口 view ID
+     * 从所有 design 中查找第一个 entry="true" 的 view（整个项目应只有一个）
+     */
+    private findLvglEntryViewId(componentsByDesign: Map<string, Component[]>): string | undefined {
+        for (const [, components] of componentsByDesign) {
+            const entryView = components.find(
+                c => c.type === 'hg_view' && (c.data?.entry === true || c.data?.entry === 'true')
+            );
+            if (entryView) {
+                return entryView.id;
+            }
+        }
+
+        return undefined;
+    }
+
+    /**
      * 生成单个 HML 文件的代码
      */
     private async generateSingle(
         hmlFile: string,
         srcDir: string,
-        designName: string
+        designName: string,
+        sharedResourceManager?: LvglResourceManager,
+        allDesignNames?: string[],
+        entryViewId?: string
     ): Promise<{ fileCount: number }> {
         const hmlController = new HmlController();
         await hmlController.loadFile(hmlFile);
@@ -233,7 +292,11 @@ export class CodeGenerator {
         const generatorOptions: CodeGenOptions = {
             srcDir,
             designName,
-            enableProtectedAreas: true
+            enableProtectedAreas: true,
+            allDesignNames,
+            entryViewId,
+            sharedResourceManager,
+            skipResourcePrepare: !!sharedResourceManager,
         };
 
         // 获取项目配置中的目标引擎

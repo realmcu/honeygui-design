@@ -108,7 +108,6 @@ export class LvglSourceFileGenerator {
 
     // Non-entry views: also create them so screen switching works
     if (nonEntryGroups.length > 0) {
-      code += `\n    // Create non-entry views (for screen switching)\n`;
       for (const group of nonEntryGroups) {
         code += `    create_${group.view.id}();\n`;
       }

@@ -33,7 +33,10 @@ export class LvglCCodeGenerator implements ICodeGenerator {
     this.components = components;
     this.options = options;
     this.componentMap = new Map(components.map(c => [c.id, c]));
-    this.resourceManager = new LvglResourceManager();
+    // Use shared resource manager if provided (multi-design mode), otherwise create a new one
+    this.resourceManager = (options.sharedResourceManager instanceof LvglResourceManager)
+      ? options.sharedResourceManager
+      : new LvglResourceManager();
   }
 
   // File generators
@@ -56,8 +59,10 @@ export class LvglCCodeGenerator implements ICodeGenerator {
         fs.mkdirSync(lvglDir, { recursive: true });
       }
 
-      // Resource preprocessing
-      this.resourceManager.prepare(this.components, srcDir, lvglDir);
+      // Resource preprocessing (skip if already done externally in multi-design mode)
+      if (!this.options.skipResourcePrepare) {
+        this.resourceManager.prepare(this.components, srcDir, lvglDir);
+      }
 
       // Prepare shared data
       const orderedComponents = this.getCreationOrder();
@@ -68,15 +73,22 @@ export class LvglCCodeGenerator implements ICodeGenerator {
       // Generate content via file generators
       const headerFile = path.join(lvglDir, `${designName}_lvgl_ui.h`);
       const sourceFile = path.join(lvglDir, `${designName}_lvgl_ui.c`);
-      const entryHeaderFile = path.join(lvglDir, 'lvgl_generated_ui.h');
-      const entrySourceFile = path.join(lvglDir, 'lvgl_generated_ui.c');
 
       fs.writeFileSync(headerFile, this.headerFileGenerator.generate(designName, orderedComponents), 'utf-8');
       fs.writeFileSync(sourceFile, this.sourceFileGenerator.generate(designName, orderedComponents, ctx, imageVars, fontVars, (c) => this.getParentRef(c)), 'utf-8');
-      fs.writeFileSync(entryHeaderFile, this.entryFileGenerator.generateHeader(), 'utf-8');
-      fs.writeFileSync(entrySourceFile, this.entryFileGenerator.generateSource(designName), 'utf-8');
 
-      files.push(headerFile, sourceFile, entryHeaderFile, entrySourceFile);
+      files.push(headerFile, sourceFile);
+
+      // Generate entry file with all design names and entry view
+      const allDesignNames = this.options.allDesignNames || [designName];
+      const entryViewId = this.options.entryViewId;
+      const entryHeaderFile = path.join(lvglDir, 'lvgl_generated_ui.h');
+      const entrySourceFile = path.join(lvglDir, 'lvgl_generated_ui.c');
+
+      fs.writeFileSync(entryHeaderFile, this.entryFileGenerator.generateHeader(), 'utf-8');
+      fs.writeFileSync(entrySourceFile, this.entryFileGenerator.generateSource(designName, allDesignNames, entryViewId), 'utf-8');
+
+      files.push(entryHeaderFile, entrySourceFile);
 
       // Generate callback files (with protected area mechanism)
       const callbackImpls = this.collectCallbackImpls(orderedComponents);
