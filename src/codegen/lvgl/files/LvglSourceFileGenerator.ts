@@ -1,12 +1,25 @@
 /**
  * LVGL source file generator
- * Extracted from LvglCCodeGenerator.generateSource()
  * Generates {designName}_lvgl_ui.c content
+ *
+ * Architecture: Each root view (hg_view with no parent) generates an independent
+ * create_xxx() function. The main ui_create() function only calls the entry view's
+ * create function. Non-entry views can be created on demand (e.g., during screen switching).
  */
 import { Component } from '../../../hml/types';
 import { LvglGeneratorContext } from '../LvglComponentGenerator';
 import { LvglComponentGeneratorFactory } from '../components';
 import { LvglEventGeneratorFactory } from '../events';
+
+/** Information about a root view and its descendant components */
+interface ViewGroup {
+  /** The root view component */
+  view: Component;
+  /** All components belonging to this view (including the view itself), in creation order */
+  components: Component[];
+  /** Whether this is the entry view */
+  isEntry: boolean;
+}
 
 export class LvglSourceFileGenerator {
   /**
@@ -47,7 +60,7 @@ export class LvglSourceFileGenerator {
       code += `\n`;
     }
 
-    // Iterate all registered generators to produce global definitions (event callbacks separated to callbacks file)
+    // Iterate all registered generators to produce global definitions
     for (const [, generator] of LvglComponentGeneratorFactory.getAllGenerators()) {
       if (generator.generateGlobalDefinitions) {
         code += generator.generateGlobalDefinitions(orderedComponents);
@@ -60,38 +73,137 @@ export class LvglSourceFileGenerator {
       code += `lv_obj_t * ${c.id} = NULL;\n`;
     });
 
-    // ui_create function (screens are created internally, no parent needed)
+    // Group components by root view
+    const viewGroups = this.groupByRootView(orderedComponents, ctx);
+
+    // Generate a create function for each root view
+    for (const group of viewGroups) {
+      code += this.generateViewCreateFunction(group, ctx, getParentRef);
+    }
+
+    // Generate orphan components (components not belonging to any root view)
+    const orphans = this.getOrphanComponents(orderedComponents, viewGroups);
+
+    // Main ui_create function
     code += `\nvoid ${designName}_lvgl_ui_create(void)\n`;
     code += `{\n`;
 
-    orderedComponents.forEach(component => {
-      const parentRef = getParentRef(component);
-      const generator = LvglComponentGeneratorFactory.getGenerator(component.type);
-
-      code += `    // ${component.id} (${component.type})\n`;
-      code += generator.generateCreation(component, parentRef, ctx);
-
-      if (component.visible === false) {
-        code += `    lv_obj_add_flag(${component.id}, LV_OBJ_FLAG_HIDDEN);\n`;
+    // Create orphan components first (if any)
+    if (orphans.length > 0) {
+      code += `    // Standalone components\n`;
+      for (const component of orphans) {
+        code += this.generateComponentCode(component, ctx, getParentRef);
       }
-      if (component.enabled === false) {
-        code += `    lv_obj_add_state(${component.id}, LV_STATE_DISABLED);\n`;
+    }
+
+    // Call entry view's create function, then other views
+    const entryGroups = viewGroups.filter(g => g.isEntry);
+    const nonEntryGroups = viewGroups.filter(g => !g.isEntry);
+
+    if (entryGroups.length > 0) {
+      for (const group of entryGroups) {
+        code += `    create_${group.view.id}();\n`;
       }
+    }
 
-      // Event bindings (unified via event generator)
-      const eventGen = LvglEventGeneratorFactory.getGenerator(component.type);
-      if (eventGen) {
-        const bindings = eventGen.generateEventBindings(component);
-        if (bindings) {
-          code += bindings;
-        }
+    // Non-entry views: also create them so screen switching works
+    if (nonEntryGroups.length > 0) {
+      code += `\n    // Create non-entry views (for screen switching)\n`;
+      for (const group of nonEntryGroups) {
+        code += `    create_${group.view.id}();\n`;
       }
+    }
 
-      code += `\n`;
-    });
+    code += `}\n`;
+    return code;
+  }
 
-    // Bind radio mutual exclusion event handler on parent containers
-    const radioComponents = orderedComponents.filter(c => c.type === 'hg_radio');
+  /**
+   * Group ordered components by their root view ancestor.
+   * A root view is an hg_view whose parent is not in the component map (parentRef === 'parent').
+   */
+  private groupByRootView(orderedComponents: Component[], ctx: LvglGeneratorContext): ViewGroup[] {
+    const componentMap = ctx.componentMap;
+    const groups: ViewGroup[] = [];
+    const assignedIds = new Set<string>();
+
+    // Find all root views (hg_view with no valid parent)
+    const rootViews = orderedComponents.filter(c =>
+      c.type === 'hg_view' && (!c.parent || !componentMap.has(c.parent))
+    );
+
+    for (const rootView of rootViews) {
+      const isEntry = rootView.data?.entry === true || rootView.data?.entry === 'true';
+      const descendants = this.collectDescendants(rootView.id, orderedComponents, componentMap);
+      const components = [rootView, ...descendants];
+
+      components.forEach(c => assignedIds.add(c.id));
+
+      groups.push({
+        view: rootView,
+        components,
+        isEntry,
+      });
+    }
+
+    return groups;
+  }
+
+  /**
+   * Collect all descendant components of a given root, in the order they appear in orderedComponents.
+   */
+  private collectDescendants(
+    rootId: string,
+    orderedComponents: Component[],
+    componentMap: Map<string, Component>
+  ): Component[] {
+    const descendants: Component[] = [];
+    const belongsToRoot = new Set<string>([rootId]);
+
+    for (const component of orderedComponents) {
+      if (component.id === rootId) { continue; }
+      const parentId = component.parent;
+      if (parentId && belongsToRoot.has(parentId)) {
+        belongsToRoot.add(component.id);
+        descendants.push(component);
+      }
+    }
+
+    return descendants;
+  }
+
+  /**
+   * Get components that don't belong to any root view group.
+   */
+  private getOrphanComponents(orderedComponents: Component[], viewGroups: ViewGroup[]): Component[] {
+    const assignedIds = new Set<string>();
+    for (const group of viewGroups) {
+      group.components.forEach(c => assignedIds.add(c.id));
+    }
+    return orderedComponents.filter(c => !assignedIds.has(c.id));
+  }
+
+  /**
+   * Generate a create_xxx() function for a single root view and all its children.
+   */
+  private generateViewCreateFunction(
+    group: ViewGroup,
+    ctx: LvglGeneratorContext,
+    getParentRef: (component: Component) => string
+  ): string {
+    const viewId = group.view.id;
+    let code = `\n/**\n`;
+    code += ` * Create ${viewId} screen and all its child components\n`;
+    code += ` */\n`;
+    code += `void create_${viewId}(void)\n`;
+    code += `{\n`;
+
+    for (const component of group.components) {
+      code += this.generateComponentCode(component, ctx, getParentRef);
+    }
+
+    // Bind radio mutual exclusion event handler on parent containers within this view
+    const radioComponents = group.components.filter(c => c.type === 'hg_radio');
     if (radioComponents.length > 0) {
       const parentIds = new Set<string>();
       for (const radio of radioComponents) {
@@ -104,6 +216,41 @@ export class LvglSourceFileGenerator {
     }
 
     code += `}\n`;
+    return code;
+  }
+
+  /**
+   * Generate code for a single component (creation + flags + events).
+   */
+  private generateComponentCode(
+    component: Component,
+    ctx: LvglGeneratorContext,
+    getParentRef: (component: Component) => string
+  ): string {
+    let code = '';
+    const parentRef = getParentRef(component);
+    const generator = LvglComponentGeneratorFactory.getGenerator(component.type);
+
+    code += `    // ${component.id} (${component.type})\n`;
+    code += generator.generateCreation(component, parentRef, ctx);
+
+    if (component.visible === false) {
+      code += `    lv_obj_add_flag(${component.id}, LV_OBJ_FLAG_HIDDEN);\n`;
+    }
+    if (component.enabled === false) {
+      code += `    lv_obj_add_state(${component.id}, LV_STATE_DISABLED);\n`;
+    }
+
+    // Event bindings (unified via event generator)
+    const eventGen = LvglEventGeneratorFactory.getGenerator(component.type);
+    if (eventGen) {
+      const bindings = eventGen.generateEventBindings(component);
+      if (bindings) {
+        code += bindings;
+      }
+    }
+
+    code += `\n`;
     return code;
   }
 }
