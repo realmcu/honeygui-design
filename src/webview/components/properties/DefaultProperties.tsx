@@ -54,8 +54,8 @@ export const DefaultProperties: React.FC<PropertyPanelProps> = ({ component, onU
   const handleDataChange = (property: string, value: any) => {
     let clampedValue = value;
 
-    // slider: value 不允许超过 min/max 范围
-    if (component.type === 'hg_slider') {
+    // slider/progressbar: value 不允许超过 min/max 范围
+    if (component.type === 'hg_slider' || component.type === 'hg_progressbar') {
       const data = component.data || {};
       if (property === 'value') {
         const min = Number(data.min ?? 0);

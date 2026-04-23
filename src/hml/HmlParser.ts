@@ -650,7 +650,9 @@ export class HmlParser {
       // 渐变属性
       'useGradient', 'gradientType', 'gradientDirection',
       // 透明度
-      'opacity'
+      'opacity',
+      // 进度条属性
+      'orientation'
     ]);
 
     // 需要转换为数字的属性

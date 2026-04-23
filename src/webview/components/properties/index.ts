@@ -25,6 +25,7 @@ export const propertyPanelRegistry: Record<ComponentType, React.FC<PropertyPanel
   hg_radio: DefaultProperties,
   hg_switch: DefaultProperties,
   hg_slider: DefaultProperties,
+  hg_progressbar: DefaultProperties,
   hg_image: HgImageProperties,
   hg_gif: HgGifProperties,
   hg_window: HgWindowProperties,

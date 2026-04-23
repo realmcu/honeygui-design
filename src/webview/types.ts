@@ -27,6 +27,7 @@ export type ComponentType =
   | 'hg_radio'
   | 'hg_switch'
   | 'hg_slider'
+  | 'hg_progressbar'
   | 'hg_image'
   | 'hg_gif'
   | 'hg_view'

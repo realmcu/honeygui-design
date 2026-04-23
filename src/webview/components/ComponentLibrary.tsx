@@ -220,6 +220,7 @@ const componentDefinitions: ComponentDefinition[] = [
     type: 'hg_input',
     name: 'Input',
     icon: '📝',
+    engineSupport: { honeygui: 'planned' },
     defaultSize: { width: 200, height: 32 },
     properties: [
       { name: 'placeholder', label: 'Placeholder', type: 'string', group: 'data' },
@@ -261,17 +262,32 @@ const componentDefinitions: ComponentDefinition[] = [
     type: 'hg_switch',
     name: 'Switch',
     icon: '🔀',
-    engineSupport: { honeygui: 'unsupported', lvgl: 'ready' },
+    engineSupport: { honeygui: 'planned', lvgl: 'ready' },
     defaultSize: { width: 50, height: 28 },
     properties: [
       { name: 'value', label: 'Checked', type: 'boolean', defaultValue: false, group: 'data' },
     ],
   },
   {
+    type: 'hg_progressbar',
+    name: 'Progress Bar',
+    icon: '📊',
+    engineSupport: { honeygui: 'planned', lvgl: 'ready' },
+    defaultSize: { width: 200, height: 20 },
+    properties: [
+      { name: 'value', label: 'Value', type: 'number', defaultValue: 0, group: 'data' },
+      { name: 'min', label: 'Min', type: 'number', defaultValue: 0, group: 'data' },
+      { name: 'max', label: 'Max', type: 'number', defaultValue: 100, group: 'data' },
+      { name: 'color', label: 'Bar Color', type: 'color', defaultValue: '#00FF00', group: 'style' },
+      { name: 'backgroundColor', label: 'Track Color', type: 'color', defaultValue: '#333333', group: 'style' },
+      { name: 'orientation', label: 'Orientation', type: 'select', defaultValue: 'horizontal', options: ['horizontal', 'vertical'], group: 'style' },
+    ],
+  },
+  {
     type: 'hg_slider',
     name: 'Slider',
     icon: '🎚️',
-    engineSupport: { honeygui: 'unsupported', lvgl: 'ready' },
+    engineSupport: { honeygui: 'planned', lvgl: 'ready' },
     defaultSize: { width: 200, height: 20 },
     properties: [
       { name: 'value', label: 'Value', type: 'number', defaultValue: 0, group: 'data' },
@@ -308,7 +324,7 @@ const componentDefinitions: ComponentDefinition[] = [
     type: 'hg_canvas',
     name: 'Canvas',
     icon: '🎨',
-    engineSupport: { honeygui: 'planned', lvgl: 'ready' },
+    engineSupport: { honeygui: 'planned', lvgl: 'planned' },
     defaultSize: { width: 300, height: 200 },
     properties: [
       { name: 'backgroundColor', label: 'Background Color', type: 'color', defaultValue: '#ffffff', group: 'style', hint: 'Designer only - helps identify container boundaries' },
@@ -346,6 +362,7 @@ const componentDefinitions: ComponentDefinition[] = [
     type: 'hg_video',
     name: 'Video',
     icon: '🎬',
+    engineSupport: { lvgl: 'planned' },
     defaultSize: { width: 320, height: 240 },
     properties: [
       { name: 'src', label: 'Video Path', type: 'string', group: 'data' },
@@ -358,6 +375,7 @@ const componentDefinitions: ComponentDefinition[] = [
     type: 'hg_gif',
     name: 'GIF Animation',
     icon: '🎞️',
+    engineSupport: { lvgl: 'planned' },
     defaultSize: { width: 150, height: 150 },
     properties: [
       { name: 'src', label: 'GIF Path', type: 'string', group: 'data' },
@@ -369,6 +387,7 @@ const componentDefinitions: ComponentDefinition[] = [
     type: 'hg_3d',
     name: '3D Model',
     icon: '🧊',
+    engineSupport: { lvgl: 'planned' },
     defaultSize: { width: 400, height: 400 },
     properties: [
       { name: 'modelPath', label: 'Model Path', type: 'string', group: 'data' },
@@ -452,6 +471,7 @@ const componentDefinitions: ComponentDefinition[] = [
     type: 'hg_svg',
     name: 'SVG',
     icon: '🎨',
+    engineSupport: { lvgl: 'planned' },
     defaultSize: { width: 100, height: 100 },
     properties: [
       { name: 'src', label: 'SVG Path', type: 'string', group: 'data' },
@@ -461,6 +481,7 @@ const componentDefinitions: ComponentDefinition[] = [
     type: 'hg_lottie',
     name: 'Lottie Animation',
     icon: '🎬',
+    engineSupport: { lvgl: 'planned' },
     defaultSize: { width: 150, height: 150 },
     properties: [
       { name: 'src', label: 'Animation Path', type: 'string', group: 'data' },
@@ -472,6 +493,7 @@ const componentDefinitions: ComponentDefinition[] = [
     type: 'hg_glass',
     name: 'Glass Effect',
     icon: '🔮',
+    engineSupport: { lvgl: 'unsupported' },
     defaultSize: { width: 150, height: 150 },
     properties: [
       { name: 'src', label: 'Shape Path', type: 'string', group: 'data' },
@@ -485,6 +507,7 @@ const componentDefinitions: ComponentDefinition[] = [
     type: 'hg_particle',
     name: 'Particle Effect',
     icon: '✨',
+    engineSupport: { lvgl: 'unsupported' },
     defaultSize: { width: 200, height: 200 },
     properties: [
       {
@@ -501,6 +524,7 @@ const componentDefinitions: ComponentDefinition[] = [
     type: 'hg_map',
     name: 'Vector Map',
     icon: '🗺️',
+    engineSupport: { lvgl: 'unsupported' },
     defaultSize: { width: 200, height: 300 },
     properties: [
       { name: 'mapFile', label: 'Map File (.trmap)', type: 'string', defaultValue: '', group: 'data' },
@@ -512,6 +536,7 @@ const componentDefinitions: ComponentDefinition[] = [
     type: 'hg_openclaw',
     name: 'OpenClaw',
     icon: '🦞',
+    engineSupport: { lvgl: 'unsupported' },
     defaultSize: { width: 410, height: 502 },
     properties: [
       { name: 'fontFile', label: 'Font File (.ttf)', type: 'string', defaultValue: '', group: 'data' },
@@ -523,6 +548,7 @@ const componentDefinitions: ComponentDefinition[] = [
     type: 'hg_claw_face',
     name: 'Claw Face',
     icon: '😐',
+    engineSupport: { lvgl: 'unsupported' },
     defaultSize: { width: 160, height: 160 },
     properties: [
       { name: 'openclawTarget', label: 'OpenClaw Target', type: 'string', defaultValue: '', group: 'data' },
@@ -533,6 +559,7 @@ const componentDefinitions: ComponentDefinition[] = [
     type: 'hg_menu_cellular',
     name: 'Menu Cellular',
     icon: '⬡',
+    engineSupport: { lvgl: 'planned' },
     defaultSize: { width: 0, height: 0 }, // 创建时动态设置为项目分辨率
     properties: [
       { name: 'iconFolder', label: 'Icon Folder', type: 'string', defaultValue: '', group: 'data' },
@@ -547,7 +574,7 @@ const componentDefinitions: ComponentDefinition[] = [
 const componentCategories = [
   { name: 'Containers', types: ['hg_view', 'hg_window', 'hg_canvas', 'hg_list', 'hg_menu_cellular'] },
   { name: 'Basic Controls', types: ['hg_button', 'hg_label', 'hg_image'] },
-  { name: 'Input Controls', types: ['hg_input', 'hg_checkbox', 'hg_radio', 'hg_switch', 'hg_slider'] },
+  { name: 'Input Controls', types: ['hg_input', 'hg_checkbox', 'hg_radio', 'hg_switch', 'hg_slider', 'hg_progressbar'] },
   { name: 'Graphics', types: ['hg_arc', 'hg_circle', 'hg_rect', 'hg_svg', 'hg_glass', 'hg_particle'] },
   { name: 'Multimedia', types: ['hg_video', 'hg_gif', 'hg_3d', 'hg_lottie'] },
   { name: 'Mini App', types: ['hg_map', 'hg_openclaw', 'hg_claw_face'] },
