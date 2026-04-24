@@ -26,6 +26,7 @@ export class LvglEventGeneratorFactory {
     this.generators.set('hg_switch', genericGenerator);
     this.generators.set('hg_slider', genericGenerator);
     this.generators.set('hg_progressbar', genericGenerator);
+    this.generators.set('hg_window', genericGenerator);
     // Radio: mutual exclusion at parent level, no per-component event callback
     this.generators.set('hg_radio', new LvglRadioEventGenerator());
   }

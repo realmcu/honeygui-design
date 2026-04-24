@@ -60,22 +60,27 @@ export class LvglGenericEventGenerator implements LvglEventCodeGenerator {
 
     const cbName = `${component.id}_event_cb`;
 
-    // Collect LVGL event codes that need binding
+    // Collect LVGL event codes that need binding (events with or without actions)
     const neededEvents = new Set<string>();
     for (const ec of eventConfigs) {
-      if (ec.actions && ec.actions.length > 0) {
-        const lvCode = HML_TO_LVGL_EVENT[ec.type];
-        if (lvCode) {
-          neededEvents.add(lvCode);
-        }
+      const lvCode = HML_TO_LVGL_EVENT[ec.type];
+      if (lvCode) {
+        neededEvents.add(lvCode);
       }
     }
 
     if (neededEvents.size === 0) { return ''; }
 
+    // lv_obj defaults to non-clickable; add CLICKABLE flag when click-type events are used
+    let code = '';
+    const clickEvents = new Set(['LV_EVENT_CLICKED', 'LV_EVENT_PRESSED', 'LV_EVENT_RELEASED', 'LV_EVENT_LONG_PRESSED']);
+    const needsClickable = [...neededEvents].some(e => clickEvents.has(e));
+    if (needsClickable && this.isNonClickableWidget(component.type)) {
+      code += `    lv_obj_add_flag(${component.id}, LV_OBJ_FLAG_CLICKABLE);\n`;
+    }
+
     // Register each event code separately for efficiency
     // (use LV_EVENT_ALL only if too many distinct codes)
-    let code = '';
     if (neededEvents.size > 3) {
       code += `    lv_obj_add_event_cb(${component.id}, ${cbName}, LV_EVENT_ALL, NULL);\n`;
     } else {
@@ -86,22 +91,39 @@ export class LvglGenericEventGenerator implements LvglEventCodeGenerator {
     return code;
   }
 
+  /**
+   * Check if a widget type maps to lv_obj (which is non-clickable by default)
+   */
+  private isNonClickableWidget(type: string): boolean {
+    // These types map to lv_obj_create() which is not clickable by default
+    return type === 'hg_window' || type === 'hg_rect' || type === 'hg_circle' || type === 'hg_view';
+  }
+
   collectCallbackFunctions(component: Component): string[] {
     const eventConfigs: EventConfig[] = (component as any).eventConfigs || [];
     if (eventConfigs.length === 0) { return []; }
 
-    // Check if any event has actions with a mappable LVGL event code
-    const hasActions = eventConfigs.some(ec =>
-      ec.actions && ec.actions.length > 0 && HML_TO_LVGL_EVENT[ec.type]
-    );
-    return hasActions ? [`${component.id}_event_cb`] : [];
+    // Generate callback if any event has a mappable LVGL event code (with or without actions)
+    const hasEvent = eventConfigs.some(ec => HML_TO_LVGL_EVENT[ec.type]);
+    return hasEvent ? [`${component.id}_event_cb`] : [];
   }
 
   getEventCallbackImpl(component: Component): string[] {
     const eventConfigs: EventConfig[] = (component as any).eventConfigs || [];
     if (eventConfigs.length === 0) { return []; }
 
-    // Build event blocks from eventConfigs
+    // Collect all LVGL event codes referenced by eventConfigs (with or without actions)
+    const allEventCodes = new Set<string>();
+    for (const ec of eventConfigs) {
+      const lvCode = HML_TO_LVGL_EVENT[ec.type];
+      if (lvCode) {
+        allEventCodes.add(lvCode);
+      }
+    }
+
+    if (allEventCodes.size === 0) { return []; }
+
+    // Build event blocks from eventConfigs that have actions
     const eventBlocks = new Map<string, {
       actionLines: string[];
       isGesture: boolean;
@@ -116,10 +138,13 @@ export class LvglGenericEventGenerator implements LvglEventCodeGenerator {
     };
 
     for (const ec of eventConfigs) {
-      if (!ec.actions || ec.actions.length === 0) { continue; }
-
       const lvCode = HML_TO_LVGL_EVENT[ec.type];
       if (!lvCode) { continue; }
+
+      // Ensure the event code has a block even if no actions
+      getOrCreate(lvCode);
+
+      if (!ec.actions || ec.actions.length === 0) { continue; }
 
       const block = getOrCreate(lvCode);
 
@@ -144,9 +169,6 @@ export class LvglGenericEventGenerator implements LvglEventCodeGenerator {
       }
     }
 
-    // Skip if no event blocks were created
-    if (eventBlocks.size === 0) { return []; }
-
     // Build callback function
     const cbName = `${component.id}_event_cb`;
     let code = `static void ${cbName}(lv_event_t * e)\n`;
@@ -169,11 +191,15 @@ export class LvglGenericEventGenerator implements LvglEventCodeGenerator {
           code += `        }\n`;
         }
         code += `    }\n`;
-      } else {
+      } else if (block.actionLines.length > 0) {
         code += `    if(code == ${eventCode}) {\n`;
         for (const line of block.actionLines) {
           code += line;
         }
+        code += `    }\n`;
+      } else {
+        // Event with no actions — generate empty if-block for user code
+        code += `    if(code == ${eventCode}) {\n`;
         code += `    }\n`;
       }
     }
